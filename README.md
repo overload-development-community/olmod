@@ -12,6 +12,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - If you installed Overload yourself, extract olmod in the Overload main
   directory (where `Overload.exe` is also located).
+  
+- Run `olmod.exe` instead of `Overload.exe`
+
+- Use `olmod.exe -nographcs -batchmode` to start a server
 
 #### What does it do
 
