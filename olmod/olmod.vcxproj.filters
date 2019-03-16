@@ -47,8 +47,8 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\GameMod\0Harmony.dll" />
-    <None Include="..\GameMod\bin\Debug\GameMod.dll" />
-    <None Include="..\GameMod\bin\Release\GameMod.dll" />
+    <CopyFileToFolders Include="..\GameMod\0Harmony.dll" />
+    <CopyFileToFolders Include="..\GameMod\bin\Debug\GameMod.dll" />
+    <CopyFileToFolders Include="..\GameMod\bin\Release\GameMod.dll" />
   </ItemGroup>
 </Project>
