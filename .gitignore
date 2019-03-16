@@ -1,0 +1,13 @@
+x64/
+Debug/
+bin/
+obj/
+Release/
+*.dll
+*.exe
+*.pdb
+UnityEngine*.xml
+.vs/
+*~
+!0Harmony.dll
+*.aps
