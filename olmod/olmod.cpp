@@ -4,6 +4,15 @@
 #include "stdafx.h"
 #include "olmod.h"
 
+// Hint that the discrete gpu should be enabled on optimus/enduro systems
+// NVIDIA docs: http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
+// AMD forum post: http://devgurus.amd.com/thread/169965
+extern "C"
+{
+	__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
 typedef struct _MonoImage MonoImage;
 typedef struct _MonoAssembly MonoAssembly;
 typedef struct _MonoMethod MonoMethod;
@@ -131,7 +140,6 @@ static int load_image(const char *filename, MonoImage **pimage, MonoAssembly **p
 		goto err;
 	}
 	if ((size = GetFileSize(h, NULL)) == INVALID_FILE_SIZE) {
-		CloseHandle(h);
 		print("cannot size\n");
 		goto err;
 	}
