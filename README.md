@@ -10,20 +10,23 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - If you installed Overload using Steam or GOG Galaxy you can extract olmod
   anywhere and it will find Overload automatically.
 
-- If you installed Overload yourself, extract olmod in the Overload main
-  directory (where `Overload.exe` is also located).
+- If you installed Overload yourself or on linux, extract olmod in the Overload main
+  directory (where `Overload.exe` / `Overload.x86_64` is also located).
   
-- Run `olmod.exe` instead of `Overload.exe`
+- Run `olmod.exe` / `olmod.sh` (linux) instead of `Overload.exe`
 
-- Use `olmod.exe -nographcs -batchmode` to start a server
+- Use `olmodserver.bat` / `olmodserver.sh` (linux) to start a server
 
 #### What does it do
 
-- Currently it only shows a modified indicator in the main menu and allows
-  access to the unfinished Monsterball multiplayer mode.
+Currently it shows a modified indicator in the main menu, allows
+access to the unfinished Monsterball multiplayer mode and puts a
+MP player in observer mode if it uses a pilot name starting with
+OBSERVER.
 
-  The Monsterball multiplayer mode only works when both server and clients
-  run olmod.
+The Monsterball multiplayer mode only works when both server and clients run olmod.
+
+The observer mode only works when the server and the observer client run olmod.
 
 #### How to build
 
