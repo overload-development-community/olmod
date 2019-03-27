@@ -11,3 +11,5 @@ UnityEngine*.xml
 *~
 !0Harmony.dll
 *.aps
+*.o
+*.so
