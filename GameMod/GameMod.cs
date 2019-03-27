@@ -12,19 +12,26 @@ namespace GameMod.Core
     {
         internal static void Initialize()
         {
-            var harmony = HarmonyInstance.Create("ol.gamemod");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            //HarmonyInstance.DEBUG = true;
+            var harmony = HarmonyInstance.Create("olmod.olmod");
+            try {
+                harmony.PatchAll(Assembly.GetExecutingAssembly());
+            } catch (Exception ex) {
+                Debug.Log(ex.ToString());
+            }
         }
 
-        [HarmonyPatch(typeof(Overload.MenuManager))]
-        [HarmonyPatch("MpMatchSetup")]
+        // enable monsterball mode, allow max players up to 16
+        [HarmonyPatch(typeof(Overload.MenuManager), "MpMatchSetup")]
         class MBModeSelPatch
         {
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
+                int n = 0;
                 var codes = new List<CodeInstruction>(instructions);
                 for (var i = 0; i < codes.Count; i++)
                 {
+                    // increase max mode to allow monsterball mode
                     if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_mode")
                     {
                         i++;
@@ -35,14 +42,27 @@ namespace GameMod.Core
                             i++;
                         if (codes[i].opcode == OpCodes.Ldc_I4_2)
                             codes[i].opcode = OpCodes.Ldc_I4_3;
+                        n++;
+                    }
+                    if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_max_players" &&
+                        i > 0 && codes[i - 1].opcode == OpCodes.Br) // take !online branch
+                    {
+                        while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
+                            i++;
+                        if (codes[i].opcode == OpCodes.Ldc_I4_1 && codes[i + 1].opcode == OpCodes.Ldc_I4_8) {
+                            codes[i + 1].opcode = OpCodes.Ldc_I4;
+                            codes[i + 1].operand = 16;
+                        }
+                        n++;
                     }
                 }
+                Debug.Log("Patched MpMatchSetup n=" + n);
                 return codes;
             }
         }
 
-        [HarmonyPatch(typeof(Overload.UIElement))]
-        [HarmonyPatch("DrawMainMenu")]
+        // add modified indicator to main menu
+        [HarmonyPatch(typeof(Overload.UIElement), "DrawMainMenu")]
         class VersionPatch
         {
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -66,8 +86,8 @@ namespace GameMod.Core
             }
         }
 
-        [HarmonyPatch(typeof(Overload.GameManager))]
-        [HarmonyPatch("ScanForLevels")]
+        // add monsterball mb_arena1 level to multiplayer levels
+        [HarmonyPatch(typeof(Overload.GameManager), "ScanForLevels")]
         class MBLevelPatch
         {
             static bool SLInit = false;
@@ -87,3 +107,4 @@ namespace GameMod.Core
         }
     }
 }
+
