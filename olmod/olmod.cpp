@@ -68,8 +68,12 @@ void print(const char *message) {
 	if (!message)
 		message = "(null)";
 	DWORD written = 0;
-	if (console && console != INVALID_HANDLE_VALUE)
-		WriteFile(console, message, lstrlenA(message), &written, NULL);
+	if (console && console != INVALID_HANDLE_VALUE) {
+		DWORD len = lstrlenA(message);
+		WriteFile(console, message, len, &written, NULL);
+		if (len && message[len - 1] == '\n')
+			FlushFileBuffers(console);
+	}
 }
 
 void printw(LPCWSTR message) {
@@ -122,6 +126,7 @@ static int run_void_method(MonoImage *image,
 
 static MonoObject* my_mono_runtime_invoke(MonoMethod *method, MonoObject *obj, void **params, MonoObject **exc)
 {
+	//MonoClass *cls = org_mono_method_get_class(method);print("runtime invoke ");print(org_mono_class_get_namespace(cls));print(" ");print(org_mono_class_get_name(cls));print(" ");print(org_mono_method_get_name(method));print("\n");
 	if (gamemod_img) {
 		run_void_method(gamemod_img, "GameMod.Core", "GameMod", "Initialize");
 		gamemod_img = NULL;
@@ -135,8 +140,10 @@ static int load_image(const char *filename, MonoImage **pimage, MonoAssembly **p
 	HANDLE h = NULL;
 	char *data = NULL;
 	DWORD size, rd_size;
-	if ((h = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE) {
-		print("cannot open\n");
+	if ((h = CreateFileA(filename, GENERIC_READ, FILE_SHARE_WRITE | FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		print("cannot open ");
+		print(filename);
+		print("\n");
 		goto err;
 	}
 	if ((size = GetFileSize(h, NULL)) == INVALID_FILE_SIZE) {
@@ -189,6 +196,7 @@ extern char _binary_GameMod_dll_end;
 static void *my_mono_image_open_from_data_with_name(char *data, int data_len, int copy,
 	MonoImageOpenStatus *st, int ref, const char*name)
 {
+	//print(name);print("\n");
 	int name_len;
 	if ((name_len = lstrlenA(name)) > 19 && lstrcmpA(name + name_len - 19, "Assembly-CSharp.dll") == 0) {
 		/*
@@ -216,6 +224,7 @@ static FARPROC MyGetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
 	FARPROC ret = GetProcAddress(hModule, lpProcName);
 	if (lpProcName[0] != 'm')
 		return ret;
+	//print(lpProcName);print("\n");
 	if (lstrcmpA(lpProcName, "mono_image_close") == 0)
 		org_mono_image_close = (mono_image_close)ret;
 	if (lstrcmpA(lpProcName, "mono_runtime_invoke") == 0) {
@@ -267,12 +276,21 @@ typedef void * (__stdcall *idetd) (HMODULE module, BOOL, int, ULONG *);
 static BOOL patch_func(HMODULE module, const char *name, PROC func)
 {
 	// We use this value as a comparison
-	PROC baseGetProcAddress = (PROC)GetProcAddress(GetModuleHandle(L"kernel32.dll"), name);
+	PROC baseGetProcAddress = (PROC)GetProcAddress(GetModuleHandleA("KERNEL32.dll"), name);
 
 	// Get a reference to the import table to locate the kernel32 entry
-	ULONG size;
-	idetd myImageDirectoryEntryToData = (idetd)GetProcAddress(LoadLibrary(L"dbghelp.dll"), "ImageDirectoryEntryToData");
-	PIMAGE_IMPORT_DESCRIPTOR importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)myImageDirectoryEntryToData(module, TRUE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size);
+	//ULONG size;
+	//idetd myImageDirectoryEntryToData = (idetd)GetProcAddress(LoadLibrary(L"dbghelp.dll"), "ImageDirectoryEntryToData");
+	//PIMAGE_IMPORT_DESCRIPTOR importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)myImageDirectoryEntryToData(module, TRUE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size);
+
+	BYTE *imageBuf = (BYTE *)module;
+	PIMAGE_DOS_HEADER pDOSHeader = (PIMAGE_DOS_HEADER)imageBuf;
+	LOADED_IMAGE image;
+	image.FileHeader = 	(PIMAGE_NT_HEADERS64)(imageBuf + pDOSHeader->e_lfanew);
+	image.NumberOfSections = image.FileHeader->FileHeader.NumberOfSections;
+	image.Sections = (PIMAGE_SECTION_HEADER)(imageBuf + pDOSHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS64));
+	PIMAGE_IMPORT_DESCRIPTOR importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)(imageBuf +
+		image.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
 	// In the import table find the entry that corresponds to kernel32
 	BOOL found = FALSE;
@@ -377,10 +395,29 @@ typedef int(*wWinMain_type)(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
 	console = GetStdHandle(STD_OUTPUT_HANDLE);
-	static WCHAR buf[256 + 64];
+	//console = CreateFile(L"c:\\temp\\olmod.log", GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	//DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_OUTPUT_HANDLE), GetCurrentProcess(), &console, 0, FALSE, DUPLICATE_SAME_ACCESS);
+
+	static WCHAR buf[256 + 64], *p;
 
 	if (!find_game_dir()) {
 		show_msg("Game directory not found!");
+		return 1;
+	}
+
+	//print("gamedir ");printw(game_dir);print("\n");
+
+	if (!GetModuleFileName(NULL, buf, sizeof(buf) / sizeof(buf[0]))) {
+		show_msg("Cannot get filename");
+		return 1;
+	}
+	p = buf + lstrlenW(buf) - 1;
+	while (p >= buf && *p != '\\')
+		p--;
+	if (p >= buf)
+		*p = 0;
+	if (!SetEnvironmentVariable(L"OLMODDIR", buf)) {
+		show_msg("Cannot set environment");
 		return 1;
 	}
 
