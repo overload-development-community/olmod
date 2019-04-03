@@ -6,9 +6,12 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "olmod", "olmod\olmod.vcxproj", "{CFB62AD7-1212-4E0F-A695-1503E89A578F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FB32EB50-DE78-4FFB-8DE8-C3C8A82E8B62} = {FB32EB50-DE78-4FFB-8DE8-C3C8A82E8B62}
+		{5F11C292-D523-4C7F-88FA-3414F62A001A} = {5F11C292-D523-4C7F-88FA-3414F62A001A}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameMod", "GameMod\GameMod.csproj", "{FB32EB50-DE78-4FFB-8DE8-C3C8A82E8B62}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "olgetdata", "olgetdata\olgetdata.csproj", "{5F11C292-D523-4C7F-88FA-3414F62A001A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +37,14 @@ Global
 		{FB32EB50-DE78-4FFB-8DE8-C3C8A82E8B62}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FB32EB50-DE78-4FFB-8DE8-C3C8A82E8B62}.Release|x64.ActiveCfg = Release|Any CPU
 		{FB32EB50-DE78-4FFB-8DE8-C3C8A82E8B62}.Release|x64.Build.0 = Release|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Debug|x64.Build.0 = Debug|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|x64.ActiveCfg = Release|Any CPU
+		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
