@@ -249,6 +249,11 @@ void *dlsym(void *lib, const char *sym) {
 
 __attribute__((constructor)) static void olmod_init(void) 
 {
+	char buf[256], *p;
+	if (readlink("/proc/self/exe", buf, sizeof(buf)) > 0 && (p = strrchr(buf, '/'))) {
+		*p = 0;
+		setenv("OLMODDIR", p, 1);
+	}
 	if (!(org_dlsym = _dl_sym(RTLD_NEXT, "dlsym", olmod_init))) {
 		print("olmod failed dlsym lookup\n");
 		abort();
