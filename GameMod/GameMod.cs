@@ -10,8 +10,11 @@ namespace GameMod.Core
 {
     public class GameMod
     {
+        private static readonly string version = "olmod 0.1.2";
+
         internal static void Initialize()
         {
+            Debug.Log("Initializing " + version);
             //HarmonyInstance.DEBUG = true;
             var harmony = HarmonyInstance.Create("olmod.olmod");
             try {
@@ -72,7 +75,7 @@ namespace GameMod.Core
                 {
                     if (codes[i].opcode == OpCodes.Ldstr && codes[i].operand as string == "VERSION {0}.{1} BUILD {2}")
                     {
-                        codes[i].operand = "VERSION {0}.{1} BUILD {2} MOD";
+                        codes[i].operand = "VERSION {0}.{1} BUILD {2} " + version.ToUpperInvariant();
                     }
                 }
                 return codes;
@@ -107,4 +110,3 @@ namespace GameMod.Core
         }
     }
 }
-
