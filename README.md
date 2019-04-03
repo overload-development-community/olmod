@@ -19,14 +19,19 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 #### What does it do
 
-Currently it shows a modified indicator in the main menu, allows
-access to the unfinished Monsterball multiplayer mode and puts a
-MP player in observer mode if it uses a pilot name starting with
-OBSERVER.
+- Shows a modified indicator in the main menu
 
-The Monsterball multiplayer mode only works when both server and clients run olmod.
+- Allows access to the unfinished Monsterball multiplayer mode.
+  The Monsterball multiplayer mode only works when both server and clients run olmod.
 
-The observer mode only works when the server and the observer client run olmod.
+- Puts a MP player in observer mode if it uses a pilot name starting with
+  OBSERVER.
+  The observer mode only works when the server and the observer client run olmod.
+
+- Reads projdata.txt / robotdata.txt with custom projectile (weapon) and
+  robot settings. You can extract the stock data from the game with the
+  included tool `olgetdata`. The txt files must be in the same directory as
+  olmod.exe. You can run olgetdata on linux with `mono olgetdata.exe`.
 
 #### How to build
 
