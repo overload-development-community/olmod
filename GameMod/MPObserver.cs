@@ -131,18 +131,42 @@ namespace GameMod
         }
     }
     */
-       
+
     // enable observer mode in server for player with name starting with "OBSERVER"
+    /*
     [HarmonyPatch(typeof(Overload.Server), "OnAddPlayerMessage")]
     class MPObserverSpawnPatch
     {
         static void Postfix(NetworkMessage msg)
         {
+            Debug.LogFormat("OnAddPlayerMessage postfix");
             Player player = Server.FindPlayerByConnectionId(msg.conn.connectionId);
             if (player.m_mp_name.StartsWith("OBSERVER"))
             {
+                Debug.LogFormat("Enabling spectator for {0}", player.m_mp_name);
                 player.Networkm_spectator = true;
+                Debug.LogFormat("Enabled spectator for {0}", player.m_mp_name);
             }
+        }
+    }
+    */
+    [HarmonyPatch(typeof(Overload.Server), "AllConnectionsHavePlayerReadyForCountdown")]
+    class MPObserverSpawnPatch
+    {
+        static void Postfix(bool __result)
+        {
+            if (!__result)
+                return;
+            foreach (KeyValuePair<int, PlayerLobbyData> keyValuePair in NetworkMatch.m_players)
+                if (keyValuePair.Value.m_name.StartsWith("OBSERVER"))
+                {
+                    Player player = Server.FindPlayerByConnectionId(keyValuePair.Value.m_id);
+                    if (!player || player.m_spectator)
+                        continue;
+                    Debug.LogFormat("Enabling spectator for {0}", player.m_mp_name);
+                    player.Networkm_spectator = true;
+                    Debug.LogFormat("Enabled spectator for {0}", player.m_mp_name);
+                }
         }
     }
 
