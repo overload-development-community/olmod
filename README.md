@@ -33,6 +33,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
   included tool `olgetdata`. The txt files must be in the same directory as
   olmod.exe. You can run olgetdata on linux with `mono olgetdata.exe`.
 
+- Adds `frametime` non-cheat code and `rearview` cheat code
+
 #### How to build
 
 - Open solution in Visual Studio 2017
