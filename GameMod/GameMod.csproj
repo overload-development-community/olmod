@@ -61,11 +61,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
     <Compile Include="MPMaxPlayer.cs" />
     <Compile Include="MPObserver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PresetData.cs" />
+    <Compile Include="RearView.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
