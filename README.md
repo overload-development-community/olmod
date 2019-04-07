@@ -35,6 +35,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Adds `frametime` non-cheat code and `rearview` cheat code
 
+- Allows MP with 16 players (server and all clients must run olmod)
+
 #### How to build
 
 - Open solution in Visual Studio 2017

@@ -4,6 +4,7 @@ using Overload;
 using System.Reflection.Emit;
 using System.Reflection;
 using UnityEngine;
+using System;
 
 namespace GameMod
 {
@@ -101,4 +102,117 @@ namespace GameMod
         }
     }
 
+    // increase PingsMessage to 16 entries
+    [HarmonyPatch(typeof(PingsMessage), MethodType.Constructor)]
+    class MPMaxPings
+    {
+        static bool Prefix(PingsMessage __instance)
+        {
+            var pings = __instance.m_pings = new ClientPing[16];
+            for (int i = 0; i < 16; i++)
+                pings[i] = new ClientPing();
+            return false;
+        }
+    }
+
+    // set ServerPing max to 16 (will crash original client!)
+    [HarmonyPatch(typeof(ServerPing), "Update")]
+    class MPMaxServerPing
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+                if (code.opcode == OpCodes.Ldc_I4_8)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 16);
+                else
+                    yield return code;
+        }
+    }
+
+    // set InitLobby max to 16
+    [HarmonyPatch(typeof(NetworkMatch), "InitLobby")]
+    class MPMaxInitLobby
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+                if (code.opcode == OpCodes.Ldc_I4_8)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 16);
+                else
+                    yield return code;
+        }
+    }
+
+    // set client config max to 16
+    [HarmonyPatch(typeof(Client), "ConfigureConnection")]
+    class MPMaxClientConfig
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+                if (code.opcode == OpCodes.Ldc_I4_8)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 16);
+                else
+                    yield return code;
+        }
+    }
+
+
+    // set TryLocalMatchmaking max to 16
+    [HarmonyPatch]
+    class MPMaxTryLocalMatchmaking
+    {
+        static MethodBase TargetMethod()
+        {
+            foreach (var x in typeof(NetworkMatch).GetNestedTypes(BindingFlags.NonPublic))
+                if (x.Name.Contains("TryLocalMatchmaking"))
+                {
+                    var m = AccessTools.Method(x, "<>m__0");
+                    if (m != null) {
+                        Debug.Log("MPMaxTryLocalMatchmaking TargetMethod found");
+                        return m;
+                    }
+                }
+            Debug.Log("MPMaxTryLocalMatchmaking TargetMethod not found");
+            return null;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+                if (code.opcode == OpCodes.Ldc_R8 && (double)code.operand == 8.0)
+                    yield return new CodeInstruction(OpCodes.Ldc_R8, 16.0);
+                else
+                    yield return code;
+        }
+    }
+
+    // increase PlayerSnapshotToClientMessage to 16 entries
+    [HarmonyPatch(typeof(Player), "NetworkPlayerAwake")]
+    class MPMaxPlayerSnapshot
+    {
+        static void Prefix(Player __instance)
+        {
+            __instance.m_snapshot_buffer.m_snapshots = new PlayerSnapshot[16];
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+                if (code.opcode == OpCodes.Ldc_I4_8)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 16);
+                else
+                    yield return code;
+        }
+    }
+
+    [HarmonyPatch(typeof(PlayerSnapshotToClientMessage), "Deserialize")]
+    class MPMaxPlayerSnapshotMsg
+    {
+        static void Prefix(PlayerSnapshotToClientMessage __instance)
+        {
+            if (__instance.m_snapshots.Length == 8)
+                __instance.m_snapshots = new PlayerSnapshot[16];
+        }
+    }
 }
