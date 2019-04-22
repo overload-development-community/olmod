@@ -10,7 +10,7 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        private static readonly string version = "olmod 0.1.4";
+        private static readonly string version = "olmod 0.1.5";
 
         internal static void Initialize()
         {
@@ -22,6 +22,7 @@ namespace GameMod.Core
             } catch (Exception ex) {
                 Debug.Log(ex.ToString());
             }
+            Debug.Log("Done initializing " + version);
         }
 
         // enable monsterball mode, allow max players up to 16
@@ -84,7 +85,7 @@ namespace GameMod.Core
             static void Postfix(UIElement __instance)
             {
                 Vector2 pos = new Vector2(UIManager.UI_RIGHT - 10f, -155f - 60f + 50f + 40f);
-                __instance.DrawStringSmall("UNOFFICIAL MODIFIED VERSION!", pos,
+                __instance.DrawStringSmall("UNOFFICIAL MODIFIED VERSION", pos,
                     0.35f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
             }
         }

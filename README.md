@@ -35,7 +35,9 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Adds `frametime` non-cheat code and `rearview` cheat code
 
-- Allows MP with 16 players (server and all clients must run olmod)
+- Allows MP with up to 16 players (server and all clients must run olmod)
+
+- Allows MP with up to 8 teams (server and all clients must run olmod)
 
 #### How to build
 
