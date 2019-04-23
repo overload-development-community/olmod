@@ -49,7 +49,7 @@ namespace GameMod
             team = team + 1;
             if (team == MpTeam.ANARCHY)
                 team = team + 1;
-            return team == MPTEAM_NUM || allTeams.IndexOf( x => x == team) >= NetworkMatchTeamCount ? MpTeam.TEAM0 : team;
+            return team == MPTEAM_NUM || allTeams.IndexOf(x => x == team) >= NetworkMatchTeamCount ? MpTeam.TEAM0 : team;
         }
 
         public static string TeamName(MpTeam team)
@@ -61,7 +61,12 @@ namespace GameMod
             return ret;
         }
 
-        static Color TeamColor(MpTeam team, int mod)
+        public static int TeamColorIdx(MpTeam team)
+        {
+            return colorIdx[TeamNum(team)];
+        }
+
+        public static Color TeamColor(MpTeam team, int mod)
         {
             int cIdx = colorIdx[TeamNum(team)];
             float sat = cIdx == 8 ? 0.01f : cIdx == 4 && mod == 5 ? 0.6f : 0.95f - mod * 0.05f;
@@ -534,6 +539,25 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawHUDArmor")]
     class MPTeamsHUDArmor
     {
+        public static IEnumerable<CodeInstruction> ChangeTeamColorLoad(IEnumerator<CodeInstruction> codes, OpCode mod)
+        {
+            // current team already loaded
+            yield return new CodeInstruction(mod);
+            yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams), "TeamColor"));
+            // skip until store
+            var labels = new List<Label>();
+            while (codes.MoveNext() && codes.Current.opcode != OpCodes.Stloc_S && codes.Current.opcode != OpCodes.Stloc_0)
+                if (codes.Current.labels.Count() != 0)
+                {
+                    //var ncode = new CodeInstruction(OpCodes.Nop);
+                    labels.AddRange(codes.Current.labels);
+                    //yield return ncode;
+                }
+            // do store color
+            codes.Current.labels.AddRange(labels);
+            yield return codes.Current;
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var codes = instructions.GetEnumerator();
@@ -549,21 +573,9 @@ namespace GameMod
                         while (codes.MoveNext() &&
                             (codes.Current.opcode != OpCodes.Ldfld || ((FieldInfo)codes.Current.operand).Name != "m_mp_team"))
                             yield return codes.Current;
-                        // do load current team
                         yield return codes.Current;
-                        yield return new CodeInstruction(i == 0 ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_3);
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams), "TeamColor"));
-                        // skip until store
-                        var labels = new List<Label>();
-                        while (codes.MoveNext() && codes.Current.opcode != OpCodes.Stloc_S)
-                            if (codes.Current.labels.Count() != 0) {
-                                //var ncode = new CodeInstruction(OpCodes.Nop);
-                                labels.AddRange(codes.Current.labels);
-                                //yield return ncode;
-                            }
-                        // do store color
-                        codes.Current.labels.AddRange(labels);
-                        yield return codes.Current;
+                        foreach (var c in MPTeamsHUDArmor.ChangeTeamColorLoad(codes, i == 0 ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_3))
+                            yield return c;
                     }
                     break;
                 }
@@ -571,6 +583,42 @@ namespace GameMod
             }
             while (codes.MoveNext())
                 yield return codes.Current;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawScoresForTeam")]
+    class MPTeamsScoresForTeam
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = instructions.GetEnumerator();
+            int cnt = 0;
+            while (codes.MoveNext())
+            {
+                var code = codes.Current;
+                yield return code;
+                if (code.opcode == OpCodes.Ldarg_1 && (++cnt == 2 || cnt == 3))
+                    foreach (var c in MPTeamsHUDArmor.ChangeTeamColorLoad(codes, cnt == 2 ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_4))
+                        yield return c;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMPWeaponOutline")]
+    class MPTeamsWeaponOutline
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = instructions.GetEnumerator();
+            int cnt = 0;
+            while (codes.MoveNext())
+            {
+                var code = codes.Current;
+                yield return code;
+                if (code.opcode == OpCodes.Ldfld && ((FieldInfo)code.operand).Name == "m_mp_team" && ++cnt == 1)
+                    foreach (var c in MPTeamsHUDArmor.ChangeTeamColorLoad(codes, OpCodes.Ldc_I4_1))
+                        yield return c;
+            }
         }
     }
 
@@ -614,6 +662,17 @@ namespace GameMod
         }
     }
 
+    [HarmonyPatch(typeof(Overload.UIManager), "ChooseMpColor")]
+    class MPTeamsMpColor
+    {
+        static bool Prefix(MpTeam team, ref Color __result)
+        {
+            if (team < MpTeam.NUM_TEAMS)
+                return true;
+            __result = MPTeams.TeamColor(team, 2);
+            return false;
+        }
+    }
 
     public class TeamCountMessage : MessageBase
     {
@@ -790,4 +849,18 @@ namespace GameMod
             }
         }
     }
+
+    [HarmonyPatch(typeof(PlayerShip), "UpdateShipColors")]
+    class MPTeamsShipColors
+    {
+        static void Prefix(ref MpTeam team, ref int glow_color, ref int decal_color)
+        {
+            if (team == MpTeam.ANARCHY)
+                return;
+            glow_color = decal_color = MPTeams.TeamColorIdx(team);
+            team = MpTeam.ANARCHY; // prevent original team color assignment
+        }
+    }
+
+    // still missing: chat colors...
 }
