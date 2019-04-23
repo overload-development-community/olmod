@@ -69,6 +69,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PresetData.cs" />
     <Compile Include="RearView.cs" />
+    <Compile Include="ServerStatLog.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
