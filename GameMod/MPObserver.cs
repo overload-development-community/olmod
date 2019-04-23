@@ -119,6 +119,16 @@ namespace GameMod
         }
     }
 
+    // Don't do chunk (de)activation for observer
+    [HarmonyPatch(typeof(ChunkManager), "ActivateChunks")]
+    class MPObserverChunks
+    {
+        static bool Prefix()
+        {
+            return !GameManager.m_local_player.m_spectator;
+        }
+    }
+
     /*
     [HarmonyPatch(typeof(Overload.Client))]
     [HarmonyPatch("SendReadyForCountdownMessage")]
@@ -193,6 +203,80 @@ namespace GameMod
             }
             Debug.Log("Patched FixedUpdateProcessControlsInternal n=" + n);
             return codes;
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "CmdSendFullChat")]
+    class MPObserverChat
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            CodeInstruction last = null;
+            foreach (var c in codes)
+            {
+                // replace xxx.m_spectator with false
+                if (c.opcode == OpCodes.Ldfld && ((FieldInfo)c.operand).Name == "m_spectator")
+                {
+                    last = new CodeInstruction(OpCodes.Ldc_I4_0);
+                    continue;
+                }
+                if (last != null)
+                    yield return last;
+                last = c;
+            }
+            yield return last;
+        }
+    }
+
+    // show parts of the hud in observer mode
+    [HarmonyPatch(typeof(UIElement), "DrawHUD")]
+    class MPObserverHUD
+    {
+        static float getAlphaEyeGaze(UIElement uie, string pos)
+        {
+            return (float)typeof(UIElement).GetMethod("getAlphaEyeGaze", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(
+                                uie, new object[] { pos });
+        }
+
+        static void DrawMpScoreboardRaw(UIElement uie, Vector2 vector)
+        {
+            typeof(UIElement).GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(
+                    uie, new object[] { vector });
+        }
+
+        static void Prefix(UIElement __instance)
+        {
+            if (!GameManager.m_local_player.m_spectator || !GameplayManager.ShowHud || Overload.NetworkManager.IsHeadless() ||
+                GameManager.m_local_player.m_pregame)
+                return;
+
+            var uie = __instance;
+            float alpha = uie.m_alpha;
+            uie.m_alpha *= UIElement.HUD_ALPHA;
+            uie.DrawMessages();
+
+            Vector2 vector;
+            if (!GameplayManager.ShowMpScoreboard)
+            {
+                vector.y = UIManager.UI_TOP + 70f;
+                vector.x = UIManager.UI_RIGHT - 20f;
+                uie.m_alpha = Mathf.Min(getAlphaEyeGaze(uie, "upperright"), uie.m_alpha);
+                //uie.DrawXPTotalSmall(vector);
+                vector.y += 26f;
+                vector.x -= 89f;
+                uie.DrawHUDScoreInfo(vector);
+            }
+            else
+            {
+                vector.y = -240f;
+                vector.x = 0f;
+                uie.DrawStringSmall(NetworkMatch.GetModeString(MatchMode.NUM), vector, 0.75f, StringOffset.CENTER, UIManager.m_col_ui5, 1f, -1f);
+                vector.y += 25f;
+                uie.DrawStringSmall(GameplayManager.Level.DisplayName, vector, 0.5f, StringOffset.CENTER, UIManager.m_col_ui1, 1f, -1f);
+                vector.y += 35f;
+                DrawMpScoreboardRaw(uie, vector);
+            }
+            uie.m_alpha = alpha;
         }
     }
 }
