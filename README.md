@@ -39,6 +39,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Allows MP with up to 8 teams (server and all clients must run olmod)
 
+- Writes ServerStatLog.txt on server (by luponix)
+
 #### How to build
 
 - Open solution in Visual Studio 2017
