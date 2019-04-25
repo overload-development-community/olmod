@@ -31,11 +31,30 @@ namespace GameMod
             return teamIndexList[(int)team];
         }
 
-        public static IEnumerable<MpTeam> Teams { get { return allTeams.Take(NetworkMatchTeamCount); } }
+        public static IEnumerable<MpTeam> Teams
+        {
+            get {
+                return allTeams.Take(NetworkMatchTeamCount);
+            }
+        }
+
+        public static IEnumerable<MpTeam> ActiveTeams
+        {
+            get
+            {
+                int[] team_counts = new int[(int)MPTeams.MPTEAM_NUM];
+                foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
+                    if (!player.m_spectator)
+                        team_counts[(int)player.m_mp_team]++;
+                foreach (var team in allTeams)
+                    if (team_counts[(int)team] > 0)
+                        yield return team;
+            }
+        }
 
         public static IEnumerable<MpTeam> TeamsByScore {
             get {
-                var teams = Teams.ToArray();
+                var teams = ActiveTeams.ToArray();
                 Array.Sort<MpTeam>(teams, new Comparison<MpTeam>((i1, i2) => {
                     var n = NetworkMatch.m_team_scores[(int)i2].CompareTo(NetworkMatch.m_team_scores[(int)i1]);
                     return n == 0 ? i1.CompareTo(i2) : n;
@@ -323,7 +342,7 @@ namespace GameMod
             pos.y -= 3f;
 
             MpTeam myTeam = GameManager.m_local_player.m_mp_team;
-            foreach (var team in MPTeams.Teams)
+            foreach (var team in MPTeams.TeamsByScore)
             {
                 pos.y += 28f;
                 int score = NetworkMatch.GetTeamScore(team);
