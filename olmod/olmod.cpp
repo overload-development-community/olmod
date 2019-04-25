@@ -369,6 +369,10 @@ static void show_msg(const char *msg) {
 	MessageBoxA(0, msg, "olmod", MB_OK);
 }
 
+static void show_wmsg(WCHAR *msg) {
+	MessageBoxW(0, msg, L"olmod", MB_OK);
+}
+
 static int find_game_dir() {
 	HKEY hKey;
 	if (GetFileAttributes(L"Overload_Data") != INVALID_FILE_ATTRIBUTES)
@@ -429,7 +433,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	StringCbCatW(buf, sizeof(buf), L"\\UnityPlayer.dll");
 	HMODULE lib = LoadLibrary(buf);
 	if (!lib) {
-		show_msg("Player lib not found");
+		StringCbCatW(buf, sizeof(buf), L" not found");
+		show_wmsg(buf);
 		return 1;
 	}
 	wWinMain_type UnityMain = (wWinMain_type)GetProcAddress(lib, "UnityMain");
