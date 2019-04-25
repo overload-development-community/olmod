@@ -41,7 +41,7 @@ namespace GameMod
 
         private static void Prefix()
         {
-            if (!Server.IsActive())
+            if (!NetworkManager.IsHeadless())
                 return;
             ServerStatLog.AddLine("START: " + ServerStatLog.FullTime());
         }
@@ -52,7 +52,7 @@ namespace GameMod
     {
         private static void Prefix()
         {
-            if (!Server.IsActive())
+            if (!NetworkManager.IsHeadless())
                 return;
             using (StreamWriter streamWriter = ServerStatLog.OpenLog())
             {
@@ -67,7 +67,7 @@ namespace GameMod
     {
         public static void Prefix(DamageInfo di, PlayerShip __instance)
         {
-            if (!Server.IsActive() || di.damage == 0f ||
+            if (!NetworkManager.IsHeadless() || di.damage == 0f ||
                 __instance.m_death_stats_recorded || __instance.m_cannot_die || __instance.c_player.m_invulnerable)
                 return;
 
@@ -91,7 +91,7 @@ namespace GameMod
     {
         private static void Prefix()
         {
-            if (!Server.IsActive())
+            if (!NetworkManager.IsHeadless())
                 return;
             using (StreamWriter streamWriter = ServerStatLog.OpenLog())
             {
