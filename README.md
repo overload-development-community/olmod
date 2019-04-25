@@ -21,7 +21,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Shows a modified indicator in the main menu
 
-- Allows access to the unfinished Monsterball multiplayer mode.
+- Allows access to the unfinished Monsterball multiplayer mode (with tweaks
+  by terminal).
   The Monsterball multiplayer mode only works when both server and clients run olmod.
 
 - Puts a MP player in observer mode if it uses a pilot name starting with
@@ -40,6 +41,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - Allows MP with up to 8 teams (server and all clients must run olmod)
 
 - Writes ServerStatLog.txt on server (by luponix)
+
+- Fixes MP client homing behaviour (by terminal)
 
 #### How to build
 
