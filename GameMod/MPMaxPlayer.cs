@@ -75,6 +75,57 @@ namespace GameMod
         }
     }
 
+    // set LocalLANHost.DoBackfillRequest max players to 16
+    [HarmonyPatch]
+    class MPMaxPlayerBackfill
+    {
+        static MethodBase TargetMethod()
+        {
+            foreach (var x in typeof(LocalLANHost).GetNestedTypes(BindingFlags.NonPublic))
+                if (x.Name.Contains("DoBackfillRequest")) {
+                    Debug.Log("Found DoBackfillRequest " + x.Name);
+                    return x.GetMethod("MoveNext");
+                }
+            return null;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            int state = 0; // 0 = before first ldc_i4_8, 1 = after
+            foreach (var c in instructions) {
+                if (state == 0 && c.opcode == OpCodes.Ldc_I4_8) {
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 16);
+                    state = 1;
+                    Debug.Log("Patched DoBackfillRequest");
+                    continue;
+                }
+                yield return c;
+            }
+        }
+    }
+
+    // fix receiving broadcast state if the payload is 32 packets (around 12th player join)
+    [HarmonyPatch]
+    class BroadcastStateReadFix
+    {
+        static MethodBase TargetMethod()
+        {
+            return typeof(BroadcastState).GetNestedType("ClientReadState", BindingFlags.NonPublic).GetMethod("ProcessPacket",
+                BindingFlags.Instance | BindingFlags.Public);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            for (int i = 0, len = codes.Count - 1; i < len; i++)
+                if (i > 2 && codes[i].opcode == OpCodes.Ldfld && ((FieldInfo)codes[i].operand).Name == "m_currentPayloadNumSections" &&
+                    codes[i - 2].opcode == OpCodes.Add &&
+                    codes[i + 1].opcode == OpCodes.Blt)
+                    codes[i + 1].opcode = OpCodes.Ble;
+            return codes;
+        }
+    }
+
     // set FindPrivateMatchGrouping max players to 16
     [HarmonyPatch(typeof(NetworkMatch), "FindPrivateMatchGrouping")]
     class MPMaxPlayerFindPMG
@@ -213,6 +264,19 @@ namespace GameMod
         {
             if (__instance.m_snapshots.Length == 8)
                 __instance.m_snapshots = new PlayerSnapshot[16];
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "FindAssistPlayer")]
+    class MPMaxPlayerFindAssistPlayer
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+                if (code.opcode == OpCodes.Ldc_I4_7)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 16 - 1);
+                else
+                    yield return code;
         }
     }
 }
