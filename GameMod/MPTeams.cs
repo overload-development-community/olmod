@@ -106,13 +106,31 @@ namespace GameMod
         {
             float name_offset = -250f;
             float highlight_width = 285f;
+            float org_x = pos.x;
+            int row_count = NetworkMatch.m_players.Count() + MPTeams.NetworkMatchTeamCount;
+            bool split = row_count > 10;
+            if (split) {
+                pos.x -= 300f;
+                pos.y += 50f + 24f;
+            }
+            float org_y = pos.y;
+            float first_y = org_y;
+            int rows_per_col = split ? (row_count + 1) / 2 : row_count;
+            int row_num = 0;
             foreach (var team in Teams)
             {
-                if (team != MpTeam.TEAM0)
-                    pos.y += 10f;
+                if (row_num >= rows_per_col)
+                {
+                    first_y = pos.y;
+                    pos.x += 300f * 2;
+                    pos.y = org_y;
+                    rows_per_col = row_count; // no more split
+                    row_num = 0;
+                }
                 DrawTeamHeader(uie, pos, team, 255f);
-                int num = 0;
                 pos.y += 24f;
+                row_num++;
+                int num = 0;
                 foreach (var value in NetworkMatch.m_players.Values)
                 {
                     if (value.m_team == team)
@@ -120,9 +138,13 @@ namespace GameMod
                         uie.DrawPlayerName(pos, value, num % 2 == 0, highlight_width, name_offset, -1f);
                         pos.y += 20f;
                         num++;
+                        row_num++;
                     }
                 }
+                pos.y += 10f;
             }
+            pos.y = Mathf.Max(first_y, pos.y) + 10f;
+            pos.x = org_x;
             if (MenuManager.m_menu_micro_state != 2 && MenuManager.m_mp_private_match)
             {
                 float alpha_mod = (MenuManager.m_mp_cst_timer > 0f) ? 0.2f : 1f;
@@ -222,7 +244,9 @@ namespace GameMod
     {
         static bool Prefix(UIElement __instance, Vector2 pos)
         {
-            if (!MenuManager.mp_display_player_list || !NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || MPTeams.NetworkMatchTeamCount == 2)
+            if (!MenuManager.mp_display_player_list ||
+                ((!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || MPTeams.NetworkMatchTeamCount == 2) &&
+                NetworkMatch.GetMaxPlayersForMatch() <= 8))
                 return true;
             MPTeams.DrawLobby(__instance, pos);
             return false;
@@ -478,7 +502,7 @@ namespace GameMod
         static bool DrawLast(UIElement uie)
         {
             if (MenuManager.m_menu_micro_state != 0)
-                return true;
+                return MenuManager.m_menu_micro_state == 1 ? DrawLastQuit(uie) : true;
             Vector2 position;
             position.x = 0f;
             position.y = 170f + 62f * 2;
@@ -495,18 +519,30 @@ namespace GameMod
             return false;
         }
 
-        static void DrawDigitsOne(UIElement uie, Vector2 pos, int value, float scl, Color c, float a)
+        static bool DrawLastQuit(UIElement uie)
+        {
+            Vector2 position;
+            position.x = 0f;
+            position.y = 170f + 62f * 2;
+            uie.SelectAndDrawItem(Loc.LS("QUIT"), position, 0, false, 1f, 0.75f);
+            position.y += 62f;
+            uie.SelectAndDrawItem(Loc.LS("CANCEL"), position, 100, false, 1f, 0.75f);
+            return false;
+        }
+
+        static void DrawDigitsLikeOne(UIElement uie, Vector2 pos, int value, float scl, Color c, float a)
         {
             uie.DrawStringSmall(value.ToString(), pos + Vector2.right * 15f, scl, StringOffset.RIGHT, c, a);
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            int state = 0; // 0 = before switch, 1 = after switch
             for (var codes = instructions.GetEnumerator(); codes.MoveNext(); )
             {
                 var code = codes.Current;
-                // replace code in first switch m_menu_micro_state case (case 0)
-                if (code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "m_menu_micro_state")
+                // add call before switch m_menu_micro_state
+                if (state == 0 && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "m_menu_micro_state")
                 {
                     yield return code;
                     codes.MoveNext();
@@ -515,17 +551,19 @@ namespace GameMod
                     if (code.opcode != OpCodes.Stloc_S)
                         continue;
                     var buf = new List<CodeInstruction>();
-                    while (codes.MoveNext() && codes.Current.opcode != OpCodes.Br)
-                        buf.Add(codes.Current);
-                    code = codes.Current;
+                    // find br to end of switch just after switch instruction
+                    while (codes.MoveNext() && (code = codes.Current).opcode != OpCodes.Br)
+                        buf.Add(code);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawLast"));
-                    yield return new CodeInstruction(OpCodes.Brfalse, code.operand);
+                    yield return new CodeInstruction(OpCodes.Brfalse, code.operand); // returns false? skip to end of switch
+                    // preserve switch jump
                     foreach (var bcode in buf)
                         yield return bcode;
+                    state = 1;
                 }
-                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawDigitsOne")
-                    code.operand = AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawDigitsOne");
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawDigitsOne") // allow >9 with same positioning
+                    code.operand = AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawDigitsLikeOne");
                 yield return code;
             }                
         }
@@ -857,14 +895,15 @@ namespace GameMod
     {
         static void Postfix()
         {
+            var prev_dir = UIManager.m_select_dir;
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE && 
                 (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
                 MenuManager.m_menu_micro_state == 2 &&
                 UIManager.m_menu_selection == 8) {
                 MPTeams.MenuManagerTeamCount = MPTeams.Min +
-                    (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
+                    (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + prev_dir) %
                     (MPTeams.Max - MPTeams.Min + 1);
-                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                MenuManager.PlayCycleSound(1f, (float)prev_dir);
             }
         }
     }
