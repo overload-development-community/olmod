@@ -67,6 +67,7 @@
   <ItemGroup>
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
+    <Compile Include="MatchmakerLog.cs" />
     <Compile Include="Monsterball.cs" />
     <Compile Include="MPHoming.cs" />
     <Compile Include="MPMaxPlayer.cs" />
