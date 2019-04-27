@@ -10,7 +10,7 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        private static readonly string version = "olmod 0.1.7";
+        private static readonly string version = "olmod 0.1.8";
 
         internal static void Initialize()
         {
