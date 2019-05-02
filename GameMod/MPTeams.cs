@@ -245,8 +245,8 @@ namespace GameMod
         static bool Prefix(UIElement __instance, Vector2 pos)
         {
             if (!MenuManager.mp_display_player_list ||
-                ((!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || MPTeams.NetworkMatchTeamCount == 2) &&
-                NetworkMatch.GetMaxPlayersForMatch() <= 8))
+                ((!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || MPTeams.NetworkMatchTeamCount == 2))) // &&
+                //NetworkMatch.GetMaxPlayersForMatch() <= 8))
                 return true;
             MPTeams.DrawLobby(__instance, pos);
             return false;
