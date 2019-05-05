@@ -732,6 +732,7 @@ namespace GameMod
         }
     }
 
+    /*
     public class TeamCountMessage : MessageBase
     {
         public override void Serialize(NetworkWriter writer)
@@ -745,7 +746,6 @@ namespace GameMod
         public int m_team_count;
     }
 
-    /*
     public class ModCustomMsg
     {
         public const short MsgTeamCount = 101;
