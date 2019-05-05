@@ -1,5 +1,8 @@
 ﻿using Harmony;
 using Overload;
+using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace GameMod
 {
@@ -24,6 +27,16 @@ namespace GameMod
                 message = string.Format(message, args).Replace("\r\n", " ");
                 args = null;
             }
+        }
+    }
+
+    // Log analytics event
+    [HarmonyPatch(typeof(GameManager), "AnalyticsCustomEvent")]
+    class LogAnalytics
+    {
+        private static void Prefix(string customEventName, IDictionary<string, object> eventData)
+        {
+            Debug.Log("AnalyticsCustomEvent " + customEventName + " " + eventData.Join());
         }
     }
 
@@ -72,16 +85,48 @@ namespace GameMod
         static void Postfix(DistributedMatchUp.Match __result)
         {
             var m = __result;
-            Debug.Log(DateTime.Now.ToString() + " " + Process.GetCurrentProcess().Id + ": received " + (m == null ? "null" : m.uid + " type " + m.matchData["mm_ticketType"] + " tickets " + m.matchData.GetValueSafe("mm_mmTickets")));
+            Debug.Log(DateTime.Now.ToString() + " " + System.Diagnostics.Process.GetCurrentProcess().Id + ": received " + (m == null ? "null" : m.uid + " type " + m.matchData["mm_ticketType"] + " tickets " + m.matchData.GetValueSafe("mm_mmTickets")));
         }
     }
 
     [HarmonyPatch(typeof(DistributedMatchUp), "Overload.IBroadcastStateReceiver.OnClientStateUpdate")]
     class MPMaxPlayerOnClientStateUpdate
     {
-        static void Postfix(Dictionary<IPEndPointProcessId, DistributedMatchUp.Match> ___m_remoteMatches, IPEndPointProcessId sender)
+        static void Postfix(Dictionary<IPEndPointProcessId, DistributedMatchUp.Match> ___m_remoteMatches, IPEndPointProcessId sender, DistributedMatchUp __instance)
         {
-            Debug.Log(DateTime.Now.ToString() + " " + Process.GetCurrentProcess().Id + ": sender " + sender + " all: " + ___m_remoteMatches.Join());
+            Debug.Log(DateTime.Now.ToString() + " " + System.Diagnostics.Process.GetCurrentProcess().Id + " OnClientStateUpdate: sender " + sender + " all: " +
+                ___m_remoteMatches.Join(x => x.Key + "[" + x.Value.uid + " " + x.Value.matchData.GetValueSafe("mm_ticketType") + " " + x.Value.matchData.GetValueSafe("mm_mmTickets") + "]"));
+        }
+    }
+
+    [HarmonyPatch(typeof(DistributedMatchUp), "Overload.IBroadcastStateReceiver.OnClientDisconnect")]
+    class LogDMUDisconnect
+    {
+        private static void Postfix(IPEndPointProcessId sender)
+        {
+            Debug.LogFormat("{0} {1} disconnect {2}", DateTime.Now.ToString(), System.Diagnostics.Process.GetCurrentProcess().Id, sender);
+        }
+    }
+
+    // Log Client AddPlayer
+    [HarmonyPatch(typeof(Client), "AddPlayer")]
+    class LogClientAddPlayer
+    {
+        private static void Prefix()
+        {
+            UnityEngine.Networking.LogFilter.currentLogLevel = UnityEngine.Networking.LogFilter.Debug;
+            Debug.Log("Client.AddPlayer");
+        }
+    }
+
+    // Log scene loaded
+    [HarmonyPatch(typeof(GameplayManager), "OnSceneLoaded")]
+    class LogGPMOnSceneLoaded
+    {
+        private static void Postfix()
+        {
+            Debug.LogFormat("GameplayManager OnSceneLoaded GameplayManager.LevelIsLoaded={0}, DynamicGI.isConverged={1} GameManager.m_local_player.isLocalPlayer={2}",
+                GameplayManager.LevelIsLoaded, DynamicGI.isConverged, GameManager.m_local_player.isLocalPlayer);
         }
     }
     */
