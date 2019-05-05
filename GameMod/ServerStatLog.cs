@@ -67,12 +67,15 @@ namespace GameMod
     {
         public static void Prefix(DamageInfo di, PlayerShip __instance)
         {
-            if (!NetworkManager.IsHeadless() || di.damage == 0f ||
+            if (!NetworkManager.IsHeadless() || di.damage == 0f || di.owner == null ||
                 __instance.m_death_stats_recorded || __instance.m_cannot_die || __instance.c_player.m_invulnerable)
+                return;
+            var otherPlayer = di.owner.GetComponent<Player>();
+            if (otherPlayer == null)
                 return;
 
             string mp_name = __instance.c_player.m_mp_name;
-            string mp_name2 = di.owner.GetComponent<Player>().m_mp_name;
+            string mp_name2 = otherPlayer.m_mp_name;
             float hitpoints = __instance.c_player.m_hitpoints;
 
             bool killed = false;
