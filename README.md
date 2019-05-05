@@ -1,6 +1,6 @@
 ## olmod - Overload mod
 
-**Loader for full custom Overload scripting**
+**Community mods for Overload**
 
 [Overload](https://playoverload.com) is a registered trademark of [Revival Productions, LLC](https://www.revivalprod.com).
 This is an unaffiliated, unsupported tool. Use at your own risk.
@@ -43,6 +43,12 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - Writes ServerStatLog.txt on server (by luponix)
 
 - Fixes MP client homing behaviour (by terminal)
+
+- Allows shoot to open doors in MP
+
+- Allows pasting in the MP password field
+
+- Allows joining in progress matches when enabled for the match
 
 #### How to build
 
