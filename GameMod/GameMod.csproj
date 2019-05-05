@@ -55,6 +55,10 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.Networking, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\UnityEngine.Networking.dll</HintPath>
@@ -67,11 +71,15 @@
   <ItemGroup>
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
+    <Compile Include="MPJoinInProgress.cs" />
     <Compile Include="MatchmakerLog.cs" />
     <Compile Include="Monsterball.cs" />
+    <Compile Include="MPDoors.cs" />
     <Compile Include="MPHoming.cs" />
     <Compile Include="MPMaxPlayer.cs" />
     <Compile Include="MPObserver.cs" />
+    <Compile Include="MPPwdPaste.cs" />
+    <Compile Include="MPSetup.cs" />
     <Compile Include="MPTeams.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PresetData.cs" />
