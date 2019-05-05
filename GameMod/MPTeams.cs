@@ -107,15 +107,16 @@ namespace GameMod
             float name_offset = -250f;
             float highlight_width = 285f;
             float org_x = pos.x;
-            int row_count = NetworkMatch.m_players.Count() + MPTeams.NetworkMatchTeamCount;
-            bool split = row_count > 10;
+            int max_row_count = NetworkMatch.GetMaxPlayersForMatch() + MPTeams.NetworkMatchTeamCount;
+            int cur_row_count = NetworkMatch.m_players.Count() + MPTeams.NetworkMatchTeamCount;
+            bool split = max_row_count > 10;
             if (split) {
                 pos.x -= 300f;
                 pos.y += 50f + 24f;
             }
             float org_y = pos.y;
             float first_y = org_y;
-            int rows_per_col = split ? (row_count + 1) / 2 : row_count;
+            int rows_per_col = split ? (cur_row_count + 1) / 2 : cur_row_count;
             int row_num = 0;
             foreach (var team in Teams)
             {
@@ -124,7 +125,7 @@ namespace GameMod
                     first_y = pos.y;
                     pos.x += 300f * 2;
                     pos.y = org_y;
-                    rows_per_col = row_count; // no more split
+                    rows_per_col = cur_row_count; // no more split
                     row_num = 0;
                 }
                 DrawTeamHeader(uie, pos, team, 255f);
