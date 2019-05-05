@@ -777,73 +777,6 @@ namespace GameMod
     }
     */
 
-    [HarmonyPatch(typeof(NetworkMatch), "SetDefaultMatchSettings")]
-    class MPTeamsDefault
-    {
-        public static void Postfix()
-        {
-            MPTeams.NetworkMatchTeamCount = 2;
-        }
-    }
-
-    [HarmonyPatch(typeof(NetworkMatch), "ApplyPrivateMatchSettings")]
-    class MPTeamsApplyPMD
-    {
-        static void Postfix()
-        {
-            Debug.Log("Apply PMD name " + String.Join(",", NetworkMatch.m_name.Select(x => ((int)x).ToString()).ToArray()));
-            var i = NetworkMatch.m_name.IndexOf('\0');
-            if (i == -1)
-            {  
-                MPTeamsDefault.Postfix();
-            }
-            else
-            {
-                MPTeams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
-    class MPTeamsAcceptedToLobby
-    {
-        static void Postfix()
-        {
-            Debug.Log("Accepted PMD name " + String.Join(",", NetworkMatch.m_name.Select(x => ((int)x).ToString()).ToArray()));
-            var i = NetworkMatch.m_name.IndexOf('\0');
-            if (i == -1)
-            {
-                MPTeamsDefault.Postfix();
-            }
-            else
-            {
-                MPTeams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuManager), "BuildPrivateMatchData")]
-    class MPTeamsBuildPMD
-    {
-        static void Postfix(PrivateMatchDataMessage __result)
-        {
-            if (MPTeams.MenuManagerTeamCount > 2 && MenuManager.m_mp_lan_match)
-            {
-                __result.m_name += new string(new char[] { '\0', (char)(Math.Max(2, MPTeams.MenuManagerTeamCount) - 2) });
-            }
-            Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuManager), "InitMpPrivateMatch")]
-    class MPTeamsMenuInit
-    {
-        static void Postfix()
-        {
-            MPTeams.MenuManagerTeamCount = 2;
-        }
-    }
-
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class MPTeamsMenuDraw
     {
@@ -853,8 +786,6 @@ namespace GameMod
                 return;
             Vector2 position = Vector2.zero;
             position.y = -217f + 62f * 6;
-            //AccessTools.Method(typeof(MenuManager), "SelectAndDrawStringOptionItem").Invoke(__instance,
-            //    new object[] { Loc.LS("TEAM COUNT"), position, 8, MPTeams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f, false });
             __instance.SelectAndDrawStringOptionItem("TEAM COUNT", position, 8, MPTeams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f,
                 MenuManager.mms_mode == MatchMode.ANARCHY || !MenuManager.m_mp_lan_match);
         }
