@@ -69,6 +69,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Console.cs" />
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
     <Compile Include="MPJoinInProgress.cs" />

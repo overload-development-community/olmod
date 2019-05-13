@@ -68,10 +68,21 @@ namespace GameMod
     [HarmonyPatch(typeof(MenuManager), "InitMpPrivateMatch")]
     class MPSetupMenuInit
     {
-        static void Postfix()
+        public static void Postfix()
         {
             MPTeams.MenuManagerTeamCount = 2;
             MPJoinInProgress.MenuManagerEnabled = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(MenuManager), "SetPreferencesDefaults")]
+    class MPSetupMenuDefault
+    {
+        static void Postfix()
+        {
+            MPSetupMenuInit.Postfix();
+            Console.KeyEnabled = false;
+            Console.CustomUIColor = 0;
         }
     }
 
@@ -82,6 +93,8 @@ namespace GameMod
         {
             MPTeams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             MPJoinInProgress.MenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
+            Console.KeyEnabled = MenuManager.LocalGetBool("O_CONSOLE_KEY", Console.KeyEnabled);
+            Console.CustomUIColor = MenuManager.LocalGetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
         }
     }
 
@@ -92,6 +105,8 @@ namespace GameMod
         {
             MenuManager.LocalSetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             MenuManager.LocalSetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
+            MenuManager.LocalSetBool("O_CONSOLE_KEY", Console.KeyEnabled);
+            MenuManager.LocalSetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
