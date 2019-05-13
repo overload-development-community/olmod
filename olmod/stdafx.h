@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <strsafe.h>
 #include <dbghelp.h>
+#include <shellapi.h>
 
 // C RunTime Header Files
 #include <stdlib.h>

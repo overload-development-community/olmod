@@ -373,23 +373,71 @@ static void show_wmsg(WCHAR *msg) {
 	MessageBoxW(0, msg, L"olmod", MB_OK);
 }
 
+static int is_game_dir_ok() {
+	static WCHAR buf[MAX_PATH];
+	DWORD attr;
+
+	if (StringCbCopyW(buf, sizeof(buf), game_dir) ||
+		StringCbCatW(buf, sizeof(buf), L"\\Overload_Data"))
+		return 0;
+	attr = GetFileAttributes(buf);
+	if (attr == INVALID_FILE_ATTRIBUTES || !(attr & FILE_ATTRIBUTE_DIRECTORY))
+		return 0;
+	if (StringCbCopyW(buf, sizeof(buf), game_dir) ||
+		StringCbCatW(buf, sizeof(buf), L"\\UnityPlayer.dll"))
+		return 0;
+	attr = GetFileAttributes(buf);
+	if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY))
+		return 0;
+	return 1;
+}
+
+static int set_game_dir_from_args() {
+	LPWSTR *szArglist;
+	int nArgs, i;
+
+	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+	if (szArglist) {
+		for (i = 1; i < nArgs - 1; i++)
+			if (lstrcmpiW(szArglist[i], L"-gamedir") == 0 &&
+				!StringCbCopyW(game_dir, sizeof(game_dir), szArglist[i + 1])) {
+				LocalFree(szArglist);
+				return 1;
+			}
+		LocalFree(szArglist);
+	}
+	return 0;
+}
+
 static int find_game_dir() {
 	HKEY hKey;
-	if (GetFileAttributes(L"Overload_Data") != INVALID_FILE_ATTRIBUTES)
-		if (GetCurrentDirectory(sizeof(game_dir) / sizeof(game_dir[0]), game_dir) != 0)
+
+	if (GetCurrentDirectory(sizeof(game_dir) / sizeof(game_dir[0]), game_dir) != 0) {
+		WCHAR *p;
+		if (is_game_dir_ok())
 			return 1;
+		// check parent directory
+		p = game_dir + lstrlenW(game_dir);
+		while (p > game_dir && *--p != '\\')
+			;
+		if (p > game_dir) {
+			*p = 0;
+			if (is_game_dir_ok())
+				return 1;
+		}
+	}
 	if (RegOpenKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 448850",
 		&hKey) == ERROR_SUCCESS) {
 		DWORD val_len = sizeof(game_dir);
 		if (RegQueryValueEx(hKey, L"InstallLocation",
-			NULL, NULL, (LPBYTE)game_dir, &val_len) == ERROR_SUCCESS)
+			NULL, NULL, (LPBYTE)game_dir, &val_len) == ERROR_SUCCESS && is_game_dir_ok())
 			return 1;
 	}
 	if (RegOpenKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\GOG.com\\Games\\1309632191",
 		&hKey) == ERROR_SUCCESS) {
 		DWORD val_len = sizeof(game_dir);
 		if (RegQueryValueEx(hKey, L"path",
-			NULL, NULL, (LPBYTE)game_dir, &val_len) == ERROR_SUCCESS)
+			NULL, NULL, (LPBYTE)game_dir, &val_len) == ERROR_SUCCESS && is_game_dir_ok())
 			return 1;
 	}
 	return 0;
@@ -404,8 +452,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	static WCHAR buf[256 + 64], *p;
 
-	if (!find_game_dir()) {
-		show_msg("Game directory not found!");
+	if (set_game_dir_from_args()) {
+		if (!is_game_dir_ok()) {
+			show_msg("Cannot find game in directory specified with -gamedir!");
+			return 1;
+		}
+	} else if (!find_game_dir()) {
+		show_msg("Game directory not found! Specify manually with -gamedir or copy olmod to the game directory.");
 		return 1;
 	}
 
