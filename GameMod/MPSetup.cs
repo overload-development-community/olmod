@@ -60,6 +60,8 @@ namespace GameMod
                     (MPJoinInProgress.MenuManagerEnabled ? 8 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
+            if (MPJoinInProgress.MenuManagerEnabled)
+                __result.m_num_players_to_start = 1;
         }
     }
 

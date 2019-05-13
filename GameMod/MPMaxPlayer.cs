@@ -136,6 +136,11 @@ namespace GameMod
             var codes = new List<CodeInstruction>(instructions);
             for (var i = 0; i < codes.Count; i++)
             {
+                if (n == 0 && codes[i].opcode == OpCodes.Ldc_I4_2) // set initial min_players to 1, for join-in-progress
+                {
+                    codes[i].opcode = OpCodes.Ldc_I4_1;
+                    n++;
+                }
                 if (codes[i].opcode == OpCodes.Ldc_I4_8)
                 {
                     codes[i].opcode = OpCodes.Ldc_I4;

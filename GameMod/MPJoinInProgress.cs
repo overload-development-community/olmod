@@ -283,4 +283,34 @@ namespace GameMod
             }
         }
     }
+
+    // Send min_num_players 1 instead of 2 for creating join-in-progress match. Depends on FindPrivateMatchGrouping patch in MPMaxPlayer
+    [HarmonyPatch(typeof(NetworkMatch), "StartMatchMakerRequest")]
+    class JIPMinPlayerPatch
+    {
+        public static void FinalizeRequest(MatchmakerPlayerRequest req)
+        {
+            if (MPJoinInProgress.MenuManagerEnabled)
+                req.PlayerAttributes["min_num_players"] = 1;
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            LocalBuilder reqVar = null;
+            CodeInstruction last = null;
+            foreach (var code in codes)
+            {
+                if (last != null && last.opcode == OpCodes.Newobj && ((ConstructorInfo)last.operand).ReflectedType == typeof(MatchmakerPlayerRequest) &&
+                    (code.opcode == OpCodes.Stloc || code.opcode == OpCodes.Stloc_S))
+                    reqVar = (LocalBuilder)code.operand;
+                if (reqVar != null && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "m_system_game_client")
+                {
+                    yield return new CodeInstruction(OpCodes.Ldloc, reqVar);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMinPlayerPatch), "FinalizeRequest"));
+                }
+                yield return code;
+                last = code;
+            }
+        }
+    }
 }
