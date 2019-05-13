@@ -159,9 +159,33 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "OnReadyForCountdownToServer")]
     class JIPReadyForCountdown
     {
+        private static void SendMatchState(int connectionId)
+        {
+            var n = Overload.NetworkManager.m_Players.Count;
+            var msg = new MatchStateMessage() {
+                m_match_elapsed_seconds = NetworkMatch.m_match_elapsed_seconds, 
+                m_player_states = new PlayerMatchState[n] };
+            int i = 0;
+            foreach (var player in Overload.NetworkManager.m_Players)
+                msg.m_player_states[i++] = new PlayerMatchState() {
+                    m_net_id = player.netId, m_kills = player.m_kills, m_deaths = player.m_deaths, m_assists = player.m_assists };
+            NetworkServer.SendToClient(connectionId, ModCustomMsg.MsgSetMatchState, msg);
+        }
+
         private static IEnumerator MatchStart(int connectionId)
         {
-            int pregameWait = 3;
+            var newPlayer = Server.FindPlayerByConnectionId(connectionId);
+            if (newPlayer.m_mp_name.StartsWith("OBSERVER")) {
+                Debug.LogFormat("Enabling spectator for {0}", newPlayer.m_mp_name);
+                newPlayer.Networkm_spectator = true;
+                Debug.LogFormat("Enabled spectator for {0}", newPlayer.m_mp_name);
+            }
+
+            int pregameWait = newPlayer.Networkm_spectator ? 0 : 3;
+            //Debug.Log("SendLoadoutDataToClients: " + NetworkMatch.m_player_loadout_data.Join());
+            // restore lobby_id which got wiped out in Client.OnSetLoadout
+            foreach (var idData in NetworkMatch.m_player_loadout_data)
+                idData.Value.lobby_id = idData.Key;
             Server.SendLoadoutDataToClients();
             IntegerMessage durationMsg = new IntegerMessage(pregameWait * 1000);
             NetworkServer.SendToClient(connectionId, CustomMsgType.StartPregameCountdown, durationMsg);
@@ -169,20 +193,24 @@ namespace GameMod
             yield return new WaitForSeconds(pregameWait);
             IntegerMessage modeMsg = new IntegerMessage((int)NetworkMatch.GetMode());
             NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
-            NetworkSpawnPlayer.Respawn(Server.FindPlayerByConnectionId(connectionId).c_player_ship);
+            SendMatchState(connectionId);
+            NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != connectionId)
+                if (player.connectionToClient.connectionId == connectionId)
+                    continue;
+                // Resend mode for existing player to move h2h -> anarchy
+                NetworkServer.SendToClient(player.connectionToClient.connectionId, CustomMsgType.MatchStart, modeMsg);
+
+                //Debug.Log("JIP: spawning on new client net " + player.netId + " lobby " + player.connectionToClient.connectionId);
+                NetworkServer.SendToClient(connectionId, CustomMsgType.Respawn, new RespawnMessage
                 {
-                    NetworkServer.SendToClient(connectionId, CustomMsgType.Respawn, new RespawnMessage
-                    {
-                        m_net_id = player.netId,
-                        lobby_id = player.connectionToClient.connectionId,
-                        m_pos = player.transform.position,
-                        m_rotation = player.transform.rotation,
-                        use_loadout1 = player.m_use_loadout1
-                    });
-                }
+                    m_net_id = player.netId,
+                    lobby_id = player.connectionToClient.connectionId,
+                    m_pos = player.transform.position,
+                    m_rotation = player.transform.rotation,
+                    use_loadout1 = player.m_use_loadout1
+                });
             }
         }
 
@@ -311,6 +339,79 @@ namespace GameMod
                 yield return code;
                 last = code;
             }
+        }
+    }
+
+    public class PlayerMatchState
+    {
+        public NetworkInstanceId m_net_id;
+        public int m_kills;
+        public int m_deaths;
+        public int m_assists;
+    }
+
+    public class MatchStateMessage : MessageBase
+    {
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write((byte)0); // version
+            writer.Write(m_match_elapsed_seconds);
+            writer.WritePackedUInt32((uint)m_player_states.Length);
+            foreach (var pl_state in m_player_states)
+            {
+                writer.Write(pl_state.m_net_id);
+                writer.WritePackedUInt32((uint)pl_state.m_kills);
+                writer.WritePackedUInt32((uint)pl_state.m_deaths);
+                writer.WritePackedUInt32((uint)pl_state.m_assists);
+            }
+        }
+        public override void Deserialize(NetworkReader reader)
+        {
+            var version = reader.ReadByte();
+            m_match_elapsed_seconds = reader.ReadSingle();
+            var n = reader.ReadPackedUInt32();
+            m_player_states = new PlayerMatchState[n];
+            for (int i = 0; i < n; i++)
+                m_player_states[i] = new PlayerMatchState() {
+                    m_net_id = reader.ReadNetworkId(),
+                    m_kills = (int)reader.ReadPackedUInt32(),
+                    m_deaths = (int)reader.ReadPackedUInt32(),
+                    m_assists = (int)reader.ReadPackedUInt32()
+                };
+        }
+        public float m_match_elapsed_seconds;
+        public PlayerMatchState[] m_player_states;
+    }
+
+    public class ModCustomMsg
+    {
+        public const short MsgSetMatchState = 101;
+    }
+
+    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
+    class JIPClientHandlers
+    {
+        private static void OnSetMatchStateMsg(NetworkMessage msg)
+        {
+            var msmsg = msg.ReadMessage<MatchStateMessage>();
+            NetworkMatch.m_match_elapsed_seconds = msmsg.m_match_elapsed_seconds;
+            foreach (var pl_state in msmsg.m_player_states) {
+                GameObject gameObject = ClientScene.FindLocalObject(pl_state.m_net_id);
+                if (gameObject == null)
+                    continue;
+                var player = gameObject.GetComponent<Player>();
+                player.m_kills = pl_state.m_kills;
+                player.m_deaths = pl_state.m_deaths;
+                player.m_assists = pl_state.m_assists;
+            }
+            NetworkMatch.SortAnarchyPlayerList();
+        }
+
+        static void Postfix()
+        {
+            if (Client.GetClient() == null)
+                return;
+            Client.GetClient().RegisterHandler(ModCustomMsg.MsgSetMatchState, OnSetMatchStateMsg);
         }
     }
 }
