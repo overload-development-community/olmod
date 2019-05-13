@@ -50,6 +50,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Allows joining in progress matches when enabled for the match
 
+- Adds option to enable console with ` key
+
+- Adds console commands: xp, reload_missions, mipmap_bias, ui_color
+
 #### How to build
 
 - Open solution in Visual Studio 2017
