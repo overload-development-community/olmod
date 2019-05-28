@@ -13,7 +13,7 @@ namespace GameMod
         public static bool KeyEnabled;
         public static int CustomUIColor;
 
-        static void CmdReloadMissions()
+        public static void CmdReloadMissions()
         {
             MBLevelPatch.SLInit = false;
             typeof(GameManager).GetMethod("InitializeMissionList", AccessTools.all).Invoke(GameManager.m_gm, null);

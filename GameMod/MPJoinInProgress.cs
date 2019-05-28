@@ -195,6 +195,8 @@ namespace GameMod
             NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
             SendMatchState(connectionId);
             NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
+            if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
+                newPlayer.CallTargetAddHUDMessage(newPlayer.connectionToClient, "REARVIEW ENABLED", -1, true);
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
                 if (player.connectionToClient.connectionId == connectionId)
@@ -281,17 +283,28 @@ namespace GameMod
                 MenuManager.GetToggleSetting(MPJoinInProgress.MenuManagerEnabled ? 1 : 0),
                 Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1.5f, !MenuManager.m_mp_lan_match);
             position.y += 62f;
+            if (false) // waits on olmod server detection
+            {
+                uie.SelectAndDrawStringOptionItem(Loc.LS("REAR VIEW MIRROR"), position, 8,
+                    MenuManager.GetToggleSetting(RearView.MPMenuManagerEnabled ? 1 : 0),
+                    Loc.LS("ENABLE REAR VIEW MIRROR"), 1.5f, !MenuManager.m_mp_lan_match);
+                position.y += 62f;
+            }
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            int state = 0;
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
+                if (state == 0 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
+                    code.operand = 155f + 62f;
+                if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchJIP"));
+                    state = 1;
                 }
                 yield return code;
             }
@@ -307,9 +320,12 @@ namespace GameMod
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
                 (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
                 MenuManager.m_menu_micro_state == 3 &&
-                UIManager.m_menu_selection == 7)
+                (UIManager.m_menu_selection == 7 || UIManager.m_menu_selection == 8))
             {
-                MPJoinInProgress.MenuManagerEnabled = !MPJoinInProgress.MenuManagerEnabled;
+                if (UIManager.m_menu_selection == 7)
+                    MPJoinInProgress.MenuManagerEnabled = !MPJoinInProgress.MenuManagerEnabled;
+                if (UIManager.m_menu_selection == 8)
+                    RearView.MPMenuManagerEnabled = !RearView.MPMenuManagerEnabled;
                 MenuManager.PlayCycleSound(1f, (float)prev_dir);
             }
         }

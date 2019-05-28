@@ -1,12 +1,15 @@
 ﻿using Harmony;
+using Newtonsoft.Json.Linq;
 using Overload;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod
 {
@@ -65,11 +68,12 @@ namespace GameMod
     {
         static void Postfix(PrivateMatchDataMessage __result)
         {
-            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled) && MenuManager.m_mp_lan_match)
+            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || RearView.MPMenuManagerEnabled) && MenuManager.m_mp_lan_match)
             {
                 __result.m_name += new string(new char[] { '\0', (char)(
                     ((Math.Max(2, MPTeams.MenuManagerTeamCount) - 2) & 7) |
-                    (MPJoinInProgress.MenuManagerEnabled ? 8 : 0))});
+                    (MPJoinInProgress.MenuManagerEnabled ? 8 : 0) |
+                    (RearView.MPMenuManagerEnabled ? 16 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
             if (MPJoinInProgress.MenuManagerEnabled)
@@ -84,6 +88,7 @@ namespace GameMod
         {
             MPTeams.MenuManagerTeamCount = 2;
             MPJoinInProgress.MenuManagerEnabled = false;
+            RearView.MPMenuManagerEnabled = false;
         }
     }
 
@@ -105,6 +110,7 @@ namespace GameMod
         {
             MPTeams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             MPJoinInProgress.MenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
+            RearView.MPMenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
             Console.KeyEnabled = MenuManager.LocalGetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             Console.CustomUIColor = MenuManager.LocalGetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
         }
@@ -117,6 +123,7 @@ namespace GameMod
         {
             MenuManager.LocalSetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             MenuManager.LocalSetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
+            MenuManager.LocalSetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
             MenuManager.LocalSetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             MenuManager.LocalSetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
         }

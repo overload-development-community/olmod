@@ -7,6 +7,8 @@ namespace GameMod
     static class RearView
     {
         public static bool Enabled;
+        public static bool MPMenuManagerEnabled;
+        public static bool MPNetworkMatchEnabled;
         public static Camera rearCam;
         public static RenderTexture rearTex;
         static Quaternion m_rear_view_rotation = Quaternion.Euler(0f, 180f, 0f);
@@ -67,7 +69,23 @@ namespace GameMod
         static void Prefix(GameplayState new_state)
         {
             if (new_state != GameplayState.PLAYING)
+            {
                 RearView.Pause();
+            }
+            else if (new_state == GameplayState.PLAYING)
+            {
+                bool want = !NetworkManager.IsHeadless() && RearView.MPNetworkMatchEnabled &&
+                    NetworkMatch.m_client_server_location != null && NetworkMatch.m_client_server_location.StartsWith("OLMOD ") &&
+                    !GameManager.m_local_player.m_spectator;
+                if (want != RearView.Enabled)
+                {
+                    RearView.Enabled = want;
+                    if (RearView.Enabled)
+                        RearView.Init();
+                    else
+                        RearView.Pause();
+                }
+            }
         }
     }
 
@@ -88,7 +106,7 @@ namespace GameMod
             if (!GameplayManager.ShowHud || !RearView.Enabled)
                 return;
             RearView.rearCam.enabled = true;
-            var pos = new Vector2(289f, 289f);
+            var pos = new Vector2(288f, 288f);
             var posTile = new Vector2(pos.x, pos.y - 0.01f);
             var size = 100f;
             UIManager.DrawQuadUI(pos, size, size, UIManager.m_col_ui0, 1, 11);
@@ -101,8 +119,7 @@ namespace GameMod
     }
 
     // detect "rearview" cheat code
-    [HarmonyPatch(typeof(Overload.PlayerShip))]
-    [HarmonyPatch("FrameUpdateReadKeysFromInput")]
+    [HarmonyPatch(typeof(Overload.PlayerShip), "FrameUpdateReadKeysFromInput")]
     class RearViewReadKeys
     {
         private static string code = "rearview";
@@ -121,6 +138,17 @@ namespace GameMod
                         RearView.Toggle();
                 codeIdx = 0;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
+    static class RearViewStartPlaying
+    {
+        static void Postfix()
+        {
+            if (RearView.MPNetworkMatchEnabled)
+                foreach (var player in Overload.NetworkManager.m_Players)
+                    player.CallTargetAddHUDMessage(player.connectionToClient, "REARVIEW ENABLED", -1, true);
         }
     }
 }
