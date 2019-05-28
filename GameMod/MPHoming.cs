@@ -17,7 +17,7 @@ namespace GameMod
         public static bool UseNonFixedHoming(Projectile proj)
         {
             return (proj.m_type == ProjPrefab.missile_hunter || proj.m_type == ProjPrefab.missile_pod) &&
-                !GameplayManager.IsDedicatedServer() && GameplayManager.IsMultiplayer;
+                !GameplayManager.IsDedicatedServer() && GameplayManager.IsMultiplayer && MenuManager.m_mp_lan_match;
         }
     }
 
