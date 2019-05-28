@@ -17,13 +17,14 @@ namespace GameMod
         {
             MPTeams.NetworkMatchTeamCount = 2;
             MPJoinInProgress.NetworkMatchEnabled = false;
+            RearView.MPNetworkMatchEnabled = false;
         }
     }
 
     [HarmonyPatch(typeof(NetworkMatch), "ApplyPrivateMatchSettings")]
     class MPSetupApplyPMD
     {
-        public static void Postfix()
+        public static void ApplyMatchOLModData()
         {
             Debug.Log("Apply PMD name " + String.Join(",", NetworkMatch.m_name.Select(x => ((int)x).ToString()).ToArray()));
             var i = NetworkMatch.m_name.IndexOf('\0');
@@ -35,6 +36,17 @@ namespace GameMod
             {
                 MPTeams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
                 MPJoinInProgress.NetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 8) != 0;
+                RearView.MPNetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 16) != 0;
+            }
+        }
+
+        private static void Postfix(ref bool __result, PrivateMatchDataMessage pmd)
+        {
+            ApplyMatchOLModData();
+            if (!__result) // unknown level
+            {
+                MPDownloadLevel.StartGetLevel(pmd.m_addon_level_name_hash);
+                __result = true;
             }
         }
     }
@@ -44,7 +56,7 @@ namespace GameMod
     {
         static void Postfix()
         {
-            MPSetupApplyPMD.Postfix();
+            MPSetupApplyPMD.ApplyMatchOLModData();
         }
     }
 
