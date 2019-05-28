@@ -255,10 +255,14 @@ namespace GameMod
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             foreach (var code in instructions)
+            {
                 if (code.opcode == OpCodes.Ldc_I4_8)
                     yield return new CodeInstruction(OpCodes.Ldc_I4, 16);
+                else if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 10)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 160);
                 else
                     yield return code;
+            }
         }
     }
 
@@ -280,8 +284,58 @@ namespace GameMod
             foreach (var code in instructions)
                 if (code.opcode == OpCodes.Ldc_I4_7)
                     yield return new CodeInstruction(OpCodes.Ldc_I4, 16 - 1);
+                else if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 10)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 160);
                 else
                     yield return code;
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), MethodType.Constructor)]
+    class MPMaxPlayerDamageRecordSizeIncrease
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            int Ldc_I4_s_10_count = 0;
+
+            foreach (var code in instructions)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 10 &&
+                    ++Ldc_I4_s_10_count == 2)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 160);
+                else
+                    yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "AddRecentDamage")]
+    class MPMaxPlayerAddRecentDamageDamageRecordSizeIncrease
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 10)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 160);
+                else
+                    yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "UpdateNetworkPlayer")]
+    class MPMaxPlayerUpdateNetworkPlayerDamageRecordSizeIncrease
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var code in instructions)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 10)
+                    yield return new CodeInstruction(OpCodes.Ldc_I4, 160);
+                else
+                    yield return code;
+            }
         }
     }
 }
