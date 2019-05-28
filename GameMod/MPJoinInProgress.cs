@@ -321,7 +321,7 @@ namespace GameMod
     {
         public static void FinalizeRequest(MatchmakerPlayerRequest req)
         {
-            if (MPJoinInProgress.MenuManagerEnabled)
+            if (MenuManager.m_mp_lan_match && MPJoinInProgress.MenuManagerEnabled && NetworkMatch.m_match_req_password == "")
                 req.PlayerAttributes["min_num_players"] = 1;
         }
 
