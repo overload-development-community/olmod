@@ -283,13 +283,12 @@ namespace GameMod
                 MenuManager.GetToggleSetting(MPJoinInProgress.MenuManagerEnabled ? 1 : 0),
                 Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1.5f, !MenuManager.m_mp_lan_match);
             position.y += 62f;
-            if (false) // waits on olmod server detection
-            {
-                uie.SelectAndDrawStringOptionItem(Loc.LS("REAR VIEW MIRROR"), position, 8,
-                    MenuManager.GetToggleSetting(RearView.MPMenuManagerEnabled ? 1 : 0),
-                    Loc.LS("ENABLE REAR VIEW MIRROR"), 1.5f, !MenuManager.m_mp_lan_match);
-                position.y += 62f;
-            }
+            #if false // waits on olmod server detection
+            uie.SelectAndDrawStringOptionItem(Loc.LS("REAR VIEW MIRROR"), position, 8,
+                MenuManager.GetToggleSetting(RearView.MPMenuManagerEnabled ? 1 : 0),
+                Loc.LS("ENABLE REAR VIEW MIRROR"), 1.5f, !MenuManager.m_mp_lan_match);
+            position.y += 62f;
+            #endif
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
