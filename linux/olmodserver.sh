@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./olmod.sh -nographics -batchmode
+exec ./olmod.sh -nographics -batchmode "$@"
