@@ -417,4 +417,13 @@ namespace GameMod
             Client.GetClient().RegisterHandler(ModCustomMsg.MsgSetMatchState, OnSetMatchStateMsg);
         }
     }
+
+    [HarmonyPatch(typeof(NetworkMatch), "SetMatchState")]
+    class JIPSetMatchState
+    {
+        private static bool Prefix(MatchState state)
+        {
+            return state != NetworkMatch.m_match_state;
+        }
+    }
 }
