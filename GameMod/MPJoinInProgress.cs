@@ -202,6 +202,9 @@ namespace GameMod
                 // Resend mode for existing player to move h2h -> anarchy
                 NetworkServer.SendToClient(player.connectionToClient.connectionId, CustomMsgType.MatchStart, modeMsg);
 
+                if (!newPlayer.m_spectator)
+                    player.CallTargetAddHUDMessage(player.connectionToClient, String.Format(Loc.LS("{0} JOINED MATCH"), newPlayer.m_mp_name), -1, true);
+
                 //Debug.Log("JIP: spawning on new client net " + player.netId + " lobby " + player.connectionToClient.connectionId);
                 NetworkServer.SendToClient(connectionId, CustomMsgType.Respawn, new RespawnMessage
                 {
