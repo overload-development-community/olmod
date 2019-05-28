@@ -10,11 +10,11 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        private static readonly string version = "olmod 0.2.1";
+        public static readonly string Version = "olmod 0.2.1";
 
         internal static void Initialize()
         {
-            Debug.Log("Initializing " + version);
+            Debug.Log("Initializing " + Version);
             //HarmonyInstance.DEBUG = true;
             var harmony = HarmonyInstance.Create("olmod.olmod");
             try {
@@ -22,7 +22,7 @@ namespace GameMod.Core
             } catch (Exception ex) {
                 Debug.Log(ex.ToString());
             }
-            Debug.Log("Done initializing " + version);
+            Debug.Log("Done initializing " + Version);
         }
 
         // enable monsterball mode, allow max players up to 16
@@ -76,7 +76,7 @@ namespace GameMod.Core
                 {
                     if (codes[i].opcode == OpCodes.Ldstr && codes[i].operand as string == "VERSION {0}.{1} BUILD {2}")
                     {
-                        codes[i].operand = "VERSION {0}.{1} BUILD {2} " + version.ToUpperInvariant();
+                        codes[i].operand = "VERSION {0}.{1} BUILD {2} " + Version.ToUpperInvariant();
                     }
                 }
                 return codes;
@@ -109,6 +109,16 @@ namespace GameMod.Core
                                 2,
                                 8
                         });
+        }
+    }
+
+    [HarmonyPatch(typeof(LocalLANHost), "GetServerLocation")]
+    class ServerLocationPatch
+    {
+        private static bool Prefix(ref string __result)
+        {
+            __result = GameMod.Version.ToUpperInvariant();
+            return false;
         }
     }
 }
