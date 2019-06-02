@@ -10,7 +10,7 @@ namespace GameMod
     {
         private static AudioClip LoadLevelAudioClip(LevelInfo level, string name)
         {
-            if (!level.IsAddOn)
+            if (!level.IsAddOn || level.FilePath == null)
                 return null;
             string tmpFilename = null;
             string clipFilename = null;
@@ -48,7 +48,7 @@ namespace GameMod
 
         private static void Postfix(string ___m_current_track, AudioSource ___m_music_source, float ___m_volume_music)
         {
-            if (___m_music_source.clip == null) // couldn't load built in, try custom
+            if (___m_music_source.clip == null && ___m_current_track != null) // couldn't load built in, try custom
             {
                 Debug.Log("Trying loading custom music " + ___m_current_track);
                 ___m_music_source.clip =

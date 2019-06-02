@@ -51,11 +51,13 @@ namespace GameMod
     {
         private static bool Prefix(LevelInfo __instance, ref string ___m_loaded_language)
         {
+            /*
             Debug.Log("CheckReloadStory " +
                 (Server.IsActive() ? "server" : "client") + " addon " +
                 __instance.IsAddOn + " " + __instance.FileName + " " +
                 " ld lang " + ___m_loaded_language + " cur lang " + Loc.CurrentLanguageCode +
                 " type " + __instance.Mission.Type);
+            */
             if (___m_loaded_language != Loc.CurrentLanguageCode &&
                 __instance.Mission.Type == MissionType.MULTIPLAYER) {
                 typeof(LevelInfo).GetMethod("ReadChallengeModeText", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
