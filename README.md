@@ -60,6 +60,12 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Adds Internet match option with built in olproxy
 
+- Adds -frametime command line option
+
+- Adds custom mod loading, add mod-xxx.dll assembly to olmod directory
+
+- Sorts MP level list (by Tobias)
+
 #### How to build
 
 - Open solution in Visual Studio 2017
