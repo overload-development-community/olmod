@@ -9,8 +9,7 @@ using UnityEngine;
 namespace GameMod
 {
     // detect "frametime" "cheat code"
-    [HarmonyPatch(typeof(Overload.PlayerShip))]
-    [HarmonyPatch("FrameUpdateReadKeysFromInput")]
+    [HarmonyPatch(typeof(PlayerShip), "FrameUpdateReadKeysFromInput")]
     class FrameTimeReadKeys
     {
         private static string code = "frametime";
@@ -27,6 +26,16 @@ namespace GameMod
                         GameManager.m_display_fps = !GameManager.m_display_fps;
                 codeIdx = 0;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(PlayerShip), "Awake")]
+    class FrameTimeInit
+    {
+        private static void Postfix()
+        {
+            if (Core.GameMod.FindArg("-frametime"))
+                GameManager.m_display_fps = true;
         }
     }
 }
