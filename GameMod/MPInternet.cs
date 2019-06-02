@@ -50,6 +50,10 @@ namespace GameMod
         {
             return Enabled ? "INTERNET MATCH" : "LAN MATCH";
         }
+        public static string PasswordFieldName()
+        {
+            return MenuManager.m_mp_lan_match && Enabled ? "SERVER IP (PASSWORD)" : "PASSWORD";
+        }
     }
 
     [HarmonyPatch(typeof(UIElement), "DrawMpMenu")]
@@ -142,7 +146,29 @@ namespace GameMod
                 }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "LAN MATCH")
                 {
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "ClientModeName"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "ClientModeName")) { labels = code.labels };
+                    continue;
+                }
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "PASSWORD")
+                {
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "PasswordFieldName")) { labels = code.labels };
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class MPInternetMatchSetupDraw
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "PASSWORD")
+                {
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "PasswordFieldName")) { labels = code.labels };
                     continue;
                 }
                 yield return code;
