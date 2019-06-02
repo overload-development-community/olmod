@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using UnityEngine;
 using Harmony;
 using Overload;
+using System.IO;
 
 namespace GameMod.Core
 {
@@ -23,6 +24,32 @@ namespace GameMod.Core
                 Debug.Log(ex.ToString());
             }
             Debug.Log("Done initializing " + Version);
+
+            string dir = Environment.GetEnvironmentVariable("OLMODDIR");
+            if (dir != null && dir != "")
+            {
+                try
+                {
+                    foreach (var f in Directory.GetFiles(dir, "Mod-*.dll"))
+                    {
+                        Debug.Log("Loading mod " + f);
+                        var asm = Assembly.LoadFile(f);
+                        try
+                        {
+                            harmony.PatchAll(asm);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Log("Running mod " + f + ": " + ex.ToString());
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log(ex);
+                }
+            }
+        }
 
         public static bool FindArg(string arg)
         {
