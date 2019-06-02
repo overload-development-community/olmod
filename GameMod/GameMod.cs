@@ -23,6 +23,10 @@ namespace GameMod.Core
                 Debug.Log(ex.ToString());
             }
             Debug.Log("Done initializing " + Version);
+
+        public static bool FindArg(string arg)
+        {
+            return Array.IndexOf<string>(Environment.GetCommandLineArgs(), arg) >= 0;
         }
 
         // enable monsterball mode, allow max players up to 16
