@@ -228,6 +228,17 @@ namespace GameMod
         }
     }
 
+    [HarmonyPatch(typeof(Server), "OnDisconnect")]
+    class JIPDisconnectRemovePing
+    {
+        private static void Postfix(NetworkMessage msg)
+        {
+            var pings = typeof(ServerPing).GetField("m_pings", BindingFlags.NonPublic | BindingFlags.Static)
+                .GetValue(null) as Dictionary<int, PingForConnection>;
+            pings.Remove(msg.conn.connectionId);
+        }
+    }
+
     /*
     Fix for unable to rejoin with multiple players on same pc
     doesn't work because OnUpdateGameSession uses only (pc)playerId for dup check
