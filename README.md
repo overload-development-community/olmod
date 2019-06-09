@@ -66,6 +66,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Sorts MP level list (by Tobias)
 
+- Automatically downloads MP levels from overloadmaps.com
+
 #### How to build
 
 - Open solution in Visual Studio 2017
