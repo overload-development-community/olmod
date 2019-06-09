@@ -86,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AddOnLevelSort.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />

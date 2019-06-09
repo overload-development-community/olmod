@@ -16,6 +16,7 @@ namespace GameMod.Core
         internal static void Initialize()
         {
             Debug.Log("Initializing " + Version);
+            Config.Init();
             HarmonyInstance.DEBUG = FindArg("-harmonydebug");
             var harmony = HarmonyInstance.Create("olmod.olmod");
             try {
