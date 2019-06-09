@@ -98,7 +98,7 @@ namespace GameMod
         private static bool Prefix(string[] words)
         {
             string word = words[0];
-            Debug.Log("Multi tag: " + word);
+            //Debug.Log("Multi tag: " + word);
             return word != null && word != "$music" && !word.StartsWith("$desc_");
         }
     }
