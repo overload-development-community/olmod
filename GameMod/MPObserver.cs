@@ -226,6 +226,37 @@ namespace GameMod
         }
     }
 
+    // remove m_spectator check so it also receives fire messages
+    [HarmonyPatch(typeof(Server), "SendProjectileFiredToClients")]
+    class MPObserverFired
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            CodeInstruction last = null;
+            int state = 0; // 0 = before m_spectator, 1 = wait for brtrue, 2 = after brtrue
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldfld && (code.operand as FieldInfo).Name == "m_spectator")
+                {
+                    last = null; // also remove previous Ldloc0
+                    state = 1;
+                    continue;
+                }
+                else if (state == 1)
+                {
+                    if (code.opcode == OpCodes.Brtrue)
+                        state = 2;
+                    continue;
+                }
+                if (last != null)
+                    yield return last;
+                last = code;
+            }
+            if (last != null)
+                yield return last;
+        }
+    }
+
     [HarmonyPatch(typeof(Player), "CmdSendFullChat")]
     class MPObserverChat
     {
