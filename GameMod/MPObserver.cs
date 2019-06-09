@@ -119,9 +119,29 @@ namespace GameMod
         }
     }
 
-    // Don't do chunk (de)activation for observer
-    [HarmonyPatch(typeof(ChunkManager), "ActivateChunks")]
+    // Don't do chunk/probe/light (de)activation for observer
+    [HarmonyPatch(typeof(RobotManager), "Update")]
     class MPObserverChunks
+    {
+        static bool Prefix()
+        {
+            return !GameManager.m_local_player.m_spectator;
+        }
+    }
+
+    // Don't do light (de)activation for observer
+    [HarmonyPatch(typeof(ChunkManager), "UpdateLights")]
+    class MPObserverLights
+    {
+        static bool Prefix()
+        {
+            return !GameManager.m_local_player.m_spectator;
+        }
+    }
+
+    // Don't do light fade for observer
+    [HarmonyPatch(typeof(ChunkManager), "FadeLights")]
+    class MPObserverLightsFade
     {
         static bool Prefix()
         {
