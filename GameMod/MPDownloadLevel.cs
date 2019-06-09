@@ -1,18 +1,35 @@
 ﻿using Harmony;
+using Ionic.Zip;
 using Newtonsoft.Json.Linq;
 using Overload;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Networking.NetworkSystem;
 
 namespace GameMod
 {
-    class MPDownloadLevel
+    static class MPDownloadLevel
     {
-        private static bool downloadBusy;
+        private const string MapHiddenMarker = "_OCT_Hidden";
+        private static Regex MapHiddenMarkerRE = new Regex(MapHiddenMarker + "[0-9]*$");
+
+        public static bool DownloadBusy;
+        private static string LastDownloadAttempt;
+        public static string LastStatus;
+
+        public static void Reset()
+        {
+            DownloadBusy = false;
+            LastDownloadAttempt = null;
+            LastStatus = null;
+        }
 
         private static bool CanCreateFile(string filename)
         {
@@ -21,43 +38,135 @@ namespace GameMod
                 File.Create(filename).Close();
                 return true;
             }
-            catch (IOException)
+            catch
             {
                 return false;
             }
         }
 
-        private static IEnumerable<string> DoDownloadLevel(string url)
+        // same algorithm as Mission.AddAddOnLevel
+        private static int FindLevelIndex(List<LevelInfo> levels, string levelIdHash)
         {
-            var i = url.LastIndexOf('/');
-            var basefn = url.Substring(i + 1);
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Path.Combine("Revival", "Overload"));
-            try { Directory.CreateDirectory(dir); } catch (Exception) { }
-            var fn = Path.Combine(dir, basefn);
-            if (File.Exists(fn))
+            string fileNameExt = levelIdHash.Split(new[] { ':' })[0];
+            string fileName = Path.GetFileNameWithoutExtension(fileNameExt);
+            string displayName = fileName.Replace('_', ' ').ToUpper();
+            for (int i = 0, count = levels.Count; i < count; i++)
             {
-                yield return "DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS";
-                yield break;
+                    var level = levels[i];
+                    if (level.FileName == fileName || level.DisplayName == displayName)
+                            return i;
             }
-            if (!CanCreateFile(fn + ".tmp"))
-            {
-                dir = Path.Combine(Environment.CurrentDirectory, "DLC");
-                try { Directory.CreateDirectory(dir); } catch (Exception) { }
-                fn = Path.Combine(dir, basefn);
-                if (File.Exists(fn))
-                {
-                    yield return "DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS";
-                    yield break;
-                }
-                if (!CanCreateFile(fn + ".tmp"))
-                {
-                    yield return "DOWNLOAD FAILED: DIRECTORY UNWRITABLE";
-                    yield break;
-                }
-            }
-            var fntmp = fn + ".tmp";
+            return -1;
+        }
 
-            downloadBusy = true;
+        private static List<LevelInfo> GetMPLevels()
+        {
+            return typeof(Mission).GetField("Levels", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
+        }
+
+        // return false if failed
+        private static bool DisableDifferentVersion(string levelIdHash, Action<string, bool> log)
+        {
+            var levels = GetMPLevels();
+            int idx = FindLevelIndex(levels, levelIdHash);
+            if (idx < 0)
+                return true;
+            LevelInfo level = levels[idx];
+            string fn = level.ZipPath ?? level.FilePath;
+            try
+            {
+                for (var i = 0; ; i++)
+                {
+                    string dest = fn + MapHiddenMarker + (i == 0 ? "" : i.ToString());
+                    if (!File.Exists(dest))
+                    {
+                        File.Move(fn, dest);
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log(ex);
+                log("CANNOT DISABLE OTHER VERSION " + Path.GetFileName(fn), true);
+                return false;
+            }
+            levels.RemoveAt(idx);
+            PropertyInfo propLevelNum = typeof(LevelInfo).GetProperty("LevelNum", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            for (int i = 0, count = levels.Count; i < count; i++)
+                propLevelNum.SetValue(levels[i], i, null);
+            log("OTHER VERSION " + Path.GetFileName(fn) + " DISABLED", false);
+            return true;
+        }
+
+        private static string DataLevelDir {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Path.Combine("Revival", "Overload")); }
+        }
+
+        private static string DLCLevelDir
+        {
+            get { return Path.Combine(Environment.CurrentDirectory, "DLC"); }
+        }
+
+        private static bool ZipContainsLevel(string zipFilename, string levelIdHash)
+        {
+            string[] parts = levelIdHash.Split(new[] { ':' });
+            string levelFile = parts[0];
+            if (!int.TryParse(parts[1], NumberStyles.HexNumber, null, out int hash))
+            {
+                //Debug.Log("FindDisabledLevel: invalid levelIdHash " + levelIdHash);
+                return false;
+            }
+            try
+            {
+                using (var zip = ZipFile.Read(zipFilename))
+                    foreach (var entry in zip)
+                        if (!entry.IsDirectory && entry.Crc == hash &&
+                            Path.GetFileName(entry.FileName).Equals(levelFile, StringComparison.InvariantCultureIgnoreCase))
+                            return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("FindDisabledLevel: reading " + zipFilename + ": " + ex);
+            }
+            return false;
+        }
+
+        private static string FindDisabledLevel(string levelIdHash)
+        {
+            foreach (var dir in new [] { DataLevelDir, DLCLevelDir })
+                try
+                {
+                    if (Directory.Exists(dir))
+                        foreach (var zipFilename in Directory.GetFiles(dir, "*.zip" + MapHiddenMarker + "*"))
+                            if (MapHiddenMarkerRE.IsMatch(zipFilename) && ZipContainsLevel(zipFilename, levelIdHash))
+                                return zipFilename;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("FindDisabledLevel: reading " + dir + ": " + ex);
+                }
+            return null;
+        }
+
+        private static void AddMPLevel(string fn)
+        {
+            Debug.Log("MPDownloadLevel.AddMPLevel " + fn);
+            if (fn.EndsWith(".mp", StringComparison.InvariantCultureIgnoreCase))
+                GameManager.MultiplayerMission.AddAddOnLevel(fn, null, "OUTER_05", new[] { 2, 3, 4, 4 }, false);
+            else if (fn.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase))
+                using (var zip = ZipFile.Read(fn))
+                    foreach (var entry in zip)
+                        if (entry.FileName.EndsWith(".mp", StringComparison.InvariantCultureIgnoreCase))
+                            GameManager.MultiplayerMission.AddAddOnLevel(entry.FileName, fn, "OUTER_05", new[] { 2, 3, 4, 4 }, false);
+        }
+
+        private static IEnumerable<string> DoDownloadLevel(string url, string fn)
+        {
+            Debug.Log("Downloading " + url + " to " + fn);
+            var basefn = Path.GetFileName(fn);
+            var fntmp = fn + ".tmp";
             using (UnityWebRequest www = new UnityWebRequest(url, "GET"))
             {
                 www.downloadHandler = new DownloadHandlerFile(fntmp);
@@ -69,53 +178,202 @@ namespace GameMod
                 if (www.isNetworkError || www.isHttpError)
                 {
                     File.Delete(fntmp);
-                    yield return "DOWNLOADING " + basefn + " FAILED!";
-                    downloadBusy = false;
+                    yield return "DOWNLOADING " + basefn + " FAILED, " + (www.isNetworkError ? "NETWORK ERROR" : "SERVER ERROR");
                     yield break;
                 }
             }
-            downloadBusy = false;
-            yield return "DOWNLOADING " + basefn + " COMPLETED, RELOADING...";
-            File.Move(fntmp, fn);
-            Console.CmdReloadMissions();
-            yield return "DOWNLOADING " + basefn + " COMPLETED";
+            yield return "DOWNLOADING " + basefn + " ... INSTALLING";
+            string msg = null;
+            try
+            {
+                File.Move(fntmp, fn);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log(ex);
+                msg = ex.Message;
+            }
+            if (msg != null)
+                yield return "DOWNLOADING " + basefn + " FAILED, " + msg;
         }
 
-        private static IEnumerable<bool> DoGetLevel(string level)
+        private static IEnumerable<string> MaybeDownloadLevel(string url, string levelIdHash)
         {
-            Debug.Log("DoGetLevel " + level);
-            var li = level.IndexOf(".MP");
-            MenuManager.AddMpStatus("SEARCHING " + level.Substring(0, li), 1f, 9);
-            string last = null;
-            foreach (var x in NetworkMatch.Get("mpget", new Dictionary<string, string> { { "level", level } }, "https://www.overloadmaps.com/api/"))
+            var i = url.LastIndexOf('/');
+            var basefn = url.Substring(i + 1);
+            string fn = null;
+            bool done = false;
+            foreach (var dir in new [] { DataLevelDir, DLCLevelDir })
             {
-                last = x;
-                yield return false;
+                try { Directory.CreateDirectory(dir); } catch (Exception) { }
+                var tryfn = Path.Combine(dir, basefn);
+                if (File.Exists(tryfn))
+                {
+                    if (ZipContainsLevel(tryfn, levelIdHash))
+                    {
+                        fn = tryfn;
+                        done = true;
+                        break;
+                    }
+                    yield return "DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS";
+                    yield break;
+                }
+                if (CanCreateFile(tryfn + ".tmp")) {
+                    fn = tryfn;
+                    break;
+                }
             }
-            JObject ret = JObject.Parse(last);
-            if (ret.TryGetValue("url", out JToken urlVal))
+            if (fn == null)
             {
-                string url = urlVal.GetString();
-                var i = url.LastIndexOf('/');
-                MenuManager.AddMpStatus("DOWNLOADING " + url.Substring(i + 1), 1f, 9);
-                yield return false;
-                foreach (var msg in DoDownloadLevel(url))
+                yield return "DOWNLOAD FAILED: NO WRITABLE DIRECTORY";
+                yield break;
+            }
+            string disMsg = null;
+            var disOk = DisableDifferentVersion(levelIdHash, (msg, isErr) => { disMsg = msg; });
+            if (disMsg != null)
+            {
+                Debug.Log(disMsg);
+                yield return disMsg;
+            }
+            if (!disOk)
+                yield break;
+            if (!done)
+                foreach (var msg in DoDownloadLevel(url, fn))
+                    yield return msg;
+            AddMPLevel(fn);
+            if (FindLevelIndex(GetMPLevels(), levelIdHash) < 0)
+                yield return "DOWNLOADING " + basefn + " FAILED, LEVEL NOT IN FILE";
+            else
+                yield return "DOWNLOADING " + basefn + " COMPLETED";
+        }
+
+        private static bool MaybeEnableLevel(string levelIdHash, Action<string, bool> log)
+        {
+            string disabledFilename = FindDisabledLevel(levelIdHash);
+            if (disabledFilename == null)
+                return false;
+            if (!DisableDifferentVersion(levelIdHash, log))
+                return true; // abort
+            string orgFilename = MapHiddenMarkerRE.Replace(disabledFilename, "");
+            try
+            {
+                File.Move(disabledFilename, orgFilename);
+            }
+            catch (Exception ex)
+            {
+                MenuManager.AddMpStatus("ENABLING " + Path.GetFileName(orgFilename) + " FAILED, " + ex.Message);
+                return false; // try download
+            }
+            AddMPLevel(orgFilename);
+            if (FindLevelIndex(GetMPLevels(), levelIdHash) < 0)
+                log("ENABLING " + Path.GetFileName(orgFilename) + " FAILED, LEVEL NOT IN FILE", true); // not possible? would be bug in FindDisabledLevel
+            else
+                log("ENABLING " + Path.GetFileName(orgFilename) + " SUCCEEDED", false);
+            return true;
+        }
+
+        private static void SendStatus(string msg)
+        {
+            if (Overload.NetworkManager.IsServer())
+            {
+                LastStatus = "SERVER: " + msg;
+                JIPClientHandlers.SendAddMpStatus(LastStatus);
+            }
+        }
+
+        private static void DownloadFailed(string msg)
+        {
+            if (!Overload.NetworkManager.IsServer())
+                return;
+            SendStatus(msg + "! SELECTED WRAITH");
+        }
+
+        private static IEnumerable<string> LookupAndDownloadLevel(string levelIdHash)
+        {
+            var li = levelIdHash.IndexOf(".MP");
+            MenuManager.AddMpStatus("SEARCHING " + levelIdHash.Substring(0, li), 1f, 9);
+            string lastData = null;
+            foreach (var x in NetworkMatch.Get("mpget", new Dictionary<string, string> { { "level", levelIdHash } }, "https://www.overloadmaps.com/api/"))
+            {
+                lastData = x;
+                yield return null;
+            }
+            JObject ret = null;
+            try
+            {
+                ret = JObject.Parse(lastData);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log(ex);
+            }
+            if (ret == null || !ret.TryGetValue("url", out JToken urlVal))
+            {
+                string msg = ret == null ? "OVERLOADMAPS.COM LOOKUP FAILED" : "LEVEL NOT FOUND ON OVERLOADMAPS.COM";
+                Debug.Log(msg);
+                MenuManager.AddMpStatus(msg, 2f, 9);
+                yield return msg;
+                yield break;
+            }
+
+            string url = urlVal.GetString();
+            var i = url.LastIndexOf('/');
+            MenuManager.AddMpStatus("DOWNLOADING " + url.Substring(i + 1), 1f, 9);
+            string lastMsg = null;
+            foreach (var msg in MaybeDownloadLevel(url, levelIdHash))
+            {
+                if (msg != lastMsg)
                 {
                     MenuManager.AddMpStatus(msg, 1f, 9);
-                    yield return false;
+                    lastMsg = msg;
+                }
+                yield return msg;
+            }
+            Debug.Log("DoGetLevel last download status: " + lastMsg);
+        }
+
+        private static IEnumerator DoGetLevel(string levelIdHash)
+        {
+            Debug.Log("DoGetLevel " + levelIdHash);
+
+            string errMsg = null, lastMsg = null;
+            if (MaybeEnableLevel(levelIdHash, (msg, isError) => { Debug.Log(msg); MenuManager.AddMpStatus(msg); if (isError) errMsg = msg; }))
+            {
+                if (errMsg != null)
+                {
+                    DownloadFailed(errMsg);
+                    DownloadBusy = false;
+                    yield break;
                 }
             }
             else
-                MenuManager.AddMpStatus("LEVEL NOT FOUND ON OVERLOADMAPS.COM", 2f, 9);
-            yield return true;
+            {
+                foreach (var msg in LookupAndDownloadLevel(levelIdHash))
+                {
+                    lastMsg = msg;
+                    yield return null;
+                }
+            }
+            if (Overload.NetworkManager.IsServer())
+            {
+                int idx = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(levelIdHash);
+                if (idx < 0)
+                    DownloadFailed(lastMsg); // if we don't have the level the last message was the error message
+                else
+                    typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, idx);
+            }
+            DownloadBusy = false;
         }
 
-        public static void StartGetLevel(string level)
+        public static void StartGetLevel(string levelIdHash)
         {
-            if (downloadBusy)
+            if (DownloadBusy || levelIdHash == LastDownloadAttempt)
                 return;
-            var tasks = typeof(NetworkMatch).GetField("m_gatewayWebTasks", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-            tasks.GetType().GetMethod("Add").Invoke(tasks, new object[] { DoGetLevel(level).GetEnumerator() });
+            DownloadBusy = true;
+            LastDownloadAttempt = levelIdHash;
+            //var tasks = typeof(NetworkMatch).GetField("m_gatewayWebTasks", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+            //tasks.GetType().GetMethod("Add").Invoke(tasks, new object[] { DoGetLevel(level).GetEnumerator() });
+            GameManager.m_gm.StartCoroutine(DoGetLevel(levelIdHash));
         }
     }
 
@@ -124,9 +382,75 @@ namespace GameMod
     {
         static void Postfix()
         {
+            if (Config.NoDownload)
+                return;
             string level = NetworkMatch.m_last_lobby_status.m_match_playlist_addon_idstringhash;
             if (level != null && level != "" && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(level) < 0)
                 MPDownloadLevel.StartGetLevel(level);
+        }
+    }
+
+    // wait for download when starting match before level downloaded, eg with JIP
+    [HarmonyPatch(typeof(Overload.NetworkManager), "LoadScene")]
+    class MPDownloadLoadScene
+    {
+        static IEnumerator WaitLevel(string name)
+        {
+            while (MPDownloadLevel.DownloadBusy)
+                yield return null;
+            if (GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) >= 0)
+                Overload.NetworkManager.LoadScene(name);
+        }
+
+        static bool Prefix(string name)
+        {
+            if (!name.Contains(":") || Config.NoDownload)
+                return true;
+            if (!MPDownloadLevel.DownloadBusy && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) < 0)
+                MPDownloadLevel.StartGetLevel(name);
+            if (MPDownloadLevel.DownloadBusy) {
+                GameManager.m_gm.StartCoroutine(WaitLevel(name));
+                return false;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(Server), "OnConnect")]
+    class MPDownloadLevelStatusOnConnect
+    {
+        private static void Postfix(NetworkMessage msg)
+        {
+            if (MPDownloadLevel.LastStatus != null)
+                NetworkServer.SendToClient(msg.conn.connectionId, ModCustomMsg.MsgAddMpStatus, new StringMessage(MPDownloadLevel.LastStatus));
+        }
+    }
+
+    // speed up hash (=crc32) calcuation for levels in zips by reading it from the zip header
+    [HarmonyPatch(typeof(LevelInfo), "GetAddOnLevelIdStringHash")]
+    class MPDownloadLevelZipHash
+    {
+        private static bool Prefix(LevelInfo __instance, ref string ___m_cachedIdStringHash, ref string __result)
+        {
+            if (!__instance.IsAddOn || ___m_cachedIdStringHash != null || __instance.ZipPath == null)
+                return true;
+            try
+            {
+                using (var zipFile = ZipFile.Read(__instance.ZipPath))
+                {
+                    var entry = zipFile[__instance.FilePath];
+                    if (entry == null)
+                        return true;
+                    ___m_cachedIdStringHash = string.Format("{0}:{1}", Path.GetFileName(__instance.FilePath).ToUpperInvariant(), entry.Crc.ToString("X8"));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log(ex);
+            }
+            Debug.Log("GetAddOnLevelIdStringHash " + __instance.ZipPath + " " + __instance.FilePath + " " + ___m_cachedIdStringHash);
+            __result = ___m_cachedIdStringHash;
+            return false;
         }
     }
 }

@@ -415,6 +415,7 @@ namespace GameMod
     public class ModCustomMsg
     {
         public const short MsgSetMatchState = 101;
+        public const short MsgAddMpStatus = 102;
     }
 
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
@@ -436,14 +437,26 @@ namespace GameMod
             NetworkMatch.SortAnarchyPlayerList();
         }
 
+        private static void OnAddMpStatus(NetworkMessage msg)
+        {
+            MenuManager.AddMpStatus(msg.ReadMessage<StringMessage>().value);
+        }
+
+        public static void SendAddMpStatus(string status)
+        {
+            NetworkServer.SendToAll(ModCustomMsg.MsgAddMpStatus, new StringMessage(status));
+        }
+
         static void Postfix()
         {
             if (Client.GetClient() == null)
                 return;
             Client.GetClient().RegisterHandler(ModCustomMsg.MsgSetMatchState, OnSetMatchStateMsg);
+            Client.GetClient().RegisterHandler(ModCustomMsg.MsgAddMpStatus, OnAddMpStatus);
         }
     }
 
+    // only reset time if state actually changes (JIP resends match state as part of SendMatchState for h2h->anarchy update)
     [HarmonyPatch(typeof(NetworkMatch), "SetMatchState")]
     class JIPSetMatchState
     {

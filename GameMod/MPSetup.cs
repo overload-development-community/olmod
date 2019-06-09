@@ -14,6 +14,7 @@ namespace GameMod
     {
         public static void Postfix()
         {
+            MPDownloadLevel.Reset();
             MPTeams.NetworkMatchTeamCount = 2;
             MPJoinInProgress.NetworkMatchEnabled = false;
             RearView.MPNetworkMatchEnabled = false;
@@ -42,7 +43,7 @@ namespace GameMod
         private static void Postfix(ref bool __result, PrivateMatchDataMessage pmd)
         {
             ApplyMatchOLModData();
-            if (!__result) // unknown level
+            if (!__result && !Config.NoDownload && !string.IsNullOrEmpty(pmd.m_addon_level_name_hash)) // unknown level?
             {
                 MPDownloadLevel.StartGetLevel(pmd.m_addon_level_name_hash);
                 __result = true;
