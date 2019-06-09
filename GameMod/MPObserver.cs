@@ -204,13 +204,29 @@ namespace GameMod
     [HarmonyPatch(typeof(Overload.PlayerShip), "FixedUpdateProcessControlsInternal")]
     class MPObserverFixedUpdateProcess
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> instructions)
         {
             int n = 0;
             var codes = new List<CodeInstruction>(instructions);
             for (var i = 0; i < codes.Count; i++)
             {
-                if (codes[i].opcode == OpCodes.Ldfld && (codes[i].operand as FieldInfo).Name == "m_spectator" &&
+                if (n == 0 && codes[i].opcode == OpCodes.Callvirt && (codes[i].operand as MemberInfo).Name == "get_mass" &&
+                    codes[i + 1].opcode == OpCodes.Mul)
+                {
+                    Label l = ilGen.DefineLabel();
+                    codes[i + 2].labels.Add(l);
+                    var newCodes = new[] {
+                        new CodeInstruction(OpCodes.Ldarg_0),
+                        new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerShip), "c_player")),
+                        new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Player), "m_spectator")),
+                        new CodeInstruction(OpCodes.Brfalse, l),
+                        new CodeInstruction(OpCodes.Ldc_R4, 2f),
+                        new CodeInstruction(OpCodes.Mul) };
+                    codes.InsertRange(i + 2, newCodes);
+                    i += 2 + newCodes.Length - 1;
+                    n++;
+                }
+                else if (codes[i].opcode == OpCodes.Ldfld && (codes[i].operand as FieldInfo).Name == "m_spectator" &&
                     codes[i + 1].opcode == OpCodes.Brfalse &&
                     i > 2 && codes[i - 1].opcode == OpCodes.Ldfld && codes[i - 2].opcode == OpCodes.Ldarg_0)
                 {
