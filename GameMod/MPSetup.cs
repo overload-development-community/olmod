@@ -115,13 +115,23 @@ namespace GameMod
     [HarmonyPatch(typeof(MenuManager), "SavePreferences")]
     class MPSetupSave
     {
+        private static int lastXP;
+
         public static void Store()
         {
+            if (MenuManager.LocalGetInt("PS_XP2", 0) == 0 && lastXP > 0)
+                MenuManager.LocalSetInt("PS_XP2", lastXP);
+
             MenuManager.LocalSetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             MenuManager.LocalSetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
             MenuManager.LocalSetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
             MenuManager.LocalSetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             MenuManager.LocalSetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
+        }
+
+        private static void Prefix()
+        {
+            lastXP = MenuManager.LocalGetInt("PS_XP2", 0);
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
