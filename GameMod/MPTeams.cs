@@ -429,16 +429,19 @@ namespace GameMod
         }
     }
     
+    // team balancing for new player
     [HarmonyPatch(typeof(NetworkMatch), "NetSystemGetTeamForPlayer")]
     static class MPTeamsForPlayer
     {
-        static bool Prefix(ref MpTeam __result)
+        static bool Prefix(ref MpTeam __result, int connection_id)
         {
-            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || MPTeams.NetworkMatchTeamCount == 2)
+            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 &&
+                !MPJoinInProgress.NetworkMatchEnabled)) // use this simple balancing method for JIP to hopefully solve JIP team imbalances
                 return true;
             int[] team_counts = new int[(int)MPTeams.MPTEAM_NUM];
             foreach (var player in NetworkMatch.m_players.Values)
-                team_counts[(int)player.m_team]++;
+                if (player.m_id != connection_id)
+                    team_counts[(int)player.m_team]++;
             MpTeam min_team = MpTeam.TEAM0;
             foreach (var team in MPTeams.Teams)
                 if (team_counts[(int)team] < team_counts[(int)min_team])
