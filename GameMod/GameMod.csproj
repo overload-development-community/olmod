@@ -102,6 +102,7 @@
     <Compile Include="Monsterball.cs" />
     <Compile Include="MPDoors.cs" />
     <Compile Include="MPHoming.cs" />
+    <Compile Include="MPLevelSelect.cs" />
     <Compile Include="MPMaxPlayer.cs" />
     <Compile Include="MPNoNewWeaponSound.cs" />
     <Compile Include="MPObserver.cs" />
