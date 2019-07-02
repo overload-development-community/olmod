@@ -217,6 +217,7 @@ namespace GameMod
                     use_loadout1 = player.m_use_loadout1
                 });
             }
+            ServerStatLog.Connected(newPlayer.m_mp_name);
         }
 
         private static void Postfix(NetworkMessage msg)
