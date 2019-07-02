@@ -134,6 +134,7 @@ namespace GameMod.Core
             if (SLInit)
                 return;
             SLInit = true;
+            /*
             Overload.GameManager.MultiplayerMission.AddLevel("mb_arena1", "ARENA", "TITAN_06", new int[]
                         {
                                 1,
@@ -141,6 +142,7 @@ namespace GameMod.Core
                                 2,
                                 8
                         });
+            */
         }
     }
 
