@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq;
+using System.Text;
 using Harmony;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Overload;
 using UnityEngine;
+using UnityEngine.Networking;
 
-// by luponix
+// by luponix, roncli
 
 namespace GameMod
 {
@@ -23,134 +27,306 @@ namespace GameMod
 
         private struct Kill
         {
-            public DateTime Time;
+            public float Time;
             public string Attacker, Defender, Assisted;
+            public MpTeam AttackerTeam, DefenderTeam, AssistedTeam;
             public ProjPrefab Weapon;
+        }
+
+        private struct Goal
+        {
+            public float Time;
+            public string Scorer, Assisted;
+            public MpTeam? ScorerTeam;
+            public bool Blunder;
         }
 
         private static Dictionary<PlayerPlayerWeaponDamage, float> DamageTable = new Dictionary<PlayerPlayerWeaponDamage, float>();
         private static List<Kill> Kills = new List<Kill>();
+        private static List<Goal> Goals = new List<Goal>();
+        public static bool GameStarted = false;
         private static string Attacker, Defender, Assisted;
+        private static MpTeam AttackerTeam = (MpTeam)(-1), DefenderTeam = (MpTeam)(-1), AssistedTeam = (MpTeam)(-1);
         public static DateTime StartTime, EndTime;
 
         public static void CleanUp()
         {
             DamageTable = new Dictionary<PlayerPlayerWeaponDamage, float>();
             Kills = new List<Kill>();
+            Goals = new List<Goal>();
+            GameStarted = false;
         }
 
-        public static void WriteDamageTable(JsonWriter writer)
+        public static JArray GetDamageTable()
         {
-            writer.WriteStartArray();
-            foreach (var entry in DamageTable)
+            return new JArray(
+                from d in DamageTable
+                select JObject.FromObject(new
+                {
+                    attacker = d.Key.Attacker.m_mp_name,
+                    defender = d.Key.Defender.m_mp_name,
+                    weapon = d.Key.Weapon.ToString(),
+                    damage = d.Value
+                }, new JsonSerializer()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                })
+            );
+        }
+
+        public static JArray GetKills()
+        {
+            return new JArray(
+                from k in Kills
+                select JObject.FromObject(new
+                {
+                    time = k.Time,
+                    attacker = k.Attacker,
+                    attackerTeam = k.Attacker == null ? null : TeamName(k.AttackerTeam),
+                    defender = k.Defender,
+                    defenderTeam = k.Defender == null ? null : TeamName(k.DefenderTeam),
+                    assisted = k.Assisted,
+                    assistedTeam = k.Assisted == null ? null : TeamName(k.AssistedTeam),
+                    weapon = k.Weapon
+                }, new JsonSerializer()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                })
+            );
+        }
+
+        public static JArray GetGoals()
+        {
+            if (Goals.Count == 0)
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName("attacker");
-                writer.WriteValue(entry.Key.Attacker.m_mp_name);
-                writer.WritePropertyName("defender");
-                writer.WriteValue(entry.Key.Defender.m_mp_name);
-                writer.WritePropertyName("weapon");
-                writer.WriteValue(entry.Key.Weapon.ToString());
-                writer.WritePropertyName("damage");
-                writer.WriteValue(entry.Value);
-                writer.WriteEndObject();
+                return null;
             }
-            writer.WriteEndArray();
+
+            return new JArray(
+                from g in Goals
+                select JObject.FromObject(new
+                {
+                    time = g.Time,
+                    scorer = g.Scorer,
+                    scorerTeam = TeamName(g.ScorerTeam),
+                    assisted = g.Assisted,
+                    blunder = g.Blunder
+                }, new JsonSerializer()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                })
+            );
         }
 
-        public static void WriteKills(JsonWriter writer)
+        public static JObject GetGame()
         {
-            writer.WriteStartArray();
-            foreach (var kill in Kills)
+            return JObject.FromObject(new
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName("time");
-                writer.WriteValue(kill.Time.ToString("o"));
-                writer.WritePropertyName("attacker");
-                writer.WriteValue(kill.Attacker);
-                writer.WritePropertyName("defender");
-                writer.WriteValue(kill.Defender);
-                writer.WritePropertyName("assisted");
-                writer.WriteValue(kill.Assisted);
-                writer.WritePropertyName("weapon");
-                writer.WriteValue(kill.Weapon.ToString());
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
+                name = "Stats",
+                type = "EndGame",
+                start = StartTime.ToString("o"),
+                end = EndTime.ToString("o"),
+                damage = GetDamageTable(),
+                kills = GetKills(),
+                goals = GetGoals()
+            }, new JsonSerializer()
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
         }
 
-        public static void WriteGame(JsonWriter writer)
+        private static IEnumerator RequestCoroutine(UnityWebRequestAsyncOperation op)
         {
-            writer.WriteStartObject();
-            writer.WritePropertyName("Game");
+            yield return op;
+        }
 
-            writer.WriteStartObject();
-            writer.WritePropertyName("Start");
-            writer.WriteValue(StartTime.ToString("o"));
-            writer.WritePropertyName("End");
-            writer.WriteValue(EndTime.ToString("o"));
-            writer.WritePropertyName("MatchData");
+        public static void Post(string url, JObject body)
+        {
+            var request = new UnityWebRequest(url)
+            {
+                uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body.ToString(Formatting.None))),
+                downloadHandler = new DownloadHandlerBuffer(),
+                method = UnityWebRequest.kHttpVerbPOST
+            };
+            GameManager.m_gm.StartCoroutine(RequestCoroutine(request.SendWebRequest()));
+        }
 
-            writer.WriteStartObject();
-            writer.WritePropertyName("damage");
-            WriteDamageTable(writer);
-            writer.WritePropertyName("kills");
-            WriteKills(writer);
-            writer.WriteEndObject();
-
-            writer.WriteEndObject();
-
-            writer.WriteEndObject();
+        public static void TrackerPost(JObject body)
+        {
+            string url;
+            Debug.Log("TrackerPost " + body.ToString(Formatting.None));
+            if (!Config.Settings.Value<bool>("isServer") ||
+                string.IsNullOrEmpty(url = Config.Settings.Value<string>("trackerBaseUrl")))
+                return;
+            Post(url + "/api/stats", body);
         }
 
         public static void PrintResultsAsJson()
         {
-            if (!DamageTable.Any())
+            if (!GameStarted)
+            {
                 return;
+            }
 
-            string FullTimeJsonPath = FullTime();
+            string FullTimeJsonPath = DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss");
             EndTime = DateTime.UtcNow;
             string JsonPath = Path.Combine(Application.persistentDataPath, "SSL_" + FullTimeJsonPath + ".json");
 
+            var obj = GetGame();
+
             using (StreamWriter streamWriter = new StreamWriter(JsonPath))
-            using (JsonWriter writer = new JsonTextWriter(streamWriter))
             {
-                writer.Formatting = Formatting.Indented;
-                WriteGame(writer);
+                streamWriter.Write(obj.ToString(Formatting.Indented));
             }
+
+            TrackerPost(obj);
+
+            CleanUp();
         }
 
-        public static void SetAttacker(string name)
+        public static void SetAttacker(string name, MpTeam team)
         {
             Attacker = name;
+            AttackerTeam = team;
         }
 
-        public static void SetDefender(string name)
+        public static void SetDefender(string name, MpTeam team)
         {
             Defender = name;
+            DefenderTeam = team;
         }
 
-        public static void SetAssisted(string name)
+        public static void SetAssisted(string name, MpTeam team)
         {
             Assisted = name;
+            AssistedTeam = team;
+        }
+
+        public static void Disconnected(string name)
+        {
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "Disconnect",
+                time = NetworkMatch.m_match_elapsed_seconds,
+                player = name
+            });
+
+            TrackerPost(obj);
+        }
+
+        // called from MPJoinInProgress
+        public static void Connected(string name)
+        {
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "Connect",
+                time = NetworkMatch.m_match_elapsed_seconds,
+                player = name
+            });
+
+            TrackerPost(obj);
+        }
+
+        private static string TeamName(MpTeam? team)
+        {
+            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : MPTeams.TeamName((MpTeam)team);
+        }
+
+        public static void AddGoal()
+        {
+            var goal = new Goal()
+            {
+                Time = NetworkMatch.m_match_elapsed_seconds,
+                Scorer = MonsterballAddon.CurrentPlayer?.m_mp_name,
+                Assisted = MonsterballAddon.LastPlayer?.m_mp_name,
+                ScorerTeam = MonsterballAddon.CurrentPlayer?.m_mp_team,
+                Blunder = false,
+            };
+
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "Goal",
+                time = goal.Time,
+                scorer = MonsterballAddon.CurrentPlayer?.m_mp_name,
+                scorerTeam = TeamName(MonsterballAddon.CurrentPlayer?.m_mp_team),
+                assisted = MonsterballAddon.LastPlayer?.m_mp_name,
+                assistedTeam = TeamName(MonsterballAddon.LastPlayer?.m_mp_team)
+            }, new JsonSerializer()
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+            Goals.Add(goal);
+
+            TrackerPost(obj);
+        }
+
+        public static void AddBlunder()
+        {
+            var goal = new Goal()
+            {
+                Time = NetworkMatch.m_match_elapsed_seconds,
+                Scorer = MonsterballAddon.CurrentPlayer?.m_mp_name,
+                ScorerTeam = MonsterballAddon.CurrentPlayer?.m_mp_team,
+                Blunder = true,
+            };
+
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "Blunder",
+                time = goal.Time,
+                scorer = MonsterballAddon.CurrentPlayer?.m_mp_name,
+                scorerTeam = TeamName(MonsterballAddon.CurrentPlayer?.m_mp_team)
+            });
+
+            Goals.Add(goal);
+
+            TrackerPost(obj);
         }
 
         public static void AddKill(DamageInfo di)
         {
-            Kills.Add(new Kill {
-                Time = DateTime.UtcNow,
-                Attacker = Attacker, Defender = Defender, Assisted = Assisted,
-                Weapon = di.weapon });
+            Kills.Add(new Kill
+            {
+                Time = NetworkMatch.m_match_elapsed_seconds,
+                Attacker = Attacker,
+                Defender = Defender,
+                Assisted = Assisted,
+                AttackerTeam = AttackerTeam,
+                DefenderTeam = DefenderTeam,
+                AssistedTeam = AssistedTeam,
+                Weapon = di.weapon
+            });
+
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "Kill",
+                time = NetworkMatch.m_match_elapsed_seconds,
+                attacker = Attacker,
+                attackerTeam = Attacker == null ? null : TeamName(AttackerTeam),
+                defender = Defender,
+                defenderTeam = Defender == null ? null : TeamName(DefenderTeam),
+                assisted = Assisted,
+                assistedTeam = Assisted == null ? null : TeamName(AssistedTeam),
+                weapon = di.weapon.ToString()
+            }, new JsonSerializer()
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+            TrackerPost(obj);
 
             Attacker = null;
             Defender = null;
             Assisted = null;
-        }
-
-        // used to create a unique file name
-        public static string FullTime()
-        {
-            return DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss");
+            AttackerTeam = MpTeam.ANARCHY;
+            DefenderTeam = MpTeam.ANARCHY;
+            AssistedTeam = MpTeam.ANARCHY;
         }
 
         public static void AddDamage(Player defender, Player attacker, ProjPrefab weapon, float damage)
@@ -161,6 +337,110 @@ namespace GameMod
             else
                 DamageTable[key] = damage;
         }
+
+        public static string GetPowerupBigSpawnString(int spawn)
+        {
+            switch (spawn)
+            {
+                case 0: return "OFF";
+                case 1: return "LOW";
+                case 2: return "NORMAL";
+                case 3: return "HIGH";
+                default: return "UNKNOWN";
+            }
+        }
+
+        public static string GetPowerupInitialString(int initial)
+        {
+            switch (initial)
+            {
+                case 0: return "NONE";
+                case 1: return "LOW";
+                case 2: return "NORMAL";
+                case 3: return "HIGH";
+                default: return "UNKNOWN";
+            }
+        }
+
+        public static string GetTurnSpeedLimitString(int limit)
+        {
+            switch (limit)
+            {
+                case 0: return "VERY STRONG";
+                case 1: return "STRONG";
+                case 2: return "MEDIUM";
+                case 3: return "WEAK";
+                case 4: return "OFF";
+                default: return "UNKNOWN";
+            }
+        }
+
+        public static string GetPowerupSpawnString(int spawn)
+        {
+            switch (spawn)
+            {
+                case 0: return "LOW";
+                case 1: return "NORMAL";
+                case 2: return "HIGH";
+                case 3: return "MAX";
+                default: return "UNKNOWN";
+            }
+        }
+
+        public static string GetLevel(int levelNum, string level)
+        {
+            if (string.IsNullOrEmpty(level))
+            {
+                return GameManager.MultiplayerMission.GetLevelDisplayName(levelNum);
+            }
+            else
+            {
+                return level.Split(':')[0];
+            }
+        }
+
+        public static void StartGame()
+        {
+            StartTime = DateTime.UtcNow;
+            CleanUp();
+            GameStarted = true;
+
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "StartGame",
+                start = DateTime.UtcNow.ToString("o"),
+                time = 0,
+                creator = NetworkMatch.m_name.Split('\0')[0],
+                forceModifier1 = NetworkMatch.m_force_modifier1 == 4 ? "OFF" : Player.GetMpModifierName(NetworkMatch.m_force_modifier1, true),
+                forceModifier2 = NetworkMatch.m_force_modifier2 == 4 ? "OFF" : Player.GetMpModifierName(NetworkMatch.m_force_modifier2, false),
+                forceMissile1 = NetworkMatch.m_force_m1.ToString()?.Replace("_", " "),
+                forceMissile2 = NetworkMatch.m_force_m2 == MissileType.NUM ? "NONE" : NetworkMatch.m_force_m2.ToString()?.Replace("_", " "),
+                forceWeapon1 = NetworkMatch.m_force_w1.ToString(),
+                forceWeapon2 = NetworkMatch.m_force_w2 == WeaponType.NUM ? "NONE" : NetworkMatch.m_force_w2.ToString(),
+                forceLoadout = MenuManager.GetToggleSetting(NetworkMatch.m_force_loadout),
+                powerupFilterBitmask = NetworkMatch.m_powerup_filter_bitmask,
+                powerupBigSpawn = GetPowerupBigSpawnString(NetworkMatch.m_powerup_big_spawn),
+                powerupInitial = GetPowerupInitialString(NetworkMatch.m_powerup_initial),
+                turnSpeedLimit = GetTurnSpeedLimitString(NetworkMatch.m_turn_speed_limit),
+                powerupSpawn = GetPowerupSpawnString(NetworkMatch.m_powerup_spawn),
+                friendlyFire = NetworkMatch.m_team_damage,
+                matchMode = NetworkMatch.GetMode().ToString()?.Replace("_", " "),
+                maxPlayers = NetworkMatch.GetMaxPlayersForMatch(),
+                showEnemyNames = NetworkMatch.m_show_enemy_names.ToString()?.Replace("_", " "),
+                timeLimit = NetworkMatch.m_match_time_limit_seconds,
+                scoreLimit = NetworkMatch.m_match_score_limit,
+                respawnTimeSeconds = NetworkMatch.m_respawn_time_seconds,
+                respawnShieldTimeSeconds = NetworkMatch.m_respawn_shield_seconds,
+                level = GameplayManager.Level.DisplayName,
+                joinInProgress = MPJoinInProgress.NetworkMatchEnabled,
+                rearViewAllowed = RearView.MPNetworkMatchEnabled,
+                teamCount = MPTeams.NetworkMatchTeamCount,
+                players = Overload.NetworkManager.m_Players.Where(x => !x.m_spectator).Select(x => x.m_mp_name)
+            });
+
+            TrackerPost(obj);
+        }
     }
 
     [HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
@@ -169,10 +449,9 @@ namespace GameMod
 
         private static void Prefix()
         {
-            if (!NetworkManager.IsHeadless())
+            if (!Overload.NetworkManager.IsHeadless())
                 return;
-            ServerStatLog.StartTime = DateTime.UtcNow;
-            ServerStatLog.CleanUp();
+            ServerStatLog.StartGame();
         }
     }
 
@@ -181,7 +460,7 @@ namespace GameMod
     {
         private static void Prefix()
         {
-            if (!NetworkManager.IsHeadless())
+            if (!Overload.NetworkManager.IsHeadless())
                 return;
             ServerStatLog.PrintResultsAsJson();
         }
@@ -192,7 +471,7 @@ namespace GameMod
     {
         public static void Prefix(DamageInfo di, PlayerShip __instance)
         {
-            if (!NetworkManager.IsHeadless() || di.damage == 0f || di.owner == null ||
+            if (!Overload.NetworkManager.IsHeadless() || di.damage == 0f || di.owner == null ||
                 __instance.m_death_stats_recorded || __instance.m_cannot_die || __instance.c_player.m_invulnerable)
                 return;
             var otherPlayer = di.owner.GetComponent<Player>();
@@ -206,7 +485,8 @@ namespace GameMod
 
             //bool killed = false;
             float damage = di.damage;
-            if (hitpoints - di.damage <= 0f) {
+            if (hitpoints - di.damage <= 0f)
+            {
                 damage = hitpoints;
                 //killed = true;
             }
@@ -225,7 +505,7 @@ namespace GameMod
             bool lastTryGetValue = false;
             object lastLocVar = null;
             int setCount = 0;
-            string[] setMethods = new [] { "SetDefender", "SetAttacker", "SetAssisted" };
+            string[] setMethods = new[] { "SetDefender", "SetAttacker", "SetAssisted" };
 
             foreach (var code in instructions)
             {
@@ -239,6 +519,8 @@ namespace GameMod
                 {
                     yield return new CodeInstruction(OpCodes.Ldloc_S, lastLocVar);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerLobbyData), "m_name"));
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, lastLocVar);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerLobbyData), "m_team"));
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ServerStatLog),
                         setMethods[setCount]));
                     setCount++;
@@ -248,6 +530,18 @@ namespace GameMod
                     lastLocVar = code.operand;
                 }
                 lastTryGetValue = code.opcode == OpCodes.Callvirt && ((MemberInfo)code.operand).Name == "TryGetValue";
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Overload.Server), "InvokeDisconnectFlashOnClients")]
+    internal class LogOnDisconnect
+    {
+        static void Prefix(Player disconnected_player)
+        {
+            if (!disconnected_player.m_spectator)
+            {
+                ServerStatLog.Disconnected(disconnected_player.m_mp_name);
             }
         }
     }
