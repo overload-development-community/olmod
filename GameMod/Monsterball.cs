@@ -8,6 +8,31 @@ using UnityEngine;
 // by terminal
 namespace GameMod
 {
+    public class MonsterballAddon
+    {
+        public static Player CurrentPlayer;
+        public static Player LastPlayer;
+
+        public static void SetPlayer(Player player)
+        {
+            if (player == CurrentPlayer)
+            {
+                return;
+            }
+
+            if (CurrentPlayer != null && player.m_mp_team == CurrentPlayer.m_mp_team)
+            {
+                LastPlayer = CurrentPlayer;
+            }
+            else
+            {
+                LastPlayer = null;
+            }
+
+            CurrentPlayer = player;
+        }
+    }
+
     //Increases mass/drag on Monsterball, enables collision with wind tunnels and other potentially useful layers
     [HarmonyPatch(typeof(MonsterBall), "Awake")]
     class MonsterballEnableWeaponCollision
@@ -33,9 +58,22 @@ namespace GameMod
             float d = 1f;
             SFXCueManager.PlayRawSoundEffectPos(SoundEffect.imp_force_field1, collision.contacts[0].point, 0.4f, UnityEngine.Random.Range(-0.3f, 0f), 0f);
             GameObject gameObject = collision.collider.gameObject;
+
+            Player player = gameObject.GetComponent<Player>();
+            if (player != null)
+            {
+                MonsterballAddon.SetPlayer(player);
+            }
+
             Projectile proj = gameObject.GetComponent<Projectile>();
             if (proj == null || proj.m_type == ProjPrefab.none)
                 return;
+
+            if (proj.m_owner_player)
+            {
+                MonsterballAddon.SetPlayer(proj.m_owner_player);
+            }
+
             var mb = __instance;
             Vector3 forward = proj.c_transform.forward;
             if (proj.m_type == ProjPrefab.proj_impulse)
@@ -101,14 +139,14 @@ namespace GameMod
     }
 
     //enforce speed cap on ball (disabled: causes linux problems, no longer needed with increased ball mass)
-    [HarmonyPatch(typeof(MonsterBall), "Update")]
-    class MonsterballSpeedCap
-    {
-        private static void Postfix(MonsterBall __instance)
-        {
-            //__instance.c_rigidbody.velocity = Vector3.ClampMagnitude(__instance.c_rigidbody.velocity, 25f);
-        }
-    }
+    //[HarmonyPatch(typeof(MonsterBall), "Update")]
+    //class MonsterballSpeedCap
+    //{
+    //    private static void Postfix(MonsterBall __instance)
+    //    {
+    //        __instance.c_rigidbody.velocity = Vector3.ClampMagnitude(__instance.c_rigidbody.velocity, 25f);
+    //    }
+    //}
 
     //disable various monsterball-layer collisions we enabled at the start of the match
     [HarmonyPatch(typeof(NetworkManager), "OnSceneUnloaded")]
@@ -124,7 +162,8 @@ namespace GameMod
         }
     }
 
-    //collide thunderbolt with monsterball, Thunderbolt pushes ball farther if charged
+    // Collide thunderbolt with monsterball, Thunderbolt pushes ball farther if charged
+    // Also record who last touched the ballExtra
     [HarmonyPatch(typeof(Projectile), "OnTriggerEnter")]
     class MonsterballCollideThunderbolt
     {
@@ -135,15 +174,22 @@ namespace GameMod
                 return true;
             }
             var proj = __instance;
-            if (NetworkMatch.GetMode() == MatchMode.MONSTERBALL && proj.m_type == ProjPrefab.proj_thunderbolt && other.gameObject.layer == 31)
+            if (NetworkMatch.GetMode() == MatchMode.MONSTERBALL && other.gameObject.layer == 31)
             {
-                Vector3 vector = other.transform.position - proj.transform.position;
-                other.attachedRigidbody.AddForce(vector.normalized * 340f * ___m_strength + vector.normalized * 60f, ForceMode.Impulse);
-                ParticleElement particleElement = ParticleManager.psm[3].StartParticle((int)proj.m_death_particle_default, proj.c_transform.localPosition, proj.c_transform.localRotation, null, null, false);
-                particleElement.SetExplosionOwner(proj.m_owner);
-                particleElement.SetParticleScaleAndSimSpeed(1f + ___m_strength * 0.25f, 1f - ___m_strength * 0.15f);
-                GameManager.m_audio.PlayCuePos(255, proj.c_transform.localPosition, 0.7f, UnityEngine.Random.Range(-0.15f, 0.15f), 0f, 1f);
-                return false;
+                if (proj.m_owner_player)
+                {
+                    MonsterballAddon.SetPlayer(proj.m_owner_player);
+                }
+                if (proj.m_type == ProjPrefab.proj_thunderbolt)
+                {
+                    Vector3 vector = other.transform.position - proj.transform.position;
+                    other.attachedRigidbody.AddForce(vector.normalized * 340f * ___m_strength + vector.normalized * 60f, ForceMode.Impulse);
+                    ParticleElement particleElement = ParticleManager.psm[3].StartParticle((int)proj.m_death_particle_default, proj.c_transform.localPosition, proj.c_transform.localRotation, null, null, false);
+                    particleElement.SetExplosionOwner(proj.m_owner);
+                    particleElement.SetParticleScaleAndSimSpeed(1f + ___m_strength * 0.25f, 1f - ___m_strength * 0.15f);
+                    GameManager.m_audio.PlayCuePos(255, proj.c_transform.localPosition, 0.7f, UnityEngine.Random.Range(-0.15f, 0.15f), 0f, 1f);
+                    return false;
+                }
             }
             return true;
         }
@@ -200,6 +246,27 @@ namespace GameMod
             if (componentInParent)
             {
                 componentInParent.c_rigidbody.AddForce(__instance.transform.forward * (componentInParent.c_rigidbody.mass * 80f));
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(MonsterBallGoal), "OnTriggerEnter")]
+    internal class MonsterballAwardGoal
+    {
+        private static void Prefix(Collider other, MonsterBallGoal __instance)
+        {
+            if (other.gameObject.layer == 31 && NetworkManager.IsServer())
+            {
+                MpTeam mpTeam = (__instance.m_team != MpTeam.TEAM0) ? MpTeam.TEAM0 : MpTeam.TEAM1;
+
+                if (mpTeam == MonsterballAddon.CurrentPlayer.m_mp_team)
+                {
+                    ServerStatLog.AddGoal();
+                }
+                else
+                {
+                    ServerStatLog.AddBlunder();
+                }
             }
         }
     }
