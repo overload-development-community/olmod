@@ -68,6 +68,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Automatically downloads MP levels from overloadmaps.com
 
+- Adds MP level select screen
+
+- Disables weapon speed/lifetime randomization in LAN/Internet MP
+
 #### How to build
 
 - Open solution in Visual Studio 2017
