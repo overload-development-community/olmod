@@ -65,15 +65,22 @@ namespace GameMod
                 .GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
         }
 
+        private static string DifferentVersionFilename(string levelIdHash, out List<LevelInfo> levels, out int idx)
+        {
+            levels = GetMPLevels();
+            idx = FindLevelIndex(levels, levelIdHash);
+            if (idx < 0)
+                return null;
+            LevelInfo level = levels[idx];
+            return level.ZipPath ?? level.FilePath;
+        }
+
         // return false if failed
         private static bool DisableDifferentVersion(string levelIdHash, Action<string, bool> log)
         {
-            var levels = GetMPLevels();
-            int idx = FindLevelIndex(levels, levelIdHash);
-            if (idx < 0)
+            string fn = DifferentVersionFilename(levelIdHash, out List<LevelInfo> levels, out int idx);
+            if (fn == null)
                 return true;
-            LevelInfo level = levels[idx];
-            string fn = level.ZipPath ?? level.FilePath;
             try
             {
                 for (var i = 0; ; i++)
@@ -215,8 +222,13 @@ namespace GameMod
                         done = true;
                         break;
                     }
-                    yield return "DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS";
-                    yield break;
+                    string curVersionFile = DifferentVersionFilename(levelIdHash, out List<LevelInfo> levels, out int idx);
+                    if (tryfn != curVersionFile)
+                    {
+                        Debug.Log("Download: " + basefn + " already exists, current file: " + curVersionFile);
+                        yield return "DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS";
+                        yield break;
+                    }
                 }
                 if (CanCreateFile(tryfn + ".tmp")) {
                     fn = tryfn;
