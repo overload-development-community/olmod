@@ -148,6 +148,7 @@ namespace GameMod
                 downloadHandler = new DownloadHandlerBuffer(),
                 method = UnityWebRequest.kHttpVerbPOST
             };
+            request.SetRequestHeader("Content-Type", "application/json");
             GameManager.m_gm.StartCoroutine(RequestCoroutine(request.SendWebRequest()));
         }
 
