@@ -106,6 +106,7 @@
     <Compile Include="MPMaxPlayer.cs" />
     <Compile Include="MPNoNewWeaponSound.cs" />
     <Compile Include="MPObserver.cs" />
+    <Compile Include="MPProjInit.cs" />
     <Compile Include="MPPwdPaste.cs" />
     <Compile Include="MPSetup.cs" />
     <Compile Include="MPTeams.cs" />
