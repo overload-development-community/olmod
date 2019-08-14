@@ -72,12 +72,12 @@ namespace GameMod.Core
                     {
                         i++;
                         if (codes[i].opcode == OpCodes.Ldc_I4_2)
-                            codes[i].opcode = OpCodes.Ldc_I4_3;
+                            codes[i].opcode = OpCodes.Ldc_I4_4;
                         i++;
                         while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
                             i++;
                         if (codes[i].opcode == OpCodes.Ldc_I4_2)
-                            codes[i].opcode = OpCodes.Ldc_I4_3;
+                            codes[i].opcode = OpCodes.Ldc_I4_4;
                         n++;
                     }
                     if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_max_players" &&
