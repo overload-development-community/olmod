@@ -2,6 +2,7 @@
 using Overload;
 using UnityEngine;
 
+// by terminal
 namespace GameMod
 {
     [HarmonyPatch(typeof(RUtility), "CanObjectOpenDoor")]
@@ -12,6 +13,19 @@ namespace GameMod
         {
             if (go != null && (go.layer == 13 || go.layer == 9 || go.layer == 31) && GameplayManager.IsMultiplayerActive)
                 __result = true;
+        }
+    }
+
+    [HarmonyPatch(typeof(DoorAnimating), "Start")]
+    internal class MPTouchDoors
+    {
+        //Removes the proximity sensor which is replaced by a collision in MPShootDoors
+        private static void Postfix(GameObject __instance, GameObject ___m_player_trigger)
+        {
+            if (GameplayManager.IsMultiplayer && __instance != null && ___m_player_trigger.GetComponentInChildren<BoxCollider>() != null)
+            {
+                ___m_player_trigger.GetComponentInChildren<BoxCollider>().size = default(Vector3);
+            }
         }
     }
 }
