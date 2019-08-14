@@ -410,8 +410,17 @@ namespace GameMod
         {
             while (MPDownloadLevel.DownloadBusy)
                 yield return null;
-            if (GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) >= 0)
+            if (GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) >= 0) // test here to prevent loop
+            {
+                Debug.Log("Level downloaded, loading scene");
                 Overload.NetworkManager.LoadScene(name);
+            }
+            else
+            {
+                Debug.Log("Match scene load failed: level still not found after download finished " + name);
+                UIManager.DestroyAll(true);
+                NetworkMatch.ExitMatchToMainMenu();
+            }
         }
 
         static bool Prefix(string name)
@@ -421,6 +430,7 @@ namespace GameMod
             if (!MPDownloadLevel.DownloadBusy && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) < 0)
                 MPDownloadLevel.StartGetLevel(name);
             if (MPDownloadLevel.DownloadBusy) {
+                Debug.Log("Level still downloading when loading match scene, delay scene load " + name);
                 GameManager.m_gm.StartCoroutine(WaitLevel(name));
                 return false;
             }
