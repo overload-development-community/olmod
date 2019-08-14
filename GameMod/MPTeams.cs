@@ -20,7 +20,7 @@ namespace GameMod
         public static readonly int Max = 8;
         private static readonly float[] colors = { 0.08f, 0.16f, 0.32f, 0.51f, 0.62f, 0.71f, 0.91f, 0.002f, 0.6f };
         private static readonly int[] colorIdx = { 4, 0, 2, 3, 5, 6, 7, 8 };
-        private static readonly MpTeam[] allTeams = { MpTeam.TEAM0, MpTeam.TEAM1,
+        public static readonly MpTeam[] AllTeams = { MpTeam.TEAM0, MpTeam.TEAM1,
             MpTeam.NUM_TEAMS, MpTeam.NUM_TEAMS + 1, MpTeam.NUM_TEAMS + 2, MpTeam.NUM_TEAMS + 3,
             MpTeam.NUM_TEAMS + 4, MpTeam.NUM_TEAMS + 5 };
         public static readonly MpTeam MPTEAM_NUM = MpTeam.NUM_TEAMS + 6;
@@ -34,7 +34,7 @@ namespace GameMod
         public static IEnumerable<MpTeam> Teams
         {
             get {
-                return allTeams.Take(NetworkMatchTeamCount);
+                return AllTeams.Take(NetworkMatchTeamCount);
             }
         }
 
@@ -46,7 +46,7 @@ namespace GameMod
                 foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
                     if (!player.m_spectator)
                         team_counts[(int)player.m_mp_team]++;
-                foreach (var team in allTeams)
+                foreach (var team in AllTeams)
                     if (team_counts[(int)team] > 0)
                         yield return team;
             }
@@ -68,7 +68,7 @@ namespace GameMod
             team = team + 1;
             if (team == MpTeam.ANARCHY)
                 team = team + 1;
-            return team == MPTEAM_NUM || allTeams.IndexOf(x => x == team) >= NetworkMatchTeamCount ? MpTeam.TEAM0 : team;
+            return team == MPTEAM_NUM || AllTeams.IndexOf(x => x == team) >= NetworkMatchTeamCount ? MpTeam.TEAM0 : team;
         }
 
         public static string TeamName(MpTeam team)
