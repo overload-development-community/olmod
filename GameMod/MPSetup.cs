@@ -66,15 +66,17 @@ namespace GameMod
     {
         static void Postfix(PrivateMatchDataMessage __result)
         {
-            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || RearView.MPMenuManagerEnabled) && MenuManager.m_mp_lan_match)
+            Debug.Log("Build PMD name jipsingle " + MPJoinInProgress.SingleMatchEnable);
+            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable || RearView.MPMenuManagerEnabled) &&
+                MenuManager.m_mp_lan_match)
             {
                 __result.m_name += new string(new char[] { '\0', (char)(
                     ((Math.Max(2, MPTeams.MenuManagerTeamCount) - 2) & 7) |
-                    (MPJoinInProgress.MenuManagerEnabled ? 8 : 0) |
+                    (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 8 : 0) |
                     (RearView.MPMenuManagerEnabled ? 16 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
-            if (MPJoinInProgress.MenuManagerEnabled)
+            if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable)
                 __result.m_num_players_to_start = 1;
         }
     }

@@ -15,6 +15,7 @@ namespace GameMod
     {
         public static bool NetworkMatchEnabled = true;
         public static bool MenuManagerEnabled = true;
+        public static bool SingleMatchEnable = false;
 
         public static bool MatchHasStartedMod(bool m_match_has_started)
         {
@@ -292,8 +293,8 @@ namespace GameMod
         public static void DrawMpMatchJIP(UIElement uie, ref Vector2 position)
         {
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW JOIN IN PROGRESS"), position, 7,
-                MenuManager.GetToggleSetting(MPJoinInProgress.MenuManagerEnabled ? 1 : 0),
-                Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1.5f, !MenuManager.m_mp_lan_match);
+                MenuManager.GetToggleSetting(MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 1 : 0),
+                Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1.5f, !MenuManager.m_mp_lan_match || MPJoinInProgress.SingleMatchEnable);
             position.y += 62f;
             #if false // waits on olmod server detection
             uie.SelectAndDrawStringOptionItem(Loc.LS("REAR VIEW MIRROR"), position, 8,
@@ -303,19 +304,43 @@ namespace GameMod
             #endif
         }
 
+        public static void DrawMpMatchCreateOpen(UIElement uie, ref Vector2 position)
+        {
+            if (!MenuManager.m_mp_lan_match)
+                return;
+            uie.SelectAndDrawItem(Loc.LS("CREATE OPEN MATCH"), position, 2, false);
+            position.y += 62f;
+            if (UIManager.m_menu_selection == 2)
+            {
+                UIElement.ToolTipActive = true;
+                UIElement.ToolTipTitle = "CREATE OPEN MATCH";
+                UIElement.ToolTipDescription = "CREATE MATCH AND ALLOW OTHERS TO JOIN AFTER STARTING";
+            }
+            else
+                UIElement.ToolTipActive = false;
+            uie.DrawMenuToolTip(position + Vector2.up * 40f);
+        }
+
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
             foreach (var code in codes)
             {
-                if (state == 0 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
+                if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "CREATE MATCH")
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchCreateOpen"));
+                    state = 1;
+                }
+                if (state == 1 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
                     code.operand = 155f + 62f;
-                if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
+                if (state == 1 && code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchJIP"));
-                    state = 1;
+                    state = 2;
                 }
                 yield return code;
             }
@@ -327,10 +352,14 @@ namespace GameMod
     {
         static void Postfix()
         {
+            if (MenuManager.m_menu_micro_state == 0)
+                MPJoinInProgress.SingleMatchEnable = false;
             var prev_dir = UIManager.m_select_dir;
-            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
-                MenuManager.m_menu_micro_state == 3 &&
+            if (MenuManager.m_menu_sub_state != MenuSubState.ACTIVE ||
+                (!UIManager.PushedSelect(100) && (!MenuManager.option_dir || !UIManager.PushedDir())))
+                return;
+
+            if (MenuManager.m_menu_micro_state == 3 &&
                 (UIManager.m_menu_selection == 7 || UIManager.m_menu_selection == 8))
             {
                 if (UIManager.m_menu_selection == 7)
@@ -338,6 +367,14 @@ namespace GameMod
                 if (UIManager.m_menu_selection == 8)
                     RearView.MPMenuManagerEnabled = !RearView.MPMenuManagerEnabled;
                 MenuManager.PlayCycleSound(1f, (float)prev_dir);
+            }
+            else if (MenuManager.m_menu_micro_state == 0 && UIManager.m_menu_selection == 2) // create open match
+            {
+                MenuManager.m_menu_micro_state = 2;
+                MenuManager.UIPulse(2f);
+                MenuManager.PlaySelectSound();
+                MenuManager.SetDefaultSelection(7);
+                MPJoinInProgress.SingleMatchEnable = true;
             }
         }
     }
@@ -348,7 +385,8 @@ namespace GameMod
     {
         public static void FinalizeRequest(MatchmakerPlayerRequest req)
         {
-            if (MenuManager.m_mp_lan_match && MPJoinInProgress.MenuManagerEnabled && NetworkMatch.m_match_req_password == "")
+            if (MenuManager.m_mp_lan_match && (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable) &&
+                NetworkMatch.m_match_req_password == "")
                 req.PlayerAttributes["min_num_players"] = 1;
         }
 
