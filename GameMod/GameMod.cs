@@ -11,12 +11,13 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static readonly string Version = "olmod 0.2.5";
+        public static readonly string Version = "olmod 0.2.5.9";
 
         internal static void Initialize()
         {
             Debug.Log("Initializing " + Version);
             Config.Init();
+            Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             HarmonyInstance.DEBUG = FindArg("-harmonydebug");
             var harmony = HarmonyInstance.Create("olmod.olmod");
             try {

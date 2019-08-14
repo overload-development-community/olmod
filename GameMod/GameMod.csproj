@@ -75,6 +75,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\UnityEngine.Networking.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
@@ -92,6 +96,9 @@
     <Compile Include="AddOnLevelSort.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
+    <Compile Include="CTF.cs" />
+    <Compile Include="DisableTimeCheat.cs" />
+    <Compile Include="FastLoad.cs" />
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
     <Compile Include="MPCustomModeFile.cs" />
@@ -104,6 +111,7 @@
     <Compile Include="MPHoming.cs" />
     <Compile Include="MPLevelSelect.cs" />
     <Compile Include="MPMaxPlayer.cs" />
+    <Compile Include="MPNegativeKills.cs" />
     <Compile Include="MPNoNewWeaponSound.cs" />
     <Compile Include="MPObserver.cs" />
     <Compile Include="MPProjInit.cs" />
