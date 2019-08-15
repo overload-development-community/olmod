@@ -97,6 +97,7 @@
     <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="CTF.cs" />
+    <Compile Include="CustomLevelResources.cs" />
     <Compile Include="DisableTimeCheat.cs" />
     <Compile Include="FastLoad.cs" />
     <Compile Include="FrameTime.cs" />
