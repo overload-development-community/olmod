@@ -85,4 +85,20 @@ namespace GameMod
             return false;
         }
     }
+
+    [HarmonyPatch(typeof(GameManager), "SetupDedicatedServer")]
+    class FastLoadTexResLow
+    {
+        private static bool Prepare()
+        {
+            var enabled = Core.GameMod.FindArg("-texreslow");
+            if (enabled)
+                Debug.Log("texreslow enabled");
+            return enabled;
+        }
+        private static void Prefix()
+        {
+            QualitySettings.masterTextureLimit = 2 - 0;
+        }
+    }
 }
