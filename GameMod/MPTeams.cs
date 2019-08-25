@@ -47,8 +47,12 @@ namespace GameMod
                     if (!player.m_spectator)
                         team_counts[(int)player.m_mp_team]++;
                 foreach (var team in AllTeams)
-                    if (team_counts[(int)team] > 0)
+                {
+                    var idx = teamIndexList[(int)team];
+                    if (team_counts[(int)team] > 0 ||
+                        (idx < NetworkMatch.m_team_scores.Length && NetworkMatch.m_team_scores[idx] != 0))
                         yield return team;
+                }
             }
         }
 
