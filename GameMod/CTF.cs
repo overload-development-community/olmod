@@ -13,14 +13,19 @@ using UnityEngine.Networking.NetworkSystem;
 
 namespace GameMod
 {
+    public enum FlagState
+    {
+        HOME, PICKEDUP, LOST
+    }
     static class CTF
     {
         public const MatchMode MatchModeCTF = MatchMode.NUM;
+        public const int TeamCount = 2;
         public static List<GameObject> FlagObjs = new List<GameObject>();
         public static bool IsActive { get { return NetworkMatch.GetMode() == CTF.MatchModeCTF && GameplayManager.IsMultiplayerActive; } }
-        public static bool[] HasSpawnPoint = new bool[2];
-        public static Vector3[] SpawnPoint = new Vector3[2];
-        public const int TeamCount = 2;
+        public static bool[] HasSpawnPoint = new bool[TeamCount];
+        public static Vector3[] SpawnPoint = new Vector3[TeamCount];
+        public static FlagState[] FlagStates = new FlagState[TeamCount];
         public static Color FlagColor(int teamIdx)
         {
             return MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], teamIdx == 1 ? 2 : 3); // make orange a bit darker
@@ -29,21 +34,28 @@ namespace GameMod
         {
             return MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], 1);
         }
-        public static Dictionary<NetworkInstanceId, int> PlayerHasKey = new Dictionary<NetworkInstanceId, int>();
+        public static Dictionary<NetworkInstanceId, int> PlayerHasFlag = new Dictionary<NetworkInstanceId, int>();
 
-        public static void SendCTFPickup(NetworkInstanceId player_id, int flag_id)
+        public static void SendCTFPickup(NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id });
+            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
-        public static void SendCTFLose(NetworkInstanceId player_id, int flag_id)
+        public static void SendCTFLose(NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id });
+            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+        }
+        public static void SendCTFFlagUpdate(NetworkInstanceId player_id, int flag_id, FlagState state)
+        {
+            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
         public static void InitForLevel()
         {
-            PlayerHasKey.Clear();
-            HasSpawnPoint = new bool[CTF.TeamCount];
+            //foreach (var x in GameObject.FindObjectsOfType<MonsterBallGoal>())
+            //    x.gameObject.GetComponent<BoxCollider>()
+            PlayerHasFlag.Clear();
+            HasSpawnPoint = new bool[TeamCount];
+            FlagStates = new FlagState[TeamCount];
             var rest = new Queue<LevelData.SpawnPoint>();
             foreach (var spawn in GameManager.m_level_data.m_player_spawn_points)
             {
@@ -67,18 +79,35 @@ namespace GameMod
                 }
             //Debug.Log("InitForLevel HasSpawnPoint=" + string.Join(",", HasSpawnPoint.Select(x => x.ToString()).ToArray()));
         }
+        // pickup of flag item
         public static bool Pickup(Player player, int flag)
         {
-            if (flag < 0 || flag >= FlagObjs.Count || PlayerHasKey.ContainsKey(player.netId) || MPTeams.AllTeams[flag] == player.m_mp_team)
+            if (flag < 0 || flag >= FlagObjs.Count)
                 return false;
-            SendCTFPickup(player.netId, flag);
+            var ownFlag = MPTeams.AllTeams[flag] == player.m_mp_team;
+            if  (ownFlag && FlagStates[flag] == FlagState.HOME)
+                return false;
+            if (!ownFlag && PlayerHasFlag.ContainsKey(player.netId))
+                return false;
+            if (ownFlag) {
+                SendCTFFlagUpdate(player.netId, flag, FlagState.HOME);
+                SpawnAtHome(flag);
+            } else {
+                SendCTFPickup(player.netId, flag, FlagState.PICKEDUP);
+            }
             // this will also send to 'client 0' so it'll get added on the server as well
             //PlayerHasKey.Add(player.connectionToClient.connectionId, flag);
-            CTF.Notify(player, string.Format(Loc.LS("PICKED UP {0} {1}!"), MPTeams.TeamName(MPTeams.AllTeams[flag]), Loc.LS("FLAG")));
+            var msg = FlagStates[flag] == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
+                ownFlag ? "{0} RETURNS THE {2} FLAG!" :
+                "{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!";
+            CTF.Notify(player, string.Format(Loc.LS(msg), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
+                MPTeams.TeamName(MPTeams.AllTeams[flag])));
+            /*
             var otherMsg = player.m_mp_name + " PICKED UP A FLAG!";
             foreach (var pl in Overload.NetworkManager.m_Players)
                 if (!System.Object.ReferenceEquals(pl, player))
                     CTF.Notify(pl, otherMsg);
+            */
             return true;
         }
         public static void Drop(Player player)
@@ -94,22 +123,23 @@ namespace GameMod
                 return;
             }
             */
-            if (!PlayerHasKey.TryGetValue(player.netId, out int flag)) {
+            if (!PlayerHasFlag.TryGetValue(player.netId, out int flag)) {
                 Debug.Log("CTF.Drop: player " + player.m_mp_name + " has no flag!");
                 return;
             }
             //var player = ClientScene.FindLocalObject(player_id).GetComponent<Player>();
-            SendCTFLose(player.netId, flag);
-            Spawn(flag);
+            CTF.PlayerHasFlag.Remove(player.netId);
+            SendCTFLose(player.netId, flag, FlagState.LOST);
+            SpawnAtHome(flag);
             //SendCTFPickup(player.connectionToClient.connectionId, flag);
             // this will also send to 'client 0' so it'll get added on the server as well
             //PlayerHasKey.Add(player.connectionToClient.connectionId, flag);
         }
-        public static void Spawn(int flag_id)
+        public static void SpawnAtHome(int flag_id)
         {
             if (flag_id >= HasSpawnPoint.Length || !HasSpawnPoint[flag_id]) // flag_id >= GameManager.m_level_data.m_player_spawn_points.Length || flag_id > 2) // || flag_id >= CTF.FlagObjs.Count)
             {
-                Debug.Log("No spawn point for flag " + flag_id);
+                Debug.Log("No home spawn point for flag " + flag_id);
                 return;
             }
             //var pos = GameManager.m_level_data.m_player_spawn_points[flag_id].position;
@@ -158,6 +188,35 @@ namespace GameMod
         {
             //player.CallTargetAddHUDMessage(player.connectionToClient, message, -1, true);
             NetworkServer.SendToClient(player.connectionToClient.connectionId, CTFCustomMsg.MsgCTFNotify, new StringMessage(message));
+        }
+        public static void NotifyAll(string message)
+        {
+            //player.CallTargetAddHUDMessage(player.connectionToClient, message, -1, true);
+            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFNotify, new StringMessage(message));
+        }
+
+        public static void Score(Player player)
+        {
+            if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[MPTeams.TeamNum(player.m_mp_team)] != FlagState.HOME)
+                return;
+            PlayerHasFlag.Remove(player.netId);
+            SendCTFLose(player.netId, flag, FlagState.HOME);
+            SpawnAtHome(flag);
+            NetworkMatch.AddPointForTeam(player.m_mp_team);
+            //typeof(NetworkMatch).GetMethod("SendUpdatedTeamScoreToClients", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { team });
+
+            NotifyAll(string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
+                MPTeams.TeamName(MPTeams.AllTeams[flag])));
+        }
+        public static void SendJoinUpdate(Player player)
+        {
+            if (!CTF.IsActive)
+                return;
+            foreach (var x in CTF.PlayerHasFlag)
+                CTF.SendCTFPickup(x.Key, x.Value, FlagState.PICKEDUP);
+            for (int flag = 0; flag < TeamCount; flag++)
+                if (FlagStates[flag] == FlagState.LOST)
+                    CTF.SendCTFFlagUpdate(NetworkInstanceId.Invalid, flag, FlagStates[flag]);
         }
     }
 
@@ -317,7 +376,7 @@ namespace GameMod
             Debug.Log("CTF.SpawnFlags: scene fully loaded");
             */
             for (int i = 0; i < CTF.TeamCount; i++)
-                CTF.Spawn(i);
+                CTF.SpawnAtHome(i);
         }
 
         private static void Postfix()
@@ -340,6 +399,7 @@ namespace GameMod
         }
     }
 
+    // pickup of flag item
     [HarmonyPatch(typeof(Item), "OnTriggerEnter")]
     class CTFOnTriggerEnter
     {
@@ -351,7 +411,7 @@ namespace GameMod
         static bool Prefix(Item __instance, Collider other)
         {
             //Debug.Log("OnTriggerEnter " + __instance.m_type + " server =" + Overload.NetworkManager.IsServer() + " index=" + __instance.m_index);
-            if (__instance.m_type != ItemType.KEY_SECURITY || !GameplayManager.IsMultiplayerActive)
+            if (__instance.m_type != ItemType.KEY_SECURITY || !CTF.IsActive)
                 return true;
             if (other.attachedRigidbody == null)
             {
@@ -388,7 +448,7 @@ namespace GameMod
         {
             if (!CTF.IsActive)
                 return;
-            if (!CTF.PlayerHasKey.TryGetValue(GameManager.m_local_player.netId, out int flag))
+            if (!CTF.PlayerHasFlag.TryGetValue(GameManager.m_local_player.netId, out int flag))
                 return;
             var m_alpha = __instance.m_alpha;
             Color col_ub = UIManager.m_col_ub1;
@@ -439,18 +499,21 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.Write(m_player_id);
             writer.WritePackedUInt32((uint)m_flag_id);
+            writer.Write((byte)m_flag_state);
         }
         public override void Deserialize(NetworkReader reader)
         {
             var version = reader.ReadByte();
             m_player_id = reader.ReadNetworkId();
             m_flag_id = (int)reader.ReadPackedUInt32();
+            m_flag_state = version >= 1 ? (FlagState)reader.ReadByte() : FlagState.HOME;
         }
         public NetworkInstanceId m_player_id;
         public int m_flag_id;
+        public FlagState m_flag_state;
     }
 
     public class CTFCustomMsg
@@ -458,6 +521,7 @@ namespace GameMod
         public const short MsgCTFPickup = 121;
         public const short MsgCTFLose = 122;
         public const short MsgCTFNotify = 123;
+        public const short MsgCTFFlagUpdate = 124;
     }
 
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
@@ -466,14 +530,18 @@ namespace GameMod
         private static void OnCTFPickup(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
-            CTF.PlayerHasKey.Add(msg.m_player_id, msg.m_flag_id);
+            if (!CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
+                CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
+            CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
             //SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_message1);
         }
 
         private static void OnCTFLose(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
-            CTF.PlayerHasKey.Remove(msg.m_player_id);
+            if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
+                CTF.PlayerHasFlag.Remove(msg.m_player_id);
+            CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
             //SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_message1);
         }
 
@@ -484,6 +552,12 @@ namespace GameMod
             SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_message1);
         }
 
+        private static void OnCTFFlagUpdate(NetworkMessage rawMsg)
+        {
+            var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
+            CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+        }
+
         static void Postfix()
         {
             if (Client.GetClient() == null)
@@ -491,6 +565,7 @@ namespace GameMod
             Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFPickup, OnCTFPickup);
             Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFLose, OnCTFLose);
             Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotify, OnCTFNotify);
+            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFFlagUpdate, OnCTFFlagUpdate);
         }
     }
 
@@ -538,17 +613,9 @@ namespace GameMod
                 return;
             Player player = playerShip.c_player;
             var team = player.m_mp_team;
-            if (team == __instance.m_team && CTF.PlayerHasKey.ContainsKey(player.netId))
+            if (team == __instance.m_team && CTF.PlayerHasFlag.ContainsKey(player.netId))
             {
-                CTF.Drop(player);
-                NetworkMatch.m_team_scores[(int)team] += 5;
-                typeof(NetworkMatch).GetMethod("SendUpdatedTeamScoreToClients", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { team });
-
-                CTF.Notify(player, "YOU HAVE SCORED!");
-                var otherMsg = player.m_mp_name + " HAS SCORED!";
-                foreach (var pl in Overload.NetworkManager.m_Players)
-                    if (!System.Object.ReferenceEquals(pl, player))
-                        CTF.Notify(pl, otherMsg);
+                CTF.Score(player);
             }
         }
     }
@@ -574,11 +641,137 @@ namespace GameMod
         {
             if (!Overload.NetworkManager.IsServer() || !GameplayManager.IsMultiplayerActive || NetworkMatch.GetMode() != CTF.MatchModeCTF)
                 return;
-            if (!CTF.PlayerHasKey.TryGetValue(__instance.c_player.netId, out int flag))
+            if (!CTF.PlayerHasFlag.TryGetValue(__instance.c_player.netId, out int flag))
                 return;
-            CTF.SendCTFLose(__instance.c_player.netId, flag);
+            CTF.SendCTFLose(__instance.c_player.netId, flag, FlagState.LOST);
             CTF.SpewFlag(flag, __instance);
+        }
+    }
 
+    [HarmonyPatch(typeof(PlayerShip), "Update")]
+    class CTFRing
+    {
+        static Material[] mats;
+
+        private static void SetupMat()
+        {
+            mats = new Material[CTF.TeamCount];
+            var org_mat = UIManager.gm.m_pull_material; //UIManager.gm.m_damage_material; //UIManager.gm.m_pull_material;
+            for (int i = 0; i < CTF.TeamCount; i++)
+            {
+                var team = MPTeams.AllTeams[i];
+                var mat = new Material(org_mat.shader);
+                mat.CopyPropertiesFromMaterial(org_mat);
+                mat.SetColor("_EdgeColor", MPTeams.TeamColor(team, 0));
+                //mat.SetColor("_GlowColor", MPTeams.TeamColor(team, 0));
+                mats[i] = mat;
+            }
+        }
+
+        private static void Postfix(PlayerShip __instance)
+        {
+            if (__instance.isLocalPlayer || __instance.m_dead ||
+                !CTF.IsActive ||
+                !CTF.PlayerHasFlag.TryGetValue(__instance.c_player.netId, out int flag) ||
+                Overload.NetworkManager.IsHeadless())
+                return;
+            if (mats == null)
+                SetupMat();
+            __instance.DrawEffectMesh(mats[flag], 1f);
+        }
+    }
+
+    [HarmonyPatch(typeof(NetworkMatch), "GetHighestScore")]
+    class CTFGetHighestScore
+    {
+        private static bool Prefix(ref int __result)
+        {
+            if (NetworkMatch.GetMode() != CTF.MatchModeCTF)
+                return true;
+            __result = MPTeams.HighestScore();
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
+    class CTFDrawHUDScoreInfo
+    {
+        private static void DrawFlagState(Vector2 pos, float m_alpha, int flag)
+        {
+            var state = CTF.FlagStates[flag];
+            if (state == FlagState.PICKEDUP)
+            {
+                var pickedupTeamIdx = 1 - flag;
+                UIManager.DrawSpriteUIRotated(pos, 0.4f, 0.4f, Mathf.PI / 2f,
+                    MPTeams.TeamColor(MPTeams.AllTeams[pickedupTeamIdx], 4), m_alpha, (int)AtlasIndex0.RING_MED0);
+
+                UIManager.DrawSpriteUIRotated(pos, 0.18f, 0.18f, Mathf.PI / 2f,
+                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * 0.5f, m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+            }
+            else
+            {
+                UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
+                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * (state == FlagState.LOST ? 0.2f : 1f), m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+            }
+        }
+
+        private static void Prefix(Vector2 pos, float ___m_alpha)
+        {
+            if (!CTF.IsActive)
+                return;
+            pos.x -= 4f;
+            pos.y -= 5f;
+            pos.x -= 100f;
+            pos.y -= 20f;
+
+            pos.x -= 110f;
+            pos.y += 20f;
+
+            for (int i = 0; i < CTF.TeamCount; i++)
+            {
+                DrawFlagState(pos, ___m_alpha, i);
+                pos.x += 60;
+            }
+            /*
+            UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
+                MPTeams.TeamColor(MPTeams.AllTeams[0], 4), ___m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+
+            pos.x += 60f;
+
+            UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
+                MPTeams.TeamColor(MPTeams.AllTeams[1], 4), ___m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+
+            // test
+            pos.x -= 60f;
+            pos.y += 60f;
+            //UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
+            //    MPTeams.TeamColor(MPTeams.AllTeams[0], 0) * .4f, ___m_alpha, 84);
+
+            //UIManager.DrawSpriteUIRotated(pos + new Vector2(-30f, -30f), 0.2f, 0.2f, Mathf.PI / 2f,
+            //    MPTeams.TeamColor(MPTeams.AllTeams[1], 4), ___m_alpha, 84);
+
+            UIManager.DrawSpriteUIRotated(pos, 0.4f, 0.4f, Mathf.PI / 2f,
+                MPTeams.TeamColor(MPTeams.AllTeams[1], 4), ___m_alpha, (int)AtlasIndex0.RING_MED0);
+
+            UIManager.DrawSpriteUIRotated(pos, 0.18f, 0.18f, Mathf.PI / 2f,
+                MPTeams.TeamColor(MPTeams.AllTeams[0], 4) * 0.5f, ___m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+
+            pos.x += 60f;
+
+            UIManager.DrawSpriteUIRotated(pos, 0.4f, 0.4f, Mathf.PI / 2f,
+                MPTeams.TeamColor(MPTeams.AllTeams[0], 4), ___m_alpha, (int)AtlasIndex0.RING_MED0);
+
+            UIManager.DrawSpriteUIRotated(pos, 0.18f, 0.18f, Mathf.PI / 2f,
+                MPTeams.TeamColor(MPTeams.AllTeams[1], 4) * 0.5f, ___m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+
+            //UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
+            //    MPTeams.TeamColor(MPTeams.AllTeams[1], 0), ___m_alpha * .2f, 84);
+
+            //UIManager.DrawSpriteUIRotated(pos + new Vector2(-30f, -30f), 0.2f, 0.2f, Mathf.PI / 2f,
+            //    MPTeams.TeamColor(MPTeams.AllTeams[0], 4), ___m_alpha, 84);
+            //UIManager.DrawCharQuad(pos, 0xd7, 0.3f, MPTeams.TeamColor(MPTeams.AllTeams[0], 4));
+            //UIManager.DrawStringScaled("\xd7", pos + new Vector2(-30f, 0), Vector2.zero, 50f, MPTeams.TeamColor(MPTeams.AllTeams[0], 3), -1f, 0f, 0f);
+            */
         }
     }
 
