@@ -317,14 +317,17 @@ namespace GameMod
     {
         static bool Prefix(UIElement __instance, ref Vector2 pos)
         {
-            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8))
+            var mode = NetworkMatch.GetMode();
+            var fitSingle = MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8;
+            if (mode == MatchMode.ANARCHY || ((mode == MatchMode.TEAM_ANARCHY || mode == MatchMode.MONSTERBALL) && fitSingle))
                 return true;
 
-            float col1 = -250f;
-            float col2 = 100f - 50f;
-            float col3 = 190f - 50f;
-            float col4 = 280f - 50f;
-            float col5 = 350f - 50f;
+            float colReduce = fitSingle ? 0 : 50f;
+            float col1 = fitSingle ? -330f : -250f;
+            float col2 = 100f - colReduce;
+            float col3 = 190f - colReduce;
+            float col4 = 280f - colReduce;
+            float col5 = 350f - colReduce;
 
             MpTeam myTeam = GameManager.m_local_player.m_mp_team;
             int col = 0;
@@ -333,11 +336,11 @@ namespace GameMod
             float[] ys = new float[2] { pos.y, pos.y };
             foreach (var team in MPTeams.TeamsByScore)
             {
-                pos.x = x + (col == 0 ? -325f : 325f);
+                pos.x = x + (fitSingle ? 0 : col == 0 ? -325f : 325f);
                 pos.y = ys[col];
                 MPTeams.DrawTeamScore(__instance, pos, team, NetworkMatch.GetTeamScore(team), col5, team == myTeam);
                 pos.y += 35f;
-                if (ys[col] == y)
+                if (ys[col] == y || fitSingle) // only draw header for first team in column
                 {
                     MPTeams.DrawScoreHeader(__instance, pos, col1, col2, col3, col4, col5, false);
                     pos.y += 15f;
@@ -347,13 +350,15 @@ namespace GameMod
                 int num = MPTeams.DrawScoresForTeam(__instance, team, pos, col1, col2, col3, col4, col5);
                 pos.y += (float)num * 25f + 35f;
                 ys[col] = pos.y;
-                col = 1 - col;
+                if (!fitSingle)
+                    col = 1 - col;
             }
             pos.y = Mathf.Max(ys[0], ys[1]);
             return false;
         }
     }
 
+    // shown on death
     [HarmonyPatch(typeof(UIElement), "DrawMpMiniScoreboard")]
     static class MPTeamsMiniScore
     {
