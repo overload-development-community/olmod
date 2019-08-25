@@ -200,13 +200,13 @@ namespace GameMod
     {
         public static void MaybeAddPointForTeam(MpTeam team)
         {
-            if (NetworkMatch.GetMode() != MatchMode.MONSTERBALL)
+            if (NetworkMatch.GetMode() != MatchMode.MONSTERBALL && NetworkMatch.GetMode() != CTF.MatchModeCTF)
                 NetworkMatch.AddPointForTeam(team);
         }
 
         public static void MaybeSubtractPointForTeam(MpTeam team)
         {
-            if (NetworkMatch.GetMode() != MatchMode.MONSTERBALL)
+            if (NetworkMatch.GetMode() != MatchMode.MONSTERBALL && NetworkMatch.GetMode() != CTF.MatchModeCTF)
                 NetworkMatch.SubtractPointForTeam(team);
         }
 
