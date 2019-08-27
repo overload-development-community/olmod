@@ -64,6 +64,7 @@ namespace GameMod
                 GameManager.m_local_player.Networkm_spectator = true;
                 GameManager.m_player_ship.c_player.m_spectator = true;
                 GameManager.m_local_player.m_spectator = true;
+                GameManager.m_player_ship.c_camera.useOcclusionCulling = false;
             }
             else
             {
@@ -103,6 +104,7 @@ namespace GameMod
     {
         static void Prefix()
         {
+            GameManager.m_player_ship.c_camera.useOcclusionCulling = true;
             GameplayManager.m_use_segment_visibility = true;
             MPObserver.Enabled = false;
         }
@@ -125,7 +127,17 @@ namespace GameMod
     {
         static bool Prefix()
         {
-            return !GameManager.m_local_player.m_spectator;
+            if (GameManager.m_local_player.m_spectator)
+            {
+                if (GameplayManager.IsMultiplayer)
+                {
+                    ChunkManager.ForceActivateAll();
+                    ChunkManager.DisableReflectionProbes();
+                    ChunkManager.DisableLights();
+                    return false;
+                }
+            }
+            return true;
         }
     }
 
@@ -195,6 +207,7 @@ namespace GameMod
                         continue;
                     Debug.LogFormat("Enabling spectator for {0}", player.m_mp_name);
                     player.Networkm_spectator = true;
+                    GameManager.m_player_ship.c_camera.useOcclusionCulling = false;
                     Debug.LogFormat("Enabled spectator for {0}", player.m_mp_name);
                 }
         }
