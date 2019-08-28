@@ -92,14 +92,18 @@ namespace GameMod
             if (ownFlag) {
                 SendCTFFlagUpdate(player.netId, flag, FlagState.HOME);
                 SpawnAtHome(flag);
-            } else {
+                ServerStatLog.AddFlagEvent(player, "Return");
+            }
+            else {
                 SendCTFPickup(player.netId, flag, FlagState.PICKEDUP);
+                ServerStatLog.AddFlagEvent(player, "Pickup");
             }
             // this will also send to 'client 0' so it'll get added on the server as well
             //PlayerHasKey.Add(player.connectionToClient.connectionId, flag);
             var msg = FlagStates[flag] == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
                 ownFlag ? "{0} RETURNS THE {2} FLAG!" :
                 "{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!";
+
             CTF.Notify(player, string.Format(Loc.LS(msg), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
                 MPTeams.TeamName(MPTeams.AllTeams[flag])));
             /*
@@ -110,6 +114,7 @@ namespace GameMod
             */
             return true;
         }
+
         public static void Drop(Player player)
         {
             /*
@@ -197,6 +202,11 @@ namespace GameMod
 
         public static void Score(Player player)
         {
+            if (NetworkMatch.m_postgame)
+            {
+                return;
+            }
+
             if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[MPTeams.TeamNum(player.m_mp_team)] != FlagState.HOME)
                 return;
             PlayerHasFlag.Remove(player.netId);
@@ -207,6 +217,8 @@ namespace GameMod
 
             NotifyAll(string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
                 MPTeams.TeamName(MPTeams.AllTeams[flag])));
+
+            ServerStatLog.AddFlagEvent(player, "Capture");
         }
         public static void SendJoinUpdate(Player player)
         {
@@ -217,6 +229,30 @@ namespace GameMod
             for (int flag = 0; flag < TeamCount; flag++)
                 if (FlagStates[flag] == FlagState.LOST)
                     CTF.SendCTFFlagUpdate(NetworkInstanceId.Invalid, flag, FlagStates[flag]);
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "OnKilledByPlayer")]
+    class CTFOnKilledByPlayer
+    {
+        private static void Prefix(Player __instance, DamageInfo di)
+        {
+            if (!NetworkServer.active)
+                return;
+
+            if (!CTF.PlayerHasFlag.TryGetValue(__instance.netId, out int flag))
+                return;
+
+            Player player = null;
+            if (di.owner != null)
+            {
+                player = di.owner.GetComponent<Player>();
+            }
+
+            if (player == null || player.netId == __instance.netId)
+                return;
+
+            ServerStatLog.AddFlagEvent(player, "CarrierKill");
         }
     }
 
@@ -256,7 +292,8 @@ namespace GameMod
         private static void Prefix(NetworkHash128 asset_id)
         {
             GameObject prefabFromAssetId = Client.GetPrefabFromAssetId(asset_id);
-            Debug.Log("client " + Client.GetClient().connection.connectionId + " item spawning " + asset_id + " = " + (prefabFromAssetId == null ? "???" : prefabFromAssetId.name));
+            
+        .Log("client " + Client.GetClient().connection.connectionId + " item spawning " + asset_id + " = " + (prefabFromAssetId == null ? "???" : prefabFromAssetId.name));
         }
     }
     */
@@ -427,6 +464,12 @@ namespace GameMod
             {
                 return false;
             }
+
+            if (NetworkMatch.m_postgame)
+            {
+                return false;
+            }
+
             if (Overload.NetworkManager.IsServer())
             {
                 //Debug.Log("OnTriggerEnter KEY_SECURITY is reachable on server");
