@@ -120,6 +120,7 @@
     <Compile Include="MPSetup.cs" />
     <Compile Include="MPTeams.cs" />
     <Compile Include="MusicCustom.cs" />
+    <Compile Include="PrevWeaponFix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PresetData.cs" />
     <Compile Include="RearView.cs" />
