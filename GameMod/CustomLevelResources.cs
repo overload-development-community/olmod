@@ -18,7 +18,7 @@ namespace GameMod
 
         static MethodInfo TargetMethod()
         {
-            return AccessTools.TypeByName("ResourceDatabase").GetMethod("LookupMaterial");
+            return typeof(UserLevelLoader).Assembly.GetType("ResourceDatabase").GetMethod("LookupMaterial", BindingFlags.Static | BindingFlags.Public);
         }
         static void Postfix(string name, ref string __result)
         {
@@ -30,7 +30,7 @@ namespace GameMod
     }
 
     [HarmonyPatch()]
-    class CustomLevelEnitities
+    class CustomLevelPrefabs
     {
         static Dictionary<string, string> extra_prefabs = new Dictionary<string, string>() {
             { "entity_prop_alien_socket", "entity_prop_alien_socket" },
@@ -46,7 +46,7 @@ namespace GameMod
 
         static MethodInfo TargetMethod()
         {
-            return AccessTools.TypeByName("ResourceDatabase").GetMethod("LookupPrefab");
+            return typeof(UserLevelLoader).Assembly.GetType("ResourceDatabase").GetMethod("LookupPrefab", BindingFlags.Static | BindingFlags.Public);
         }
         static void Postfix(string name, ref string __result)
         {
