@@ -29,4 +29,17 @@ namespace GameMod
             }
         }
     }
+
+    //Prevent RobotManager from removing doors in multiplayer
+    [HarmonyPatch(typeof(RobotManager), "DoorInRelevantSegment")]
+    internal class MPDoorVisible
+    {
+        private static void Postfix(DoorBase door, ref bool __result)
+        {
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                __result = true;
+            }
+        }
+    }
 }
