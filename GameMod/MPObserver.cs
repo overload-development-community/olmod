@@ -105,6 +105,8 @@ namespace GameMod
         {
             GameplayManager.m_use_segment_visibility = true;
             MPObserver.Enabled = false;
+            if (GameManager.m_player_ship != null && GameManager.m_player_ship.c_camera != null)
+                GameManager.m_player_ship.c_camera.useOcclusionCulling = true;
         }
     }
 
@@ -180,6 +182,23 @@ namespace GameMod
         }
     }
     */
+
+    // Modify level / settings for observer. Need to wait for OnMatchStart to be sure m_spectator is set
+    [HarmonyPatch(typeof(Client), "OnMatchStart")]
+    class MPObserverModifyLevel
+    {
+        static void Postfix()
+        {
+            //Debug.Log("OnMatchStart player " + GameManager.m_local_player.m_mp_name + " observer " + GameManager.m_local_player.m_spectator);
+            if (GameplayManager.IsDedicatedServer() || !GameManager.m_local_player.m_spectator)
+                return;
+            RenderSettings.skybox = null;
+            GameplayManager.m_use_segment_visibility = false;
+            NetworkMatch.m_show_enemy_names = MatchShowEnemyNames.ALWAYS;
+            GameManager.m_player_ship.c_camera.useOcclusionCulling = false;
+        }
+    }
+
     [HarmonyPatch(typeof(Overload.Server), "AllConnectionsHavePlayerReadyForCountdown")]
     class MPObserverSpawnPatch
     {
