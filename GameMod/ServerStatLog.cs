@@ -41,9 +41,18 @@ namespace GameMod
             public bool Blunder;
         }
 
+        private struct FlagStat
+        {
+            public float Time;
+            public string Event;
+            public string Scorer;
+            public MpTeam? ScorerTeam;
+        }
+
         private static Dictionary<PlayerPlayerWeaponDamage, float> DamageTable = new Dictionary<PlayerPlayerWeaponDamage, float>();
         private static List<Kill> Kills = new List<Kill>();
         private static List<Goal> Goals = new List<Goal>();
+        private static List<FlagStat> FlagStats = new List<FlagStat>();
         public static bool GameStarted = false;
         private static string Attacker, Defender, Assisted;
         private static MpTeam AttackerTeam = (MpTeam)(-1), DefenderTeam = (MpTeam)(-1), AssistedTeam = (MpTeam)(-1);
@@ -54,6 +63,7 @@ namespace GameMod
             DamageTable = new Dictionary<PlayerPlayerWeaponDamage, float>();
             Kills = new List<Kill>();
             Goals = new List<Goal>();
+            FlagStats = new List<FlagStat>();
             GameStarted = false;
         }
 
@@ -87,7 +97,7 @@ namespace GameMod
                     defenderTeam = k.Defender == null ? null : TeamName(k.DefenderTeam),
                     assisted = k.Assisted,
                     assistedTeam = k.Assisted == null ? null : TeamName(k.AssistedTeam),
-                    weapon = k.Weapon
+                    weapon = k.Weapon.ToString()
                 }, new JsonSerializer()
                 {
                     NullValueHandling = NullValueHandling.Ignore
@@ -118,6 +128,28 @@ namespace GameMod
             );
         }
 
+        public static JArray GetFlagStats()
+        {
+            if (FlagStats.Count == 0)
+            {
+                return null;
+            }
+
+            return new JArray(
+                from s in FlagStats
+                select JObject.FromObject(new
+                {
+                    time = s.Time,
+                    @event = s.Event,
+                    scorer = s.Scorer,
+                    scorerTeam = TeamName(s.ScorerTeam)
+                }, new JsonSerializer()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                })
+            );
+        }
+
         public static JObject GetGame()
         {
             return JObject.FromObject(new
@@ -128,7 +160,8 @@ namespace GameMod
                 end = EndTime.ToString("o"),
                 damage = GetDamageTable(),
                 kills = GetKills(),
-                goals = GetGoals()
+                goals = GetGoals(),
+                flagStats = GetFlagStats()
             }, new JsonSerializer()
             {
                 NullValueHandling = NullValueHandling.Ignore
@@ -205,6 +238,9 @@ namespace GameMod
 
         public static void Disconnected(string name)
         {
+            if (NetworkMatch.m_postgame)
+                return;
+
             var obj = JObject.FromObject(new
             {
                 name = "Stats",
@@ -219,6 +255,9 @@ namespace GameMod
         // called from MPJoinInProgress
         public static void Connected(string name)
         {
+            if (NetworkMatch.m_postgame)
+                return;
+
             var obj = JObject.FromObject(new
             {
                 name = "Stats",
@@ -237,6 +276,9 @@ namespace GameMod
 
         public static void AddGoal()
         {
+            if (NetworkMatch.m_postgame)
+                return;
+
             var goal = new Goal()
             {
                 Time = NetworkMatch.m_match_elapsed_seconds,
@@ -267,6 +309,9 @@ namespace GameMod
 
         public static void AddBlunder()
         {
+            if (NetworkMatch.m_postgame)
+                return;
+
             var goal = new Goal()
             {
                 Time = NetworkMatch.m_match_elapsed_seconds,
@@ -291,6 +336,9 @@ namespace GameMod
 
         public static void AddKill(DamageInfo di)
         {
+            if (NetworkMatch.m_postgame)
+                return;
+
             Kills.Add(new Kill
             {
                 Time = NetworkMatch.m_match_elapsed_seconds,
@@ -332,11 +380,45 @@ namespace GameMod
 
         public static void AddDamage(Player defender, Player attacker, ProjPrefab weapon, float damage)
         {
+            if (NetworkMatch.m_postgame)
+                return;
+
             var key = new PlayerPlayerWeaponDamage { Attacker = attacker, Defender = defender, Weapon = weapon };
             if (DamageTable.TryGetValue(key, out float totalDamage))
                 DamageTable[key] = totalDamage + damage;
             else
                 DamageTable[key] = damage;
+        }
+
+        public static void AddFlagEvent(Player player, string @event)
+        {
+            if (NetworkMatch.m_postgame)
+                return;
+
+            var capture = new FlagStat()
+            {
+                Time = NetworkMatch.m_match_elapsed_seconds,
+                Event = @event,
+                Scorer = player.m_mp_name,
+                ScorerTeam = player.m_mp_team
+            };
+
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "CTF",
+                time = capture.Time,
+                @event,
+                scorer = capture.Scorer,
+                scorerTeam = TeamName(capture.ScorerTeam),
+            }, new JsonSerializer()
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+            FlagStats.Add(capture);
+
+            TrackerPost(obj);
         }
 
         public static string GetPowerupBigSpawnString(int spawn)
@@ -479,22 +561,13 @@ namespace GameMod
             if (otherPlayer == null)
                 return;
 
-            string mp_name = __instance.c_player.m_mp_name;
-            string mp_name2 = otherPlayer.m_mp_name;
             float hitpoints = __instance.c_player.m_hitpoints;
             ProjPrefab weapon = di.weapon;
 
-            //bool killed = false;
             float damage = di.damage;
             if (hitpoints - di.damage <= 0f)
-            {
                 damage = hitpoints;
-                //killed = true;
-            }
             ServerStatLog.AddDamage(__instance.c_player, otherPlayer, weapon, damage);
-            //ServerStatLog.damageTable.
-            //ServerStatLog.damageTable[new PlayerPlayerWeaponDamage { From = __instance.c_player, To = otherPlayer, Weapon = weapon }] += damage;
-            //ServerStatLog.AddLine("Event: " + ServerStatLog.ShortTime() + ":" + mp_name2 + ":" +mp_name + ":" + di.weapon + ":" + damage + ":" + killed);
         }
     }
 
