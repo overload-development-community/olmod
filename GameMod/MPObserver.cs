@@ -196,6 +196,7 @@ namespace GameMod
             GameplayManager.m_use_segment_visibility = false;
             NetworkMatch.m_show_enemy_names = MatchShowEnemyNames.ALWAYS;
             GameManager.m_player_ship.c_camera.useOcclusionCulling = false;
+            ChunkManager.ForceActivateAll();
         }
     }
 
