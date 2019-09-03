@@ -19,8 +19,6 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 #### What does it do
 
-- Shows a modified indicator in the main menu
-
 - Allows access to the unfinished Monsterball multiplayer mode (with tweaks
   by terminal).
   The Monsterball multiplayer mode only works when both server and clients run olmod.
@@ -36,15 +34,13 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Adds `frametime` non-cheat code and `rearview` cheat code
 
-- Allows MP with up to 16 players (server and all clients must run olmod)
+- Allows MP with up to 16 players / 8 teams (server and all clients must run olmod)
 
-- Allows MP with up to 8 teams (server and all clients must run olmod)
-
-- Writes ServerStatLog.txt on server (by luponix)
+- Writes match log files on server (by luponix)
 
 - Fixes MP client homing behaviour (by terminal)
 
-- Allows shoot to open doors in MP
+- Allows shoot to open doors and disables door open when nearby in MP
 
 - Allows pasting in the MP password field
 
@@ -56,21 +52,25 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Allows custom music in custom levels
 
-- Allows spawn data for custom MP levels
+- Allows powerup spawn data for custom MP levels
 
 - Adds Internet match option with built in olproxy
 
 - Adds -frametime command line option
 
-- Adds custom mod loading, add mod-xxx.dll assembly to olmod directory
-
-- Sorts MP level list (by Tobias)
+- Adds custom mod loading, add Mod-xxx.dll assembly to olmod directory
 
 - Automatically downloads MP levels from overloadmaps.com
 
-- Adds MP level select screen
+- Adds MP level select screen, sorts MP level list
 
 - Disables weapon speed/lifetime randomization in LAN/Internet MP
+
+- Adds MP Capture The Flag mode
+
+- MP Prev weapon switch fix from Tobias
+
+- Adds support for some missing textures (crystal) and props (fans, monitors) in custom levels
 
 #### How to build
 
