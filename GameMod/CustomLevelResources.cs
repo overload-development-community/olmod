@@ -1,5 +1,5 @@
 ﻿using Harmony;
-using Overload;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -8,7 +8,7 @@ namespace GameMod
     [HarmonyPatch()]
     class CustomLevelMaterials
     {
-        static Dictionary<string, string> extra_materials = new Dictionary<string, string>() {
+        static Dictionary<string, string> extra_materials = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) {
             { "alien_cave_crystals_02a", "alien_cave_crystals_02a/alien_cave_crystals_02a" },
             { "alien_decals_01a_dark", "alien_decals_01a/alien_decals_01a_dark" },
             { "alien_decals_02a_dark", "alien_decals_02a/alien_decals_02a_dark" },
@@ -32,7 +32,7 @@ namespace GameMod
     [HarmonyPatch()]
     class CustomLevelPrefabs
     {
-        static Dictionary<string, string> extra_prefabs = new Dictionary<string, string>() {
+        static Dictionary<string, string> extra_prefabs = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) {
             { "entity_prop_alien_socket", "entity_prop_alien_socket" },
             { "entity_prop_monitor_secret1", "entity_prop_monitor_secret1" },
             { "entity_prop_monitor_secret2", "entity_prop_monitor_secret2" },
