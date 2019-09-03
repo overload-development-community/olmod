@@ -470,6 +470,18 @@ namespace GameMod
             }
         }
 
+        public static string GetMatchModeString(MatchMode mode)
+        {
+            switch (mode)
+            {
+                case MatchMode.ANARCHY: return "ANARCHY";
+                case MatchMode.TEAM_ANARCHY: return "TEAM ANARCHY";
+                case MatchMode.MONSTERBALL: return "MONSTERBALL";
+                case CTF.MatchModeCTF: return "CTF";
+                default: return "UNKNOWN";
+            }
+        }
+
         public static string GetLevel(int levelNum, string level)
         {
             if (string.IsNullOrEmpty(level))
@@ -508,7 +520,7 @@ namespace GameMod
                 turnSpeedLimit = GetTurnSpeedLimitString(NetworkMatch.m_turn_speed_limit),
                 powerupSpawn = GetPowerupSpawnString(NetworkMatch.m_powerup_spawn),
                 friendlyFire = NetworkMatch.m_team_damage,
-                matchMode = NetworkMatch.GetMode().ToString()?.Replace("_", " "),
+                matchMode = GetMatchModeString(NetworkMatch.GetMode()),
                 maxPlayers = NetworkMatch.GetMaxPlayersForMatch(),
                 showEnemyNames = NetworkMatch.m_show_enemy_names.ToString()?.Replace("_", " "),
                 timeLimit = NetworkMatch.m_match_time_limit_seconds,
