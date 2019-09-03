@@ -72,7 +72,7 @@ namespace GameMod
             NetworkServer.SendToAll(CTFCustomMsg.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
-        private static void FindFlagSpawnPoints()
+        public static void FindFlagSpawnPoints()
         {
             // finding spawn points from the goals doesn't work well since the triggers are not always in the goal centers :(
             /*
@@ -128,14 +128,12 @@ namespace GameMod
             //Debug.Log("InitForLevel HasSpawnPoint=" + string.Join(",", HasSpawnPoint.Select(x => x.ToString()).ToArray()));
         }
 
-        public static void InitForLevel()
+        public static void InitForMatch()
         {
             PlayerHasFlag.Clear();
             HasSpawnPoint = new bool[TeamCount];
             FlagStates = new FlagState[TeamCount];
             SpawnPoint = new Vector3[TeamCount];
-
-            FindFlagSpawnPoints();
         }
 
         // pickup of flag item
@@ -404,6 +402,16 @@ namespace GameMod
         }
     }
 
+    [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
+    class CTFInitBeforeEachMatch
+    {
+        private static void Postfix()
+        {
+            CTF.InitForMatch();
+        }
+    }
+
+    // only called on server
     [HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
     class CTFStartPlaying
     {
@@ -417,7 +425,7 @@ namespace GameMod
         {
             if (!CTF.IsActiveServer)
                 return;
-            CTF.InitForLevel();
+            CTF.FindFlagSpawnPoints();
             SpawnFlags();
         }
     }
