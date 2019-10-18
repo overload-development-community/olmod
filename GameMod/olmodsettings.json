@@ -1,4 +1,7 @@
 {
   "isServer": false,
-  "trackerBaseUrl": "https://olproxy.otl.gg"
+  "trackerBaseUrl": "https://olproxy.otl.gg",
+  "keepListed": false,
+  "serverName": "My Overload Server",
+  "notes": "Change these notes to give information about your server, such as geographical location, hardware, bandwidth, etc."
 }

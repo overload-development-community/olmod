@@ -125,6 +125,7 @@
     <Compile Include="PresetData.cs" />
     <Compile Include="RearView.cs" />
     <Compile Include="ServerStatLog.cs" />
+    <Compile Include="ServerTrackerPost.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
