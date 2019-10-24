@@ -659,8 +659,8 @@ namespace GameMod
             Debug.Log("OnCTFNotify " + msg.m_event);
             switch (msg.m_event) {
                 case CTFEvent.PICKUP:
-                    SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_lockdown_initiated, 0.9f, 0f, 0f, false);
-                    SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_warning_loop2, 0.8f, -0.1f, 0f, false);
+                    SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_lockdown_initiated, 1f, 0.8f, 0f, false);
+                    SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_alien_tele_warp, 1f, 0f, 0f, false);
                     break;
                 case CTFEvent.DROP:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.cine_sfx_warning_2, 0.7f, 0f, 0f, false);
