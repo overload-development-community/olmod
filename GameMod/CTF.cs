@@ -588,9 +588,10 @@ namespace GameMod
         private static void OnCTFPickup(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
-            if (!CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
-                CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
             CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+            if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
+                return;
+            CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
 
             // copy flag ring effect to carrier ship
             if (msg.m_player_id == GameManager.m_local_player.netId || GameplayManager.IsDedicatedServer())
@@ -600,6 +601,8 @@ namespace GameMod
                 return;
             var player = playerObj.GetComponent<Player>();
             if (player == null)
+                return;
+            if (player.c_player_ship.gameObject.GetChildByNameRecursive("carrier_ring")) // maybe fix persistent glow
                 return;
             var flag = CTF.FlagObjs[msg.m_flag_id];
             var orgPart = flag.GetChildByNameRecursive("_particle1");
