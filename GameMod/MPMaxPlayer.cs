@@ -154,7 +154,7 @@ namespace GameMod
 
         static void Postfix(DistributedMatchUp.Match[] __result)
         {
-            Debug.Log("FindPrivateMatchGrouping result: " + (__result == null ? "null" : __result.Length.ToString()));
+            Debug.LogFormat("{0} FindPrivateMatchGrouping result: {1}", DateTime.Now, __result == null ? "null" : __result.Length.ToString());
         }
     }
 
