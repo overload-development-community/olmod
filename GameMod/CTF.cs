@@ -57,19 +57,27 @@ namespace GameMod
             return MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], 1);
         }
 
-        public static void SendCTFPickup(NetworkInstanceId player_id, int flag_id, FlagState state)
+        private static void SendToClientOrAll(int conn_id, short msg_type, MessageBase msg)
         {
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            if (conn_id == -1)
+                NetworkServer.SendToAll(msg_type, msg);
+            else
+                NetworkServer.SendToClient(conn_id, msg_type, msg);
         }
 
-        public static void SendCTFLose(NetworkInstanceId player_id, int flag_id, FlagState state)
+        public static void SendCTFPickup(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            SendToClientOrAll(conn_id, CTFCustomMsg.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
-        public static void SendCTFFlagUpdate(NetworkInstanceId player_id, int flag_id, FlagState state)
+        public static void SendCTFLose(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            SendToClientOrAll(conn_id, CTFCustomMsg.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+        }
+
+        public static void SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
+        {
+            SendToClientOrAll(conn_id, CTFCustomMsg.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
         public static void FindFlagSpawnPoints()
@@ -150,11 +158,11 @@ namespace GameMod
             // this also sends to 'client 0' so it'll get processed on the server as well
             CTFEvent evt;
             if (ownFlag) {
-                SendCTFFlagUpdate(player.netId, flag, FlagState.HOME);
+                SendCTFFlagUpdate(-1, player.netId, flag, FlagState.HOME);
                 SpawnAtHome(flag);
                 evt = CTFEvent.RETURN;
             } else {
-                SendCTFPickup(player.netId, flag, FlagState.PICKEDUP);
+                SendCTFPickup(-1, player.netId, flag, FlagState.PICKEDUP);
                 evt = CTFEvent.PICKUP;
             }
 
@@ -243,7 +251,7 @@ namespace GameMod
             if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[MPTeams.TeamNum(player.m_mp_team)] != FlagState.HOME)
                 return;
             PlayerHasFlag.Remove(player.netId);
-            SendCTFLose(player.netId, flag, FlagState.HOME);
+            SendCTFLose(-1, player.netId, flag, FlagState.HOME);
             SpawnAtHome(flag);
             NetworkMatch.AddPointForTeam(player.m_mp_team);
 
@@ -255,19 +263,59 @@ namespace GameMod
         {
             if (!PlayerHasFlag.TryGetValue(player.netId, out int flag))
                 return;
-            SendCTFLose(player.netId, flag, FlagState.LOST);
+            SendCTFLose(-1, player.netId, flag, FlagState.LOST);
             NotifyAll(CTFEvent.DROP, null, player, flag);
         }
 
         public static void SendJoinUpdate(Player player)
         {
-            if (!CTF.IsActive)
+            if (!CTF.IsActiveServer)
                 return;
+            int conn_id = player.connectionToClient.connectionId;
             foreach (var x in CTF.PlayerHasFlag)
-                CTF.SendCTFPickup(x.Key, x.Value, FlagState.PICKEDUP);
+                CTF.SendCTFPickup(conn_id, x.Key, x.Value, FlagState.PICKEDUP);
             for (int flag = 0; flag < TeamCount; flag++)
                 if (FlagStates[flag] == FlagState.LOST)
-                    CTF.SendCTFFlagUpdate(NetworkInstanceId.Invalid, flag, FlagStates[flag]);
+                    CTF.SendCTFFlagUpdate(conn_id, NetworkInstanceId.Invalid, flag, FlagStates[flag]);
+        }
+
+        // return Player object for given net id if it should show an effect, i.e. not local player or headless
+        public static Player FindPlayerForEffect(NetworkInstanceId m_player_id)
+        {
+            if (m_player_id == GameManager.m_local_player.netId || GameplayManager.IsDedicatedServer())
+                return null;
+            var playerObj = ClientScene.FindLocalObject(m_player_id);
+            if (playerObj == null)
+                return null;
+            return playerObj.GetComponent<Player>();
+        }
+
+        public static void PlayerEnableRing(Player player, int flag_id)
+        {
+            if (player == null)
+                return;
+            var flag = CTF.FlagObjs[flag_id];
+            var orgPart = flag.GetChildByNameRecursive("_particle1");
+            if (orgPart == null)
+                return;
+            if (player.c_player_ship.gameObject.GetChildByName("carrier_ring") != null)
+                return;
+            var part = UnityEngine.Object.Instantiate<GameObject>(orgPart, player.c_player_ship.transform);
+            var main = part.GetComponent<ParticleSystem>().main;
+            main.scalingMode = ParticleSystemScalingMode.Local;
+            part.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+            part.transform.localRotation = Quaternion.Euler(0, 0, 90f);
+            part.name = "carrier_ring";
+            part.SetActive(true);
+        }
+
+        public static void PlayerDisableRing(Player player)
+        {
+            if (player == null)
+                return;
+            var part = player.c_player_ship.gameObject.GetChildByName("carrier_ring");
+            if (part != null)
+                UnityEngine.Object.Destroy(part);
         }
     }
 
@@ -594,27 +642,7 @@ namespace GameMod
             CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
 
             // copy flag ring effect to carrier ship
-            if (msg.m_player_id == GameManager.m_local_player.netId || GameplayManager.IsDedicatedServer())
-                return;
-            var playerObj = ClientScene.FindLocalObject(msg.m_player_id);
-            if (playerObj == null)
-                return;
-            var player = playerObj.GetComponent<Player>();
-            if (player == null)
-                return;
-            if (player.c_player_ship.gameObject.GetChildByNameRecursive("carrier_ring")) // maybe fix persistent glow
-                return;
-            var flag = CTF.FlagObjs[msg.m_flag_id];
-            var orgPart = flag.GetChildByNameRecursive("_particle1");
-            if (orgPart == null)
-                return;
-            var part = UnityEngine.Object.Instantiate<GameObject>(orgPart, player.c_player_ship.transform);
-            var main = part.GetComponent<ParticleSystem>().main;
-            main.scalingMode = ParticleSystemScalingMode.Local;
-            part.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-            part.transform.localRotation = Quaternion.Euler(0, 0, 90f);
-            part.name = "carrier_ring";
-            part.SetActive(true);
+            CTF.PlayerEnableRing(CTF.FindPlayerForEffect(msg.m_player_id), msg.m_flag_id);
         }
 
         private static void OnCTFLose(NetworkMessage rawMsg)
@@ -625,17 +653,7 @@ namespace GameMod
             CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
 
             // remove flag ring effect from carrier ship
-            if (msg.m_player_id == GameManager.m_local_player.netId || GameplayManager.IsDedicatedServer())
-                return;
-            var playerObj = ClientScene.FindLocalObject(msg.m_player_id);
-            if (playerObj == null)
-                return;
-            var player = playerObj.GetComponent<Player>();
-            if (player == null)
-                return;
-            var part = player.c_player_ship.gameObject.GetChildByName("carrier_ring");
-            if (part != null)
-                UnityEngine.Object.Destroy(part);
+            CTF.PlayerDisableRing(CTF.FindPlayerForEffect(msg.m_player_id));
         }
 
         private static void OnCTFNotifyOld(NetworkMessage rawMsg)
