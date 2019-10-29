@@ -58,6 +58,17 @@ namespace GameMod.Core
             return Array.IndexOf<string>(Environment.GetCommandLineArgs(), arg) >= 0;
         }
 
+        public static bool FindArgVal(string arg, out string val)
+        {
+            var args = Environment.GetCommandLineArgs();
+            int i = Array.IndexOf<string>(args, arg);
+            val = null;
+            if (i < 0 || i + 1 >= args.Length)
+                return false;
+            val = args[i + 1];
+            return true;
+        }
+
         // enable monsterball mode, allow max players up to 16
         [HarmonyPatch(typeof(Overload.MenuManager), "MpMatchSetup")]
         class MBModeSelPatch
