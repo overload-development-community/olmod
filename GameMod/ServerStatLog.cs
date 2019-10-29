@@ -185,20 +185,30 @@ namespace GameMod
             GameManager.m_gm.StartCoroutine(RequestCoroutine(request.SendWebRequest()));
         }
 
-        public static void TrackerPost(JObject body)
+        public static void TrackerPost(string path, JObject body)
         {
             string url;
-            Debug.Log("TrackerPost " + body.ToString(Formatting.None));
+            Debug.LogFormat("{0}: TrackerPost {1} {2}", DateTime.Now.ToString(), path, body.ToString(Formatting.None));
             if (!Config.Settings.Value<bool>("isServer") ||
                 string.IsNullOrEmpty(url = Config.Settings.Value<string>("trackerBaseUrl")))
                 return;
             Post(url + "/api/stats", body);
         }
 
-        public static void PrintResultsAsJson()
+        public static void TrackerPostStats(JObject body)
+        {
+            TrackerPost("/api/stats", body);
+        }
+
+        public static void EndGame()
         {
             if (!GameStarted)
             {
+                TrackerPostStats(JObject.FromObject(new
+                {
+                    name = "Stats",
+                    type = "LobbyExit",
+                }));
                 return;
             }
 
@@ -213,7 +223,7 @@ namespace GameMod
                 streamWriter.Write(obj.ToString(Formatting.Indented));
             }
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
 
             CleanUp();
         }
@@ -249,7 +259,7 @@ namespace GameMod
                 player = name
             });
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
         }
 
         // called from MPJoinInProgress
@@ -266,7 +276,7 @@ namespace GameMod
                 player = name
             });
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
         }
 
         private static string TeamName(MpTeam? team)
@@ -304,7 +314,7 @@ namespace GameMod
 
             Goals.Add(goal);
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
         }
 
         public static void AddBlunder()
@@ -331,7 +341,7 @@ namespace GameMod
 
             Goals.Add(goal);
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
         }
 
         public static void AddKill(DamageInfo di)
@@ -368,7 +378,7 @@ namespace GameMod
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
 
             Attacker = null;
             Defender = null;
@@ -418,7 +428,7 @@ namespace GameMod
 
             FlagStats.Add(capture);
 
-            TrackerPost(obj);
+            TrackerPostStats(obj);
         }
 
         public static string GetPowerupBigSpawnString(int spawn)
@@ -494,23 +504,31 @@ namespace GameMod
             }
         }
 
-        public static void StartGame()
+        public static string GetCurrentLevelName()
         {
-            StartTime = DateTime.UtcNow;
-            CleanUp();
-            GameStarted = true;
+            string match_force_playlist_addon_idstringhash = (string)typeof(NetworkMatch).GetField("m_match_force_playlist_addon_idstringhash", AccessTools.all).GetValue(null);
+            int idx;
+            if (string.IsNullOrEmpty(match_force_playlist_addon_idstringhash)) {
+                idx = (int)typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all).GetValue(null);
+            } else {
+                idx = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(match_force_playlist_addon_idstringhash);
+                if (idx < 0) // unknown level
+                    return Path.GetFileNameWithoutExtension(match_force_playlist_addon_idstringhash.Split(':')[0]).Replace('_', ' ').ToUpper();
+            }
+            if (idx < 0 || idx >= GameManager.MultiplayerMission.NumLevels)
+                return null;
+            return GameManager.MultiplayerMission.GetLevelDisplayName(idx);
+        }
 
-            var obj = JObject.FromObject(new
+        public static JObject GetGameData()
+        {
+            return JObject.FromObject(new
             {
-                name = "Stats",
-                type = "StartGame",
-                start = DateTime.UtcNow.ToString("o"),
-                time = 0,
                 creator = NetworkMatch.m_name.Split('\0')[0],
                 forceModifier1 = NetworkMatch.m_force_modifier1 == 4 ? "OFF" : Player.GetMpModifierName(NetworkMatch.m_force_modifier1, true),
                 forceModifier2 = NetworkMatch.m_force_modifier2 == 4 ? "OFF" : Player.GetMpModifierName(NetworkMatch.m_force_modifier2, false),
-                forceMissile1 = NetworkMatch.m_force_m1.ToString()?.Replace("_", " "),
-                forceMissile2 = NetworkMatch.m_force_m2 == MissileType.NUM ? "NONE" : NetworkMatch.m_force_m2.ToString()?.Replace("_", " "),
+                forceMissile1 = NetworkMatch.m_force_m1.ToString()?.Replace('_', ' '),
+                forceMissile2 = NetworkMatch.m_force_m2 == MissileType.NUM ? "NONE" : NetworkMatch.m_force_m2.ToString()?.Replace('_', ' '),
                 forceWeapon1 = NetworkMatch.m_force_w1.ToString(),
                 forceWeapon2 = NetworkMatch.m_force_w2 == WeaponType.NUM ? "NONE" : NetworkMatch.m_force_w2.ToString(),
                 forceLoadout = MenuManager.GetToggleSetting(NetworkMatch.m_force_loadout),
@@ -522,19 +540,33 @@ namespace GameMod
                 friendlyFire = NetworkMatch.m_team_damage,
                 matchMode = GetMatchModeString(NetworkMatch.GetMode()),
                 maxPlayers = NetworkMatch.GetMaxPlayersForMatch(),
-                showEnemyNames = NetworkMatch.m_show_enemy_names.ToString()?.Replace("_", " "),
+                showEnemyNames = NetworkMatch.m_show_enemy_names.ToString()?.Replace('_', ' '),
                 timeLimit = NetworkMatch.m_match_time_limit_seconds,
                 scoreLimit = NetworkMatch.m_match_score_limit,
                 respawnTimeSeconds = NetworkMatch.m_respawn_time_seconds,
                 respawnShieldTimeSeconds = NetworkMatch.m_respawn_shield_seconds,
-                level = GameplayManager.Level.DisplayName,
+                level = GetCurrentLevelName(),
                 joinInProgress = MPJoinInProgress.NetworkMatchEnabled,
                 rearViewAllowed = RearView.MPNetworkMatchEnabled,
                 teamCount = MPTeams.NetworkMatchTeamCount,
-                players = Overload.NetworkManager.m_Players.Where(x => !x.m_spectator).Select(x => x.m_mp_name)
+                players = NetworkMatch.m_players.Values.Where(x => !x.m_name.StartsWith("OBSERVER")).Select(x => x.m_name)
+                //Overload.NetworkManager.m_Players.Where(x => !x.m_spectator).Select(x => x.m_mp_name)
             });
+        }
 
-            TrackerPost(obj);
+        public static void StartGame()
+        {
+            StartTime = DateTime.UtcNow;
+            CleanUp();
+            GameStarted = true;
+
+            var obj = GetGameData();
+            obj["name"] = "Stats";
+            obj["type"] = "StartGame";
+            obj["start"] = DateTime.UtcNow.ToString("o");
+            obj["time"] = 0;
+
+            TrackerPostStats(obj);
         }
     }
 
@@ -557,7 +589,7 @@ namespace GameMod
         {
             if (!Overload.NetworkManager.IsHeadless())
                 return;
-            ServerStatLog.PrintResultsAsJson();
+            ServerStatLog.EndGame();
         }
     }
 
