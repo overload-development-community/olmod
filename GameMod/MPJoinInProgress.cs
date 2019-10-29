@@ -196,6 +196,7 @@ namespace GameMod
             NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
             SendMatchState(connectionId);
             NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
+            MPTweaks.Send(connectionId);
             if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
                 newPlayer.CallTargetAddHUDMessage(newPlayer.connectionToClient, "REARVIEW ENABLED", -1, true);
             CTF.SendJoinUpdate(newPlayer);
