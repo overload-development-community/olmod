@@ -4,6 +4,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Networking;
 
+// remove randomness in MP projectile lifetime/speed
 namespace GameMod
 {
     /*
