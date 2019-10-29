@@ -453,9 +453,13 @@ namespace GameMod
                     team_counts[(int)player.m_team]++;
             MpTeam min_team = MpTeam.TEAM0;
             foreach (var team in MPTeams.Teams)
-                if (team_counts[(int)team] < team_counts[(int)min_team])
+                if (team_counts[(int)team] < team_counts[(int)min_team] ||
+                    (team_counts[(int)team] == team_counts[(int)min_team] &&
+                        NetworkMatch.m_team_scores[(int)team] < NetworkMatch.m_team_scores[(int)min_team]))
                     min_team = team;
             __result = min_team;
+            Debug.LogFormat("GetTeamForPlayer: result {0}, conn {1}, counts {2}, scores {3}", (int)min_team, connection_id,
+                team_counts.Join(), NetworkMatch.m_team_scores.Join());
             return false;
         }
     }
