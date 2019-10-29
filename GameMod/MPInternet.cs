@@ -1,4 +1,5 @@
 ﻿using Harmony;
+using Newtonsoft.Json.Linq;
 using Overload;
 using System;
 using System.Collections;
@@ -17,6 +18,7 @@ namespace GameMod
     class MPInternet
     {
         public static bool Enabled;
+        public static bool ServerEnabled;
         public static IPAddress ServerAddress;
         public static IPAddress FindPasswordAddress(string password, out string msg)
         {
@@ -53,6 +55,15 @@ namespace GameMod
         public static string PasswordFieldName()
         {
             return MenuManager.m_mp_lan_match && Enabled ? "SERVER IP (PASSWORD)" : "PASSWORD";
+        }
+        public static void CheckInternetServer()
+        {
+            if (Core.GameMod.FindArg("-internet") && GameplayManager.IsDedicatedServer())
+            {
+                Enabled = ServerEnabled = true;
+                ServerAddress = IPAddress.Any;
+                Debug.Log("Internet server enabled");
+            }
         }
     }
 
@@ -159,6 +170,7 @@ namespace GameMod
         }
     }
 
+    // rename password field if internet match selected
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class MPInternetMatchSetupDraw
     {
@@ -176,12 +188,13 @@ namespace GameMod
         }
     }
 
+    // after password entered: translate password to ip, adjust mp status
     [HarmonyPatch(typeof(NetworkMatch), "SwitchToLobbyMenu")]
     class MPInternetStart
     {
         private static bool Prefix()
         {
-            if (!MPInternet.Enabled)
+            if (!MPInternet.Enabled || MPInternet.ServerEnabled)
                 return true;
             string pwd = NetworkMatch.m_match_req_password;
             if (pwd == "")
@@ -192,7 +205,7 @@ namespace GameMod
             MPInternet.ServerAddress = MPInternet.FindPasswordAddress(pwd.Trim(), out string msg);
             if (MPInternet.ServerAddress == null)
             {
-                Debug.Log("SwitchToLobbyMenu failed " + msg);
+                Debug.Log("SwitchToLobbyMenu FindPasswordAddress failed " + msg);
                 NetworkMatch.CreateGeneralUIPopup("INTERNET MATCH", msg, 1);
                 //MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH, true);
                 /*
@@ -209,6 +222,7 @@ namespace GameMod
         }
     }
 
+    // do not use interfaces for sending, instead send to listening socket (see below)
     [HarmonyPatch(typeof(BroadcastState), "EnumerateNetworkInterfaces")]
     class MPInternetEnum
     {
@@ -229,7 +243,8 @@ namespace GameMod
             return false;
         }
     }
-    
+
+    //  create connection to server and use it for sending and receiving
     [HarmonyPatch(typeof(BroadcastState), MethodType.Constructor, new [] { typeof(int), typeof(int), typeof(IBroadcastStateReceiver) })]
     class MPInternetState
     {
@@ -241,20 +256,45 @@ namespace GameMod
             return 8001; // Exception if olproxy is running...
         }
         */
-        
+
+        // create receiving socket and also use it for sending by adding it to m_interfaces
         public static bool InitReceiveClient(BroadcastState bs)
         {
             if (!MPInternet.Enabled)
                 return false;
-            var ep = new IPEndPoint(MPInternet.ServerAddress, 8001);
+
             var client = new UdpClient();
-            client.Connect(ep);
+
+            var ep = new IPEndPoint(MPInternet.ServerAddress, 8001);
+            if (MPInternet.ServerEnabled)
+            {
+                // allowing multiple servers doesn't work, only one of the servers receives the packet, and it might be busy etc.
+                //client.Client.ExclusiveAddressUse = false;
+                //client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, 0);
+                //client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+                try
+                {
+                    client.Client.Bind(ep);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Internet server setup failed " + ex.ToString());
+                    Application.Quit();
+                }
+            }
+            else
+            {
+                client.Connect(ep);
+
+                // add socket to sending sockets (m_interfaces)
+                var IntfType = typeof(BroadcastState).Assembly.GetType("Overload.BroadcastState").GetNestedType("InterfaceState", BindingFlags.NonPublic);
+                object intf = Activator.CreateInstance(IntfType, new object[] { client, ep.Address, null, new IPAddress(-1) });
+                var intfs = typeof(BroadcastState).GetField("m_interfaces", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(bs);
+                intfs.GetType().GetMethod("Add").Invoke(intfs, new object[] { intf });
+            }
+
             typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(bs, client);
 
-            var IntfType = typeof(BroadcastState).Assembly.GetType("Overload.BroadcastState").GetNestedType("InterfaceState", BindingFlags.NonPublic);
-            object intf = Activator.CreateInstance(IntfType, new object[] { client, ep.Address, null, new IPAddress(-1) });
-            var intfs = typeof(BroadcastState).GetField("m_interfaces", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(bs);
-            intfs.GetType().GetMethod("Add").Invoke(intfs, new object[] { intf });
             /*
             ICollection intfs = typeof(BroadcastState).GetField("m_interfaces", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(bs) as ICollection;
             foreach (var intf in intfs) {
@@ -266,10 +306,10 @@ namespace GameMod
             return true;
         }
 
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        private static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
         {
             int state = 0; // 0 = before 1st LogFormat, 1 = before 2nd LogFormat, 2 = before rc Bind, 3 = after rc Bind, 4 = after Bind label
-            Label initRCLabel = new Label();
+            Label initRCLabel = ilGen.DefineLabel();
             foreach (var code in codes) //Trans.FieldReadModifier("listenPort", AccessTools.Method(typeof(MPInternetState), "ListenPortMod"), codes))
             {
                 //Debug.Log("state " + state + " op " + code.opcode + " " + code.operand);
@@ -338,6 +378,7 @@ namespace GameMod
     }
     */
 
+    // replace received server ip with the outgoing ip we used (server probably transmits internal ip)
     [HarmonyPatch(typeof(LocalLANClient), "DoTick")]
     class MPInternetConnInfo
     {
@@ -356,6 +397,70 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternetConnInfo), "ConnInfoMod"));
                 yield return code;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(BroadcastState), "InternalSendPacket")]
+    class MPInternetServerSend
+    {
+        private static bool Prepare()
+        {
+            return MPInternet.ServerEnabled;
+        }
+
+        private static bool Prefix(byte[] buffer, int bufferSize, IDictionary ___m_clientStates, UdpClient ___m_receiveClient)
+        {
+            if (!MPInternet.ServerEnabled)
+                return true;
+            foreach (var key in ___m_clientStates.Keys)
+            {
+                var addr = key as IPEndPointProcessId;
+                ___m_receiveClient.Send(buffer, bufferSize, addr.endPoint);
+            }
+            return false;
+        }
+    }
+
+    // -host support, allows multiple servers with same ip but different hostnames
+    [HarmonyPatch(typeof(NetworkMatch), "TryLocalMatchmaking")]
+    class MPServerHostFilter
+    {
+        static string HostArg;
+
+        private static bool Prepare()
+        {
+            return Core.GameMod.FindArgVal("-host", out HostArg);
+        }
+
+        private static void Prefix(List<DistributedMatchUp.Match> candidates, DistributedMatchUp.Match backfillSeedMatch)
+        {
+            if (HostArg == null || backfillSeedMatch != null)
+                return;
+            List<DistributedMatchUp.Match> delReqs = new List<DistributedMatchUp.Match>();
+            foreach (var req in candidates)
+                foreach (var player in JArray.Parse(req.matchData["mm_players"].stringValue))
+                {
+                    JObject attrs = (player as JObject)["PlayerAttributes"] as JObject;
+                    if (!attrs.TryGetValue("password", out JToken passwordAttrToken) || passwordAttrToken == null)
+                        continue;
+                    var passwordAttr = passwordAttrToken as JObject;
+                    var passwordAttrType = (string)passwordAttr["attributeType"];
+                    if (passwordAttrType != "STRING" && passwordAttrType != "STRING_LIST")
+                        continue;
+                    string password = (string)(passwordAttrType == "STRING_LIST" ? ((JArray)passwordAttr["valueAttribute"])[0] : passwordAttr["valueAttribute"]);
+                    if (password == "")
+                        continue;
+                    var i = password.IndexOf('_'); // allow password suffix with '_'
+                    string name = i == -1 ? password : password.Substring(0, i);
+                    if (!name.Equals(HostArg, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Debug.LogFormat("{0}: {1}: Match with wrong host ignored: {2}", DateTime.Now.ToString(), HostArg, name);
+                        delReqs.Add(req);
+                        break;
+                    }
+                }
+            foreach (var req in delReqs)
+                candidates.Remove(req);
         }
     }
 }

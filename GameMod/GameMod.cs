@@ -16,8 +16,9 @@ namespace GameMod.Core
         internal static void Initialize()
         {
             Debug.Log("Initializing " + Version);
-            Config.Init();
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
+            Config.Init();
+            MPInternet.CheckInternetServer();
             HarmonyInstance.DEBUG = FindArg("-harmonydebug");
             var harmony = HarmonyInstance.Create("olmod.olmod");
             try {
