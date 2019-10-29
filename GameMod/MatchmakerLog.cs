@@ -1,4 +1,7 @@
-﻿using Harmony;
+﻿//#define MATCHMAKER_DEBUG_LOG
+
+using Harmony;
+using Newtonsoft.Json.Linq;
 using Overload;
 using System;
 using System.Collections.Generic;
@@ -24,7 +27,7 @@ namespace GameMod
         {
             if (args != null && args.Length > 0)
             {
-                message = string.Format(message, args).Replace("\r\n", " ");
+                message = string.Format(message, args).Replace("\r\n", " ").Replace("\n", " ");
                 args = null;
             }
         }
@@ -40,7 +43,7 @@ namespace GameMod
         }
     }
 
-    /*
+    #if MATCHMAKER_DEBUG_LOG
     // log FindGameSessionToCreate
     [HarmonyPatch(typeof(LocalLANHost), "FindGameSessionToCreate")]
     class MPMaxPlayerFindGameSessionToCreate
@@ -63,7 +66,7 @@ namespace GameMod
         static void Postfix(DistributedMatchUp __instance)
         {
             DistributedMatchUp.Match m = __instance.ActiveMatch;
-            Debug.Log(DateTime.Now.ToString() + " " + Process.GetCurrentProcess().Id + ": create match " + m.uid + " updated to " + m.matchData["mm_ticketType"]);
+            Debug.Log(DateTime.Now.ToString() + " " + System.Diagnostics.Process.GetCurrentProcess().Id + ": create match " + m.uid + " updated to " + m.matchData["mm_ticketType"]);
         }
     }
 
@@ -74,7 +77,7 @@ namespace GameMod
         static void Postfix(DistributedMatchUp __instance)
         {
             DistributedMatchUp.Match m = __instance.ActiveMatch;
-            Debug.Log(DateTime.Now.ToString() + " " + Process.GetCurrentProcess().Id + ": update match " + m.uid + " updated to " + m.matchData["mm_ticketType"]);
+            Debug.Log(DateTime.Now.ToString() + " " + System.Diagnostics.Process.GetCurrentProcess().Id + ": update match " + m.uid + " updated to " + m.matchData["mm_ticketType"]);
         }
     }
 
@@ -129,5 +132,5 @@ namespace GameMod
                 GameplayManager.LevelIsLoaded, DynamicGI.isConverged, GameManager.m_local_player.isLocalPlayer);
         }
     }
-    */
+    #endif
 }
