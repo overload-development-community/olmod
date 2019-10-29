@@ -21,7 +21,11 @@ namespace GameMod
                 Debug.Log("olmod directory unknown " + Environment.GetEnvironmentVariable("OLMODDIR") + " path " + Environment.GetEnvironmentVariable("PATH"));
                 return;
             }
-            string settingsFilename = Path.Combine(OLModDir, "olmodsettings.json");
+            string settingsFilename = "olmodsettings.json";
+            if (Core.GameMod.FindArgVal("-config", out string configArg))
+                settingsFilename = configArg;
+            if (!settingsFilename.Contains(Path.DirectorySeparatorChar) && !settingsFilename.Contains(Path.AltDirectorySeparatorChar))
+                settingsFilename = Path.Combine(OLModDir, settingsFilename);
             try
             {
                 Settings = JObject.Parse(File.ReadAllText(settingsFilename));
