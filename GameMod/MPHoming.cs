@@ -27,7 +27,7 @@ namespace GameMod
         public static float MaxDegrees(Projectile proj, float m_homing_cur_strength)
         {
             return MPHoming.UseNonFixedHoming(proj) ?
-                m_homing_cur_strength * RUtility.FRAMETIME_GAME / RUtility.FRAMETIME_FIXED * 2.1f + 0.09f :
+                m_homing_cur_strength * RUtility.FRAMETIME_GAME / RUtility.FRAMETIME_FIXED * 1.8f + 0.08f :
                 m_homing_cur_strength * RUtility.FIXED_FT_RATIO;
         }
 
