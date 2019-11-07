@@ -56,20 +56,23 @@ namespace GameMod
                 return;
             MenuManager.PlaySelectSound();
             UIManager.DestroyAll();
+
+            NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.Invalid);
+            NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
+            MenuManager.ClearMpStatus();
+
             if (NetworkMatch.m_match_req_password == "")
             {
                 //MenuManager.m_updating_pm_settings = true;
                 //MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH);
-                
-                var pmd = (PrivateMatchDataMessage)typeof(MenuManager).GetMethod("BuildPrivateMatchData", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { false });
-                NetworkMatch.StartPrivateLobby(pmd);
+
+                //var pmd = (PrivateMatchDataMessage)typeof(MenuManager).GetMethod("BuildPrivateMatchData", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { false });
+                //NetworkMatch.StartPrivateLobby(pmd);
                 //MenuManager.m_updating_pm_settings = true;
-                MenuManager.ChangeMenuState(MenuState.MP_PRIVATE_MATCH);
-                
+                MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH);
             }
             else
             {
-                MenuManager.ClearMpStatus();
                 MenuManager.m_mp_status = Loc.LS("JOINING " + MPInternet.ClientModeName());
                 NetworkMatch.JoinPrivateLobby(MenuManager.mms_match_password);
             }
