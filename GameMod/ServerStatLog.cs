@@ -192,7 +192,7 @@ namespace GameMod
             if (!Config.Settings.Value<bool>("isServer") ||
                 string.IsNullOrEmpty(url = Config.Settings.Value<string>("trackerBaseUrl")))
                 return;
-            Post(url + "/api/stats", body);
+            Post(url + path, body);
         }
 
         public static void TrackerPostStats(JObject body)
