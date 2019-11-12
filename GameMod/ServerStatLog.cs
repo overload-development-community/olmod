@@ -248,7 +248,7 @@ namespace GameMod
 
         public static void Disconnected(string name)
         {
-            if (NetworkMatch.m_postgame)
+            if (NetworkMatch.m_postgame || NetworkMatch.GetMatchState() == MatchState.NONE)
                 return;
 
             var obj = JObject.FromObject(new
