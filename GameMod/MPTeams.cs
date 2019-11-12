@@ -447,10 +447,14 @@ namespace GameMod
             if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 &&
                 !MPJoinInProgress.NetworkMatchEnabled)) // use this simple balancing method for JIP to hopefully solve JIP team imbalances
                 return true;
+            if (NetworkMatch.m_players.TryGetValue(connection_id, out var connPlayer)) // keep team if player already exists (when called from OnUpdateGameSession)
+            {
+                __result = connPlayer.m_team;
+                return false;
+            }
             int[] team_counts = new int[(int)MPTeams.MPTEAM_NUM];
             foreach (var player in NetworkMatch.m_players.Values)
-                if (player.m_id != connection_id)
-                    team_counts[(int)player.m_team]++;
+                team_counts[(int)player.m_team]++;
             MpTeam min_team = MpTeam.TEAM0;
             foreach (var team in MPTeams.Teams)
                 if (team_counts[(int)team] < team_counts[(int)min_team] ||
