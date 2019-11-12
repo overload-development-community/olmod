@@ -1,0 +1,1 @@
+"olmod" -nographics -batchmode
