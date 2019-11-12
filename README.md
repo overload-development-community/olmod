@@ -15,7 +15,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
   
 - Run `olmod.exe` / `olmod.sh` (linux) instead of `Overload.exe`
 
-- Use `olmodserver.bat` / `olmodserver.sh` (linux) to start a server
+- Use `olmodserver.bat` / `olmodserver.sh` (linux) to start a LAN server,
+  use `olmodserverinet.bat` / `olmodserverinet.sh` (linux) to start an
+  internet server. For the internet server you need to open UDP port range
+  7000-8001
 
 #### What does it do
 
@@ -71,6 +74,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - MP Prev weapon switch fix from Tobias
 
 - Adds support for some missing textures (crystal) and props (fans, monitors) in custom levels
+
+- MP server writes kill/damage log and optionally send it to tracker
 
 #### How to build
 
