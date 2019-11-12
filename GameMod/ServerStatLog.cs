@@ -73,7 +73,7 @@ namespace GameMod
                 from d in DamageTable
                 select JObject.FromObject(new
                 {
-                    attacker = d.Key.Attacker.m_mp_name,
+                    attacker = d.Key.Attacker?.m_mp_name,
                     defender = d.Key.Defender.m_mp_name,
                     weapon = d.Key.Weapon.ToString(),
                     damage = d.Value
@@ -598,12 +598,10 @@ namespace GameMod
     {
         public static void Prefix(DamageInfo di, PlayerShip __instance)
         {
-            if (!Overload.NetworkManager.IsHeadless() || di.damage == 0f || di.owner == null ||
+            if (!Overload.NetworkManager.IsHeadless() || di.damage == 0f ||
                 __instance.m_death_stats_recorded || __instance.m_cannot_die || __instance.c_player.m_invulnerable)
                 return;
-            var otherPlayer = di.owner.GetComponent<Player>();
-            if (otherPlayer == null)
-                return;
+            var otherPlayer = di.owner?.GetComponent<Player>();
 
             float hitpoints = __instance.c_player.m_hitpoints;
             ProjPrefab weapon = di.weapon;
