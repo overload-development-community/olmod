@@ -112,6 +112,7 @@
     <Compile Include="Monsterball.cs" />
     <Compile Include="MPDoors.cs" />
     <Compile Include="MPHoming.cs" />
+    <Compile Include="MPLavaTrack.cs" />
     <Compile Include="MPLevelSelect.cs" />
     <Compile Include="MPMaxPlayer.cs" />
     <Compile Include="MPNegativeKills.cs" />
