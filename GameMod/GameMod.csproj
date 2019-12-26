@@ -124,6 +124,7 @@
     <Compile Include="MPTeams.cs" />
     <Compile Include="MPTeamsEnemyArrow.cs" />
     <Compile Include="MPTweaks.cs" />
+    <Compile Include="MPUnlockAll.cs" />
     <Compile Include="MusicCustom.cs" />
     <Compile Include="PrevWeaponFix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
