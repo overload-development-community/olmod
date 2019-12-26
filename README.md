@@ -77,6 +77,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - MP server writes kill/damage log and optionally send it to tracker
 
+- Always makes all MP loadouts available and uses Impulse instead of Reflex for Warrior
+
+- Fixes missing doors and teleporters in MP levels
+
 #### How to build
 
 - Open solution in Visual Studio 2017
