@@ -39,7 +39,7 @@ namespace GameMod
             position.y += 10f;
             DrawMpScoreboardRaw.Invoke(uie, new object[] { position });
             position.y = UIManager.UI_BOTTOM - 30f;
-            uie.SelectAndDrawItem(Loc.LS("MULTIPLATER MENU"), position, 100, false);
+            uie.SelectAndDrawItem(Loc.LS("MULTIPLAYER MENU"), position, 100, false);
             position.y -= 62f;
             uie.SelectAndDrawItem(Loc.LS(NetworkMatch.m_match_req_password == "" ? "CREATE AGAIN" : "JOIN AGAIN"), position, 2, false);
             return false;
