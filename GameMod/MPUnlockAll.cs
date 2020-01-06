@@ -7,9 +7,7 @@ using System.Reflection.Emit;
 // contributed by terminal
 namespace GameMod
 {
-    /*
-    // Disabled, works server side which causes server - client version mismatches
-    //Replace loadout Reflex with Impulse in loadouts (data message). Targets the Warrior loadout (0) specifically.
+    //Replace loadout Reflex with Impulse in loadouts (data message) on server. Targets the Warrior loadout (0) specifically.
     [HarmonyPatch(typeof(LoadoutDataMessage), "GetMpLoadoutWeapon1")]
     class MPLoadoutsReplaceReflex
     {
@@ -19,7 +17,6 @@ namespace GameMod
                 __result = WeaponType.IMPULSE;
         }
     }
-    */
 
     //Replace Reflex with Impulse in loadouts (menu). Targets the Warrior loadout (0) specifically.
     [HarmonyPatch(typeof(Player), "GetMpLoadoutWeapon1")]
