@@ -105,6 +105,7 @@
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCustomModeFile.cs" />
+    <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTriggers.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
