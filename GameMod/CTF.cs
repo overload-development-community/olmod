@@ -237,18 +237,18 @@ namespace GameMod
             SpawnAt(flag, playerShip.c_transform_position + a * 0.05f, a + playerShip.c_rigidbody.velocity * UnityEngine.Random.Range(1f, 2f));
         }
 
-        private static void LogEvent(CTFEvent evt, Player player)
+        private static void LogEvent(CTFEvent evt, Player player, MpTeam flag)
         {
             switch (evt)
             {
                 case CTFEvent.RETURN:
-                    ServerStatLog.AddFlagEvent(player, "Return");
+                    ServerStatLog.AddFlagEvent(player, "Return", flag);
                     break;
                 case CTFEvent.PICKUP:
-                    ServerStatLog.AddFlagEvent(player, "Pickup");
+                    ServerStatLog.AddFlagEvent(player, "Pickup", flag);
                     break;
                 case CTFEvent.SCORE:
-                    ServerStatLog.AddFlagEvent(player, "Capture");
+                    ServerStatLog.AddFlagEvent(player, "Capture", flag);
                     break;
             }
         }
@@ -258,7 +258,7 @@ namespace GameMod
             Debug.Log("CTF.NotifyAll " + evt);
             NetworkServer.SendToAll(CTFCustomMsg.MsgCTFNotify, new CTFNotifyMessage { m_event = evt, m_message = message,
                 m_player_id = player == null ? default(NetworkInstanceId) : player.netId, m_flag_id = flag });
-            LogEvent(evt, player);
+            LogEvent(evt, player, MPTeams.AllTeams[flag]);
         }
 
         public static void Score(Player player)
@@ -572,7 +572,7 @@ namespace GameMod
             if (attacker == null || attacker.netId == __instance.netId)
                 return;
 
-            ServerStatLog.AddFlagEvent(attacker, "CarrierKill");
+            ServerStatLog.AddFlagEvent(attacker, "CarrierKill", MPTeams.AllTeams[flag]);
         }
     }
 
@@ -856,7 +856,7 @@ namespace GameMod
                 {
                     pos.y += 32f;
                     pos.x += 12f;
-                    float t = CTF.FlagReturnTime[flag] - Time.time;
+                    float t = CTF.FlagReturnTime[flag] - Time.time + 1f; // 'round up'
                     if (t < 0)
                         t = 0;
                     uie.DrawDigitsTimeNoHours(pos, t, 0.45f, MPTeams.TeamColor(MPTeams.AllTeams[flag], 4), m_alpha);

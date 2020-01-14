@@ -400,7 +400,7 @@ namespace GameMod
                 DamageTable[key] = damage;
         }
 
-        public static void AddFlagEvent(Player player, string @event)
+        public static void AddFlagEvent(Player player, string @event, MpTeam flagTeam)
         {
             if (NetworkMatch.m_postgame)
                 return;
@@ -409,8 +409,8 @@ namespace GameMod
             {
                 Time = NetworkMatch.m_match_elapsed_seconds,
                 Event = @event,
-                Scorer = player.m_mp_name,
-                ScorerTeam = player.m_mp_team
+                Scorer = player?.m_mp_name,
+                ScorerTeam = player != null ? player.m_mp_team : flagTeam
             };
 
             var obj = JObject.FromObject(new
