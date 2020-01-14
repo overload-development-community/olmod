@@ -56,10 +56,12 @@ namespace GameMod
                 RUtility.ReadField(obj, keyParts[2], value);
                 return oldValue;
             }
-            if (key == "ctf.returntimer")
+            if (key == "ctf.returntimer" && float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float valFloat))
             {
-                CTF.ReturnTimeAmount = float.Parse(value, CultureInfo.InvariantCulture);
+                var oldValue = CTF.ReturnTimeAmount.ToStringInvariantCulture();
+                CTF.ReturnTimeAmount = valFloat;
                 CTF.ShowReturnTimer = true;
+                return oldValue;
             }
             return null;
         }
@@ -127,7 +129,7 @@ namespace GameMod
             if (everyoneSupportsProj)
                 tweaks.Add("proj.missile_hunter.m_init_speed_min", "17.5");
             if (NetworkMatch.GetMode() == CTF.MatchModeCTF)
-                tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmount.ToStringInvariantCulture());
+                tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmountDefault.ToStringInvariantCulture());
             if (tweaks.Any())
             {
                 Debug.LogFormat("MPTweaks: sending tweaks {0}", tweaks.Join());

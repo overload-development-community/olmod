@@ -32,7 +32,8 @@ namespace GameMod
         public static Dictionary<NetworkInstanceId, int> PlayerHasFlag = new Dictionary<NetworkInstanceId, int>();
         public static float[] FlagReturnTime = new float[TeamCount];
         public static IEnumerator[] FlagReturnTimer = new IEnumerator[TeamCount];
-        public static float ReturnTimeAmount = 30;
+        public const float ReturnTimeAmountDefault = 30;
+        public static float ReturnTimeAmount = ReturnTimeAmountDefault;
         public static bool ShowReturnTimer = false;
 
         public static bool IsActive
