@@ -2,6 +2,7 @@
 using Overload;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -54,6 +55,11 @@ namespace GameMod
                 var oldValue = obj.GetType().GetField(keyParts[2]).GetValue(obj).ToString();
                 RUtility.ReadField(obj, keyParts[2], value);
                 return oldValue;
+            }
+            if (key == "ctf.returntimer")
+            {
+                CTF.ReturnTimeAmount = float.Parse(value, CultureInfo.InvariantCulture);
+                CTF.ShowReturnTimer = true;
             }
             return null;
         }
@@ -117,9 +123,13 @@ namespace GameMod
                     everyoneSupportsProj = false;
                     Debug.LogFormat("MPTweaks: not tweaking hunter: unsupported by client {0}", connId);
                 }
+            var tweaks = new Dictionary<string, string>() { };
             if (everyoneSupportsProj)
+                tweaks.Add("proj.missile_hunter.m_init_speed_min", "17.5");
+            if (NetworkMatch.GetMode() == CTF.MatchModeCTF)
+                tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmount.ToStringInvariantCulture());
+            if (tweaks.Any())
             {
-                var tweaks = new Dictionary<string, string>() { { "proj.missile_hunter.m_init_speed_min", "17.5" } };
                 Debug.LogFormat("MPTweaks: sending tweaks {0}", tweaks.Join());
                 MPTweaks.Set(tweaks);
                 MPTweaks.Send();

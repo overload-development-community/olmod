@@ -30,6 +30,10 @@ namespace GameMod
         public static Vector3[] SpawnPoint = new Vector3[TeamCount];
         public static FlagState[] FlagStates = new FlagState[TeamCount];
         public static Dictionary<NetworkInstanceId, int> PlayerHasFlag = new Dictionary<NetworkInstanceId, int>();
+        public static float[] FlagReturnTime = new float[TeamCount];
+        public static IEnumerator[] FlagReturnTimer = new IEnumerator[TeamCount];
+        public static float ReturnTimeAmount = 30;
+        public static bool ShowReturnTimer = false;
 
         public static bool IsActive
         {
@@ -142,6 +146,12 @@ namespace GameMod
             HasSpawnPoint = new bool[TeamCount];
             FlagStates = new FlagState[TeamCount];
             SpawnPoint = new Vector3[TeamCount];
+            FlagReturnTime = new float[TeamCount];
+            ShowReturnTimer = false;
+            foreach (var timer in FlagReturnTimer)
+                if (timer != null)
+                    GameManager.m_gm.StopCoroutine(timer);
+            FlagReturnTimer = new IEnumerator[TeamCount];
         }
 
         // pickup of flag item
@@ -171,6 +181,11 @@ namespace GameMod
                 "{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!";
             CTF.NotifyAll(evt, string.Format(Loc.LS(msg), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
                 MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
+            if (FlagReturnTimer[flag] != null)
+            {
+                GameManager.m_gm.StopCoroutine(FlagReturnTimer[flag]);
+                FlagReturnTimer[flag] = null;
+            }
             return true;
         }
 
@@ -240,7 +255,8 @@ namespace GameMod
         public static void NotifyAll(CTFEvent evt, string message, Player player, int flag)
         {
             Debug.Log("CTF.NotifyAll " + evt);
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFNotify, new CTFNotifyMessage { m_event = evt, m_message = message, m_player_id = player.netId, m_flag_id = flag });
+            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFNotify, new CTFNotifyMessage { m_event = evt, m_message = message,
+                m_player_id = player == null ? default(NetworkInstanceId) : player.netId, m_flag_id = flag });
             LogEvent(evt, player);
         }
 
@@ -259,12 +275,26 @@ namespace GameMod
                 MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
         }
 
+        public static IEnumerator CreateReturnTimer(int flag)
+        {
+            yield return new WaitForSeconds(CTF.ReturnTimeAmount);
+            if (!IsActiveServer || NetworkMatch.m_match_state != MatchState.PLAYING || CTF.FlagStates[flag] != FlagState.LOST)
+                yield break;
+            SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME);
+            SpawnAtHome(flag);
+            NotifyAll(CTFEvent.RETURN, string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[flag])), null, flag);
+            FlagReturnTimer[flag] = null;
+        }
+
         public static void Drop(Player player)
         {
             if (!PlayerHasFlag.TryGetValue(player.netId, out int flag))
                 return;
             SendCTFLose(-1, player.netId, flag, FlagState.LOST);
             NotifyAll(CTFEvent.DROP, null, player, flag);
+            if (FlagReturnTimer[flag] != null)
+                GameManager.m_gm.StopCoroutine(FlagReturnTimer[flag]);
+            GameManager.m_gm.StartCoroutine(FlagReturnTimer[flag] = CreateReturnTimer(flag));
         }
 
         public static void SendJoinUpdate(Player player)
@@ -654,6 +684,9 @@ namespace GameMod
 
             // remove flag ring effect from carrier ship
             CTF.PlayerDisableRing(CTF.FindPlayerForEffect(msg.m_player_id));
+
+            if (msg.m_flag_state == FlagState.LOST)
+                CTF.FlagReturnTime[msg.m_flag_id] = Time.time + CTF.ReturnTimeAmount;
         }
 
         private static void OnCTFNotifyOld(NetworkMessage rawMsg)
@@ -799,7 +832,7 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
     class CTFDrawHUDScoreInfo
     {
-        private static void DrawFlagState(Vector2 pos, float m_alpha, int flag)
+        private static void DrawFlagState(UIElement uie, Vector2 pos, float m_alpha, int flag)
         {
             var state = CTF.FlagStates[flag];
             if (state == FlagState.PICKEDUP)
@@ -815,10 +848,19 @@ namespace GameMod
             {
                 UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
                     MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * (state == FlagState.LOST ? 0.2f : 1f), m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+                if (state == FlagState.LOST && CTF.ShowReturnTimer)
+                {
+                    pos.y += 32f;
+                    pos.x += 12f;
+                    float t = CTF.FlagReturnTime[flag] - Time.time;
+                    if (t < 0)
+                        t = 0;
+                    uie.DrawDigitsTimeNoHours(pos, t, 0.45f, MPTeams.TeamColor(MPTeams.AllTeams[flag], 4), m_alpha);
+                }
             }
         }
 
-        private static void Prefix(Vector2 pos, float ___m_alpha)
+        private static void Prefix(Vector2 pos, float ___m_alpha, UIElement __instance)
         {
             if (!CTF.IsActive)
                 return;
@@ -832,7 +874,7 @@ namespace GameMod
 
             for (int i = 0; i < CTF.TeamCount; i++)
             {
-                DrawFlagState(pos, ___m_alpha, i);
+                DrawFlagState(__instance, pos, ___m_alpha, i);
                 pos.x += 60;
             }
         }
