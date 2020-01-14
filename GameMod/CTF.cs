@@ -281,6 +281,9 @@ namespace GameMod
             if (!IsActiveServer || NetworkMatch.m_match_state != MatchState.PLAYING || CTF.FlagStates[flag] != FlagState.LOST)
                 yield break;
             SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME);
+            foreach (var item in GameObject.FindObjectsOfType<Item>())
+                if (item.m_type == ItemType.KEY_SECURITY && item.m_index == flag)
+                    UnityEngine.Object.Destroy(item.gameObject);
             SpawnAtHome(flag);
             NotifyAll(CTFEvent.RETURN, string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[flag])), null, flag);
             FlagReturnTimer[flag] = null;
