@@ -102,6 +102,7 @@
     <Compile Include="FastLoad.cs" />
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
+    <Compile Include="MoreAudio.cs" />
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCustomModeFile.cs" />
