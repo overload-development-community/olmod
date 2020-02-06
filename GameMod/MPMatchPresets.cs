@@ -1,0 +1,230 @@
+﻿using Harmony;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Overload;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
+using UnityEngine;
+using UnityEngine.Networking;
+
+namespace GameMod
+{
+
+    /// <summary>
+    /// MP Match Presets Support for quick switching between OTL, pub anarchy etc
+    /// Author: Tobias
+    /// </summary>
+    class MPMatchPresets
+    {
+        static List<MPMatchPreset> presets = new List<MPMatchPreset>();
+        static int mms_match_preset = 0;
+
+        static string GetMatchPreset()
+        {
+            return presets[mms_match_preset].title;
+        }
+
+        static MPMatchPresets()
+        {
+            presets.Add(new MPMatchPreset
+            {
+                title = "PILOT PROFILE",
+                matchMode = MenuManager.mms_mode,
+                maxPlayers = MenuManager.mms_max_players,
+                friendlyFire = MenuManager.mms_friendly_fire,
+                timeLimit = MenuManager.mms_time_limit,
+                scoreLimit = MenuManager.mms_score_limit,
+                respawnTime = MenuManager.mms_respawn_time,
+                respawnInvuln = MenuManager.mms_respawn_invuln,
+                showNames = MenuManager.mms_show_names,
+                turnSpeedLimit = MenuManager.mms_turn_speed_limit,
+                forceLoadout = MenuManager.mms_force_loadout,
+                forcePrimary1 = MenuManager.mms_force_w1,
+                forcePrimary2 = MenuManager.mms_force_w2,
+                forceSecondary1 = MenuManager.mms_force_m1,
+                forceSecondary2 = MenuManager.mms_force_m2,
+                forceModifier1 = MenuManager.mms_force_modifier1,
+                forceModifier2 = MenuManager.mms_force_modifier2,
+                powerupSpawn = MenuManager.mms_powerup_spawn,
+                powerupInitial = MenuManager.mms_powerup_initial,
+                powerupBigSpawn = MenuManager.mms_powerup_big_spawn,
+                powerupFilter = MenuManager.mms_powerup_filter,
+                jipEnabled = ModPrefs.GetBool("MP_PM_JIP", true)
+            });
+
+            presets.Add(new MPMatchPreset
+            {
+                title = "PUBLIC ANARCHY",
+                matchMode = MatchMode.ANARCHY,
+                maxPlayers = 16,
+                friendlyFire = 0,
+                timeLimit = MatchTimeLimit.MIN_15,
+                scoreLimit = 0,
+                respawnTime = 2,
+                respawnInvuln = 2,
+                showNames = MatchShowEnemyNames.NORMAL,
+                turnSpeedLimit = 2,
+                forceLoadout = 0,
+                forcePrimary1 = WeaponType.IMPULSE,
+                forcePrimary2 = WeaponType.NUM,
+                forceSecondary1 = MissileType.FALCON,
+                forceSecondary2 = MissileType.NUM,
+                forceModifier1 = 4,
+                forceModifier2 = 4,
+                powerupSpawn = 2,
+                powerupInitial = 2,
+                powerupBigSpawn = 1,
+                powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
+                jipEnabled = true
+            });
+
+            GameManager.m_gm.StartCoroutine(GetMatchPresets());
+        }        
+
+        class MPMatchPreset
+        {
+            public string title { get; set; }
+            public MatchMode matchMode;
+            public int maxPlayers;
+            public int friendlyFire;
+            public MatchTimeLimit timeLimit;
+            public int scoreLimit;
+            public int respawnTime;
+            public int respawnInvuln;
+            public MatchShowEnemyNames showNames;
+            public int turnSpeedLimit;
+            public int forceLoadout;
+            public WeaponType forcePrimary1;
+            public WeaponType forcePrimary2;
+            public MissileType forceSecondary1;
+            public MissileType forceSecondary2;
+            public int forceModifier1;
+            public int forceModifier2;
+            public int powerupSpawn;
+            public int powerupInitial;
+            public int powerupBigSpawn;
+            public bool[] powerupFilter;
+            public bool jipEnabled;
+            
+            public void Apply()
+            {
+                MenuManager.mms_mode = this.matchMode;
+                MenuManager.mms_max_players = this.maxPlayers;
+                MenuManager.mms_friendly_fire = this.friendlyFire;
+                MenuManager.mms_time_limit = this.timeLimit;
+                MenuManager.mms_score_limit = this.scoreLimit;
+                MenuManager.mms_respawn_time = this.respawnTime;
+                MenuManager.mms_respawn_invuln = this.respawnInvuln;
+                MenuManager.mms_show_names = this.showNames;
+                MenuManager.mms_turn_speed_limit = this.turnSpeedLimit;
+                MenuManager.mms_force_loadout = this.forceLoadout;
+                MenuManager.mms_force_w1 = this.forcePrimary1;
+                MenuManager.mms_force_w2 = this.forcePrimary2;
+                MenuManager.mms_force_m1 = this.forceSecondary1;
+                MenuManager.mms_force_m2 = this.forceSecondary2;
+                MenuManager.mms_force_modifier1 = this.forceModifier1;
+                MenuManager.mms_force_modifier2 = this.forceModifier2;
+                MenuManager.mms_powerup_spawn = this.powerupSpawn;
+                MenuManager.mms_powerup_initial = this.powerupInitial;
+                MenuManager.mms_powerup_big_spawn = this.powerupBigSpawn;
+                MenuManager.mms_powerup_filter = this.powerupFilter;
+                MPJoinInProgress.MenuManagerEnabled = this.jipEnabled;
+            }
+        }
+
+        static IEnumerator GetMatchPresets()
+        {
+            HashSet<string> urls = new HashSet<string>() { "https://otl.gg/olmod/settings.json" };
+            JToken jUrls = null;
+            Config.Settings.TryGetValue("matchPresetUrls", out jUrls);
+            if (jUrls != null)
+            {
+                foreach (var jUrl in jUrls)
+                {
+                    urls.Add(jUrl.Value<string>());
+                }
+            }            
+
+            foreach (var url in urls)
+            {
+                UnityWebRequest www = UnityWebRequest.Get(url);
+                yield return www.SendWebRequest();
+
+                if (www.isNetworkError || www.isHttpError)
+                {
+                    uConsole.Log(www.error);
+                }
+                else
+                {
+                    List<MPMatchPreset> _presets = JsonConvert.DeserializeObject<List<MPMatchPreset>>(www.downloadHandler.text);
+                    foreach (var preset in _presets)
+                    {
+                        presets.Add(preset);
+                    }
+                }
+            }
+        }
+        
+        [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+        class MPMatchPresetDrawMpMatchSetup
+        {
+            private static void DrawItem(UIElement uie, ref Vector2 position)
+            {
+                uie.SelectAndDrawStringOptionItem("MATCH PRESET", position, 9, GetMatchPreset(), "PRECONFIGURED SETTINGS FOR MATCHES", 1.5f, false);
+                position.y += 62f;
+            }
+
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            {
+                int state = 0;
+                foreach (var code in codes)
+                {
+                    if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "MATCH SETTINGS")
+                    {
+                        state = 1;
+                    }
+                    else if (state == 1 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 217f)
+                    {
+                        code.operand = 277f;
+                        state = 2;
+                    }
+                    else if (state == 2 && code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawMenuSeparator")
+                    {
+                        state = 3;
+                    }
+                    else if (state == 3)
+                    {
+                        state = 4;
+                        yield return new CodeInstruction(OpCodes.Ldarg_0);
+                        yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPMatchPresetDrawMpMatchSetup), "DrawItem"));
+                    }
+                    yield return code;
+                }
+            }
+
+        }
+
+        // Process slider input
+        [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+        class MPMatchPresetMpMatchSetup
+        {
+            static void Postfix()
+            {
+                if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                    (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                    MenuManager.m_menu_micro_state == 2 &&
+                    UIManager.m_menu_selection == 9)
+                {
+
+                    mms_match_preset = (mms_match_preset + presets.Count + UIManager.m_select_dir) % presets.Count;
+                    presets[mms_match_preset].Apply();
+                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                }
+            }
+        }
+
+    }
+}
