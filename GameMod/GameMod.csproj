@@ -106,6 +106,7 @@
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCustomModeFile.cs" />
+    <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTriggers.cs" />
