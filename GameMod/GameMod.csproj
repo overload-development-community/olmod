@@ -108,6 +108,7 @@
     <Compile Include="MPCustomModeFile.cs" />
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
+    <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTriggers.cs" />
     <Compile Include="MPDownloadLevel.cs" />

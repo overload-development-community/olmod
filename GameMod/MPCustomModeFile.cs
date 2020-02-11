@@ -11,8 +11,13 @@ using UnityEngine;
 
 namespace GameMod
 {
-    [HarmonyPatch(typeof(RobotManager), "DoReadMultiplayerModeFile")]
     class MPCustomModeFile
+    {
+        public static bool PickupCheck;
+    }
+
+    [HarmonyPatch(typeof(RobotManager), "DoReadMultiplayerModeFile")]
+    class MPCustomModeFileRead
     {
         public static string ReadCustomFile(LevelInfo level)
         {
@@ -29,15 +34,22 @@ namespace GameMod
             return string.Empty;
         }
 
+        private static void Prefix()
+        {
+            MPCustomModeFile.PickupCheck = false;
+            Debug.Log("reset PickupCheck to false");
+        }
+
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
             foreach (var code in codes)
             {
+                // replace init to empty string with init to custom level string
                 if (state == 0 && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "Empty")
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0) { labels = code.labels };
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPCustomModeFile), "ReadCustomFile"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPCustomModeFileRead), "ReadCustomFile"));
                     state = 1;
                     continue;
                 }
@@ -69,6 +81,7 @@ namespace GameMod
         }
     }
 
+    // also scan multi_mode for desc / music tags
     [HarmonyPatch(typeof(LevelInfo), "ReadChallengeModeText")]
     class MPCustomLevelInfoRead
     {
@@ -98,6 +111,13 @@ namespace GameMod
         private static bool Prefix(string[] words)
         {
             string word = words[0];
+            if (word == "$pickup_check") {
+                if (words.Length != 2 || !bool.TryParse(words[1], out MPCustomModeFile.PickupCheck))
+                    Debug.Log("Invalid argument to pickup_check in multi_mode file. Must be true or false.");
+                else
+                    Debug.Log("pickup_check changed to " + MPCustomModeFile.PickupCheck);
+                return false;
+            }
             //Debug.Log("Multi tag: " + word);
             return word != null && word != "$music" && !word.StartsWith("$desc_");
         }

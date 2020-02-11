@@ -63,11 +63,18 @@ namespace GameMod
                 CTF.ShowReturnTimer = true;
                 return oldValue;
             }
+            if (key == "item.pickupcheck" && bool.TryParse(value, out bool valBool))
+            {
+                MPPickupCheck.PickupCheck = valBool;
+                return Boolean.TrueString;
+            }
             return null;
         }
 
         public static void Apply()
         {
+            if (oldSettings.Any())
+                Debug.Log("MPTweaks.Apply " + (Overload.NetworkManager.IsServer() ? "server" : "conn " + NetworkMatch.m_my_lobby_id) + " restoring to " + oldSettings.Join());
             foreach (var x in oldSettings)
                 ApplySetting(x.Key, x.Value);
             oldSettings.Clear();
@@ -110,13 +117,18 @@ namespace GameMod
         }
     }
 
-    // start of lobby countdown
-    [HarmonyPatch(typeof(NetworkMatch), "NetSystemNotifyMatchStart")]
-    class MPTweaksNetSystemNotifyMatchStart
+    // send tweaks after mp scene load, needed to make ReadMultiplayerModeFile work for pickupcheck
+    // was: NetworkMatch.NetSystemNotifyMatchStart, after start of lobby countdown
+    [HarmonyPatch(typeof(Overload.NetworkManager), "LoadScene")]
+    class MPTweaksLoadScene
     {
         private static void Postfix()
         {
-            Debug.Log("MPTweaksNetSystemNotifyMatchStart");
+            if (!GameplayManager.IsDedicatedServer())
+                return;
+            Debug.Log("MPTweaksLoadScene");
+            RobotManager.ReadMultiplayerModeFile();
+            Debug.Log("MPTweaks loaded mode file");
             bool everyoneSupportsProj = true;
             foreach (var connId in NetworkMatch.m_players.Keys)
                 if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo) ||
@@ -130,6 +142,8 @@ namespace GameMod
                 tweaks.Add("proj.missile_hunter.m_init_speed_min", "17.5");
             if (NetworkMatch.GetMode() == CTF.MatchModeCTF)
                 tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmountDefault.ToStringInvariantCulture());
+            if (!MPCustomModeFile.PickupCheck)
+                tweaks.Add("item.pickupcheck", Boolean.FalseString);
             if (tweaks.Any())
             {
                 Debug.LogFormat("MPTweaks: sending tweaks {0}", tweaks.Join());
