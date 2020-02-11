@@ -351,6 +351,43 @@ namespace GameMod
             if (part != null)
                 UnityEngine.Object.Destroy(part);
         }
+
+        private static void DrawFlagState(UIElement uie, Vector2 pos, float m_alpha, int flag)
+        {
+            var state = CTF.FlagStates[flag];
+            if (state == FlagState.PICKEDUP)
+            {
+                var pickedupTeamIdx = 1 - flag;
+                UIManager.DrawSpriteUIRotated(pos, 0.4f, 0.4f, Mathf.PI / 2f,
+                    MPTeams.TeamColor(MPTeams.AllTeams[pickedupTeamIdx], 4), m_alpha, (int)AtlasIndex0.RING_MED0);
+
+                UIManager.DrawSpriteUIRotated(pos, 0.18f, 0.18f, Mathf.PI / 2f,
+                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * 0.5f, m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+            }
+            else
+            {
+                UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
+                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * (state == FlagState.LOST ? 0.2f : 1f), m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+                if (state == FlagState.LOST && CTF.ShowReturnTimer)
+                {
+                    pos.y += 32f;
+                    pos.x += 12f;
+                    float t = CTF.FlagReturnTime[flag] - Time.time + 1f; // 'round up'
+                    if (t < 0)
+                        t = 0;
+                    uie.DrawDigitsTimeNoHours(pos, t, 0.45f, MPTeams.TeamColor(MPTeams.AllTeams[flag], 4), m_alpha);
+                }
+            }
+        }
+
+        public static void DrawFlags(UIElement instance, Vector2 pos, float m_alpha)
+        {
+            for (int i = 0; i < CTF.TeamCount; i++)
+            {
+                DrawFlagState(instance, pos, m_alpha, i);
+                pos.x += 60;
+            }
+        }
     }
 
     [HarmonyPatch(typeof(MenuManager), "GetMMSGameMode")]
@@ -836,34 +873,6 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
     class CTFDrawHUDScoreInfo
     {
-        private static void DrawFlagState(UIElement uie, Vector2 pos, float m_alpha, int flag)
-        {
-            var state = CTF.FlagStates[flag];
-            if (state == FlagState.PICKEDUP)
-            {
-                var pickedupTeamIdx = 1 - flag;
-                UIManager.DrawSpriteUIRotated(pos, 0.4f, 0.4f, Mathf.PI / 2f,
-                    MPTeams.TeamColor(MPTeams.AllTeams[pickedupTeamIdx], 4), m_alpha, (int)AtlasIndex0.RING_MED0);
-
-                UIManager.DrawSpriteUIRotated(pos, 0.18f, 0.18f, Mathf.PI / 2f,
-                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * 0.5f, m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
-            }
-            else
-            {
-                UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
-                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * (state == FlagState.LOST ? 0.2f : 1f), m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
-                if (state == FlagState.LOST && CTF.ShowReturnTimer)
-                {
-                    pos.y += 32f;
-                    pos.x += 12f;
-                    float t = CTF.FlagReturnTime[flag] - Time.time + 1f; // 'round up'
-                    if (t < 0)
-                        t = 0;
-                    uie.DrawDigitsTimeNoHours(pos, t, 0.45f, MPTeams.TeamColor(MPTeams.AllTeams[flag], 4), m_alpha);
-                }
-            }
-        }
-
         private static void Prefix(Vector2 pos, float ___m_alpha, UIElement __instance)
         {
             if (!CTF.IsActive)
@@ -876,11 +885,25 @@ namespace GameMod
             pos.x -= 110f;
             pos.y += 20f;
 
-            for (int i = 0; i < CTF.TeamCount; i++)
-            {
-                DrawFlagState(__instance, pos, ___m_alpha, i);
-                pos.x += 60;
-            }
+            CTF.DrawFlags(__instance, pos, ___m_alpha);
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpDeathOverlay")]
+    class CTFDrawMpDeathOverlay
+    {
+        private static void Prefix(float ___m_alpha, UIElement __instance)
+        {
+            if (!CTF.IsActive)
+                return;
+            var pos = __instance.m_position;
+            pos.x = 510f;
+            pos.y = -230f;
+
+            pos.x -= 100f;
+            pos.x -= 110f;
+            pos.y += 20f;
+            CTF.DrawFlags(__instance, pos, ___m_alpha);
         }
     }
 }
