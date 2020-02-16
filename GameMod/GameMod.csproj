@@ -136,6 +136,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PresetData.cs" />
     <Compile Include="RearView.cs" />
+    <Compile Include="ServerPing.cs" />
     <Compile Include="ServerPort.cs" />
     <Compile Include="ServerStatLog.cs" />
     <Compile Include="ServerTrackerPost.cs" />
