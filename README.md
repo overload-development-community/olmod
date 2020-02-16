@@ -81,6 +81,12 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Fixes missing doors and teleporters in MP levels
 
+- Less strict item pickup for inverted segment MP levels, originally by terminal
+
+- Adds MP presets by Tobias
+
+- Allows more simultaneous sounds for large MP matches
+
 #### How to build
 
 - Open solution in Visual Studio 2017
