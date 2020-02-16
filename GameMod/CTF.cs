@@ -894,16 +894,31 @@ namespace GameMod
     {
         private static void Prefix(float ___m_alpha, UIElement __instance)
         {
+            if (!GameplayManager.IsMultiplayerActive)
+                return;
+            var position = new Vector2();
+            position.x = 0f;
+            position.y = -230f;
+            float num = -25f;
+            for (int i = 0; i < GameplayManager.RecentMessageString.Length; i++)
+            {
+                if (GameplayManager.RecentMessageTimer[i] > 0f && GameplayManager.RecentMessageString[i] != string.Empty)
+                {
+                    __instance.DrawStringSmall(GameplayManager.RecentMessageString[i], position, 0.5f, StringOffset.CENTER, (!GameplayManager.RecentMessagePriority[i]) ? UIManager.m_col_ui3 : UIManager.m_col_hi5, Mathf.Min(1f, GameplayManager.RecentMessageTimer[i] * 2f));
+                    position.y -= 25f;
+                    num += 25f;
+                }
+            }
+
             if (!CTF.IsActive)
                 return;
-            var pos = __instance.m_position;
-            pos.x = 510f;
-            pos.y = -230f;
+            position.x = 510f;
+            position.y = -230f;
 
-            pos.x -= 100f;
-            pos.x -= 110f;
-            pos.y += 20f;
-            CTF.DrawFlags(__instance, pos, ___m_alpha);
+            position.x -= 100f;
+            position.x -= 110f;
+            position.y += 20f;
+            CTF.DrawFlags(__instance, position, ___m_alpha);
         }
     }
 }
