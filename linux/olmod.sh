@@ -5,4 +5,4 @@ for arg; do
   if [ "$next_dir" = "0" ]; then OLDIR="$arg"; fi
   [ "$arg" = "-gamedir" ]; next_dir="$?"
 done
-LD_PRELOAD="$OLMODDIR/olmod.so" exec "$OLDIR/Overload.x86_64" "$@"
+LD_PRELOAD="$OLMODDIR/olmod.so:$LD_PRELOAD" exec "$OLDIR/Overload.x86_64" "$@"
