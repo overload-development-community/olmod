@@ -136,7 +136,7 @@ namespace GameMod
 
         static IEnumerator GetMatchPresets()
         {
-            HashSet<string> urls = new HashSet<string>() { "https://otl.gg/olmod/settings.json" };
+            HashSet<string> urls = new HashSet<string>() { "https://otl.gg/olmod/settings.json", "https://octcache.playoverload.online/O1L.json" };
             JToken jUrls = null;
             Config.Settings.TryGetValue("matchPresetUrls", out jUrls);
             if (jUrls != null)
@@ -176,6 +176,11 @@ namespace GameMod
                 position.y += 62f;
             }
 
+            // rewrite call to empty method to avoid needing to remove pushing the arguments in the IL code
+            private static void NoDrawLabelSmall(UIElement self, Vector2 pos, string s, float w = 200f, float h = 24f, float alpha = 1f)
+            {
+            }
+
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
             {
                 int state = 0;
@@ -184,6 +189,11 @@ namespace GameMod
                     if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "MATCH SETTINGS")
                     {
                         state = 1;
+                    }
+                    else if (state == 1 && code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawLabelSmall")
+                    {
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPMatchPresetDrawMpMatchSetup), "NoDrawLabelSmall"));
+                        continue;
                     }
                     else if (state == 1 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 217f)
                     {
