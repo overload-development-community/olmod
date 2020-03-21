@@ -768,13 +768,14 @@ namespace GameMod
 
         static void Postfix()
         {
-            if (Client.GetClient() == null)
-                return;
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFPickup, OnCTFPickup);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFLose, OnCTFLose);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotifyOld, OnCTFNotifyOld);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFFlagUpdate, OnCTFFlagUpdate);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotify, OnCTFNotify);
+            if (Client.GetClient() != null)
+            {
+                Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFPickup, OnCTFPickup);
+                Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFLose, OnCTFLose);
+                Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotifyOld, OnCTFNotifyOld);
+                Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFFlagUpdate, OnCTFFlagUpdate);
+                Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotify, OnCTFNotify);
+            }
         }
     }
 
