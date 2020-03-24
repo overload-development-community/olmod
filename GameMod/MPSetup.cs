@@ -19,6 +19,7 @@ namespace GameMod
             MPTeams.NetworkMatchTeamCount = 2;
             MPJoinInProgress.NetworkMatchEnabled = false;
             RearView.MPNetworkMatchEnabled = false;
+            MPSuddenDeath.SuddenDeathEnabled = false;
         }
     }
 
@@ -38,6 +39,7 @@ namespace GameMod
                 MPTeams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
                 MPJoinInProgress.NetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 8) != 0;
                 RearView.MPNetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 16) != 0;
+                MPSuddenDeath.SuddenDeathEnabled = (NetworkMatch.m_name[i + 1] & 32) != 0;
             }
         }
 
@@ -73,7 +75,8 @@ namespace GameMod
                 __result.m_name += new string(new char[] { '\0', (char)(
                     ((Math.Max(2, MPTeams.MenuManagerTeamCount) - 2) & 7) |
                     (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 8 : 0) |
-                    (RearView.MPMenuManagerEnabled ? 16 : 0))});
+                    (RearView.MPMenuManagerEnabled ? 16 : 0) |
+                    (MPSuddenDeath.SuddenDeathEnabled ? 32 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
             if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable)
@@ -89,6 +92,7 @@ namespace GameMod
             MPTeams.MenuManagerTeamCount = 2;
             MPJoinInProgress.MenuManagerEnabled = false;
             RearView.MPMenuManagerEnabled = false;
+            MPSuddenDeath.SuddenDeathEnabled = false;
         }
     }
 

@@ -12,7 +12,7 @@ namespace GameMod
 {
     class MPSuddenDeath
     {
-        public static bool SuddenDeathEnabled = true; // TODO: Make this an option.
+        public static bool SuddenDeathEnabled = false; // TODO: Make this an option.
         public static bool InOvertime = false;
 
         public static int GetTimer()
@@ -143,6 +143,55 @@ namespace GameMod
                 }
 
                 yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class MPSuddenDeath_DrawMpMatchSetup
+    {
+        private static string GetMMSSuddenDeath()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(MPSuddenDeath.SuddenDeathEnabled));
+        }
+
+        private static void DrawSuddenDeathToggle(UIElement uie, ref Vector2 position)
+        {
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SUDDEN DEATH OVERTIME"), position, 10, GetMMSSuddenDeath(), string.Empty, 1.5f, MenuManager.mms_mode != MatchMode.NUM);
+            position.y += 62f;
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            var powerupFound = false;
+            foreach (var code in codes)
+            {
+                if (!powerupFound && code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
+                {
+                    powerupFound = true;
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPSuddenDeath_DrawMpMatchSetup), "DrawSuddenDeathToggle"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    // Process slider input
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class MPSuddenDeath_MpMatchSetup
+    {
+        static void Postfix()
+        {
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3 &&
+                UIManager.m_menu_selection == 10)
+            {
+                MPSuddenDeath.SuddenDeathEnabled = !MPSuddenDeath.SuddenDeathEnabled;
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
             }
         }
     }

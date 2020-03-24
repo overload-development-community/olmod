@@ -51,7 +51,8 @@ namespace GameMod
                 powerupInitial = MenuManager.mms_powerup_initial,
                 powerupBigSpawn = MenuManager.mms_powerup_big_spawn,
                 powerupFilter = MenuManager.mms_powerup_filter,
-                jipEnabled = ModPrefs.GetBool("MP_PM_JIP", true)
+                jipEnabled = ModPrefs.GetBool("MP_PM_JIP", true),
+                suddenDeathOvertime = false
             });
 
             presets.Add(new MPMatchPreset
@@ -77,11 +78,12 @@ namespace GameMod
                 powerupInitial = 2,
                 powerupBigSpawn = 1,
                 powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
-                jipEnabled = true
+                jipEnabled = true,
+                suddenDeathOvertime = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
-        }        
+        }
 
         class MPMatchPreset
         {
@@ -107,7 +109,8 @@ namespace GameMod
             public int powerupBigSpawn;
             public bool[] powerupFilter;
             public bool jipEnabled;
-            
+            public bool suddenDeathOvertime;
+
             public void Apply()
             {
                 MenuManager.mms_mode = this.matchMode;
@@ -131,6 +134,7 @@ namespace GameMod
                 MenuManager.mms_powerup_big_spawn = this.powerupBigSpawn;
                 MenuManager.mms_powerup_filter = this.powerupFilter;
                 MPJoinInProgress.MenuManagerEnabled = this.jipEnabled;
+                MPSuddenDeath.SuddenDeathEnabled = this.suddenDeathOvertime;
             }
         }
 
@@ -145,7 +149,7 @@ namespace GameMod
                 {
                     urls.Add(jUrl.Value<string>());
                 }
-            }            
+            }
 
             foreach (var url in urls)
             {
@@ -166,7 +170,7 @@ namespace GameMod
                 }
             }
         }
-        
+
         [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
         class MPMatchPresetDrawMpMatchSetup
         {
