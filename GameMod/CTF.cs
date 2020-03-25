@@ -577,7 +577,7 @@ namespace GameMod
             {
                 return false;
             }
-            if (Overload.NetworkManager.IsServer() && !NetworkMatch.m_postgame)
+            if (Overload.NetworkManager.IsServer() && !NetworkMatch.m_postgame && !c_player.c_player_ship.m_dying)
             {
                 if (!CTF.Pickup(c_player, __instance.m_index))
                     return false;
