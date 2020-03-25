@@ -19,6 +19,7 @@ namespace GameMod
             MPTeams.NetworkMatchTeamCount = 2;
             MPJoinInProgress.NetworkMatchEnabled = false;
             RearView.MPNetworkMatchEnabled = false;
+            MPSuddenDeath.SuddenDeathMatchEnabled = false;
         }
     }
 
@@ -38,6 +39,7 @@ namespace GameMod
                 MPTeams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
                 MPJoinInProgress.NetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 8) != 0;
                 RearView.MPNetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 16) != 0;
+                MPSuddenDeath.SuddenDeathMatchEnabled = (NetworkMatch.m_name[i + 1] & 32) != 0;
             }
         }
 
@@ -67,13 +69,15 @@ namespace GameMod
         static void Postfix(PrivateMatchDataMessage __result)
         {
             Debug.Log("Build PMD name jipsingle " + MPJoinInProgress.SingleMatchEnable);
-            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable || RearView.MPMenuManagerEnabled) &&
+            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable || RearView.MPMenuManagerEnabled ||
+                MPSuddenDeath.SuddenDeathMenuEnabled) &&
                 MenuManager.m_mp_lan_match)
             {
                 __result.m_name += new string(new char[] { '\0', (char)(
                     ((Math.Max(2, MPTeams.MenuManagerTeamCount) - 2) & 7) |
                     (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 8 : 0) |
-                    (RearView.MPMenuManagerEnabled ? 16 : 0))});
+                    (RearView.MPMenuManagerEnabled ? 16 : 0) |
+                    (MPSuddenDeath.SuddenDeathMenuEnabled ? 32 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
             if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable)
@@ -89,6 +93,7 @@ namespace GameMod
             MPTeams.MenuManagerTeamCount = 2;
             MPJoinInProgress.MenuManagerEnabled = false;
             RearView.MPMenuManagerEnabled = false;
+            MPSuddenDeath.SuddenDeathMenuEnabled = false;
         }
     }
 
@@ -193,10 +198,11 @@ namespace GameMod
                 MPTeams.MenuManagerTeamCount = ModPrefs.GetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
                 RearView.MPMenuManagerEnabled = ModPrefs.GetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
+                MPSuddenDeath.SuddenDeathMenuEnabled = ModPrefs.GetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             }
-            else
+            else // for compatability with old olmod, no need to add new settings
             {
                 MPTeams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
@@ -226,6 +232,7 @@ namespace GameMod
             ModPrefs.SetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             ModPrefs.SetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
+            ModPrefs.SetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.Flush(filename + "mod");

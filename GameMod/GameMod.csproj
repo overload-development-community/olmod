@@ -107,9 +107,11 @@
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCustomModeFile.cs" />
+    <Compile Include="MPHUDMessage.cs" />
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPPickupCheck.cs" />
+    <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTriggers.cs" />
     <Compile Include="MPDownloadLevel.cs" />
