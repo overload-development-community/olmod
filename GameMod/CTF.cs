@@ -162,7 +162,11 @@ namespace GameMod
                 return false;
             var ownFlag = MPTeams.AllTeams[flag] == player.m_mp_team;
             if  (ownFlag && FlagStates[flag] == FlagState.HOME)
+            {
+                if (CTF.PlayerHasFlag.ContainsKey(player.netId))
+                    CTF.Score(player);
                 return false;
+            }
             if (!ownFlag && PlayerHasFlag.ContainsKey(player.netId))
                 return false;
 
@@ -775,25 +779,6 @@ namespace GameMod
             Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotifyOld, OnCTFNotifyOld);
             Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFFlagUpdate, OnCTFFlagUpdate);
             Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotify, OnCTFNotify);
-        }
-    }
-
-    [HarmonyPatch(typeof(MonsterBallGoal), "OnTriggerEnter")]
-    internal class CTFScore
-    {
-        private static void Prefix(Collider other, MonsterBallGoal __instance)
-        {
-            if (!CTF.IsActiveServer || other.attachedRigidbody == null)
-                return;
-            PlayerShip playerShip = other.attachedRigidbody.GetComponent<PlayerShip>();
-            if (playerShip == null)
-                return;
-            Player player = playerShip.c_player;
-            var team = player.m_mp_team;
-            if (team == __instance.m_team && CTF.PlayerHasFlag.ContainsKey(player.netId))
-            {
-                CTF.Score(player);
-            }
         }
     }
 
