@@ -58,7 +58,8 @@ static MonoImage *gamemod_img = NULL;
 void print(const char *msg) {
 	if (!msg)
 		msg = "(null)";
-	if (write(1, msg, strlen(msg)));
+	if (write(1, msg, strlen(msg)))
+		;
 }
 
 static int load_image(const char *filename, MonoImage **pimage, MonoAssembly **passem) {
@@ -157,6 +158,8 @@ static MonoObject* my_mono_runtime_invoke(MonoMethod *method, MonoObject *obj, v
 }
 
 // strlcat: Russ Allbery <rra@stanford.edu>, PD
+#undef strlcat
+#define strlcat my_strlcat
 static size_t strlcat(char *dst, const char *src, size_t size)
 {
     size_t used, length, copy;
@@ -202,11 +205,15 @@ static void *my_mono_image_open_from_data_with_name(char *data, int data_len, in
 	return org_mono_image_open_from_data_with_name(data, data_len, copy, st, ref, name);
 }
 
+
+#ifdef __APPLE__
+#define org_dlsym dlsym
+#else
+#define new_dlsym dlsym
 static void *(*org_dlsym)(void*,const char*);
-
 extern void *_dl_sym(void *, const char *, void *);
-
-void *dlsym(void *lib, const char *sym) {
+#endif
+void *new_dlsym(void *lib, const char *sym) {
 	void *ret = org_dlsym(lib, sym);
 	if (sym[0] != 'm' || !ret)
 		return ret;
@@ -247,6 +254,20 @@ void *dlsym(void *lib, const char *sym) {
 
 //static void olmod_init(void) __attribute__((constructor));
 
+#ifdef __APPLE__
+struct	interpose { /* the struct/typenames are arbitrary */
+	void*	new;
+	void*	old;
+};
+typedef	struct	interpose	interpose_t;
+
+__attribute__((used)) static const struct { void *a, *b; } interpose_dlsym[]
+	__attribute__((section("__DATA, __interpose"))) =
+{
+	{ (void*) new_dlsym, (void*) dlsym}
+};
+
+#else
 __attribute__((constructor)) static void olmod_init(void) 
 {
 	#if 0
@@ -261,3 +282,4 @@ __attribute__((constructor)) static void olmod_init(void)
 		abort();
 	}
 }
+#endif
