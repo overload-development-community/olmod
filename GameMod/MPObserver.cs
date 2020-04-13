@@ -40,6 +40,12 @@ namespace GameMod
     static class MPObserver
     {
         public static bool Enabled;
+        public static int ObservedPlayer = -1;
+        public static bool ThirdPerson = false;
+        public static Vector3 SavedPosition = Vector3.zero;
+        public static Quaternion SavedRotation = Quaternion.identity;
+        public static Quaternion LastRotation = Quaternion.identity;
+
         public static void Enable()
         {
             if (Enabled)
@@ -48,7 +54,9 @@ namespace GameMod
             GameplayManager.AddHUDMessage("Observer mode enabled");
             PlayerShip.EnablePlayerLevelCollision(false);
             ChunkManager.ForceActivateAll();
+            RenderSettings.skybox = null;
             GameplayManager.m_use_segment_visibility = false;
+            GameManager.m_player_ship.c_camera.useOcclusionCulling = false;
 
             /*
             GameManager.m_player_ship.m_player_died_due_to_timer = true;
@@ -64,6 +72,7 @@ namespace GameMod
                 GameManager.m_local_player.Networkm_spectator = true;
                 GameManager.m_player_ship.c_player.m_spectator = true;
                 GameManager.m_local_player.m_spectator = true;
+                NetworkMatch.m_show_enemy_names = MatchShowEnemyNames.ALWAYS;
             }
             else
             {
@@ -71,6 +80,94 @@ namespace GameMod
                 foreach (var robot in RobotManager.m_master_robot_list)
                     if (robot != null && !robot.gameObject.activeSelf)
                         robot.gameObject.SetActive(true);
+            }
+        }
+
+        public static void SetNextObservedPlayer()
+        {
+            if (ObservedPlayer == -1)
+            {
+                SavedPosition = GameManager.m_player_ship.c_transform.position;
+                SavedRotation = GameManager.m_player_ship.c_transform.rotation;
+            }
+            else
+            {
+                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+            }
+
+            while (true)
+            {
+                ObservedPlayer++;
+                if (ObservedPlayer >= Overload.NetworkManager.m_Players.Count)
+                {
+                    ObservedPlayer = -1;
+                }
+
+                if (ObservedPlayer == -1)
+                {
+                    break;
+                }
+
+                if (!Overload.NetworkManager.m_Players[ObservedPlayer].m_spectator && !Overload.NetworkManager.m_Players[ObservedPlayer].Networkm_spectator)
+                {
+                    break;
+                }
+            }
+
+            if (ObservedPlayer == -1)
+            {
+                GameplayManager.AddHUDMessage("Observing freely.");
+                GameManager.m_player_ship.c_transform.position = SavedPosition;
+                GameManager.m_player_ship.c_transform.rotation = SavedRotation;
+            }
+            else
+            {
+                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = ThirdPerson ? Vector3.one : Vector3.zero;
+                GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[ObservedPlayer].m_mp_name}.");
+            }
+        }
+
+        public static void SetPrevObservedPlayer()
+        {
+            if (ObservedPlayer == -1)
+            {
+                SavedPosition = GameManager.m_player_ship.c_transform.position;
+                SavedRotation = GameManager.m_player_ship.c_transform.rotation;
+            }
+            else
+            {
+                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+            }
+
+            while (true)
+            {
+                ObservedPlayer--;
+                if (ObservedPlayer < -1)
+                {
+                    ObservedPlayer = Overload.NetworkManager.m_Players.Count - 1;
+                }
+
+                if (ObservedPlayer == -1)
+                {
+                    break;
+                }
+
+                if (!Overload.NetworkManager.m_Players[ObservedPlayer].m_spectator && !Overload.NetworkManager.m_Players[ObservedPlayer].Networkm_spectator)
+                {
+                    break;
+                }
+            }
+
+            if (ObservedPlayer == -1)
+            {
+                GameplayManager.AddHUDMessage("Observing freely.");
+                GameManager.m_player_ship.c_transform.position = SavedPosition;
+                GameManager.m_player_ship.c_transform.rotation = SavedRotation;
+            }
+            else
+            {
+                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = ThirdPerson ? Vector3.one : Vector3.zero;
+                GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[ObservedPlayer].m_mp_name}.");
             }
         }
     }
@@ -105,6 +202,11 @@ namespace GameMod
         {
             GameplayManager.m_use_segment_visibility = true;
             MPObserver.Enabled = false;
+            MPObserver.ObservedPlayer = -1;
+            MPObserver.ThirdPerson = false;
+            MPObserver.SavedPosition = Vector3.zero;
+            MPObserver.SavedRotation = Quaternion.identity;
+            MPObserver.LastRotation = Quaternion.identity;
             if (GameManager.m_player_ship != null && GameManager.m_player_ship.c_camera != null)
                 GameManager.m_player_ship.c_camera.useOcclusionCulling = true;
         }
@@ -192,11 +294,7 @@ namespace GameMod
             //Debug.Log("OnMatchStart player " + GameManager.m_local_player.m_mp_name + " observer " + GameManager.m_local_player.m_spectator);
             if (GameplayManager.IsDedicatedServer() || !GameManager.m_local_player.m_spectator)
                 return;
-            RenderSettings.skybox = null;
-            GameplayManager.m_use_segment_visibility = false;
-            NetworkMatch.m_show_enemy_names = MatchShowEnemyNames.ALWAYS;
-            GameManager.m_player_ship.c_camera.useOcclusionCulling = false;
-            ChunkManager.ForceActivateAll();
+            MPObserver.Enable();
         }
     }
 
@@ -220,10 +318,40 @@ namespace GameMod
         }
     }
 
-    // remove very slow turning with observer (spectator) mode
+    // Remove very slow turning with observer (spectator) mode if not
     [HarmonyPatch(typeof(Overload.PlayerShip), "FixedUpdateProcessControlsInternal")]
     class MPObserverFixedUpdateProcess
     {
+        static bool Prefix(PlayerShip __instance)
+        {
+            if (MPObserver.Enabled && MPObserver.ObservedPlayer != -1)
+            {
+                __instance.c_transform.position = (__instance.c_transform.position + Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].transform.position) / 2;
+
+                if (Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.m_dead || Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.m_dying)
+                {
+                    __instance.c_transform.position -= MPObserver.LastRotation * Vector3.forward * 2;
+                    __instance.c_transform.rotation = MPObserver.LastRotation;
+                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                }
+                else
+                {
+                    MPObserver.LastRotation = __instance.c_transform.rotation = Quaternion.Lerp(__instance.c_transform.rotation, Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].transform.rotation, 0.5f);
+
+                    if (MPObserver.ThirdPerson)
+                    {
+                        __instance.c_transform.position -= __instance.c_transform.rotation * Vector3.forward * 2;
+                    }
+
+                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> instructions)
         {
             int n = 0;
@@ -364,6 +492,121 @@ namespace GameMod
                 DrawMpScoreboardRaw(uie, vector);
             }
             uie.m_alpha = alpha;
+        }
+    }
+
+    // Handle input for observer mode. Note: Is there a better method to hook than this?
+    [HarmonyPatch(typeof(Controls), "UpdateKey")]
+    class MPObserverControlsUpdateKey
+    {
+        static void Postfix(CCInput cc_type)
+        {
+            if (MPObserver.Enabled && GameplayManager.IsMultiplayer)
+            {
+                if (cc_type == CCInput.SWITCH_WEAPON && Controls.JustPressed(CCInput.SWITCH_WEAPON))
+                {
+                    MPObserver.SetNextObservedPlayer();
+                }
+                if (cc_type == CCInput.PREV_WEAPON && Controls.JustPressed(CCInput.PREV_WEAPON))
+                {
+                    MPObserver.SetPrevObservedPlayer();
+                }
+                if (cc_type == CCInput.FIRE_WEAPON && Controls.JustPressed(CCInput.FIRE_WEAPON) && MPObserver.ObservedPlayer != -1)
+                {
+                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+
+                    MPObserver.ObservedPlayer = -1;
+
+                    GameplayManager.AddHUDMessage("Observing freely.");
+                    GameManager.m_player_ship.c_transform.position = MPObserver.SavedPosition;
+                    GameManager.m_player_ship.c_transform.rotation = MPObserver.SavedRotation;
+                }
+                if (cc_type == CCInput.FIRE_MISSILE && Controls.JustPressed(CCInput.FIRE_MISSILE) && MPObserver.ObservedPlayer != -1)
+                {
+                    MPObserver.ThirdPerson = !MPObserver.ThirdPerson;
+                    GameplayManager.AddHUDMessage(MPObserver.ThirdPerson ? "Observing in third person." : "Observing in first person.");
+                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
+                }
+                if (cc_type == CCInput.SWITCH_MISSILE && Controls.JustPressed(CCInput.SWITCH_MISSILE) && CTF.IsActive)
+                {
+                    var player = (from f in CTF.PlayerHasFlag
+                                  join p in Overload.NetworkManager.m_Players on f.Key equals p.netId
+                                  where p.m_mp_team == MpTeam.TEAM0
+                                  select p).FirstOrDefault();
+
+                    if (player == null)
+                    {
+                        GameplayManager.AddHUDMessage($"No {MPTeams.TeamName(MpTeam.TEAM0)} player is carrying a flag.");
+                    }
+                    else
+                    {
+                        if (MPObserver.ObservedPlayer == -1)
+                        {
+                            MPObserver.SavedPosition = GameManager.m_player_ship.c_transform.position;
+                            MPObserver.SavedRotation = GameManager.m_player_ship.c_transform.rotation;
+                        }
+                        else
+                        {
+                            Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                        }
+
+                        MPObserver.ObservedPlayer = Overload.NetworkManager.m_Players.IndexOf(player);
+
+                        Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
+                        GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].m_mp_name}.");
+                    }
+                }
+                if (cc_type == CCInput.PREV_MISSILE && Controls.JustPressed(CCInput.PREV_MISSILE) && CTF.IsActive)
+                {
+                    var player = (from f in CTF.PlayerHasFlag
+                                  join p in Overload.NetworkManager.m_Players on f.Key equals p.netId
+                                  where p.m_mp_team == MpTeam.TEAM1
+                                  select p).FirstOrDefault();
+
+                    if (player == null)
+                    {
+                        GameplayManager.AddHUDMessage($"No {MPTeams.TeamName(MpTeam.TEAM1)} player is carrying a flag.");
+                    }
+                    else
+                    {
+                        if (MPObserver.ObservedPlayer == -1)
+                        {
+                            MPObserver.SavedPosition = GameManager.m_player_ship.c_transform.position;
+                            MPObserver.SavedRotation = GameManager.m_player_ship.c_transform.rotation;
+                        }
+                        else
+                        {
+                            Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                        }
+
+                        MPObserver.ObservedPlayer = Overload.NetworkManager.m_Players.IndexOf(player);
+
+                        Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
+                        GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].m_mp_name}.");
+                    }
+                }
+            }
+        }
+    }
+
+    // Handle what happens when a player leaves.
+    [HarmonyPatch(typeof(Overload.NetworkManager), "RemovePlayer")]
+    class MPObserverNetworkManagerRemovePlayer {
+        static void Prefix(Player player)
+        {
+            if (MPObserver.Enabled && Overload.NetworkManager.m_Players.Contains(player))
+            {
+                var index = Overload.NetworkManager.m_Players.IndexOf(player);
+
+                if (index == MPObserver.ObservedPlayer)
+                {
+                    MPObserver.ObservedPlayer = -1;
+                }
+                else if (index < MPObserver.ObservedPlayer)
+                {
+                    MPObserver.ObservedPlayer--;
+                }
+            }
         }
     }
 }
