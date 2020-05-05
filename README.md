@@ -7,6 +7,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 #### How to run
 
+- Download the latest release: [olmod-0.2.8.2.zip](https://github.com/arbruijn/olmod/releases/download/v0.2.8.2/olmod-0.2.8.2.zip)
+
 - If you installed Overload using Steam or GOG Galaxy you can extract olmod
   anywhere and it will find Overload automatically.
 
