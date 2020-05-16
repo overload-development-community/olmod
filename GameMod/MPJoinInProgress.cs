@@ -162,6 +162,15 @@ namespace GameMod
     {
         private static void SendMatchState(int connectionId)
         {
+            if (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+                foreach (var team in MPTeams.ActiveTeams)
+                    NetworkServer.SendToClient(connectionId, CustomMsgType.SetScoreForTeam, new ScoreForTeamMessage
+                    {
+                        team = (int)team,
+                        score = NetworkMatch.m_team_scores[(int)team]
+                    });
+            if (!MPTweaks.ClientHasMod(connectionId))
+                return;
             var n = Overload.NetworkManager.m_Players.Count;
             var msg = new MatchStateMessage() {
                 m_match_elapsed_seconds = NetworkMatch.m_match_elapsed_seconds, 
@@ -176,7 +185,8 @@ namespace GameMod
         private static IEnumerator MatchStart(int connectionId)
         {
             var newPlayer = Server.FindPlayerByConnectionId(connectionId);
-            if (newPlayer.m_mp_name.StartsWith("OBSERVER")) {
+            if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
+            {
                 Debug.LogFormat("Enabling spectator for {0}", newPlayer.m_mp_name);
                 newPlayer.Networkm_spectator = true;
                 Debug.LogFormat("Enabled spectator for {0}", newPlayer.m_mp_name);
@@ -485,7 +495,10 @@ namespace GameMod
 
         public static void SendAddMpStatus(string status)
         {
-            NetworkServer.SendToAll(ModCustomMsg.MsgAddMpStatus, new StringMessage(status));
+            var msg = new StringMessage(status);
+            foreach (var conn in NetworkServer.connections)
+                if (conn != null && MPTweaks.ClientHasMod(conn.connectionId)) // do not send unsupported message to stock game
+                    conn.Send(ModCustomMsg.MsgAddMpStatus, msg);
         }
 
         static void Postfix()

@@ -1,6 +1,7 @@
 ﻿using Harmony;
 using Overload;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -23,6 +24,12 @@ namespace GameMod
         private static readonly Dictionary<string, string> settings = new Dictionary<string, string>();
         public static readonly Dictionary<int, ClientInfo> ClientInfos = new Dictionary<int, ClientInfo>();
         public static bool IncompatibleMatchReported;
+
+        public static bool ClientHasMod(int connectionId)
+        {
+            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
+                clientInfo.Capabilities.ContainsKey("ModVersion");
+        }
 
         public static void Set(Dictionary<string, string> newSettings)
         {
@@ -88,9 +95,13 @@ namespace GameMod
             //Debug.Log("MPTweaks.Send to " + conn_id + " settings " + settings.Join());
             var msg = new TweaksMessage { m_settings = settings };
             if (conn_id == -1)
-                NetworkServer.SendToAll(MPTweaksCustomMsg.MsgMPTweaksSet, msg);
-            else
-                NetworkServer.SendToClient(conn_id, MPTweaksCustomMsg.MsgMPTweaksSet, msg);
+            {
+                foreach (var conn in NetworkServer.connections)
+                    if (conn != null && ClientHasMod(conn.connectionId))
+                        conn.Send(MPTweaksCustomMsg.MsgMPTweaksSet, msg);
+            }
+            else if (ClientHasMod(conn_id))
+               NetworkServer.SendToClient(conn_id, MPTweaksCustomMsg.MsgMPTweaksSet, msg);
         }
 
         public static ClientInfo ClientCapabilitiesSet(int connectionId, Dictionary<string, string> capabilities)
@@ -129,16 +140,13 @@ namespace GameMod
             Debug.Log("MPTweaksLoadScene");
             RobotManager.ReadMultiplayerModeFile();
             Debug.Log("MPTweaks loaded mode file");
-            bool everyoneSupportsProj = true;
-            foreach (var connId in NetworkMatch.m_players.Keys)
-                if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo) ||
-                    !clientInfo.SupportsTweaks.Contains("proj"))
-                {
-                    everyoneSupportsProj = false;
-                    Debug.LogFormat("MPTweaks: not tweaking hunter: unsupported by client {0}", connId);
-                }
+            bool nobodySupportsProj = !NetworkMatch.m_players.Keys.Any(connId =>
+                MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo) &&
+                    clientInfo.SupportsTweaks.Contains("proj"));
             var tweaks = new Dictionary<string, string>() { };
-            if (everyoneSupportsProj)
+            if (nobodySupportsProj) // use stock hunters for all stock client match
+                Debug.LogFormat("MPTweaks: not tweaking hunter: unsupported by all clients");
+            else
                 tweaks.Add("proj.missile_hunter.m_init_speed_min", "17.5");
             if (NetworkMatch.GetMode() == CTF.MatchModeCTF)
                 tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmountDefault.ToStringInvariantCulture());
@@ -272,6 +280,14 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "OnLoadoutDataMessage")]
     class MPTweaksOnLoadoutDataMessage
     {
+        private static IEnumerator DisconnectCoroutine(int connectionId)
+        {
+            yield return new WaitForSecondsRealtime(5);
+            var conn = NetworkServer.connections[connectionId];
+            if (conn != null)
+                conn.Disconnect();
+        }
+
         private static void Postfix(NetworkMessage msg)
         {
             var connId = msg.conn.connectionId;
@@ -279,13 +295,23 @@ namespace GameMod
                 return;
             if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo))
                 clientInfo = MPTweaks.ClientCapabilitiesSet(connId, new Dictionary<string, string>());
+            /*
             if (!clientInfo.SupportsTweaks.Contains("proj") && !MPTweaks.IncompatibleMatchReported)
             {
                 MPTweaks.IncompatibleMatchReported = true;
                 string name = NetworkMatch.m_players.TryGetValue(connId, out var playerData) ? playerData.m_name : connId.ToString();
                 var text = "DISABLED HUNTER SPEED CHANGE! OLD OLMOD: " + name;
                 Debug.LogFormat("MPTweaks: IncompatibleMatchReported {0}", text);
-                NetworkServer.SendToAll(ModCustomMsg.MsgAddMpStatus, new StringMessage(text));
+                JIPClientHandlers.SendAddMpStatus(text);
+            }
+            */
+            if (!MPTweaks.ClientHasMod(connId) &&
+                (int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
+                MPTeams.NetworkMatchTeamCount > 2)
+            {
+                LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
+                NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
+                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
         }
     }
