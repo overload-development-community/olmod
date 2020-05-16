@@ -21,7 +21,7 @@ namespace GameMod
     {
         NONE, PICKUP, DROP, RETURN, SCORE, CARRIER_DIED
     }
-    static class CTF
+    public static class CTF
     {
         public const MatchMode MatchModeCTF = MatchMode.NUM;
         public const int TeamCount = 2;
