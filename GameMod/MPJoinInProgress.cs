@@ -162,6 +162,13 @@ namespace GameMod
     {
         private static void SendMatchState(int connectionId)
         {
+            if (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+                foreach (var team in MPTeams.ActiveTeams)
+                    NetworkServer.SendToClient(connectionId, CustomMsgType.SetScoreForTeam, new ScoreForTeamMessage
+                    {
+                        team = (int)team,
+                        score = NetworkMatch.m_team_scores[(int)team]
+                    });
             var n = Overload.NetworkManager.m_Players.Count;
             var msg = new MatchStateMessage() {
                 m_match_elapsed_seconds = NetworkMatch.m_match_elapsed_seconds, 
