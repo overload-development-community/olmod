@@ -24,6 +24,12 @@ namespace GameMod
         public static readonly Dictionary<int, ClientInfo> ClientInfos = new Dictionary<int, ClientInfo>();
         public static bool IncompatibleMatchReported;
 
+        public static bool ClientHasMod(int connectionId)
+        {
+            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
+                clientInfo.Capabilities.ContainsKey("ModVersion");
+        }
+
         public static void Set(Dictionary<string, string> newSettings)
         {
             settings.Clear();
