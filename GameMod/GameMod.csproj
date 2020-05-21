@@ -115,6 +115,7 @@
     <Compile Include="MPSpawnBoostClear.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
+    <Compile Include="MPTags.cs" />
     <Compile Include="MPTriggers.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
