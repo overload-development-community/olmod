@@ -215,6 +215,7 @@ namespace GameMod
                 MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
                 MenuManager.m_menu_micro_state = NetworkMatch.m_match_req_password == "" ? 4 : 1;
                 */
+                MenuManager.ClearMpStatus();
                 return false;
             }
             MenuManager.m_mp_status = NetworkMatch.m_match_req_password == "" ? Loc.LS("CREATING INTERNET MATCH") : Loc.LS("JOINING INTERNET MATCH");
