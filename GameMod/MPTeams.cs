@@ -845,17 +845,31 @@ namespace GameMod
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class MPTeamsMenuHandle
     {
-        static void Postfix()
+        static void HandleTeamCount()
         {
-            var prev_dir = UIManager.m_select_dir;
-            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE && 
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
                 MenuManager.m_menu_micro_state == 2 &&
-                UIManager.m_menu_selection == 8) {
+                UIManager.m_menu_selection == 8)
+            {
                 MPTeams.MenuManagerTeamCount = MPTeams.Min +
-                    (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + prev_dir) %
+                    (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
                     (MPTeams.Max - MPTeams.Min + 1);
-                MenuManager.PlayCycleSound(1f, (float)prev_dir);
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+            }
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeamsMenuHandle), "HandleTeamCount"));
+                    continue;
+                }
+
+                yield return code;
             }
         }
     }
