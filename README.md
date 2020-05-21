@@ -7,15 +7,18 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 #### How to run
 
-- Download the latest release: [olmod-0.2.8.2.zip](https://github.com/arbruijn/olmod/releases/download/v0.2.8.2/olmod-0.2.8.2.zip)
+- Download the latest release: [olmod-0.2.9.zip](https://github.com/arbruijn/olmod/releases/download/v0.2.9/olmod-0.2.9.zip)
 
-- If you installed Overload using Steam or GOG Galaxy you can extract olmod
-  anywhere and it will find Overload automatically.
-
-- If you installed Overload yourself or on linux, extract olmod in the Overload main
-  directory (where `Overload.exe` / `Overload.x86_64` is also located).
+- Extract olmod in the Overload main directory
+  (where `Overload.exe` / `Overload.x86_64` / `Overload.app` is also located).
   
-- Run `olmod.exe` / `olmod.sh` (linux) instead of `Overload.exe`
+- On linux / mac, execute `chmod +x olmod.sh` from the terminal after changing to the correct directory.
+  For example after `cd "~/Library/Application Support/Steam/steamapps/common/Overload"`
+
+- Run `olmod.exe` / `olmod.sh` (linux / mac) instead of `Overload.exe`
+
+  On mac you might get a warning about `olmod.dylib`, you can add an exception in
+  System Preferences, Security & Privacy, General.
 
 - Use `olmodserver.bat` / `olmodserver.sh` (linux) to start a LAN server,
   use `olmodserverinet.bat` / `olmodserverinet.sh` (linux) to start an
@@ -71,7 +74,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Disables weapon speed/lifetime randomization in LAN/Internet MP
 
-- Adds MP Capture The Flag mode
+- Adds Capture The Flag and Race match mode (Race mode by Tobias)
 
 - MP Prev weapon switch fix from Tobias
 
