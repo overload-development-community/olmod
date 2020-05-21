@@ -83,6 +83,8 @@ namespace GameMod
             if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ||
                 (MenuManager.m_mp_lan_match && MPInternet.Enabled))
                 __result.m_num_players_to_start = 1;
+            if ((int)__result.m_match_mode > (int)ExtMatchMode.CTF) // newer matchmodes are sent with ModPrivateData
+                __result.m_match_mode = NetworkMatch.IsTeamMode(__result.m_match_mode) ? MatchMode.TEAM_ANARCHY : MatchMode.ANARCHY;
         }
     }
 
@@ -95,6 +97,7 @@ namespace GameMod
             MPJoinInProgress.MenuManagerEnabled = false;
             RearView.MPMenuManagerEnabled = false;
             MPSuddenDeath.SuddenDeathMenuEnabled = false;
+            ExtMenuManager.mms_ext_lap_limit = 0;
         }
     }
 
@@ -200,6 +203,7 @@ namespace GameMod
                 MPJoinInProgress.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
                 RearView.MPMenuManagerEnabled = ModPrefs.GetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
                 MPSuddenDeath.SuddenDeathMenuEnabled = ModPrefs.GetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
+                ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             }
@@ -234,6 +238,7 @@ namespace GameMod
             ModPrefs.SetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
+            ModPrefs.SetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.Flush(filename + "mod");

@@ -467,6 +467,7 @@ namespace GameMod
     {
         public const short MsgSetMatchState = 101;
         public const short MsgAddMpStatus = 102;
+        public const short MsgModPrivateData = 103;
     }
 
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]

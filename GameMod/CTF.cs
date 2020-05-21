@@ -407,22 +407,6 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(NetworkMatch), "GetModeString")]
-    class CTFGetModeString
-    {
-        // there's a mode argument but in actual usage this is always NetworkMatch.GetMode()
-        // so ignore it here, since it uses MatchMode.NUM differently :(
-        private static bool Prefix(MatchMode ___m_match_mode, ref string __result)
-        {
-            if (___m_match_mode == CTF.MatchModeCTF)
-            {
-                __result = "CTF";
-                return false;
-            }
-            return true;
-        }
-    }
-
     [HarmonyPatch(typeof(NetworkSpawnItem), "RegisterSpawnHandlers")]
     class CTFRegisterSpawnHandlers
     {

@@ -110,6 +110,7 @@
     <Compile Include="MPHUDMessage.cs" />
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
+    <Compile Include="MPModPrivateData.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPSpawnBoostClear.cs" />
     <Compile Include="MPSuddenDeath.cs" />

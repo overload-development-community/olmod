@@ -52,7 +52,8 @@ namespace GameMod
                 powerupBigSpawn = MenuManager.mms_powerup_big_spawn,
                 powerupFilter = MenuManager.mms_powerup_filter,
                 jipEnabled = MPJoinInProgress.MenuManagerEnabled,
-                suddenDeathOvertime = MPSuddenDeath.SuddenDeathMenuEnabled
+                suddenDeathOvertime = MPSuddenDeath.SuddenDeathMenuEnabled,
+                lapLimit = ExtMenuManager.mms_ext_lap_limit
             });
 
             presets.Add(new MPMatchPreset
@@ -79,7 +80,8 @@ namespace GameMod
                 powerupBigSpawn = 1,
                 powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
                 jipEnabled = true,
-                suddenDeathOvertime = false
+                suddenDeathOvertime = false,
+                lapLimit = 0
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -110,6 +112,7 @@ namespace GameMod
             public bool[] powerupFilter;
             public bool jipEnabled;
             public bool suddenDeathOvertime;
+            public int lapLimit;
 
             public void Apply()
             {
@@ -135,6 +138,7 @@ namespace GameMod
                 MenuManager.mms_powerup_filter = this.powerupFilter;
                 MPJoinInProgress.MenuManagerEnabled = this.jipEnabled;
                 MPSuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
+                ExtMenuManager.mms_ext_lap_limit = this.lapLimit;
             }
         }
 

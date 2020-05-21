@@ -272,6 +272,7 @@ namespace GameMod
             var caps = new Dictionary<string, string>();
             caps.Add("ModVersion", Core.GameMod.Version);
             caps.Add("SupportsTweaks", "proj");
+            caps.Add("ModPrivateData", "1");
             Client.GetClient().Send(MPTweaksCustomMsg.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }
     }
@@ -313,6 +314,8 @@ namespace GameMod
                 NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
+            if (clientInfo.Capabilities.ContainsKey("ModPrivateData"))
+                MPModPrivateDataTransfer.SendTo(connId);
         }
     }
 }

@@ -319,6 +319,8 @@ namespace GameMod
         {
             var mode = NetworkMatch.GetMode();
             var fitSingle = MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8;
+            if (MPModPrivateData.MatchMode == ExtMatchMode.RACE)
+                return true;
             if (mode == MatchMode.ANARCHY || ((mode == MatchMode.TEAM_ANARCHY || mode == MatchMode.MONSTERBALL) && fitSingle))
                 return true;
 
@@ -364,6 +366,12 @@ namespace GameMod
     {
         static bool Prefix(UIElement __instance, ref Vector2 pos)
         {
+            if (MPModPrivateData.MatchMode == ExtMatchMode.RACE)
+            {
+                Race.DrawMpMiniScoreboard(ref pos, __instance);
+                return false;
+            }
+
             if (NetworkMatch.GetMode() == MatchMode.ANARCHY || MPTeams.NetworkMatchTeamCount == 2)
                 return true;
 
@@ -802,7 +810,7 @@ namespace GameMod
     {
         static void Postfix(UIElement __instance)
         {
-            if (MenuManager.m_menu_micro_state != 2)
+            if (MenuManager.m_menu_micro_state != 2 || NetworkMatch.IsTeamMode(MenuManager.mms_mode))
                 return;
             Vector2 position = Vector2.zero;
             position.y = -217f + 62f * 6;
