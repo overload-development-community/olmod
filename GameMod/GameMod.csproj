@@ -111,6 +111,7 @@
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPPickupCheck.cs" />
+    <Compile Include="MPSpawnBoostClear.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTriggers.cs" />
