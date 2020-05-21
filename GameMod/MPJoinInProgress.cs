@@ -210,6 +210,7 @@ namespace GameMod
             if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
                 newPlayer.CallTargetAddHUDMessage(newPlayer.connectionToClient, "REARVIEW ENABLED", -1, true);
             CTF.SendJoinUpdate(newPlayer);
+            Race.SendJoinUpdate(newPlayer);
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
                 if (player.connectionToClient.connectionId == connectionId)
