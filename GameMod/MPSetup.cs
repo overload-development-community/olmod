@@ -80,7 +80,8 @@ namespace GameMod
                     (MPSuddenDeath.SuddenDeathMenuEnabled ? 32 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
-            if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable)
+            if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ||
+                (MenuManager.m_mp_lan_match && MPInternet.Enabled))
                 __result.m_num_players_to_start = 1;
         }
     }
