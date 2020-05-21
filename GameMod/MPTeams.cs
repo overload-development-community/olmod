@@ -810,7 +810,7 @@ namespace GameMod
     {
         static void Postfix(UIElement __instance)
         {
-            if (MenuManager.m_menu_micro_state != 2 || NetworkMatch.IsTeamMode(MenuManager.mms_mode))
+            if (MenuManager.m_menu_micro_state != 2 || !NetworkMatch.IsTeamMode(MenuManager.mms_mode))
                 return;
             Vector2 position = Vector2.zero;
             position.y = -217f + 62f * 6;
