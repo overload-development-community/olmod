@@ -205,7 +205,6 @@ static void *my_mono_image_open_from_data_with_name(char *data, int data_len, in
 	return org_mono_image_open_from_data_with_name(data, data_len, copy, st, ref, name);
 }
 
-
 #ifdef __APPLE__
 #define org_dlsym dlsym
 #else
@@ -213,10 +212,11 @@ static void *my_mono_image_open_from_data_with_name(char *data, int data_len, in
 static void *(*org_dlsym)(void*,const char*);
 extern void *_dl_sym(void *, const char *, void *);
 #endif
-void *new_dlsym(void *lib, const char *sym) {
+
+// separate function needed on mac to prevent stub_helper in dlsym which prevents opengl driver loading (???)
+__attribute__((noinline))
+static void *mono_dlsym(void *lib, const char *sym) {
 	void *ret = org_dlsym(lib, sym);
-	if (sym[0] != 'm' || !ret)
-		return ret;
 	if (strcmp(sym, "mono_image_close") == 0)
 		org_mono_image_close = (mono_image_close_t)ret;
 	if (strcmp(sym, "mono_runtime_invoke") == 0) {
@@ -252,6 +252,11 @@ void *new_dlsym(void *lib, const char *sym) {
 	return ret;
 }
 
+void *new_dlsym(void *lib, const char *sym) {
+	if (sym[0] != 'm' || sym[1] != 'o' || sym[2] != 'n' || sym[3] != 'o')
+		return org_dlsym(lib, sym);
+	return mono_dlsym(lib, sym);
+}
 //static void olmod_init(void) __attribute__((constructor));
 
 #ifdef __APPLE__
