@@ -588,7 +588,7 @@ namespace GameMod
             if (Overload.NetworkManager.IsServer())
             {
                 var playerShip = other.GetComponent<PlayerShip>();
-                if (playerShip && !playerShip.m_dying)
+                if (playerShip && !playerShip.m_dying && NetworkMatch.m_match_state == MatchState.PLAYING)
                 {
                     var rp = Race.Players.FirstOrDefault(x => x.player.netId.Value == playerShip.c_player.netId.Value);
                     Vector3 direction = other.transform.position - __instance.transform.position;
