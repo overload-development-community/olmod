@@ -157,8 +157,8 @@ namespace GameMod
             {
                 Vector2 position = Vector2.zero;
                 position.y = -217f + 62f * 6;
-                __instance.SelectAndDrawStringOptionItem("LAP LIMIT", position, 10, ExtMenuManager.mms_ext_lap_limit.ToString(), string.Empty, 1.5f,
-                    false);
+                var text = ExtMenuManager.mms_ext_lap_limit == 0 ? "NONE" : ExtMenuManager.mms_ext_lap_limit.ToString();
+                __instance.SelectAndDrawStringOptionItem("LAP LIMIT", position, 10, text, string.Empty, 1.5f, false);
             }
         }
     }
@@ -178,7 +178,8 @@ namespace GameMod
                 MenuManager.m_menu_micro_state == 2 &&
                 UIManager.m_menu_selection == 10)
             {
-                ExtMenuManager.mms_ext_lap_limit = (ExtMenuManager.mms_ext_lap_limit + 21 + UIManager.m_select_dir) % 21;
+                //ExtMenuManager.mms_ext_lap_limit = (ExtMenuManager.mms_ext_lap_limit + 21 + UIManager.m_select_dir) % 21;
+                ExtMenuManager.mms_ext_lap_limit = Math.Max(0, Math.Min(50, ExtMenuManager.mms_ext_lap_limit + UIManager.m_select_dir * 5));
                 MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
             }
         }
