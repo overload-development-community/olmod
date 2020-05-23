@@ -493,6 +493,10 @@ namespace GameMod
             if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
                 return true;
 
+            // Defer to score limit on no lap limit
+            if (MPModPrivateData.LapLimit == 0)
+                return true;
+
             if (Race.Players.Any(x => x.Laps.Count() >= MPModPrivateData.LapLimit))
                 NetworkMatch.End();
 
@@ -506,6 +510,10 @@ namespace GameMod
         static bool Prefix()
         {
             if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
+                return true;
+
+            // Defer to time limit on no lap limit
+            if (MPModPrivateData.LapLimit == 0)
                 return true;
 
             if (Race.Players.Any(x => x.Laps.Count() >= MPModPrivateData.LapLimit))
