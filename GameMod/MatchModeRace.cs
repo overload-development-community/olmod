@@ -292,6 +292,10 @@ namespace GameMod
 
             NetworkServer.SendToClient(player.connectionToClient.connectionId, RaceClientHandlers.MsgSetFullMatchState, new FullRaceStateMessage());
         }
+        public static void Sort()
+        {
+            Race.Players = Race.Players.OrderByDescending(x => x.Laps.Count()).ThenBy(x => x.Laps.Sum(y => y.Time)).ToList();
+        }
 
         public class ArenaSpawn
         {
@@ -532,7 +536,7 @@ namespace GameMod
             if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
                 return;
 
-            Race.Players.Sort((a, b) => a.Laps.Count().CompareTo(b.Laps.Count()));
+            Race.Sort();
             PlayerLapMessage plm = rawMsg.ReadMessage<PlayerLapMessage>();
             var rp = Race.Players.FirstOrDefault(x => x.player.netId.Value == plm.m_player_id.Value);
             rp.Laps.Add(new RacePlayer.Lap { Num = plm.lapNum, Time = plm.lapTime });
@@ -540,7 +544,7 @@ namespace GameMod
             {
                 GameplayManager.AddHUDMessage(String.Format("Last Lap ({0:n2}), Personal Best ({1:n2}), Match Best ({2:n2})", rp.Laps.LastOrDefault().Time, rp.Laps.Min(x => x.Time), Race.Players.SelectMany(x => x.Laps).Min(y => y.Time)), -1, true);
             }
-            Race.Players.Sort((a, b) => b.Laps.Count.CompareTo(a.Laps.Count));
+            Race.Sort();
         }
 
         private static void OnSetFullMatchState(NetworkMessage rawMsg)
@@ -549,7 +553,7 @@ namespace GameMod
                 return;
 
             FullRaceStateMessage rs = rawMsg.ReadMessage<FullRaceStateMessage>();
-            Race.Players.Sort((a, b) => b.Laps.Count.CompareTo(a.Laps.Count));
+            Race.Sort();
         }
 
         static void Postfix()
