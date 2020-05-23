@@ -306,9 +306,10 @@ namespace GameMod
                 JIPClientHandlers.SendAddMpStatus(text);
             }
             */
+            Debug.Log("MPTweaks: conn " + connId + " OnLoadoutDataMessage clientInfo is now " + clientInfo.Capabilities.Join());
             if (!MPTweaks.ClientHasMod(connId) &&
-                (int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
-                MPTeams.NetworkMatchTeamCount > 2)
+                ((int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
+                MPTeams.NetworkMatchTeamCount > 2))
             {
                 LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
