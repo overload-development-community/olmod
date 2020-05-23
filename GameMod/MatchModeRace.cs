@@ -1451,4 +1451,14 @@ namespace GameMod
             }
         }
     }
+
+    // the level remains active, disable windtunnels to prevent continuous bumping in menus
+    [HarmonyPatch(typeof(NetworkMatch), "NetSystemShutdown")]
+    class DisableWindTunnels
+    {
+        static void Prefix() {
+            foreach (var wt in UnityEngine.Object.FindObjectsOfType<TriggerWindTunnel>())
+                wt.gameObject.SetActive(false);
+        }
+    }
 }
