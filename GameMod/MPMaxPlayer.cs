@@ -236,7 +236,9 @@ namespace GameMod
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             foreach (var code in instructions)
-                if (code.opcode == OpCodes.Ldc_R8 && (double)code.operand == 8.0)
+                if (code.opcode == OpCodes.Ldc_R8 && (double)code.operand == 2.0) // min players: default to 1
+                    yield return new CodeInstruction(OpCodes.Ldc_R8, 1.0);
+                else if (code.opcode == OpCodes.Ldc_R8 && (double)code.operand == 8.0)
                     yield return new CodeInstruction(OpCodes.Ldc_R8, 16.0);
                 else
                     yield return code;
