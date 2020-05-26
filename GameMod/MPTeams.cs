@@ -56,7 +56,7 @@ namespace GameMod
             }
         }
 
-        public static IEnumerable<MpTeam> TeamsByScore {
+        public static MpTeam[] TeamsByScore {
             get {
                 var teams = ActiveTeams.ToArray();
                 Array.Sort<MpTeam>(teams, new Comparison<MpTeam>((i1, i2) => {
@@ -203,9 +203,11 @@ namespace GameMod
             pos.y = -300f;
             Color c = UIManager.m_col_ui5;
             string s = Loc.LS("MATCH OVER!");
-            var win_team = TeamsByScore.First();
-            c = TeamColor(win_team, 4);
-            s = TeamName(win_team) + " WINS!";
+            var teams = TeamsByScore;
+            if (teams.Length >= 2 && NetworkMatch.m_team_scores[(int)teams[0]] != NetworkMatch.m_team_scores[(int)teams[1]]) {
+                c = TeamColor(teams[0], 4);
+                s = TeamName(teams[0]) + " WINS!";
+            }
             float a = uie.m_alpha * uie.m_alpha * uie.m_alpha;
             uie.DrawWideBox(pos, 300f, 29f, c, a, 7);
             uie.DrawWideBox(pos, 300f, 25f, c, a, 11);
