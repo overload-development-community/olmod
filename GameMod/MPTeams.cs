@@ -454,6 +454,11 @@ namespace GameMod
     {
         static bool Prefix(ref MpTeam __result, int connection_id)
         {
+		    if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+		    {
+			    __result = MpTeam.ANARCHY;
+                return false;
+		    }
             if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 &&
                 !MPJoinInProgress.NetworkMatchEnabled)) // use this simple balancing method for JIP to hopefully solve JIP team imbalances
                 return true;
@@ -715,7 +720,7 @@ namespace GameMod
     {
         static bool Prefix(UIElement __instance)
         {
-            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8))
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || (MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8))
                 return true;
             if (GameManager.m_local_player.m_hitpoints >= 0f)
                 MPTeams.DrawPostgame(__instance);
@@ -728,7 +733,7 @@ namespace GameMod
     {
         static bool Prefix(UIElement __instance)
         {
-            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8))
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || (MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8))
                 return true;
             if (GameManager.m_local_player.m_hitpoints < 0f)
                 MPTeams.DrawPostgame(__instance);
