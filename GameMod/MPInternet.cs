@@ -62,6 +62,8 @@ namespace GameMod
             {
                 Enabled = ServerEnabled = true;
                 ServerAddress = IPAddress.Any;
+                if (Core.GameMod.HasInternetMatch())
+                    typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public).SetValue(null, true);
                 Debug.Log("Internet server enabled");
             }
         }
@@ -70,6 +72,10 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawMpMenu")]
     class MPInternetMainDraw
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         private static void DrawItem(UIElement uie, ref Vector2 position)
         {
             uie.SelectAndDrawItem(Loc.LS("INTERNET MATCH"), position, 4, false, 1f, 0.75f);
@@ -94,6 +100,10 @@ namespace GameMod
     [HarmonyPatch(typeof(MenuManager), "MpMenuUpdate")]
     class MPInternetMainUpdate
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         private static void Prefix()
         {
             MPInternet.Enabled = false;
@@ -126,6 +136,10 @@ namespace GameMod
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class MPInternetMatchSetup
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         private static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
         {
             int state = 0; // 0 = before Start/JoinPrivLob, 1 = before call DestroyAll, 2 = just after call DestroyAll
@@ -174,6 +188,10 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class MPInternetMatchSetupDraw
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             foreach (var code in codes)
@@ -192,6 +210,10 @@ namespace GameMod
     [HarmonyPatch(typeof(NetworkMatch), "SwitchToLobbyMenu")]
     class MPInternetStart
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         private static bool Prefix()
         {
             if (!MPInternet.Enabled || MPInternet.ServerEnabled)
@@ -227,6 +249,10 @@ namespace GameMod
     [HarmonyPatch(typeof(BroadcastState), "EnumerateNetworkInterfaces")]
     class MPInternetEnum
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         private static bool Prefix(Action<object> callback)
         {
             if (!MPInternet.Enabled)
@@ -249,6 +275,10 @@ namespace GameMod
     [HarmonyPatch(typeof(BroadcastState), MethodType.Constructor, new [] { typeof(int), typeof(int), typeof(IBroadcastStateReceiver) })]
     class MPInternetState
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         /*
         public static int ListenPortMod(int value)
         {
@@ -336,6 +366,36 @@ namespace GameMod
         }
     }
 
+    [HarmonyPatch(typeof(BroadcastState), "InitInternetMatch")]
+    class MPInternetServer
+    {
+        private static bool Prepare() {
+            return Core.GameMod.HasInternetMatch();
+        }
+
+        private static bool Prefix(BroadcastState __instance) {
+            if (!MPInternet.ServerEnabled)
+                return true;
+
+            var client = new UdpClient();
+            var ep = new IPEndPoint(IPAddress.Any, 8001);
+
+            try
+            {
+                client.Client.Bind(ep);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Internet server setup failed " + ex.ToString());
+                Application.Quit();
+            }
+
+            typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, client);
+
+            return false;
+        }
+    }
+
     /*
     [HarmonyPatch]
     class MPInternetEnumCB
@@ -383,6 +443,10 @@ namespace GameMod
     [HarmonyPatch(typeof(LocalLANClient), "DoTick")]
     class MPInternetConnInfo
     {
+        private static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch();
+        }
+
         public static MatchmakerConnectionInfo ConnInfoMod(MatchmakerConnectionInfo connInfo)
         {
             if (MPInternet.Enabled)

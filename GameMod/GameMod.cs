@@ -12,11 +12,13 @@ namespace GameMod.Core
     public class GameMod
     {
         public static readonly string Version = "olmod 0.2.9.2";
+        private static Version GameVersion;
 
         internal static void Initialize()
         {
             Debug.Log("Initializing " + Version);
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
+            GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
             Config.Init();
             MPInternet.CheckInternetServer();
             HarmonyInstance.DEBUG = FindArg("-harmonydebug");
@@ -108,6 +110,11 @@ namespace GameMod.Core
                 Debug.Log("Patched MpMatchSetup n=" + n);
                 return codes;
             }
+        }
+
+        public static bool HasInternetMatch()
+        {
+            return GameVersion.CompareTo(new Version(1, 0, 1885)) >= 0;
         }
 
         // add modified indicator to main menu
