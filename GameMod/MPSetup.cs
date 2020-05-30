@@ -43,9 +43,11 @@ namespace GameMod
             }
         }
 
-        private static void Postfix(ref bool __result, PrivateMatchDataMessage pmd)
+        private static void Postfix(ref bool __result, PrivateMatchDataMessage pmd, ref int ___m_num_players_to_start_match)
         {
             ApplyMatchOLModData();
+            if (___m_num_players_to_start_match == 2) // always allow start with 1
+                ___m_num_players_to_start_match = 1;
             if (!__result && !Config.NoDownload && !string.IsNullOrEmpty(pmd.m_addon_level_name_hash)) // unknown level?
             {
                 MPDownloadLevel.StartGetLevel(pmd.m_addon_level_name_hash);
