@@ -169,8 +169,8 @@ namespace GameMod
                         team = (int)team,
                         score = NetworkMatch.m_team_scores[(int)team]
                     });
-            if (!MPTweaks.ClientHasMod(connectionId))
-                return;
+            //if (!MPTweaks.ClientHasMod(connectionId))
+            //    return;
             var n = Overload.NetworkManager.m_Players.Count;
             var msg = new MatchStateMessage() {
                 m_match_elapsed_seconds = NetworkMatch.m_match_elapsed_seconds, 
