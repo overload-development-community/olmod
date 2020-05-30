@@ -17,7 +17,7 @@ namespace GameMod
 {
     class MPInternet
     {
-        public static bool Enabled;
+        public static bool OldEnabled; // this is only used on the old non-internet-match builds!
         public static bool ServerEnabled;
         public static IPAddress ServerAddress;
         public static IPAddress FindPasswordAddress(string password, out string msg)
@@ -62,9 +62,24 @@ namespace GameMod
             {
                 Enabled = ServerEnabled = true;
                 ServerAddress = IPAddress.Any;
-                if (Core.GameMod.HasInternetMatch())
-                    typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public).SetValue(null, true);
                 Debug.Log("Internet server enabled");
+            }
+        }
+        public static bool Enabled
+        {
+            get
+            {
+                if (Core.GameMod.HasInternetMatch())
+                    return (bool)typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+                else
+                    return OldEnabled;
+            }
+            set
+            {
+                if (Core.GameMod.HasInternetMatch())
+                    typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+                else
+                    OldEnabled = value;
             }
         }
     }
@@ -106,7 +121,7 @@ namespace GameMod
 
         private static void Prefix()
         {
-            MPInternet.Enabled = false;
+            MPInternet.OldEnabled = false;
         }
 
         private static void Postfix()
@@ -116,7 +131,7 @@ namespace GameMod
                 if (UIManager.m_menu_selection == 4)
                 {
                     Debug.Log("MpMenuUpdate - pushed internet");
-                    MPInternet.Enabled = true;
+                    MPInternet.OldEnabled = true;
                     MenuManager.m_mp_lan_match = true;
                     MenuManager.m_mp_private_match = true;
                     UIManager.DestroyAll(false);
@@ -127,7 +142,7 @@ namespace GameMod
                 else
                 {
                     Debug.Log("MpMenuUpdate - pushed non internet");
-                    MPInternet.Enabled = false;
+                    MPInternet.OldEnabled = false;
                 }
             }
         }
@@ -216,7 +231,7 @@ namespace GameMod
 
         private static bool Prefix()
         {
-            if (!MPInternet.Enabled || MPInternet.ServerEnabled)
+            if (!MPInternet.OldEnabled || MPInternet.ServerEnabled)
                 return true;
             string pwd = NetworkMatch.m_match_req_password;
             if (pwd == "")
@@ -255,7 +270,7 @@ namespace GameMod
 
         private static bool Prefix(Action<object> callback)
         {
-            if (!MPInternet.Enabled)
+            if (!MPInternet.OldEnabled)
                 return true;
             /*
             var IntfType = typeof(BroadcastState).Assembly.GetType("Overload.EnumeratedNetworkInterface");
@@ -291,7 +306,7 @@ namespace GameMod
         // create receiving socket and also use it for sending by adding it to m_interfaces
         public static bool InitReceiveClient(BroadcastState bs)
         {
-            if (!MPInternet.Enabled)
+            if (!MPInternet.OldEnabled)
                 return false;
 
             var client = new UdpClient();
@@ -449,7 +464,7 @@ namespace GameMod
 
         public static MatchmakerConnectionInfo ConnInfoMod(MatchmakerConnectionInfo connInfo)
         {
-            if (MPInternet.Enabled)
+            if (MPInternet.OldEnabled)
                 connInfo.IPAddress = MPInternet.ServerAddress.ToString();
             return connInfo;
         }
