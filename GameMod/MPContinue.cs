@@ -46,7 +46,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(UIElement), "DrawMpMatchEndedScoreboard")]
+    [HarmonyPatch(typeof(MenuManager), "MpMatchOverScoreboardUpdate")]
     class MPContinueUpdatePostMatch
     {
         static void Postfix()
