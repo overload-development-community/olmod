@@ -51,10 +51,10 @@ namespace GameMod
         static void Prefix(DistributedMatchUp.Match[] requests, DistributedMatchUp.Match backfillSeedMatch)
         {
             foreach (var m in requests)
-                Debug.Log(DateTime.Now.ToString() + ": HOST: FindGameSessionToCreate req " + m.uid + " mp=" + m.maxPlayers + " #p=" + JArray.Parse(m.matchData["mm_players"].stringValue).Count);
+                Debug.Log(DateTime.Now.ToString() + ": HOST: FindGameSessionToCreate req " + m.uid + " maxp=" + m.maxPlayers + " #p=" + JArray.Parse(m.matchData["mm_players"].stringValue).Count);
             if (backfillSeedMatch != null) {
                 var m = backfillSeedMatch;
-                Debug.Log(DateTime.Now.ToString() + ": HOST: FindGameSessionToCreate backfill " + m.uid + " mp=" + m.maxPlayers + " #p=" + JArray.Parse(m.matchData["mm_players"].stringValue).Count);
+                Debug.Log(DateTime.Now.ToString() + ": HOST: FindGameSessionToCreate backfill " + m.uid + " maxp=" + m.maxPlayers + " #p=" + JArray.Parse(m.matchData["mm_players"].stringValue).Count);
             }
         }
     }
