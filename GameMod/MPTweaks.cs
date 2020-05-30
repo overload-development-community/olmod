@@ -315,8 +315,9 @@ namespace GameMod
             Debug.Log("MPTweaks: conn " + connId + " OnLoadoutDataMessage clientInfo is now " + clientInfo.Capabilities.Join());
             if (!MPTweaks.ClientHasMod(connId) && MPTweaks.MatchNeedsMod())
             {
-                LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
-                NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
+                //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
+                //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
+                NetworkServer.SendToClient(connId, 86, new StringMessage("You need OLMOD to join this match."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
             if (clientInfo.Capabilities.ContainsKey("ModPrivateData"))
