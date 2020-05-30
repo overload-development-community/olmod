@@ -117,6 +117,12 @@ namespace GameMod
         {
             ClientInfos.Remove(connectionId);
         }
+
+        public static bool MatchNeedsMod()
+        {
+            return (int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
+                (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && MPTeams.NetworkMatchTeamCount > 2);
+        }
     }
 
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
@@ -307,9 +313,7 @@ namespace GameMod
             }
             */
             Debug.Log("MPTweaks: conn " + connId + " OnLoadoutDataMessage clientInfo is now " + clientInfo.Capabilities.Join());
-            if (!MPTweaks.ClientHasMod(connId) &&
-                ((int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
-                MPTeams.NetworkMatchTeamCount > 2))
+            if (!MPTweaks.ClientHasMod(connId) && MPTweaks.MatchNeedsMod())
             {
                 LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);

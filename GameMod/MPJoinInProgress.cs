@@ -184,6 +184,8 @@ namespace GameMod
 
         private static IEnumerator MatchStart(int connectionId)
         {
+            if (!MPTweaks.ClientHasMod(connectionId) && MPTweaks.MatchNeedsMod())
+                yield break;
             var newPlayer = Server.FindPlayerByConnectionId(connectionId);
             if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {
