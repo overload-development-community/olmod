@@ -49,7 +49,7 @@ namespace GameMod
             __instance.InitSoundFX();
             var CreateAudioSourceAndObject = typeof(UnityAudio).GetMethod("CreateAudioSourceAndObject", BindingFlags.NonPublic | BindingFlags.Instance);
             var args = new object[] { 0, "" };
-            for (int j = 0; j < 128; j++)
+            for (int j = 0; j < 512; j++)
             {
                 args[0] = j;
                 CreateAudioSourceAndObject.Invoke(__instance, args);
