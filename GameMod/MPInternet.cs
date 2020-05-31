@@ -221,6 +221,33 @@ namespace GameMod
         }
     }
 
+    // remove olmod link
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class MPInternetMatchSetupDrawOlMod
+    {
+        private static bool Prepare() {
+            return Core.GameMod.HasInternetMatch();
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0; // 0 before olmod text, 1 waiting for position reset, 2 after position reset
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 200f)
+                {
+                    state = 1;
+                }
+                if (state == 1)
+                    if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 0f)
+                        state = 2;
+                    else
+                        continue;
+                yield return code;
+            }
+        }
+    }
+
     // after password entered: translate password to ip, adjust mp status
     [HarmonyPatch(typeof(NetworkMatch), "SwitchToLobbyMenu")]
     class MPInternetStart
