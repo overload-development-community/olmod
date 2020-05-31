@@ -82,6 +82,40 @@ namespace GameMod
                     OldEnabled = value;
             }
         }
+        public static string MenuPassword
+        {
+            get
+            {
+                if (Core.GameMod.HasInternetMatch())
+                    return (string)typeof(MenuManager).GetProperty("mms_match_password", BindingFlags.Static | BindingFlags.Public).GetValue(null, null);
+                else
+                    return (string)typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+            }
+            set
+            {
+                if (Core.GameMod.HasInternetMatch())
+                    typeof(MenuManager).GetProperty("mms_match_password", BindingFlags.Static | BindingFlags.Public).SetValue(null, value, null);
+                else
+                    typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+            }
+        }
+        public static string MenuIPAddress
+        {
+            get
+            {
+                if (Core.GameMod.HasInternetMatch())
+                    return (string)typeof(MenuManager).GetField("_mms_ip_address", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+                else
+                    return (string)typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+            }
+            set
+            {
+                if (Core.GameMod.HasInternetMatch())
+                    typeof(MenuManager).GetField("_mms_ip_address", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+                else
+                    typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(UIElement), "DrawMpMenu")]

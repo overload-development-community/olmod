@@ -74,7 +74,7 @@ namespace GameMod
             else
             {
                 MenuManager.m_mp_status = Loc.LS("JOINING " + MPInternet.ClientModeName());
-                NetworkMatch.JoinPrivateLobby(MenuManager.mms_match_password);
+                NetworkMatch.JoinPrivateLobby(MPInternet.MenuPassword);
             }
         }
     }
