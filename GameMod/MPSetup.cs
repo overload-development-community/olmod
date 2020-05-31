@@ -192,6 +192,21 @@ namespace GameMod
         {
             m_prefs_hashtable[key] = value;
         }
+
+        public static string GetString(string key, string defaultValue)
+        {
+            if (m_prefs_hashtable.ContainsKey(key))
+            {
+                return (string)m_prefs_hashtable[key];
+            }
+            m_prefs_hashtable.Add(key, defaultValue);
+            return defaultValue;
+        }
+
+        public static void SetString(string key, string value)
+        {
+            m_prefs_hashtable[key] = value;
+        }
     }
 
     [HarmonyPatch(typeof(MenuManager), "LoadPreferences")]
@@ -208,6 +223,8 @@ namespace GameMod
                 ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
+                if (Core.GameMod.HasInternetMatch())
+                    MPInternet.MenuIPAddress = ModPrefs.GetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -243,6 +260,7 @@ namespace GameMod
             ModPrefs.SetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
+            ModPrefs.SetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             ModPrefs.Flush(filename + "mod");
         }
 
