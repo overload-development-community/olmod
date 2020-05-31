@@ -11,14 +11,14 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static readonly string Version = "olmod 0.2.9.3";
+        public static readonly string Version = "olmod 0.2.9.4";
         private static Version GameVersion;
 
         internal static void Initialize()
         {
-            Debug.Log("Initializing " + Version);
-            Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
+            Debug.Log("Initializing " + Version + ", game " + GameVersion);
+            Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             Config.Init();
             MPInternet.CheckInternetServer();
             HarmonyInstance.DEBUG = FindArg("-harmonydebug");
