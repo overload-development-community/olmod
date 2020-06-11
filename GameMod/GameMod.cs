@@ -14,7 +14,7 @@ namespace GameMod.Core
         public static readonly string Version = "olmod 0.2.9.4";
         private static Version GameVersion;
 
-        internal static void Initialize()
+        public static void Initialize()
         {
             GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + Version + ", game " + GameVersion);
@@ -30,12 +30,11 @@ namespace GameMod.Core
             }
             Debug.Log("Done initializing " + Version);
 
-            string dir = Environment.GetEnvironmentVariable("OLMODDIR");
-            if (dir != null && dir != "")
+            if (Config.OLModDir != null && Config.OLModDir != "")
             {
                 try
                 {
-                    foreach (var f in Directory.GetFiles(dir, "Mod-*.dll"))
+                    foreach (var f in Directory.GetFiles(Config.OLModDir, "Mod-*.dll"))
                     {
                         Debug.Log("Loading mod " + f);
                         var asm = Assembly.LoadFile(f);
