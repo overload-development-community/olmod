@@ -568,7 +568,7 @@ namespace GameMod
                     position.y += 40f;
                     uie.DrawMenuSeparator(position);
                     position.y += 30f;
-                    uie.SelectAndDrawItem(Loc.LS("RETURN TO MULTIPLAYER"), position, 102, fade: false);
+                    uie.SelectAndDrawItem(Loc.LS("RETURN TO MULTIPLAYER"), position, 100, fade: false);
                     break;
             }
         }
@@ -725,7 +725,7 @@ namespace GameMod
                         {
                             if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()))
                             {
-                                if (UIManager.m_menu_selection == 102)
+                                if (UIManager.m_menu_selection == 100)
                                 {
                                     MenuManager.PlaySelectSound(1f);
                                     m_menu_state_timer = 0f;
