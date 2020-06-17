@@ -755,7 +755,7 @@ namespace GameMod
                                         {
                                             // Join
                                             UIManager.DestroyAll(false);
-                                            MenuManager.mms_match_password = MPServerBrowser.selectedItem.ip;
+                                            MPInternet.MenuPassword = MPServerBrowser.selectedItem.ip;
 
                                             // temporary show password field for non-jip matches because old server won't send hasPassword
                                             if (MPServerBrowser.selectedItem.hasPassword || !MPServerBrowser.selectedItem.jip)
@@ -770,9 +770,10 @@ namespace GameMod
                                                 NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
                                                 NetworkMatch.m_match_req_password = MPServerBrowser.selectedItem.ip;
                                                 MPInternet.ServerAddress = MPInternet.FindPasswordAddress(MPServerBrowser.selectedItem.ip, out string msg);
-                                                typeof(GameManager).Assembly.GetType("InternetMatch").GetField("ServerAddress", BindingFlags.Static | BindingFlags.Public).SetValue(null, MPInternet.ServerAddress);
+                                                if (Core.GameMod.HasInternetMatch())
+                                                    typeof(GameManager).Assembly.GetType("InternetMatch").GetField("ServerAddress", BindingFlags.Static | BindingFlags.Public).SetValue(null, MPInternet.ServerAddress);
                                                 MenuManager.m_mp_status = Loc.LS("JOINING " + MPInternet.ClientModeName());
-                                                NetworkMatch.JoinPrivateLobby(MenuManager.mms_match_password);
+                                                NetworkMatch.JoinPrivateLobby(MPInternet.MenuPassword);
                                             }
 
                                         }
@@ -781,7 +782,7 @@ namespace GameMod
                                             // Create
                                             UIManager.DestroyAll(false);
                                             NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
-                                            MenuManager.mms_match_password = MPServerBrowser.selectedItem.ip;
+                                            MPInternet.MenuPassword = MPServerBrowser.selectedItem.ip;
                                             MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH, false);
                                             UIManager.m_menu_selection = 1;
                                             MenuManager.m_menu_state = MenuState.MP_LOCAL_MATCH;
@@ -904,7 +905,8 @@ namespace GameMod
                 }
 
                 // MpMatchSetup init always sets m_menu_micro_state = 0, override if initiated by browser select
-                if (state == 0 && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "_mms_match_password")
+                if (state == 0 && code.opcode == OpCodes.Ldsfld &&
+                    (((FieldInfo)code.operand).Name == "_mms_match_password" || ((FieldInfo)code.operand).Name == "mms_match_password"))
                 {
                     state = 1;
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPServerBrowser_MenuManager_MpMatchSetup), "MpMatchSetupMicrostate"));
