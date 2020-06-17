@@ -667,7 +667,7 @@ namespace GameMod
                         GameManager.m_gm.StartCoroutine(MPServerBrowser.Update());
                     if (m_menu_state_timer > 0.25f)
                     {
-                        Debug.Log("MPServerBrowser Init " + DateTime.Now);
+                        //Debug.Log("MPServerBrowser Init " + DateTime.Now);
                         GameplayManager.SetGameType(GameType.MULTIPLAYER);
                         MPInternet.Enabled = true;
                         MenuManager.m_game_paused = false;
@@ -683,7 +683,7 @@ namespace GameMod
                                 }
                                 else
                                 {
-                                    Debug.Log("MPServerBrowser: Set player id to " + player_id);
+                                    //Debug.Log("MPServerBrowser: Set player id to " + player_id);
                                     NetworkMatch.SetPlayerId(player_id);
                                 }
                             };
