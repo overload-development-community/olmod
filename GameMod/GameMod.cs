@@ -16,6 +16,11 @@ namespace GameMod.Core
 
         public static void Initialize()
         {
+            if (GameVersion != null)
+            {
+                Debug.Log("olmod Initialize called but is already initialized!");
+                return;
+            }
             GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + Version + ", game " + GameVersion);
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
