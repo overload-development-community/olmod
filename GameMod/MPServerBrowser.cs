@@ -457,6 +457,8 @@ namespace GameMod
 
         private static void Postfix()
         {
+            if (MenuManager.m_menu_sub_state == MenuSubState.INIT)
+                MPServerBrowser.selectedItem = null;
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE && UIManager.PushedSelect(100))
             {
                 if (UIManager.m_menu_selection == 5)
