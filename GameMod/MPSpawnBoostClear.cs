@@ -9,6 +9,7 @@ namespace GameMod
         static void Prefix(PlayerShip player_ship)
         {
             player_ship.m_boost_heat = 0;
+            player_ship.m_boost_overheat_timer = 0f;
         }
     }
 }
