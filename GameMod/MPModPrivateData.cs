@@ -62,6 +62,8 @@ namespace GameMod
             set { MPSuddenDeath.SuddenDeathMatchEnabled = value; }
         }
         public static int LapLimit;
+        public static string MatchNotes { get; set; }
+        public static bool HasPassword { get; set; }
 
         public static JObject Serialize()
         {
@@ -72,6 +74,8 @@ namespace GameMod
             jobject["matchmode"] = (int)MatchMode;
             jobject["suddendeathenabled"] = SuddenDeathEnabled;
             jobject["laplimit"] = LapLimit;
+            jobject["matchnotes"] = MatchNotes;
+            jobject["haspassword"] = HasPassword;
             return jobject;
         }
 
@@ -83,6 +87,8 @@ namespace GameMod
             MatchMode = (MatchMode)root["matchmode"].GetInt(0);
             SuddenDeathEnabled = root["suddendeathenabled"].GetBool(false);
             LapLimit = root["laplimit"].GetInt(0);
+            MatchNotes = root["matchnotes"].GetString(String.Empty);
+            HasPassword = root["haspassword"].GetBool(false);
         }
 
         public static string GetModeString(MatchMode mode)
@@ -156,7 +162,7 @@ namespace GameMod
             if (MenuManager.m_menu_micro_state == 2 && MenuManager.mms_mode == ExtMatchMode.RACE)
             {
                 Vector2 position = Vector2.zero;
-                position.y = -217f + 62f * 6;
+                position.y = -279f + 62f * 6;
                 var text = ExtMenuManager.mms_ext_lap_limit == 0 ? "NONE" : ExtMenuManager.mms_ext_lap_limit.ToString();
                 __instance.SelectAndDrawStringOptionItem("LAP LIMIT", position, 10, text, string.Empty, 1.5f, false);
             }
@@ -363,6 +369,9 @@ namespace GameMod
             MPModPrivateData.JIPEnabled = MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable;
             MPModPrivateData.TeamCount = MPTeams.MenuManagerTeamCount;
             MPModPrivateData.LapLimit = ExtMenuManager.mms_ext_lap_limit;
+            MPModPrivateData.MatchNotes = MPServerBrowser.mms_match_notes;
+            var mpd = (PrivateMatchDataMessage)AccessTools.Field(typeof(NetworkMatch), "m_private_data").GetValue(null);
+            MPModPrivateData.HasPassword = mpd.m_password.Contains('_');
             matchmakerPlayerRequest.PlayerAttributes["mod_private_data"] = MPModPrivateData.Serialize().ToString(Newtonsoft.Json.Formatting.None);
         }
 

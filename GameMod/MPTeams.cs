@@ -820,7 +820,7 @@ namespace GameMod
             if (MenuManager.m_menu_micro_state != 2 || !NetworkMatch.IsTeamMode(MenuManager.mms_mode))
                 return;
             Vector2 position = Vector2.zero;
-            position.y = -217f + 62f * 6;
+            position.y = -279f + 62f * 6;
             __instance.SelectAndDrawStringOptionItem("TEAM COUNT", position, 8, MPTeams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f,
                 MenuManager.mms_mode == MatchMode.ANARCHY || !MenuManager.m_mp_lan_match);
         }

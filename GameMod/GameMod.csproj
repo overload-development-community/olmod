@@ -113,6 +113,7 @@
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPModPrivateData.cs" />
     <Compile Include="MPPickupCheck.cs" />
+    <Compile Include="MPServerBrowser.cs" />
     <Compile Include="MPSpawnBoostClear.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
