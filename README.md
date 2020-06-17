@@ -8,7 +8,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 #### How to run
 
 - Download the latest release:
-  [olmod-0.2.9.4.zip](https://github.com/arbruijn/olmod/releases/download/v0.2.9.4/olmod-0.2.9.4.zip)
+  [olmod-0.3.0.zip](https://github.com/arbruijn/olmod/releases/download/v0.3.0/olmod-0.3.0.zip)
 
 - Extract olmod in the Overload main directory
   (where `Overload.exe` / `Overload.x86_64` / `Overload.app` is also located).
@@ -92,6 +92,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - Adds MP presets by Tobias
 
 - Allows more simultaneous sounds for large MP matches
+
+- Adds server browser by Tobias
 
 #### How to build
 
