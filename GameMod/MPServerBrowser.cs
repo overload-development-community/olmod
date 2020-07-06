@@ -100,7 +100,7 @@ namespace GameMod
                             addr = addrs == null || addrs.Length == 0 ? null : addrs[0];
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         //Debug.LogException(ex);
                     }
@@ -289,7 +289,7 @@ namespace GameMod
                         socket.BeginSend(packet, packet.Length, new IPEndPoint(entry.addr, 8001),
                             (ar) => ((UdpClient)ar.AsyncState).EndSend(ar), socket);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         //Debug.LogException(ex);
                         //uConsole.Log("Unable to ping " + entry.name);
