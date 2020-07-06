@@ -14,10 +14,13 @@ namespace GameMod
 {
     class MPTweaks
     {
+        public const int NET_VERSION = 1;
+
         public class ClientInfo
         {
             public Dictionary<string, string> Capabilities = new Dictionary<string, string>();
             public HashSet<string> SupportsTweaks = new HashSet<string>();
+            public int NetVersion;
         }
 
         private static readonly Dictionary<string, string> oldSettings = new Dictionary<string, string>();
@@ -29,6 +32,12 @@ namespace GameMod
         {
             return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
                 clientInfo.Capabilities.ContainsKey("ModVersion");
+        }
+
+        public static bool ClientHasNetVersion(int connectionId, int netVersion)
+        {
+            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
+                clientInfo.NetVersion >= netVersion;
         }
 
         public static void Set(Dictionary<string, string> newSettings)
@@ -106,7 +115,11 @@ namespace GameMod
 
         public static ClientInfo ClientCapabilitiesSet(int connectionId, Dictionary<string, string> capabilities)
         {
-            var clientInfo = ClientInfos[connectionId] = new ClientInfo { Capabilities = capabilities };
+            int netVersion = 0;
+            if (capabilities.TryGetValue("NetVersion", out string clientNetVersionStr) &&
+                int.TryParse(clientNetVersionStr, out int clientNetVersion))
+                netVersion = clientNetVersion;
+            var clientInfo = ClientInfos[connectionId] = new ClientInfo { Capabilities = capabilities, NetVersion = netVersion };
             if (capabilities.TryGetValue("SupportsTweaks", out string supportsTweaks))
                 foreach (var tweak in supportsTweaks.Split(','))
                     clientInfo.SupportsTweaks.Add(tweak);
@@ -279,6 +292,7 @@ namespace GameMod
             caps.Add("ModVersion", Core.GameMod.Version);
             caps.Add("SupportsTweaks", "proj");
             caps.Add("ModPrivateData", "1");
+            caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
             Client.GetClient().Send(MPTweaksCustomMsg.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }
     }
