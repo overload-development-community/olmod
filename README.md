@@ -8,7 +8,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 #### How to run
 
 - Download the latest release:
-  [olmod-0.3.1.zip](https://github.com/arbruijn/olmod/releases/download/v0.3.1/olmod-0.3.1.zip)
+  [olmod-0.3.1.1.zip](https://github.com/arbruijn/olmod/releases/download/v0.3.1.1/olmod-0.3.1.1.zip)
 
 - Extract olmod in the Overload main directory
   (where `Overload.exe` / `Overload.x86_64` / `Overload.app` is also located).
