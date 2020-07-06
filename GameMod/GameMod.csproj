@@ -107,6 +107,7 @@
     <Compile Include="MPAnticheat.cs" />
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPContinue.cs" />
+    <Compile Include="MPCreeperSync.cs" />
     <Compile Include="MPCustomModeFile.cs" />
     <Compile Include="MPHUDMessage.cs" />
     <Compile Include="MPLongPwd.cs" />
