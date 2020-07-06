@@ -198,11 +198,11 @@ namespace GameMod
 
         static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
         {
-            if (!GameplayManager.IsMultiplayerActive || ___m_type != ProjPrefab.missile_creeper || m_allow_explosions ||
+            if (!GameplayManager.IsMultiplayerActive || ___m_type != ProjPrefab.missile_creeper ||
                 __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
                 return true;
-            if (!Server.IsActive()) // ignore explosions on client
-                return false;
+            if (!Server.IsActive()) // ignore explosions on client if creeper-sync active
+                return m_allow_explosions;
             var msg = new ExplodeMsg();
             msg.m_id = __instance.m_projectile_id;
             msg.m_pos = __instance.c_transform.position;
