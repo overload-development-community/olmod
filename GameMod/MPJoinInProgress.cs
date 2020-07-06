@@ -19,7 +19,7 @@ namespace GameMod
 
         public static bool MatchHasStartedMod(bool m_match_has_started)
         {
-            return m_match_has_started && !MPJoinInProgress.NetworkMatchEnabled;
+            return m_match_has_started && (!NetworkMatchEnabled || (int)NetworkMatch.GetMatchState() >= (int)MatchState.POSTGAME);
         }
 
         public static string NetworkMatchLevelName()
@@ -142,17 +142,34 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "OnPlayerJoinLobbyMessage")]
     class JIPJoinLobby
     {
+        private static IEnumerator SendSceneLoad(int connectionId)
+        {
+            // wait until we've received the loadout
+            while (!NetworkMatch.m_player_loadout_data.ContainsKey(connectionId))
+            {
+                if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
+                    yield break;
+                yield return null;
+            }
+
+            StringMessage levelNameMsg = new StringMessage(MPJoinInProgress.NetworkMatchLevelName());
+            NetworkServer.SendToClient(connectionId, CustomMsgType.SceneLoad, levelNameMsg);
+            Debug.Log("JIP: sending scene load " + levelNameMsg.value);
+
+            if (NetworkMatch.GetMatchState() == MatchState.LOBBY_LOADING_SCENE)
+                yield break;
+
+            StringMessage sceneNameMsg = new StringMessage(GameplayManager.m_level_info.SceneName);
+            NetworkServer.SendToClient(connectionId, CustomMsgType.SceneLoaded, sceneNameMsg);
+            Debug.Log("JIP: sending scene loaded " + sceneNameMsg.value);
+        }
+
         private static void Postfix(NetworkMessage msg)
         {
-            if (!NetworkMatch.InLobby())
+            MatchState match_state = NetworkMatch.GetMatchState();
+            if (match_state != MatchState.LOBBY && match_state != MatchState.LOBBY_LOAD_COUNTDOWN)
             {
-                int connectionId = msg.conn.connectionId;
-                StringMessage levelNameMsg = new StringMessage(MPJoinInProgress.NetworkMatchLevelName());
-                NetworkServer.SendToClient(connectionId, CustomMsgType.SceneLoad, levelNameMsg);
-                StringMessage sceneNameMsg = new StringMessage(GameplayManager.m_level_info.SceneName);
-                NetworkServer.SendToClient(connectionId, CustomMsgType.SceneLoaded, sceneNameMsg);
-                Debug.Log("JIP: sending scene load " + levelNameMsg.value);
-                Debug.Log("JIP: sending scene loaded " + sceneNameMsg.value);
+                GameManager.m_gm.StartCoroutine(SendSceneLoad(msg.conn.connectionId));
             }
         }
     }
@@ -182,10 +199,37 @@ namespace GameMod
             NetworkServer.SendToClient(connectionId, ModCustomMsg.MsgSetMatchState, msg);
         }
 
+        private static float SendPreGame(int connectionId, float pregameWait)
+        {
+            if (NetworkMatch.m_players.TryGetValue(connectionId, out PlayerLobbyData pld) &&
+                pld.m_name.StartsWith("OBSERVER"))
+                pregameWait = 0;
+            // restore lobby_id which got wiped out in Client.OnSetLoadout
+            foreach (var idData in NetworkMatch.m_player_loadout_data)
+                idData.Value.lobby_id = idData.Key;
+            //Debug.Log("JIP: SendLoadoutDataToClients: " + NetworkMatch.m_player_loadout_data.Join());
+            Server.SendLoadoutDataToClients();
+            IntegerMessage durationMsg = new IntegerMessage((int)(pregameWait * 1000));
+            NetworkServer.SendToClient(connectionId, CustomMsgType.StartPregameCountdown, durationMsg);
+            Debug.Log("JIP: sending start pregame countdown");
+
+            return pregameWait;
+        }
+
         private static IEnumerator MatchStart(int connectionId)
         {
-            if (!MPTweaks.ClientHasMod(connectionId) && MPTweaks.MatchNeedsMod())
+            float pregameWait = 3f;
+            pregameWait = SendPreGame(connectionId, pregameWait);
+
+            yield return new WaitForSeconds(pregameWait);
+
+            if (NetworkMatch.GetMatchState() != MatchState.PLAYING)
                 yield break;
+
+            IntegerMessage modeMsg = new IntegerMessage((int)NetworkMatch.GetMode());
+            NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
+            SendMatchState(connectionId);
+
             var newPlayer = Server.FindPlayerByConnectionId(connectionId);
             if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {
@@ -194,19 +238,6 @@ namespace GameMod
                 Debug.LogFormat("Enabled spectator for {0}", newPlayer.m_mp_name);
             }
 
-            int pregameWait = newPlayer.Networkm_spectator ? 0 : 3;
-            //Debug.Log("SendLoadoutDataToClients: " + NetworkMatch.m_player_loadout_data.Join());
-            // restore lobby_id which got wiped out in Client.OnSetLoadout
-            foreach (var idData in NetworkMatch.m_player_loadout_data)
-                idData.Value.lobby_id = idData.Key;
-            Server.SendLoadoutDataToClients();
-            IntegerMessage durationMsg = new IntegerMessage(pregameWait * 1000);
-            NetworkServer.SendToClient(connectionId, CustomMsgType.StartPregameCountdown, durationMsg);
-            Debug.Log("JIP: sending start pregame countdown");
-            yield return new WaitForSeconds(pregameWait);
-            IntegerMessage modeMsg = new IntegerMessage((int)NetworkMatch.GetMode());
-            NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
-            SendMatchState(connectionId);
             NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
             MPTweaks.Send(connectionId);
             if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
@@ -238,9 +269,17 @@ namespace GameMod
 
         private static void Postfix(NetworkMessage msg)
         {
+            int connectionId = msg.conn.connectionId;
+            if (!MPTweaks.ClientHasMod(connectionId) && MPTweaks.MatchNeedsMod())
+                return;
+
             if (NetworkMatch.GetMatchState() == MatchState.PLAYING)
             {
-                GameManager.m_gm.StartCoroutine(MatchStart(msg.conn.connectionId));
+                GameManager.m_gm.StartCoroutine(MatchStart(connectionId));
+            }
+            else if (NetworkMatch.GetMatchState() == MatchState.PREGAME && NetworkMatch.m_pregame_countdown_active)
+            {
+                SendPreGame(connectionId, NetworkMatch.m_pregame_countdown_seconds_left);
             }
         }
     }
