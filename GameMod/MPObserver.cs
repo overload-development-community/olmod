@@ -83,6 +83,21 @@ namespace GameMod
             }
         }
 
+        public static void SetVisibility(bool visible)
+        {
+            Overload.NetworkManager.m_Players[ObservedPlayer].gameObject.GetComponent<MeshRenderer>().enabled = visible;
+            foreach (var child in Overload.NetworkManager.m_Players[ObservedPlayer].GetComponentsInChildren<MeshRenderer>())
+            {
+                child.enabled = visible;
+            }
+
+            Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.gameObject.GetComponent<MeshRenderer>().enabled = visible;
+            foreach (var child in Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.GetComponentsInChildren<MeshRenderer>())
+            {
+                child.enabled = visible;
+            }
+        }
+
         public static void SetNextObservedPlayer()
         {
             if (ObservedPlayer == -1)
@@ -92,7 +107,7 @@ namespace GameMod
             }
             else
             {
-                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                SetVisibility(true);
             }
 
             while (true)
@@ -116,14 +131,12 @@ namespace GameMod
 
             if (ObservedPlayer == -1)
             {
-                GameplayManager.AddHUDMessage("Observing freely.");
                 GameManager.m_player_ship.c_transform.position = SavedPosition;
                 GameManager.m_player_ship.c_transform.rotation = SavedRotation;
             }
             else
             {
-                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = ThirdPerson ? Vector3.one : Vector3.zero;
-                GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[ObservedPlayer].m_mp_name}.");
+                SetVisibility(ThirdPerson);
             }
         }
 
@@ -136,7 +149,7 @@ namespace GameMod
             }
             else
             {
-                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                SetVisibility(true);
             }
 
             while (true)
@@ -160,14 +173,12 @@ namespace GameMod
 
             if (ObservedPlayer == -1)
             {
-                GameplayManager.AddHUDMessage("Observing freely.");
                 GameManager.m_player_ship.c_transform.position = SavedPosition;
                 GameManager.m_player_ship.c_transform.rotation = SavedRotation;
             }
             else
             {
-                Overload.NetworkManager.m_Players[ObservedPlayer].c_player_ship.transform.localScale = ThirdPerson ? Vector3.one : Vector3.zero;
-                GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[ObservedPlayer].m_mp_name}.");
+                SetVisibility(ThirdPerson);
             }
         }
     }
@@ -330,9 +341,10 @@ namespace GameMod
 
                 if (Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.m_dead || Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.m_dying)
                 {
-                    __instance.c_transform.position -= MPObserver.LastRotation * Vector3.forward * 2;
+                    __instance.c_transform.position -= MPObserver.LastRotation * (Vector3.forward * 2);
                     __instance.c_transform.rotation = MPObserver.LastRotation;
-                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+
+                    MPObserver.SetVisibility(true);
                 }
                 else
                 {
@@ -340,10 +352,10 @@ namespace GameMod
 
                     if (MPObserver.ThirdPerson)
                     {
-                        __instance.c_transform.position -= __instance.c_transform.rotation * Vector3.forward * 2;
+                        __instance.c_transform.position -= __instance.c_transform.rotation * (Vector3.forward * 2 + Vector3.up * -0.5f);
                     }
 
-                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
+                    MPObserver.SetVisibility(MPObserver.ThirdPerson);
                 }
 
                 return false;
@@ -459,6 +471,68 @@ namespace GameMod
                     uie, new object[] { vector });
         }
 
+        public static void DrawFullScreenEffects()
+        {
+            if (MPObserver.ObservedPlayer == -1)
+            {
+                return;
+            }
+            PlayerShip player_ship = Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship;
+            Vector2 position;
+            position.x = 576f;
+            position.y = 576f;
+            if (UIManager.ui_bg_fade > 0f)
+            {
+                UIManager.DrawQuadUIInner(position, 15f, 15f, Color.black, UIManager.ui_bg_fade, 11, 0.8f);
+                if (!UIManager.ui_blocker_active && UIManager.ui_bg_fade >= 1f)
+                {
+                    UIManager.ui_blocker_active = true;
+                    GameManager.m_player_ship.c_bright_blocker_go.SetActive(true);
+                    if (GameManager.m_mesh_container != null)
+                    {
+                        GameManager.m_mesh_container.SetActive(false);
+                    }
+                }
+            }
+            if (UIManager.ui_blocker_active && UIManager.ui_bg_fade < 1f)
+            {
+                UIManager.ui_blocker_active = false;
+                GameManager.m_player_ship.c_bright_blocker_go.SetActive(false);
+                if (GameManager.m_mesh_container != null)
+                {
+                    GameManager.m_mesh_container.SetActive(true);
+                }
+            }
+            position.x = -576f;
+            position.y = 576f;
+            if (GameplayManager.GamePaused)
+            {
+                UIManager.menu_flash_fade = Mathf.Max(0f, UIManager.menu_flash_fade - RUtility.FRAMETIME_UI * 2f);
+            }
+            else
+            {
+                UIManager.menu_flash_fade = Mathf.Min(1f, UIManager.menu_flash_fade + RUtility.FRAMETIME_UI * 4f);
+            }
+            if (UIManager.menu_flash_fade > 0f && (!player_ship.m_dying || player_ship.m_player_died_due_to_timer))
+            {
+                if (player_ship.m_damage_flash_slow > 0f)
+                {
+                    float a = UIManager.menu_flash_fade * Mathf.Min(0.1f, player_ship.m_damage_flash_slow * 0.1f) + Mathf.Min(0.2f, player_ship.m_damage_flash_fast * 0.2f);
+                    UIManager.DrawQuadUI(position, 15f, 15f, UIManager.m_col_damage, a, 11);
+                }
+                if (player_ship.m_pickup_flash > 0f)
+                {
+                    float a2 = UIManager.menu_flash_fade * Mathf.Clamp01(player_ship.m_pickup_flash * player_ship.m_pickup_flash) * 0.25f;
+                    UIManager.DrawQuadUI(position, 15f, 15f, UIManager.m_col_white, a2, 11);
+                }
+                if (player_ship.m_energy_flash > 0f)
+                {
+                    float a3 = UIManager.menu_flash_fade * (player_ship.m_energy_flash - 0.2f) * (player_ship.m_energy_flash - 0.2f) * 0.15f;
+                    UIManager.DrawQuadUI(position, 15f, 15f, UIManager.m_col_hi3, a3, 11);
+                }
+            }
+        }
+
         static void Prefix(UIElement __instance)
         {
             if (!GameManager.m_local_player.m_spectator || !GameplayManager.ShowHud || Overload.NetworkManager.IsHeadless() ||
@@ -492,6 +566,43 @@ namespace GameMod
                 DrawMpScoreboardRaw(uie, vector);
             }
             uie.m_alpha = alpha;
+
+            if (MPObserver.ObservedPlayer == -1)
+            {
+                return;
+            }
+
+            var player = Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer];
+            var player_ship = player.c_player_ship;
+
+            vector.x = UIManager.UI_RIGHT - 270f;
+            vector.y = UIManager.UI_BOTTOM - 70f - 22f * 4;
+
+            uie.DrawStringSmall("NOW OBSERVING:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+            vector.y += 22f;
+            uie.DrawStringSmall("KILLS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+            vector.y += 22f;
+            uie.DrawStringSmall("ASSISTS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+            vector.y += 22f;
+            uie.DrawStringSmall("DEATHS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+
+            vector.x = UIManager.UI_RIGHT - 20f;
+            vector.y = UIManager.UI_BOTTOM - 70f - 22f * 4;
+
+            uie.DrawStringSmall(player.m_mp_name, vector, 0.35f, StringOffset.RIGHT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+            vector.y += 22f;
+            uie.DrawDigitsVariable(vector, player.m_kills, 0.4f, StringOffset.RIGHT, UIManager.m_col_hi3, uie.m_alpha);
+            vector.y += 22f;
+            uie.DrawDigitsVariable(vector, player.m_assists, 0.4f, StringOffset.RIGHT, UIManager.m_col_hi3, uie.m_alpha);
+            vector.y += 22f;
+            uie.DrawDigitsVariable(vector, player.m_deaths, 0.4f, StringOffset.RIGHT, UIManager.m_col_hi3, uie.m_alpha);
+
+            var index = Overload.NetworkManager.m_Players.IndexOf(player_ship.c_player);
+
+            if (index == MPObserver.ObservedPlayer && MPObserver.ObservedPlayer != -1 && !MPObserver.ThirdPerson && !player_ship.m_dead && !player_ship.m_dying)
+            {
+                DrawFullScreenEffects();
+            }
         }
     }
 
@@ -506,26 +617,29 @@ namespace GameMod
                 if (cc_type == CCInput.SWITCH_WEAPON && Controls.JustPressed(CCInput.SWITCH_WEAPON))
                 {
                     MPObserver.SetNextObservedPlayer();
+                    GameManager.m_viewer.SetDamageEffects(-999);
                 }
                 if (cc_type == CCInput.PREV_WEAPON && Controls.JustPressed(CCInput.PREV_WEAPON))
                 {
                     MPObserver.SetPrevObservedPlayer();
+                    GameManager.m_viewer.SetDamageEffects(-999);
                 }
                 if (cc_type == CCInput.FIRE_WEAPON && Controls.JustPressed(CCInput.FIRE_WEAPON) && MPObserver.ObservedPlayer != -1)
                 {
-                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                    MPObserver.SetVisibility(true);
 
                     MPObserver.ObservedPlayer = -1;
 
-                    GameplayManager.AddHUDMessage("Observing freely.");
                     GameManager.m_player_ship.c_transform.position = MPObserver.SavedPosition;
                     GameManager.m_player_ship.c_transform.rotation = MPObserver.SavedRotation;
+                    GameManager.m_viewer.SetDamageEffects(-999);
                 }
                 if (cc_type == CCInput.FIRE_MISSILE && Controls.JustPressed(CCInput.FIRE_MISSILE) && MPObserver.ObservedPlayer != -1)
                 {
                     MPObserver.ThirdPerson = !MPObserver.ThirdPerson;
-                    GameplayManager.AddHUDMessage(MPObserver.ThirdPerson ? "Observing in third person." : "Observing in first person.");
-                    Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
+
+                    MPObserver.SetVisibility(MPObserver.ThirdPerson);
+                    GameManager.m_viewer.SetDamageEffects(-999);
                 }
                 if (cc_type == CCInput.SWITCH_MISSILE && Controls.JustPressed(CCInput.SWITCH_MISSILE) && CTF.IsActive)
                 {
@@ -547,13 +661,14 @@ namespace GameMod
                         }
                         else
                         {
-                            Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                            MPObserver.SetVisibility(true);
                         }
 
                         MPObserver.ObservedPlayer = Overload.NetworkManager.m_Players.IndexOf(player);
 
-                        Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
-                        GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].m_mp_name}.");
+                        MPObserver.SetVisibility(MPObserver.ThirdPerson);
+
+                        GameManager.m_viewer.SetDamageEffects(-999);
                     }
                 }
                 if (cc_type == CCInput.PREV_MISSILE && Controls.JustPressed(CCInput.PREV_MISSILE) && CTF.IsActive)
@@ -576,13 +691,14 @@ namespace GameMod
                         }
                         else
                         {
-                            Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = Vector3.one;
+                            MPObserver.SetVisibility(true);
                         }
 
                         MPObserver.ObservedPlayer = Overload.NetworkManager.m_Players.IndexOf(player);
 
-                        Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].c_player_ship.transform.localScale = MPObserver.ThirdPerson ? Vector3.one : Vector3.zero;
-                        GameplayManager.AddHUDMessage($"Now observing {Overload.NetworkManager.m_Players[MPObserver.ObservedPlayer].m_mp_name}.");
+                        MPObserver.SetVisibility(MPObserver.ThirdPerson);
+
+                        GameManager.m_viewer.SetDamageEffects(-999);
                     }
                 }
             }
@@ -606,6 +722,33 @@ namespace GameMod
                 {
                     MPObserver.ObservedPlayer--;
                 }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Overload.PlayerShip), "DrawEffectMesh")]
+    class MPObserverDisableEffectMeshForObservedPlayer
+    {
+        static bool Prefix(PlayerShip __instance)
+        {
+            var index = Overload.NetworkManager.m_Players.IndexOf(__instance.c_player);
+
+            return !(index == MPObserver.ObservedPlayer && MPObserver.ObservedPlayer != -1 && !MPObserver.ThirdPerson && !__instance.m_dead && !__instance.m_dying);
+        }
+    }
+
+    [HarmonyPatch(typeof(Overload.PlayerShip), "RpcApplyDamage")]
+    class MPObserverSetDamageEffects
+    {
+        static void Postfix(PlayerShip __instance, float hitpoints, float damage, float damage_scaled, float damage_min)
+        {
+            var index = Overload.NetworkManager.m_Players.IndexOf(__instance.c_player);
+
+            if (index == MPObserver.ObservedPlayer && MPObserver.ObservedPlayer != -1 && !MPObserver.ThirdPerson && !__instance.m_dead && !__instance.m_dying)
+            {
+                // NOTE: This appears to be a bug with the base game... __instance.c_player.m_hitpoints is the value AFTER the damage taken, but shouldn't this be the value BEFORE the damage taken?
+                float damageEffects = Mathf.Min(__instance.c_player.m_hitpoints, damage_scaled);
+                GameManager.m_viewer.SetDamageEffects(damageEffects);
             }
         }
     }
