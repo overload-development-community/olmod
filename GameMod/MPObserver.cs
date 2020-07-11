@@ -610,6 +610,18 @@ namespace GameMod
     [HarmonyPatch(typeof(Controls), "UpdateKey")]
     class MPObserverControlsUpdateKey
     {
+        static bool Prefix(CCInput cc_type)
+        {
+            if (MPObserver.Enabled && GameplayManager.IsMultiplayer)
+            {
+                if (cc_type == CCInput.FIRE_FLARE)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         static void Postfix(CCInput cc_type)
         {
             if (MPObserver.Enabled && GameplayManager.IsMultiplayer)
