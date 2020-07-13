@@ -223,20 +223,22 @@ namespace GameMod
 
             yield return new WaitForSeconds(pregameWait);
 
-            if (NetworkMatch.GetMatchState() != MatchState.PLAYING)
-                yield break;
-
-            IntegerMessage modeMsg = new IntegerMessage((int)NetworkMatch.GetMode());
-            NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
-            SendMatchState(connectionId);
-
             var newPlayer = Server.FindPlayerByConnectionId(connectionId);
             if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {
                 Debug.LogFormat("Enabling spectator for {0}", newPlayer.m_mp_name);
                 newPlayer.Networkm_spectator = true;
                 Debug.LogFormat("Enabled spectator for {0}", newPlayer.m_mp_name);
+
+                yield return null; // make sure spectator change is received before sending MatchStart
             }
+
+            if (NetworkMatch.GetMatchState() != MatchState.PLAYING)
+                yield break;
+
+            IntegerMessage modeMsg = new IntegerMessage((int)NetworkMatch.GetMode());
+            NetworkServer.SendToClient(connectionId, CustomMsgType.MatchStart, modeMsg);
+            SendMatchState(connectionId);
 
             NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
             MPTweaks.Send(connectionId);
