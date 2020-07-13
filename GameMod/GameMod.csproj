@@ -103,6 +103,7 @@
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
     <Compile Include="MatchModeRace.cs" />
+    <Compile Include="MessageTypes.cs" />
     <Compile Include="MoreAudio.cs" />
     <Compile Include="MPAnticheat.cs" />
     <Compile Include="MPCeiling.cs" />
@@ -115,6 +116,7 @@
     <Compile Include="MPModPrivateData.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPServerBrowser.cs" />
+    <Compile Include="MPSniperPackets.cs" />
     <Compile Include="MPSpawnBoostClear.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />

@@ -103,7 +103,7 @@ namespace GameMod
         public static void SendTo(int connId)
         {
             var mmpdMsg = new StringMessage(MPModPrivateData.Serialize().ToString(Newtonsoft.Json.Formatting.None));
-            NetworkServer.SendToClient(connId, ModCustomMsg.MsgModPrivateData, mmpdMsg);
+            NetworkServer.SendToClient(connId, MessageTypes.MsgModPrivateData, mmpdMsg);
         }
         public static void OnReceived(string data)
         {
@@ -261,7 +261,7 @@ namespace GameMod
         {
             if (Client.GetClient() == null)
                 return;
-            Client.GetClient().RegisterHandler(ModCustomMsg.MsgModPrivateData, OnModPrivateData);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgModPrivateData, OnModPrivateData);
         }
     }
 
