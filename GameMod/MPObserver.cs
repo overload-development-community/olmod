@@ -303,6 +303,8 @@ namespace GameMod
                     {
                         __instance.c_transform.position -= __instance.c_transform.rotation * new Vector3(0, -0.5f, 2f);
                     }
+
+                    MPObserver.SetPlayerVisibility(player, MPObserver.ThirdPerson);
                 }
             }
         }
