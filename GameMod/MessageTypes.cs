@@ -20,6 +20,15 @@ namespace GameMod
         public const short MsgCTFNotify = 125;
         public const short MsgLapCompleted = 126;
         public const short MsgSetFullMatchState = 127;
-        public const short MsgSniperPacket = 128;
+
+        public const short MsgCreeperSync = 130;
+        public const short MsgExplode = 131;
+        public const short MsgSetAlternatingMissleFire = 132;
+        public const short MsgSniperPacket = 133;
+        public const short MsgPlayerWeaponSynchronization = 134;
+        public const short MsgPlayerAddResource = 135;
+        public const short MsgPlayerSyncResource = 136;
+        public const short MsgPlayerSyncAllMissiles = 137;
+        public const short MsgDetonate = 138;
     }
 }
