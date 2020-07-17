@@ -179,4 +179,13 @@ namespace GameMod.Core
             return false;
         }
     }
+
+    // Remove annoying Tobii errors.
+    [HarmonyPatch(typeof(Debug), "LogError", new Type[] { typeof(object) })]
+    class RemoveTobiiErrors
+    {
+        static bool Prefix(object message) {
+            return !(message is string msg && msg.StartsWith("Could not find any window with process id"));
+        }
+    }
 }
