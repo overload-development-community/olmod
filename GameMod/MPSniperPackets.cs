@@ -26,6 +26,11 @@ namespace GameMod
 		/// </summary>
 		static public bool enabled = true;
 
+        /// <summary>
+        /// Indicates state of UI toggle for match creator.
+        /// </summary>
+        static public bool menu_enabled = true;
+
 		/// <summary>
 		/// Indicates whether a dev was just fired and should not be exploded.
 		/// </summary>
@@ -1435,4 +1440,69 @@ namespace GameMod
 			return true;
 		}
 	}
+
+    /// <summary>
+	/// Add UI toggle to Create Match -> Advanced.
+	/// </summary>
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class MPSniperPackets_UIElement_DrawMpMatchSetup
+    {
+        private static void DrawSniperPackets(UIElement uie, ref Vector2 position)
+        {
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SNIPER PACKETS"), position, 8, MPSniperPackets.menu_enabled ? "ON" : "OFF", string.Empty, 1.5f, false);
+            position.y += 62f;
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "ADVANCED MATCH SETTINGS")
+                    state = 1;
+
+                // Squeeze vertical item spacing down from 62 to 58
+                if (state == 1 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 62f)
+                    code.operand = 58f;
+
+                // Add toggle above Powerup Settings
+                if (state == 1 && code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
+                {
+                    state = 2;
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPSniperPackets_UIElement_DrawMpMatchSetup), "DrawSniperPackets"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Process input on Sniper Packets toggle in Create Match -> Advanced
+    /// </summary>
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class MPSniperPackets_MenuManager_MpMatchSetup
+    {
+        private static void Postfix()
+        {
+            switch (MenuManager.m_menu_sub_state)
+            {
+                case MenuSubState.ACTIVE:
+                    switch (UIManager.m_menu_selection)
+                    {
+                        case 8:
+                            if (UIManager.PushedSelect(100))
+                            {
+                                MPSniperPackets.menu_enabled = !MPSniperPackets.menu_enabled;
+                                MenuManager.PlayCycleSound(1f, 1f);
+                            }
+                            break;
+                    }
+                    break;
+            }
+        }
+    }
 }
