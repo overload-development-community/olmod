@@ -22,9 +22,9 @@ namespace GameMod
 	internal class MPSniperPackets
 	{
 		/// <summary>
-		/// List of players using sniper packets, added to when they first send a sniper packet to the server.
+		/// Determines whether sniper packets are enabled for the current game.
 		/// </summary>
-		static internal List<NetworkInstanceId> snipers = new List<NetworkInstanceId>();
+		static public bool enabled = true;
 
 		/// <summary>
 		/// Indicates whether a dev was just fired and should not be exploded.
@@ -43,6 +43,8 @@ namespace GameMod
 		/// <param name="msg"></param>
 		static internal void SetWeapon(Player player, PlayerWeaponSynchronizationMessage msg)
 		{
+			if (!enabled) return;
+
 			switch (msg.m_type)
 			{
 				case PlayerWeaponSynchronizationMessage.ValueType.WEAPON:
@@ -65,19 +67,13 @@ namespace GameMod
 		}
 
 		/// <summary>
-		/// Initializes sniper packets at the start of a multiplayer game.
-		/// </summary>
-		static internal void InitForMatch()
-		{
-			snipers = new List<NetworkInstanceId>();
-		}
-
-		/// <summary>
 		/// Replacement function for Server.IsActive() in MaybeFireWeapon and other places that need to deduct from the player's energy pool regardless if the function is called on client or server.
 		/// </summary>
 		/// <returns></returns>
 		static bool AlwaysUseEnergy()
 		{
+			if (!enabled) return Server.IsActive();
+
 			return true;
 		}
 
@@ -96,6 +92,8 @@ namespace GameMod
 		/// <returns></returns>
 		static ParticleElement MaybePlayerFire(Player player, ProjPrefab type, Vector3 pos, Quaternion rot, float strength = 0, WeaponUnlock upgrade_lvl = WeaponUnlock.LEVEL_0, bool no_sound = false, int slot = -1, int force_id = -1)
 		{
+			if (!enabled) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+
 			// Set this to false so that creepers and devastators do not explode unless the server tells us.
 			CreeperSyncExplode.m_allow_explosions = false;
 
@@ -383,6 +381,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerWeaponSynchronization(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerWeaponSynchronizationMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -400,6 +400,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerAddResource(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerAddResourceMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -509,6 +511,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerSyncResource(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerSyncResourceMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -545,6 +549,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerSyncAllMissiles(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerSyncAllMissilesMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -580,22 +586,19 @@ namespace GameMod
 	class MPSniperPacketsServerHandlers
 	{
 		/// <summary>
-		/// Handles the SniperPacketMessage on the server.  This generates the weapon fire on the server as received by the client, as long as they are still alive.  Adds the player to the snipers list.
+		/// Handles the SniperPacketMessage on the server.  This generates the weapon fire on the server as received by the client, as long as they are still alive.
 		/// </summary>
 		/// <param name="rawMsg"></param>
 		private static void OnSniperPacket(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<SniperPacketMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
 			if (player == null || player.c_player_ship.m_dead || player.c_player_ship.m_dying)
 			{
 				return;
-			}
-
-			if (!MPSniperPackets.snipers.Contains(player.netId))
-			{
-				MPSniperPackets.snipers.Add(player.netId);
 			}
 
 			ProjectileManager.PlayerFire(player, msg.m_type, msg.m_pos, msg.m_rot, msg.m_strength, msg.m_upgrade_lvl, msg.m_no_sound, msg.m_slot, msg.m_force_id);
@@ -607,6 +610,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerWeaponSynchronization(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerWeaponSynchronizationMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -632,6 +637,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerSyncResource(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerSyncResourceMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -676,6 +683,8 @@ namespace GameMod
 		/// <param name="rawMsg"></param>
 		private static void OnPlayerSyncAllMissiles(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<PlayerSyncAllMissilesMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -704,6 +713,8 @@ namespace GameMod
 		/// <param name="msg"></param>
 		static void OnDetonate(NetworkMessage rawMsg)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			var msg = rawMsg.ReadMessage<DetonateMessage>();
 			var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
@@ -729,18 +740,6 @@ namespace GameMod
 			NetworkServer.RegisterHandler(MessageTypes.MsgPlayerSyncResource, OnPlayerSyncResource);
 			NetworkServer.RegisterHandler(MessageTypes.MsgPlayerSyncAllMissiles, OnPlayerSyncAllMissiles);
 			NetworkServer.RegisterHandler(MessageTypes.MsgDetonate, OnDetonate);
-		}
-	}
-
-	/// <summary>
-	/// When the match begins, we need to initialize the MPSniperPackets singleton.
-	/// </summary>
-	[HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
-	class MPSniperPacketsInitBeforeEachMatch
-	{
-		private static void Postfix()
-		{
-			MPSniperPackets.InitForMatch();
 		}
 	}
 
@@ -778,6 +777,8 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
 		}
 	}
@@ -790,6 +791,8 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, ref bool __result)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active))
 			{
 				return true;
@@ -811,6 +814,8 @@ namespace GameMod
 	{
 		static void Postfix(PlayerShip __instance)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (__instance.c_player.isLocalPlayer)
 			{
 				if (__instance.c_player.JustReleased(CCInput.FIRE_WEAPON))
@@ -928,10 +933,13 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, WeaponType value)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (!GameplayManager.IsMultiplayer)
 			{
 				return true;
 			}
+
 			if (__instance.m_weapon_type != value)
 			{
 				if (!NetworkServer.active)
@@ -961,10 +969,13 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, WeaponType value)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (!GameplayManager.IsMultiplayer)
 			{
 				return true;
 			}
+
 			if (__instance.m_weapon_type_prev != value)
 			{
 				if (!NetworkServer.active)
@@ -994,6 +1005,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return false;
 		}
 	}
@@ -1006,6 +1019,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return false;
 		}
 	}
@@ -1018,6 +1033,8 @@ namespace GameMod
 	{
 		static void Postfix(bool __result, Player __instance, float energy)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (__result && NetworkServer.active)
 			{
 				NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
@@ -1040,6 +1057,8 @@ namespace GameMod
 	{
 		static void Postfix(bool __result, Player __instance, float energy)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (__result && NetworkServer.active)
 			{
 				NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
@@ -1062,6 +1081,8 @@ namespace GameMod
 	{
 		static void Postfix(Player __instance, float energy, float max_energy)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (NetworkServer.active)
 			{
 				NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
@@ -1084,6 +1105,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return !GameplayManager.IsMultiplayerActive;
 		}
 	}
@@ -1096,10 +1119,13 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, float amount)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (__instance.m_overdrive || Player.CheatUnlimited)
 			{
 				return false;
 			}
+
 			__instance.m_energy = Mathf.Max(0f, __instance.m_energy - amount * Player.ENERGY_USAGE[__instance.m_upgrade_level[1]]);
 			return false;
 		}
@@ -1113,6 +1139,8 @@ namespace GameMod
 	{
 		static void Postfix(bool __result, Player __instance, int ammo)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (__result && NetworkServer.active)
 			{
 				NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
@@ -1135,6 +1163,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return !GameplayManager.IsMultiplayerActive;
 		}
 	}
@@ -1147,10 +1177,13 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, int amount)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (__instance.m_overdrive || Player.CheatUnlimited)
 			{
 				return false;
 			}
+
 			__instance.m_ammo = Mathf.Max(0, __instance.m_ammo - amount);
 			return false;
 		}
@@ -1186,6 +1219,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
 		}
 	}
@@ -1198,10 +1233,13 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, MissileType value)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (!GameplayManager.IsMultiplayer)
 			{
 				return true;
 			}
+
 			if (!NetworkServer.active)
 			{
 				__instance.m_missile_type = value;
@@ -1228,10 +1266,13 @@ namespace GameMod
 	{
 		static bool Prefix(Player __instance, MissileType value)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (!GameplayManager.IsMultiplayer)
 			{
 				return true;
 			}
+
 			if (__instance.m_missile_type_prev != value)
 			{
 				if (!NetworkServer.active)
@@ -1261,6 +1302,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return false;
 		}
 	}
@@ -1273,6 +1316,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return false;
 		}
 	}
@@ -1285,6 +1330,8 @@ namespace GameMod
 	{
 		static void Prefix(Player __instance, int amt, MissileType mt, bool silent = false, bool super = false)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (GameplayManager.IsMultiplayerActive && NetworkServer.active && __instance.CanAddMissileAmmo(mt, super))
 			{
 				int max = 999;
@@ -1324,6 +1371,8 @@ namespace GameMod
 	{
 		static void Postfix(PlayerShip __instance)
 		{
+			if (!MPSniperPackets.enabled) return;
+
 			if (Overload.NetworkManager.IsMultiplayerSceneLoaded() && !NetworkMatch.InGameplay())
 			{
 				return;
@@ -1349,6 +1398,8 @@ namespace GameMod
 	{
 		static bool Prefix()
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
 		}
 	}
@@ -1361,6 +1412,8 @@ namespace GameMod
 	{
 		static bool Prefix(Player p)
 		{
+			if (!MPSniperPackets.enabled) return true;
+
 			if (GameplayManager.IsMultiplayer && NetworkServer.active && !MPSniperPackets.serverCanDetonate)
 			{
 				return false;
