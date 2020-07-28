@@ -1,6 +1,6 @@
 #!/bin/sh
 export OLMODDIR=$(dirname "$0")
-OLDIR=.
+OLDIR=${OLMODDDIR}
 for arg; do
   if [ "$next_dir" = "0" ]; then OLDIR="$arg"; fi
   [ "$arg" = "-gamedir" ]; next_dir="$?"
@@ -10,5 +10,5 @@ ISMAC=""
 if [ -n "$ISMAC" ]; then
 DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES:+$DYLD_INSERT_LIBRARIES:}${OLMODDIR}/olmod.dylib" exec "${OLDIR}/Overload.app/Contents/MacOS/Overload" "$@"
 else
-LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${OLMODDIR}/olmod.so" exec "${OLMODDIR}/Overload.x86_64" "$@"
+LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${OLMODDIR}/olmod.so" exec "${OLDIR}/Overload.x86_64" "$@"
 fi
