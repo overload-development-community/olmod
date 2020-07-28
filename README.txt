@@ -1,13 +1,12 @@
-## olmod - Overload mod
+olmod 0.3.2-beta.1 - Overload mod
+Community mods for Overload
+https://github.com/arbruijn/olmod
 
-**Community mods for Overload**
+Overload is a registered trademark of Revival Productions, LLC.  This is an
+unaffiliated, unsupported tool.  Use at your own risk.
 
-[Overload](https://playoverload.com) is a registered trademark of [Revival Productions, LLC](https://www.revivalprod.com).
-This is an unaffiliated, unsupported tool. Use at your own risk.
-
-#### How to run
-
-- Download the latest release from [olmod.overloadmaps.com](https://olmod.overloadmaps.com)
+How to run
+----------
 
 - Extract olmod in the Overload main directory
   (where `Overload.exe` / `Overload.x86_64` / `Overload.app` is also located).
@@ -25,13 +24,12 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
   internet server. For the internet server you need to open UDP port range
   7000-8001
 
-#### What does it do
+What does it do
+---------------
 
 - Replaces default networking model with a sniper packets style, resulting in more consistent network play.
 
 - Better synchronizes energy, ammo, weapon choice, and missile counts.
-
-- Removes picture-in-picture rear view from multiplayer games, an option will be added later.
 
 - Allows access to the unfinished Monsterball multiplayer mode (with tweaks
   by terminal).
@@ -98,20 +96,11 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Allows more simultaneous sounds for large MP matches
 
-- Adds server browser by Tobias
+How does it work
+----------------
 
-#### How to build
-
-- Open solution in Visual Studio 2017 or 2019
-
-- In the GameMod project, find the file Directory.Build.targets and replace the OverloadDir variable with the path to Overload 1.1 on your machine.
-
-- Run
-
-#### How does it work
-
-The regular `Overload.exe` just runs `UnityMain` from `UnityPlayer.dll`.
-The replacement `olmod.exe` also runs `UnityMain`, but intercepts calls from Unity to the mono C# engine
-to also load `GameMod.dll`. The file `GameMod.dll` contains a C# class that
-uses [Harmony](https://github.com/pardeike/Harmony) to modify the game
-scripting code in memory.
+The regular Overload.exe just runs UnityMain from UnityPlayer.dll.  The
+replacement olmod.exe also runs UnityMain, but intercepts calls from Unity
+to the mono C# engine to also load GameMod.dll.  The file GameMod.dll
+contains a C# class that uses Harmony to modify the game scripting code in
+memory.

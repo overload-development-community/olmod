@@ -72,17 +72,17 @@ namespace GameMod
 
         public static void SendCTFPickup(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            SendToClientOrAll(conn_id, CTFCustomMsg.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            SendToClientOrAll(conn_id, MessageTypes.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
         public static void SendCTFLose(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            SendToClientOrAll(conn_id, CTFCustomMsg.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            SendToClientOrAll(conn_id, MessageTypes.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
         public static void SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
-            SendToClientOrAll(conn_id, CTFCustomMsg.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            SendToClientOrAll(conn_id, MessageTypes.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
         public static void FindFlagSpawnPoints()
@@ -260,7 +260,7 @@ namespace GameMod
         public static void NotifyAll(CTFEvent evt, string message, Player player, int flag)
         {
             Debug.Log("CTF.NotifyAll " + evt);
-            NetworkServer.SendToAll(CTFCustomMsg.MsgCTFNotify, new CTFNotifyMessage { m_event = evt, m_message = message,
+            NetworkServer.SendToAll(MessageTypes.MsgCTFNotify, new CTFNotifyMessage { m_event = evt, m_message = message,
                 m_player_id = player == null ? default(NetworkInstanceId) : player.netId, m_flag_id = flag });
             LogEvent(evt, player, MPTeams.AllTeams[flag]);
         }
@@ -680,15 +680,6 @@ namespace GameMod
         public int m_flag_id;
     }
 
-    public class CTFCustomMsg
-    {
-        public const short MsgCTFPickup = 121;
-        public const short MsgCTFLose = 122;
-        public const short MsgCTFNotifyOld = 123;
-        public const short MsgCTFFlagUpdate = 124;
-        public const short MsgCTFNotify = 125;
-    }
-
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
     class CTFClientHandlers
     {
@@ -758,11 +749,11 @@ namespace GameMod
         {
             if (Client.GetClient() == null)
                 return;
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFPickup, OnCTFPickup);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFLose, OnCTFLose);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotifyOld, OnCTFNotifyOld);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFFlagUpdate, OnCTFFlagUpdate);
-            Client.GetClient().RegisterHandler(CTFCustomMsg.MsgCTFNotify, OnCTFNotify);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFPickup, OnCTFPickup);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFLose, OnCTFLose);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFNotifyOld, OnCTFNotifyOld);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFFlagUpdate, OnCTFFlagUpdate);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFNotify, OnCTFNotify);
         }
     }
 

@@ -11,7 +11,7 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static readonly string Version = "olmod 0.3.1.3";
+        public static readonly string Version = "olmod 0.3.2-beta.1";
         private static Version GameVersion;
 
         public static void Initialize()
@@ -177,6 +177,15 @@ namespace GameMod.Core
         {
             __result = GameMod.Version.ToUpperInvariant();
             return false;
+        }
+    }
+
+    // Remove annoying Tobii errors.
+    [HarmonyPatch(typeof(Debug), "LogError", new Type[] { typeof(object) })]
+    class RemoveTobiiErrors
+    {
+        static bool Prefix(object message) {
+            return !(message is string msg && msg.StartsWith("Could not find any window with process id"));
         }
     }
 }

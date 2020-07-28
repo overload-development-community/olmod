@@ -13,4 +13,4 @@ UnityEngine*.xml
 *.aps
 *.o
 *.so
-*.vcxproj.user
+*.user
