@@ -88,7 +88,11 @@ namespace GameMod
         public static void Deserialize(JToken root)
         {
             TeamCount = root["teamcount"].GetInt(MPTeams.Min);
-            RearViewEnabled = root["rearviewenabled"].GetBool(false);
+
+            // TODO: Re-enable after an option has been made for it.
+            //RearViewEnabled = root["rearviewenabled"].GetBool(false);
+            RearViewEnabled = false;
+
             JIPEnabled = root["jipenabled"].GetBool(false);
             SniperPacketsEnabled = root["sniperpacketsenabled"].GetBool(false);
             MatchMode = (MatchMode)root["matchmode"].GetInt(0);

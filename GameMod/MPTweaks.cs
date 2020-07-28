@@ -284,7 +284,7 @@ namespace GameMod
             Debug.Log("MPTweaks: sending client capabilites");
             var caps = new Dictionary<string, string>();
             caps.Add("ModVersion", Core.GameMod.Version);
-            caps.Add("SupportsTweaks", "proj");
+            caps.Add("SupportsTweaks", "proj,sniper");
             caps.Add("ModPrivateData", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
@@ -326,6 +326,11 @@ namespace GameMod
                 //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
                 NetworkServer.SendToClient(connId, 86, new StringMessage("You need OLMOD to join this match."));
+                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
+            }
+            if (MPSniperPackets.enabled && !clientInfo.SupportsTweaks.Contains("sniper"))
+            {
+                NetworkServer.SendToClient(connId, 86, new StringMessage("You need a newer version of OLMOD to join this match."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
             if (clientInfo.Capabilities.ContainsKey("ModPrivateData"))
