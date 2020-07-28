@@ -29,9 +29,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Replaces default networking model with a sniper packets style, resulting in more consistent network play.
 
-- Better synchronizes energy, ammo, weapon choice, and missile counts.
-
-- Removes picture-in-picture rear view from multiplayer games, an option will be added later.
+- Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
 
 - Allows access to the unfinished Monsterball multiplayer mode (with tweaks
   by terminal).

@@ -29,7 +29,7 @@ What does it do
 
 - Replaces default networking model with a sniper packets style, resulting in more consistent network play.
 
-- Better synchronizes energy, ammo, weapon choice, and missile counts.
+- Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
 
 - Allows access to the unfinished Monsterball multiplayer mode (with tweaks
   by terminal).
