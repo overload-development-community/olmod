@@ -564,6 +564,27 @@ namespace GameMod
         }
 
         /// <summary>
+        /// Explode Devastators on the server.
+        /// </summary>
+        /// <param name="msg"></param>
+        static void OnDetonate(NetworkMessage rawMsg)
+        {
+            if (!MPSniperPackets.enabled) return;
+
+            var msg = rawMsg.ReadMessage<DetonateMessage>();
+            var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
+
+            if (player == null)
+            {
+                return;
+            }
+
+            CreeperSyncExplode.m_allow_explosions = true;
+            ProjectileManager.ExplodePlayerDetonators(player);
+            CreeperSyncExplode.m_allow_explosions = false;
+        }
+
+        /// <summary>
         /// Harmony call to register the above handlers.
         /// </summary>
         static void Postfix()
@@ -574,6 +595,7 @@ namespace GameMod
             Client.GetClient().RegisterHandler(MessageTypes.MsgPlayerAddResource, OnPlayerAddResource);
             Client.GetClient().RegisterHandler(MessageTypes.MsgPlayerSyncResource, OnPlayerSyncResource);
             Client.GetClient().RegisterHandler(MessageTypes.MsgPlayerSyncAllMissiles, OnPlayerSyncAllMissiles);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgDetonate, OnDetonate);
         }
     }
 
@@ -726,6 +748,14 @@ namespace GameMod
             ProjectileManager.ExplodePlayerDetonators(player);
             CreeperSyncExplode.m_allow_explosions = false;
             MPSniperPackets.serverCanDetonate = false;
+
+            foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
+            {
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId)
+                {
+                    NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgDetonate, msg);
+                }
+            }
         }
 
         /// <summary>
