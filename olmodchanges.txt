@@ -1,3 +1,8 @@
+v0.3.2-beta.2 - 2020-08-02
+
+- Potential bug fix to other players' devastators remaining in the game as a broken physics object after being manually detonated.
+- olmod.sh can now be ran from any directory if you provide the -gamedir argument for the path to the Overload executable.
+
 v0.3.2-beta.1 - 2020-07-28
 
 - Added sniper packets as an option in multiplayer.  Option defaults to off.  If on, all clients playing must be using this version or later.  Net code from roncli, UI from Tobias.
