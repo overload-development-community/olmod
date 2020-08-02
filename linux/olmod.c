@@ -162,16 +162,16 @@ static MonoObject* my_mono_runtime_invoke(MonoMethod *method, MonoObject *obj, v
 #define strlcat my_strlcat
 static size_t strlcat(char *dst, const char *src, size_t size)
 {
-    size_t used, length, copy;
+	size_t used, length, copy;
 
-    used = strlen(dst);
-    length = strlen(src);
-    if (size > 0 && used < size - 1) {
-        copy = (length >= size - used) ? size - used - 1 : length;
-        memcpy(dst + used, src, copy);
-        dst[used + copy] = '\0';
-    }
-    return used + length;
+	used = strlen(dst);
+	length = strlen(src);
+	if (size > 0 && used < size - 1) {
+		copy = (length >= size - used) ? size - used - 1 : length;
+		memcpy(dst + used, src, copy);
+		dst[used + copy] = '\0';
+	}
+	return used + length;
 }
 
 static void *my_mono_image_open_from_data_with_name(char *data, int data_len, int copy,
@@ -187,8 +187,11 @@ static void *my_mono_image_open_from_data_with_name(char *data, int data_len, in
 		*/
 		MonoImage *harmony_img;
 		char buf[256];
-		if (!getcwd(buf, sizeof(buf) - 16)) {
-			print("olmod getcwd failed");
+		char* ret = getenv("OLMODDIR");
+		if (ret) {
+			strncpy(buf, ret, sizeof(buf) - 1);
+		} else {
+			print("OLMODDIR environment variable missing");
 			abort();
 		}
 		//int len = GetModuleFileNameA(NULL, buf, sizeof(buf));
@@ -275,13 +278,6 @@ __attribute__((used)) static const struct { void *a, *b; } interpose_dlsym[]
 #else
 __attribute__((constructor)) static void olmod_init(void) 
 {
-	#if 0
-	char buf[256], *p;
-	if (readlink("/proc/self/exe", buf, sizeof(buf)) > 0 && (p = strrchr(buf, '/'))) {
-		*p = 0;
-		setenv("OLMODDIR", buf, 1);
-	}
-	#endif
 	if (!(org_dlsym = _dl_sym(RTLD_NEXT, "dlsym", olmod_init))) {
 		print("olmod failed dlsym lookup\n");
 		abort();
