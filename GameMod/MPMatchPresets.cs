@@ -224,36 +224,22 @@ namespace GameMod
             }
 
         }
-        
+
         // Process slider input
         [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-        class MPMatchPresets_MenuManager_MpMatchSetup
+        class MPMatchPresetMpMatchSetup
         {
-            static void HandleMatchPreset()
+            static void Postfix()
             {
                 if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                    (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
                     MenuManager.m_menu_micro_state == 2 &&
                     UIManager.m_menu_selection == 9)
                 {
+
                     mms_match_preset = (mms_match_preset + presets.Count + UIManager.m_select_dir) % presets.Count;
                     presets[mms_match_preset].Apply();
                     MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                }
-            }
-
-            // Patch in input check after the sole MaybeReverseOption()
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-            {
-                foreach (var code in codes)
-                {
-                    if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
-                    {
-                        yield return code;
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPMatchPresets_MenuManager_MpMatchSetup), "HandleMatchPreset"));
-                        continue;
-                    }
-
-                    yield return code;
                 }
             }
         }
