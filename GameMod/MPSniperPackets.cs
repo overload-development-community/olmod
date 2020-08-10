@@ -86,6 +86,7 @@ namespace GameMod
         static ParticleElement MaybePlayerFire(Player player, ProjPrefab type, Vector3 pos, Quaternion rot, float strength = 0, WeaponUnlock upgrade_lvl = WeaponUnlock.LEVEL_0, bool no_sound = false, int slot = -1, int force_id = -1)
         {
             if (!enabled) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "sniper")) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
 
             // Set this to false so that creepers and devastators do not explode unless the server tells us.
             CreeperSyncExplode.m_allow_explosions = false;
@@ -560,6 +561,27 @@ namespace GameMod
         }
 
         /// <summary>
+        /// Explode Devastators on the server.
+        /// </summary>
+        /// <param name="msg"></param>
+        static void OnDetonate(NetworkMessage rawMsg)
+        {
+            if (!MPSniperPackets.enabled) return;
+
+            var msg = rawMsg.ReadMessage<DetonateMessage>();
+            var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
+
+            if (player == null)
+            {
+                return;
+            }
+
+            CreeperSyncExplode.m_allow_explosions = true;
+            ProjectileManager.ExplodePlayerDetonators(player);
+            CreeperSyncExplode.m_allow_explosions = false;
+        }
+
+        /// <summary>
         /// Harmony call to register the above handlers.
         /// </summary>
         static void Postfix()
@@ -570,6 +592,7 @@ namespace GameMod
             Client.GetClient().RegisterHandler(MessageTypes.MsgPlayerAddResource, OnPlayerAddResource);
             Client.GetClient().RegisterHandler(MessageTypes.MsgPlayerSyncResource, OnPlayerSyncResource);
             Client.GetClient().RegisterHandler(MessageTypes.MsgPlayerSyncAllMissiles, OnPlayerSyncAllMissiles);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgDetonate, OnDetonate);
         }
     }
 
@@ -618,7 +641,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId)
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerWeaponSynchronization, msg);
                 }
@@ -664,7 +687,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId)
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerSyncResource, msg);
                 }
@@ -694,7 +717,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId)
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerSyncAllMissiles, msg);
                 }
@@ -722,6 +745,14 @@ namespace GameMod
             ProjectileManager.ExplodePlayerDetonators(player);
             CreeperSyncExplode.m_allow_explosions = false;
             MPSniperPackets.serverCanDetonate = false;
+
+            foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
+            {
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                {
+                    NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgDetonate, msg);
+                }
+            }
         }
 
         /// <summary>
@@ -772,6 +803,7 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
         }
@@ -786,6 +818,7 @@ namespace GameMod
         static bool Prefix(Player __instance, ref bool __result)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active))
             {
@@ -928,6 +961,7 @@ namespace GameMod
         static bool Prefix(Player __instance, WeaponType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (!GameplayManager.IsMultiplayer)
             {
@@ -964,6 +998,7 @@ namespace GameMod
         static bool Prefix(Player __instance, WeaponType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (!GameplayManager.IsMultiplayer)
             {
@@ -997,9 +1032,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "RpcSetEnergy")]
     class MPSniperPacketsDisableRpcSetEnergy
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
         }
@@ -1011,9 +1047,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "RpcSetAmmo")]
     class MPSniperPacketsDisableRpcSetAmmo
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
         }
@@ -1031,14 +1068,20 @@ namespace GameMod
 
             if (__result && NetworkServer.active)
             {
-                NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    m_player_id = __instance.netId,
-                    m_type = PlayerAddResourceMessage.ValueType.ENERGY,
-                    m_value = energy,
-                    m_max_value = Player.MAX_ENERGY,
-                    m_default = false
-                });
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                        {
+                            m_player_id = __instance.netId,
+                            m_type = PlayerAddResourceMessage.ValueType.ENERGY,
+                            m_value = energy,
+                            m_max_value = Player.MAX_ENERGY,
+                            m_default = false
+                        });
+                    }
+                }
             }
         }
     }
@@ -1055,14 +1098,20 @@ namespace GameMod
 
             if (__result && NetworkServer.active)
             {
-                NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    m_player_id = __instance.netId,
-                    m_type = PlayerAddResourceMessage.ValueType.ENERGY,
-                    m_value = energy,
-                    m_max_value = 100,
-                    m_default = true
-                });
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                        {
+                            m_player_id = __instance.netId,
+                            m_type = PlayerAddResourceMessage.ValueType.ENERGY,
+                            m_value = energy,
+                            m_max_value = 100,
+                            m_default = true
+                        });
+                    }
+                }
             }
         }
     }
@@ -1079,14 +1128,20 @@ namespace GameMod
 
             if (NetworkServer.active)
             {
-                NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    m_player_id = __instance.netId,
-                    m_type = PlayerAddResourceMessage.ValueType.ENERGY,
-                    m_value = energy,
-                    m_max_value = max_energy,
-                    m_default = false
-                });
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                        {
+                            m_player_id = __instance.netId,
+                            m_type = PlayerAddResourceMessage.ValueType.ENERGY,
+                            m_value = energy,
+                            m_max_value = max_energy,
+                            m_default = false
+                        });
+                    }
+                }
             }
         }
     }
@@ -1097,9 +1152,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "TargetAddHUDMessageEnergyIncreased")]
     class MPSniperPacketsTargetAddHUDMessageEnergyIncreased
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return !GameplayManager.IsMultiplayerActive;
         }
@@ -1114,6 +1170,7 @@ namespace GameMod
         static bool Prefix(Player __instance, float amount)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (__instance.m_overdrive || Player.CheatUnlimited)
             {
@@ -1137,14 +1194,20 @@ namespace GameMod
 
             if (__result && NetworkServer.active)
             {
-                NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    m_player_id = __instance.netId,
-                    m_type = PlayerAddResourceMessage.ValueType.AMMO,
-                    m_value = ammo,
-                    m_max_value = Player.MAX_AMMO[__instance.m_upgrade_level[2]],
-                    m_default = false
-                });
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                        {
+                            m_player_id = __instance.netId,
+                            m_type = PlayerAddResourceMessage.ValueType.AMMO,
+                            m_value = ammo,
+                            m_max_value = Player.MAX_AMMO[__instance.m_upgrade_level[2]],
+                            m_default = false
+                        });
+                    }
+                }
             }
         }
     }
@@ -1155,9 +1218,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "TargetAddHUDMessageAmmoIncreased")]
     class MPSniperPacketsTargetAddHUDMessageAmmoIncreased
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return !GameplayManager.IsMultiplayerActive;
         }
@@ -1172,6 +1236,7 @@ namespace GameMod
         static bool Prefix(Player __instance, int amount)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (__instance.m_overdrive || Player.CheatUnlimited)
             {
@@ -1211,9 +1276,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "SwitchToNextMissileWithAmmo")]
     class MPSniperPacketsSwitchToNextMissileWithAmmo
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
         }
@@ -1228,6 +1294,7 @@ namespace GameMod
         static bool Prefix(Player __instance, MissileType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (!GameplayManager.IsMultiplayer)
             {
@@ -1261,6 +1328,7 @@ namespace GameMod
         static bool Prefix(Player __instance, MissileType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (!GameplayManager.IsMultiplayer)
             {
@@ -1294,9 +1362,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "RpcSetMissileType")]
     class MPSniperPacketsRpcSetMissileType
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
         }
@@ -1308,9 +1377,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "RpcSetMissileAmmo")]
     class MPSniperPacketsRpcSetMissileAmmo
     {
-        static bool Prefix()
+        static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
         }
@@ -1345,14 +1415,20 @@ namespace GameMod
                     max = __instance.GetMaxMissileAmmo(mt);
                 }
 
-                NetworkServer.SendToAll(MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    m_player_id = __instance.netId,
-                    m_type = (PlayerAddResourceMessage.ValueType)((int)PlayerAddResourceMessage.ValueType.FALCON + (int)mt),
-                    m_value = amt,
-                    m_max_value = max,
-                    m_default = false
-                });
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
+                        {
+                            m_player_id = __instance.netId,
+                            m_type = (PlayerAddResourceMessage.ValueType)((int)PlayerAddResourceMessage.ValueType.FALCON + (int)mt),
+                            m_value = amt,
+                            m_max_value = max,
+                            m_default = false
+                        });
+                    }
+                }
             }
         }
     }
@@ -1390,9 +1466,10 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "DetonatorInFlight")]
     class MPSniperPacketsDetonatorInFlight
     {
-        static bool Prefix()
+        static bool Prefix(PlayerShip __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.c_player.connectionToClient.connectionId, "sniper")) return true;
 
             return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
         }
@@ -1407,6 +1484,7 @@ namespace GameMod
         static bool Prefix(Player p)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (NetworkServer.active && !MPTweaks.ClientHasTweak(p.connectionToClient.connectionId, "sniper")) return true;
 
             if (GameplayManager.IsMultiplayer && NetworkServer.active && !MPSniperPackets.serverCanDetonate)
             {

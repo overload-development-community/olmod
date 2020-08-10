@@ -40,6 +40,12 @@ namespace GameMod
                 clientInfo.NetVersion >= netVersion;
         }
 
+        public static bool ClientHasTweak(int connectionId, string tweak)
+        {
+            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
+                clientInfo.SupportsTweaks.Contains(tweak);
+        }
+
         public static void Set(Dictionary<string, string> newSettings)
         {
             settings.Clear();
@@ -159,9 +165,7 @@ namespace GameMod
             Debug.Log("MPTweaksLoadScene");
             RobotManager.ReadMultiplayerModeFile();
             Debug.Log("MPTweaks loaded mode file");
-            bool nobodySupportsProj = !NetworkMatch.m_players.Keys.Any(connId =>
-                MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo) &&
-                    clientInfo.SupportsTweaks.Contains("proj"));
+            bool nobodySupportsProj = !NetworkMatch.m_players.Keys.Any(connId => MPTweaks.ClientHasTweak(connId, "proj"));
             var tweaks = new Dictionary<string, string>() { };
             if (nobodySupportsProj) // use stock hunters for all stock client match
                 Debug.LogFormat("MPTweaks: not tweaking hunter: unsupported by all clients");
@@ -326,11 +330,6 @@ namespace GameMod
                 //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
                 NetworkServer.SendToClient(connId, 86, new StringMessage("You need OLMOD to join this match."));
-                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
-            }
-            if (MPSniperPackets.enabled && !clientInfo.SupportsTweaks.Contains("sniper"))
-            {
-                NetworkServer.SendToClient(connId, 86, new StringMessage("You need a newer version of OLMOD to join this match."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
             if (clientInfo.Capabilities.ContainsKey("ModPrivateData"))
