@@ -7,7 +7,7 @@ v0.3.2 - 2020-08-09
 
 v0.3.2-beta.2 - 2020-08-02
 
-- Potential bug fix to other players' devastators remaining in the game as a broken physics object after being manually detonated.  Devastators will still exhabit some strange client-side behavior, and is being tracked in issue #29.
+- Potential bug fix to other players' devastators remaining in the game as a broken physics object after being manually detonated.  Devastators will still exhibit some strange client-side behavior, and is being tracked in issue #29.
 - olmod.sh can now be ran from any directory if you provide the -gamedir argument for the path to the Overload executable.
 
 v0.3.2-beta.1 - 2020-07-28
