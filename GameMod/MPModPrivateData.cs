@@ -51,11 +51,6 @@ namespace GameMod
             get { return MPJoinInProgress.NetworkMatchEnabled; }
             set { MPJoinInProgress.NetworkMatchEnabled = value; }
         }
-        public static bool SniperPacketsEnabled
-        {
-            get { return MPSniperPackets.enabled; }
-            set { MPSniperPackets.enabled = value; }
-        }
         public static MatchMode MatchMode
         {
             get { return NetworkMatch.GetMode(); }
@@ -76,7 +71,6 @@ namespace GameMod
             jobject["teamcount"] = TeamCount;
             jobject["rearviewenabled"] = RearViewEnabled;
             jobject["jipenabled"] = JIPEnabled;
-            jobject["sniperpacketsenabled"] = SniperPacketsEnabled;
             jobject["matchmode"] = (int)MatchMode;
             jobject["suddendeathenabled"] = SuddenDeathEnabled;
             jobject["laplimit"] = LapLimit;
@@ -94,7 +88,6 @@ namespace GameMod
             RearViewEnabled = false;
 
             JIPEnabled = root["jipenabled"].GetBool(false);
-            SniperPacketsEnabled = root["sniperpacketsenabled"].GetBool(false);
             MatchMode = (MatchMode)root["matchmode"].GetInt(0);
             SuddenDeathEnabled = root["suddendeathenabled"].GetBool(false);
             LapLimit = root["laplimit"].GetInt(0);
@@ -381,7 +374,6 @@ namespace GameMod
             MPModPrivateData.TeamCount = MPTeams.MenuManagerTeamCount;
             MPModPrivateData.LapLimit = ExtMenuManager.mms_ext_lap_limit;
             MPModPrivateData.MatchNotes = MPServerBrowser.mms_match_notes;
-            MPModPrivateData.SniperPacketsEnabled = MPSniperPackets.menu_enabled;
             var mpd = (PrivateMatchDataMessage)AccessTools.Field(typeof(NetworkMatch), "m_private_data").GetValue(null);
             MPModPrivateData.HasPassword = mpd.m_password.Contains('_');
             matchmakerPlayerRequest.PlayerAttributes["mod_private_data"] = MPModPrivateData.Serialize().ToString(Newtonsoft.Json.Formatting.None);
