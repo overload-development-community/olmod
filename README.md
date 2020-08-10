@@ -27,10 +27,6 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 #### What does it do
 
-- Replaces default networking model with a sniper packets style, resulting in more consistent network play.
-
-- Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
-
 - Allows access to the unfinished Monsterball multiplayer mode (with tweaks
   by terminal).
   The Monsterball multiplayer mode only works when both server and clients run olmod.
@@ -97,6 +93,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - Allows more simultaneous sounds for large MP matches
 
 - Adds server browser by Tobias
+
+- Replaces default networking model with a sniper packets style, resulting in more consistent network play.  Older clients can still play with the newer clients, but won't experience the new networking model.
+
+- Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
 
 #### How to build
 

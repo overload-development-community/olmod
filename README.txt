@@ -1,4 +1,4 @@
-olmod 0.3.2-beta.2 - Overload mod
+olmod 0.3.2 - Overload mod
 Community mods for Overload
 https://github.com/arbruijn/olmod
 
@@ -26,10 +26,6 @@ How to run
 
 What does it do
 ---------------
-
-- Replaces default networking model with a sniper packets style, resulting in more consistent network play.
-
-- Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
 
 - Allows access to the unfinished Monsterball multiplayer mode (with tweaks
   by terminal).
@@ -95,6 +91,10 @@ What does it do
 - Adds MP presets by Tobias
 
 - Allows more simultaneous sounds for large MP matches
+
+- Replaces default networking model with a sniper packets style, resulting in more consistent network play.  Older clients can still play with the newer clients, but won't experience the new networking model.
+
+- Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
 
 How does it work
 ----------------
