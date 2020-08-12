@@ -40,6 +40,12 @@ namespace GameMod
                 clientInfo.NetVersion >= netVersion;
         }
 
+        public static bool ClientHasTweak(int connectionId, string tweak)
+        {
+            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
+                clientInfo.SupportsTweaks.Contains(tweak);
+        }
+
         public static void Set(Dictionary<string, string> newSettings)
         {
             settings.Clear();
@@ -107,10 +113,10 @@ namespace GameMod
             {
                 foreach (var conn in NetworkServer.connections)
                     if (conn != null && ClientHasMod(conn.connectionId))
-                        conn.Send(MPTweaksCustomMsg.MsgMPTweaksSet, msg);
+                        conn.Send(MessageTypes.MsgMPTweaksSet, msg);
             }
             else if (ClientHasMod(conn_id))
-               NetworkServer.SendToClient(conn_id, MPTweaksCustomMsg.MsgMPTweaksSet, msg);
+               NetworkServer.SendToClient(conn_id, MessageTypes.MsgMPTweaksSet, msg);
         }
 
         public static ClientInfo ClientCapabilitiesSet(int connectionId, Dictionary<string, string> capabilities)
@@ -159,9 +165,7 @@ namespace GameMod
             Debug.Log("MPTweaksLoadScene");
             RobotManager.ReadMultiplayerModeFile();
             Debug.Log("MPTweaks loaded mode file");
-            bool nobodySupportsProj = !NetworkMatch.m_players.Keys.Any(connId =>
-                MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo) &&
-                    clientInfo.SupportsTweaks.Contains("proj"));
+            bool nobodySupportsProj = !NetworkMatch.m_players.Keys.Any(connId => MPTweaks.ClientHasTweak(connId, "proj"));
             var tweaks = new Dictionary<string, string>() { };
             if (nobodySupportsProj) // use stock hunters for all stock client match
                 Debug.LogFormat("MPTweaks: not tweaking hunter: unsupported by all clients");
@@ -220,12 +224,6 @@ namespace GameMod
         public Dictionary<string, string> m_settings;
     }
 
-    public class MPTweaksCustomMsg
-    {
-        public const short MsgClientCapabilities = 119;
-        public const short MsgMPTweaksSet = 120;
-    }
-
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
     class MPTweaksClientHandlers
     {
@@ -239,7 +237,7 @@ namespace GameMod
         {
             if (Client.GetClient() == null)
                 return;
-            Client.GetClient().RegisterHandler(MPTweaksCustomMsg.MsgMPTweaksSet, OnMPTweaksSet);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgMPTweaksSet, OnMPTweaksSet);
         }
     }
 
@@ -255,7 +253,7 @@ namespace GameMod
 
         static void Postfix()
         {
-            NetworkServer.RegisterHandler(MPTweaksCustomMsg.MsgClientCapabilities, OnClientCapabilities);
+            NetworkServer.RegisterHandler(MessageTypes.MsgClientCapabilities, OnClientCapabilities);
         }
     }
 
@@ -290,10 +288,10 @@ namespace GameMod
             Debug.Log("MPTweaks: sending client capabilites");
             var caps = new Dictionary<string, string>();
             caps.Add("ModVersion", Core.GameMod.Version);
-            caps.Add("SupportsTweaks", "proj");
+            caps.Add("SupportsTweaks", "proj,sniper");
             caps.Add("ModPrivateData", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
-            Client.GetClient().Send(MPTweaksCustomMsg.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
+            Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }
     }
 

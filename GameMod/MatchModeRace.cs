@@ -290,7 +290,7 @@ namespace GameMod
             if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
                 return;
 
-            NetworkServer.SendToClient(player.connectionToClient.connectionId, RaceClientHandlers.MsgSetFullMatchState, new FullRaceStateMessage());
+            NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetFullMatchState, new FullRaceStateMessage());
         }
         public static void Sort()
         {
@@ -330,12 +330,6 @@ namespace GameMod
             public float Time { get; set; }
         }
 
-    }
-
-    public class RaceClientHandlers
-    {
-        public const short MsgLapCompleted = 126;
-        public const short MsgSetFullMatchState = 127;
     }
 
     public class PlayerLapMessage : MessageBase
@@ -569,8 +563,8 @@ namespace GameMod
             if (Client.GetClient() == null)
                 return;
 
-            Client.GetClient().RegisterHandler(RaceClientHandlers.MsgLapCompleted, OnLapCompleted);
-            Client.GetClient().RegisterHandler(RaceClientHandlers.MsgSetFullMatchState, OnSetFullMatchState);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgLapCompleted, OnLapCompleted);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgSetFullMatchState, OnSetFullMatchState);
         }
     }
 
@@ -615,7 +609,7 @@ namespace GameMod
 
                         if (rp.lastTriggerForward && lapTime > 4f)
                         {
-                            NetworkServer.SendToAll(RaceClientHandlers.MsgLapCompleted, new PlayerLapMessage { m_player_id = playerShip.c_player.netId, lapNum = (uint)rp.Laps.Count() + 1, lapTime = lapTime });
+                            NetworkServer.SendToAll(MessageTypes.MsgLapCompleted, new PlayerLapMessage { m_player_id = playerShip.c_player.netId, lapNum = (uint)rp.Laps.Count() + 1, lapTime = lapTime });
                         }
                         rp.lastTriggerForward = true;
                     }

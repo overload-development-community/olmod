@@ -1,0 +1,211 @@
+v0.3.2 - 2020-08-09
+
+- Client-side handling of games that use maps with missing resources.  Clients will now be booted to the lobby in this case.  Servers still crash, and is being tracked in issue #33.
+- Match Presets left arrow now works.
+- Sniper packets mod is now on by default, and no longer has an option to be turned off.  The only time a v0.3.2 server should start a game without the sniper packets mod is when the client that starts it does not have the sniper packets mod.
+- Clients without the sniper packets mod can now join games with the sniper packets mod, but won't have the benefit of sniper packets enabled for them.
+
+v0.3.2-beta.2 - 2020-08-02
+
+- Potential bug fix to other players' devastators remaining in the game as a broken physics object after being manually detonated.  Devastators will still exhibit some strange client-side behavior, and is being tracked in issue #29.
+- olmod.sh can now be ran from any directory if you provide the -gamedir argument for the path to the Overload executable.
+
+v0.3.2-beta.1 - 2020-07-28
+
+- Added sniper packets as an option in multiplayer.  Option defaults to off.  If on, all clients playing must be using this version or later.  Net code from roncli, UI from Tobias.
+- Added better synchronization for energy, ammo, weapon selection, missile counts, and devastator fire/triggering.  From roncli.
+- Removed logging errors related to Tobii eye tracker.  From roncli.
+- Due to bugs, picture in picture rear view is now disabled in multiplayer.  A setting will be added in the future to re-enable this.
+
+v0.3.1.3 - 2020-07-13
+
+- Fix to observer mode.
+
+v0.3.1.2 - 2020-07-13
+
+- Add view player option to observer mode, by roncli
+- Fix for observer joining in progress match
+
+v0.3.1.1 - 2020-07-06
+
+- Fixed creeper sync server controlled explosions
+
+v0.3.1 - 2020-07-06
+
+- Add creeper sync support
+- Join-In-Progress: Better support for joining while match starts/ends
+
+v0.3.0.1 - 2020-06-17
+
+- Fixes for server browser
+
+v0.3.0 - 2020-06-17
+
+- Added server browser by Tobias
+- Fix boost reset on spawn fix
+
+v0.2.9.4 - 2020-05-31
+
+- Fixes for upcoming Overload version
+
+v0.2.9.3 - 2020-05-30
+
+- Support for upcoming Overload version
+
+v0.2.9.2 - 2020-05-26
+
+- Fix partial team mode for race mode
+
+v0.2.9.1 - 2020-05-23
+
+- Better support for no lap limit
+- Changed lap limit setting increments
+- Fixed scoreboard sorting
+- Default to instant respawn for race mode
+- Fixed bumping sound after leaving match
+- Fixed 3 or more team matches
+
+v0.2.9 - 2020-05-21
+
+- Added Race mode by Tobias
+- Support for mac
+- Show current team score when joining in progress match
+- Reset boost heat on respawn
+- Mod loading speedup
+
+v0.2.8.2 - 2020-03-25
+
+- Added fire macro/mouse wheel prevention by roncli
+- Added sudden death option for MB/CTF matches by roncli
+- CTF: Score on touching flag instead of goal
+- CTF: Fix scoring when flag is returned
+- CTF: Disable flag pickup when dying
+
+v0.2.8.1 - 2020-03-08
+
+- Added O1L match preset
+- Preserve LD_PRELOAD on linux by derhass
+
+v0.2.8 - 2020-02-16
+
+- Added MP Presets by Tobias
+- Less strict item pickup for inverted segment MP levels, originally by terminal
+- CTF: Added lost flag return timer
+- Show HUD messages and flag status on MP death screen
+- Added long MP password support by Tobias
+- Increased simultaneous sounds to 512 (formerly mod-moreaudio)
+- Disable super spawn when no spawnable items specified
+- Support for internet server ping
+
+v0.2.7.2 - 2020-01-06
+
+- Fix Impulse in Warrior loadout when used with Bomber (serverside)
+- Disable super alarm in levels without super spawn (serverside)
+
+v0.2.7.1 - 2019-12-26
+
+- Always make all MP loadouts available and use Impulse instead of Reflex for Warrior
+  (with help from terminal)
+- Fix for missing teleporters in MP levels
+
+v0.2.7 - 2019-11-12
+-  MP server support for new tracker (by roncli)
+-  MP hunter speed reduced (for updated client & server)
+-  Client side homing tracking improved (by terminal)
+-  Prevent power-ups moving through ceiling in outdoor levels (by terminal)
+-  Added Join/Create again after match
+-  Fixed JIP team balancing
+-  Added internet server (without olproxy)
+-  MP damage log includes weapon lava explosions
+
+v0.2.6.1 - 2019-10-24
+-  CTF: possible fix for persistent halo
+-  CTF: pickup sound changed to be less similar to super sound (by terminal)
+-  MP teams: added red enemy arrow to name in hud (by terminal)
+
+v0.2.6 - 2019-09-03
+-  Added MP Capture The Flag (CTF) mode
+-  Observer mode visibility fixes by roncli
+-  MP Prev weapon switch fix byTobias
+-  Added "Create open match" to enable JIP more easily
+-  Disabled door opening when nearby in MP (with updated server)
+-  Fix for MP door visibility in some levels (with help from terminal)
+-  Added support for crystals and more fans/monitors in custom levels (with help from kevin)
+
+v0.2.5 - 2019-07-05
+-  Adds MP level select screen
+-  Adds game stats tracking, by roncli
+-  Hopefully fixes team imbalance with JIP
+-  Fixes already exists with new level version on level download
+-  Disables weapon speed/lifetime randomization in MP
+
+v0.2.4 - 2019-06-10
+-  Support for multiple level versions in level download
+-  Observer: double movement speed, show thunderbolt/missiles (server side fix), skip more level deactivation
+-  Join in progress: auto level download, fix for 0ms ping
+
+v0.2.3 - 2019-06-02
+-  Sorts MP level list by name (by Tobias)
+-  Adds custom mod loading, add mod-xxx.dll assembly to olmod directory
+-  Adds -frametime command line option
+
+v0.2.2 - 2019-05-28
+-  Allows spawn data for custom MP levels
+-  Allows custom music in custom levels
+-  Adds Internet match option with built in olproxy
+-  New server stat log with JSON output (by luponix)
+-  Experimental client side MP level download
+-  MP fixes: assist calculation (by roncli), no extra new weapon pickup sound, show olmod server version
+-  JIP fixes: match time no longer resets, shows joined player, fix for join in lobby
+
+v0.2.1 - 2019-05-13
+-  join-in-progress fixes: join as observer, loadout data, preserve kda/time in match, start 1 player match
+-  console: option to enable console key `
+-  console commands: xp, reload_missions, mipmap_bias, ui_color
+-  -gamedir option
+
+v0.2.0 - 2019-05-05
+-  Join in progress support
+-  Shoot to open doors in MP (by terminal)
+-  Paste in MP password field with Ctrl+V
+
+v0.1.9 - 2019-05-02
+-  Monsterball: fix linux support, better weapon balance, use thunderbolt charge, only score with ball, support wind tunnels, no score after game ends (by terminal)
+-  Fix empty anarchy lobby bug
+
+v0.1.8 - 2019-04-27
+-  Fixes for more than 8 players: joining, lobby UI, assist finding
+-  More monsterball tweaks: drag, speed cap, thunderbolt (by terminal)
+-  Removes log spam on windows server
+
+v0.1.7 - 2019-04-25
+-  Added MP homing fix by terminal
+-  Added monsterball tweaks by terminal (weapons now hit monsterball, no more suicide penalty)
+-  Fix for CM/SP no damage bug, reported by sLLiK
+-  Hide empty teams, suggested by Yoshimitsu
+
+v0.1.6 - 2019-04-23
+-  Observer & more teams fixes
+-  Added game stats log (by luponix)
+
+v0.1.5 - 2019-04-22
+-  Added support for up to 8 teams
+
+v0.1.4 - 2019-04-07
+-  More 16 player tweaks, it appears to work now
+
+v0.1.3 - 2019-04-05
+-  Added frametime non-cheat code and rearview cheat code
+
+v0.1.2 - 2019-04-03
+-  Customize robot / projectile (weapon) data
+-  Stability fix for observer mode
+-  A few stability fixes for the Windows loader
+
+v0.1.1 - 2019-03-27
+-  Added MP observer mode
+-  Attempt at MP 16 player support, not working currently
+-  linux support
+
+v0.1.0 - 2019-03-16
+-  Initial version

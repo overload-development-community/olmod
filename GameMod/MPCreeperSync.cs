@@ -20,20 +20,20 @@ namespace GameMod
 
     public class ProjUpdateMsg : MessageBase
     {
-		public override void Serialize(NetworkWriter writer)
-		{
-			writer.WritePackedUInt32((uint)m_num_proj_info);
-			for (int i = 0; i < m_num_proj_info; i++)
-			{
-				writer.Write(m_proj_info[i].m_id);
-				writer.Write(m_proj_info[i].m_pos);
-				writer.Write(m_proj_info[i].m_vel);
-			}
-		}
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.WritePackedUInt32((uint)m_num_proj_info);
+            for (int i = 0; i < m_num_proj_info; i++)
+            {
+                writer.Write(m_proj_info[i].m_id);
+                writer.Write(m_proj_info[i].m_pos);
+                writer.Write(m_proj_info[i].m_vel);
+            }
+        }
 
-		public override void Deserialize(NetworkReader reader)
-		{
-			m_num_proj_info = (int)reader.ReadPackedUInt32();
+        public override void Deserialize(NetworkReader reader)
+        {
+            m_num_proj_info = (int)reader.ReadPackedUInt32();
             m_proj_info = new ProjInfo[m_num_proj_info];
             for (int i = 0; i < m_num_proj_info; i++)
             {
@@ -41,7 +41,7 @@ namespace GameMod
                 m_proj_info[i].m_pos = reader.ReadVector3();
                 m_proj_info[i].m_vel = reader.ReadVector3();
             }
-		}
+        }
 
         public int m_num_proj_info;
         public ProjInfo[] m_proj_info;
@@ -49,32 +49,25 @@ namespace GameMod
 
     public class ExplodeMsg : MessageBase
     {
-		public override void Serialize(NetworkWriter writer)
-		{
-			writer.Write(m_id);
-			writer.Write(m_pos);
-			writer.Write(m_damaged_something);
-		}
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write(m_id);
+            writer.Write(m_pos);
+            writer.Write(m_damaged_something);
+        }
 
-		public override void Deserialize(NetworkReader reader)
-		{
+        public override void Deserialize(NetworkReader reader)
+        {
             m_id = reader.ReadInt32();
             m_pos = reader.ReadVector3();
             m_damaged_something = reader.ReadBoolean();
-		}
+        }
 
         public int m_id;
         public Vector3 m_pos;
         public bool m_damaged_something;
     }
         
-    public class CreeperSyncMsg
-    {
-        public const short MsgCreeperSync = 130;
-        public const short MsgExplode = 131;
-        public const short MsgSetAlternatingMissleFire = 132;
-    }
-
     [HarmonyPatch(typeof(Server), "SendSnapshotsToPlayers")]
     class CreeperSyncSend
     {
@@ -112,7 +105,7 @@ namespace GameMod
             msg.m_num_proj_info = count;
             foreach (var conn in NetworkServer.connections)
                 if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
-                    conn.SendByChannel(CreeperSyncMsg.MsgCreeperSync, msg, 3); // channel 3 has QosType.StateUpdate
+                    conn.SendByChannel(MessageTypes.MsgCreeperSync, msg, 3); // channel 3 has QosType.StateUpdate
         }
     }
 
@@ -167,6 +160,8 @@ namespace GameMod
             if (Server.IsActive())
                 return;
             var proj = ProjectileManager.FindProjectileById(ProjPrefab.missile_creeper, explode_msg.m_id);
+            if (proj == null && MPSniperPackets.enabled) // With sniper packets, also allow devastator explosions to synchronize correctly.
+                proj = ProjectileManager.FindProjectileById(ProjPrefab.missile_devastator, explode_msg.m_id);
             if (proj == null)
                 return;
             proj.c_rigidbody.MovePosition(explode_msg.m_pos);
@@ -185,9 +180,9 @@ namespace GameMod
         {
             if (___m_network_client == null)
                 return;
-            ___m_network_client.RegisterHandler(CreeperSyncMsg.MsgCreeperSync, OnCreeperSyncMsg);
-            ___m_network_client.RegisterHandler(CreeperSyncMsg.MsgExplode, OnExplodeMsg);
-            ___m_network_client.RegisterHandler(CreeperSyncMsg.MsgSetAlternatingMissleFire, OnSetAlternatingMissileFire);
+            ___m_network_client.RegisterHandler(MessageTypes.MsgCreeperSync, OnCreeperSyncMsg);
+            ___m_network_client.RegisterHandler(MessageTypes.MsgExplode, OnExplodeMsg);
+            ___m_network_client.RegisterHandler(MessageTypes.MsgSetAlternatingMissleFire, OnSetAlternatingMissileFire);
         }
     }
 
@@ -198,7 +193,8 @@ namespace GameMod
 
         static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
         {
-            if (!GameplayManager.IsMultiplayerActive || ___m_type != ProjPrefab.missile_creeper ||
+            if (!GameplayManager.IsMultiplayerActive ||
+                (___m_type != ProjPrefab.missile_creeper && (!MPSniperPackets.enabled || ___m_type != ProjPrefab.missile_devastator)) || // Extend to devastators when sniper packets are enabled.
                 __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
                 return true;
             if (!Server.IsActive()) // ignore explosions on client if creeper-sync active
@@ -209,7 +205,7 @@ namespace GameMod
             msg.m_damaged_something = damaged_something;
             foreach (var conn in NetworkServer.connections)
                 if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
-                    NetworkServer.SendToClient(conn.connectionId, CreeperSyncMsg.MsgExplode, msg);
+                    NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
             return true;
         }
     }
@@ -229,6 +225,12 @@ namespace GameMod
     {
         static void Postfix(float ___m_refire_missile_time, Player ___c_player)
         {
+            // When sniper packets are enabled, this code is not needed as missile firing synchronization happens automatically.
+            if (MPSniperPackets.enabled)
+            {
+                return;
+            }
+
             if (!GameplayManager.IsMultiplayerActive ||
                 !Server.IsActive() ||
                 !(___m_refire_missile_time == 1f &&
@@ -237,7 +239,7 @@ namespace GameMod
                 return;
 
             // make sure ammo is also zero on the client
-			___c_player.CallRpcSetMissileAmmo((int)___c_player.m_old_missile_type, 0);
+            ___c_player.CallRpcSetMissileAmmo((int)___c_player.m_old_missile_type, 0);
 
             // workaround for not updating missle name in hud
             ___c_player.CallRpcSetMissileType(___c_player.m_missile_type);
@@ -248,7 +250,7 @@ namespace GameMod
             if (MPTweaks.ClientHasNetVersion(connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
             {
                 var msg = new IntegerMessage(___c_player.c_player_ship.m_alternating_missile_fire ? 1 : 0);
-                NetworkServer.SendToClient(connectionId, CreeperSyncMsg.MsgSetAlternatingMissleFire, msg);
+                NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetAlternatingMissleFire, msg);
             }
         }
     }

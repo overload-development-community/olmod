@@ -196,7 +196,7 @@ namespace GameMod
             foreach (var player in Overload.NetworkManager.m_Players)
                 msg.m_player_states[i++] = new PlayerMatchState() {
                     m_net_id = player.netId, m_kills = player.m_kills, m_deaths = player.m_deaths, m_assists = player.m_assists };
-            NetworkServer.SendToClient(connectionId, ModCustomMsg.MsgSetMatchState, msg);
+            NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetMatchState, msg);
         }
 
         private static float SendPreGame(int connectionId, float pregameWait)
@@ -507,13 +507,6 @@ namespace GameMod
         public PlayerMatchState[] m_player_states;
     }
 
-    public class ModCustomMsg
-    {
-        public const short MsgSetMatchState = 101;
-        public const short MsgAddMpStatus = 102;
-        public const short MsgModPrivateData = 103;
-    }
-
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
     class JIPClientHandlers
     {
@@ -543,15 +536,15 @@ namespace GameMod
             var msg = new StringMessage(status);
             foreach (var conn in NetworkServer.connections)
                 if (conn != null && MPTweaks.ClientHasMod(conn.connectionId)) // do not send unsupported message to stock game
-                    conn.Send(ModCustomMsg.MsgAddMpStatus, msg);
+                    conn.Send(MessageTypes.MsgAddMpStatus, msg);
         }
 
         static void Postfix()
         {
             if (Client.GetClient() == null)
                 return;
-            Client.GetClient().RegisterHandler(ModCustomMsg.MsgSetMatchState, OnSetMatchStateMsg);
-            Client.GetClient().RegisterHandler(ModCustomMsg.MsgAddMpStatus, OnAddMpStatus);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgSetMatchState, OnSetMatchStateMsg);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgAddMpStatus, OnAddMpStatus);
         }
     }
 

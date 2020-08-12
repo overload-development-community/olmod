@@ -53,7 +53,8 @@ namespace GameMod
                 powerupFilter = MenuManager.mms_powerup_filter,
                 jipEnabled = MPJoinInProgress.MenuManagerEnabled,
                 suddenDeathOvertime = MPSuddenDeath.SuddenDeathMenuEnabled,
-                lapLimit = ExtMenuManager.mms_ext_lap_limit
+                lapLimit = ExtMenuManager.mms_ext_lap_limit,
+                sniperPackets = MPSniperPackets.enabled
             });
 
             presets.Add(new MPMatchPreset
@@ -81,7 +82,8 @@ namespace GameMod
                 powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
                 jipEnabled = true,
                 suddenDeathOvertime = false,
-                lapLimit = 0
+                lapLimit = 0,
+                sniperPackets = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -113,6 +115,7 @@ namespace GameMod
             public bool jipEnabled;
             public bool suddenDeathOvertime;
             public int lapLimit;
+            public bool sniperPackets;
 
             public void Apply()
             {
@@ -139,6 +142,7 @@ namespace GameMod
                 MPJoinInProgress.MenuManagerEnabled = this.jipEnabled;
                 MPSuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
                 ExtMenuManager.mms_ext_lap_limit = this.lapLimit;
+                MPSniperPackets.enabled = this.sniperPackets;
             }
         }
 
@@ -224,22 +228,36 @@ namespace GameMod
             }
 
         }
-
+        
         // Process slider input
         [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-        class MPMatchPresetMpMatchSetup
+        class MPMatchPresets_MenuManager_MpMatchSetup
         {
-            static void Postfix()
+            static void HandleMatchPreset()
             {
                 if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                    (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
                     MenuManager.m_menu_micro_state == 2 &&
                     UIManager.m_menu_selection == 9)
                 {
-
                     mms_match_preset = (mms_match_preset + presets.Count + UIManager.m_select_dir) % presets.Count;
                     presets[mms_match_preset].Apply();
                     MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                }
+            }
+
+            // Patch in input check after the sole MaybeReverseOption()
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            {
+                foreach (var code in codes)
+                {
+                    if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
+                    {
+                        yield return code;
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPMatchPresets_MenuManager_MpMatchSetup), "HandleMatchPreset"));
+                        continue;
+                    }
+
+                    yield return code;
                 }
             }
         }

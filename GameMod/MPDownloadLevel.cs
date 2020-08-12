@@ -444,7 +444,7 @@ namespace GameMod
         private static void Postfix(NetworkMessage msg)
         {
             if (MPDownloadLevel.LastStatus != null)
-                NetworkServer.SendToClient(msg.conn.connectionId, ModCustomMsg.MsgAddMpStatus, new StringMessage(MPDownloadLevel.LastStatus));
+                NetworkServer.SendToClient(msg.conn.connectionId, MessageTypes.MsgAddMpStatus, new StringMessage(MPDownloadLevel.LastStatus));
         }
     }
 
