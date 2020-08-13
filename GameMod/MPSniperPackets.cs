@@ -14,6 +14,8 @@ namespace GameMod
     /// </summary>
     internal class MPSniperPackets
     {
+        public const int NET_VERSION_SNIPER_PACKETS = 1;
+
         /// <summary>
         /// Determines whether sniper packets are enabled for the current game.
         /// </summary>
@@ -71,7 +73,7 @@ namespace GameMod
         }
 
         /// <summary>
-        /// Replacement function for ProjectileManager.PlayerFire in MaybeFireWeapon, MaybeFireMissile, and other places where we don't want weapon fire getting simulated on the server.
+        /// Replacement function for ProjectileManager.PlayerFire in MaybeFireWeapon, MaybeFireMissile, and other places where we don't want weapon fire getting simulated on the server.  Also makes devastators, novas, creepers, and time bombs without collision on the client, so that they don't seemingly bounce off ships without actually hitting them.
         /// </summary>
         /// <param name="player"></param>
         /// <param name="type"></param>
@@ -89,7 +91,7 @@ namespace GameMod
             if (!GameplayManager.IsMultiplayerActive) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "sniper")) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
 
-            // Set this to false so that creepers and devastators do not explode unless the server tells us.
+            // Set this to false so that creepers and time bombs do not explode unless the server tells us.
             CreeperSyncExplode.m_allow_explosions = false;
 
             if (player.isLocalPlayer && type == ProjPrefab.missile_devastator)
@@ -97,31 +99,38 @@ namespace GameMod
                 MPSniperPackets.justFiredDev = true;
             }
 
-            if (GameplayManager.IsMultiplayerActive)
+            if (NetworkServer.active)
             {
-                if (NetworkServer.active)
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                if (player.isLocalPlayer && type != ProjPrefab.missile_devastator_mini && type != ProjPrefab.missile_smart_mini)
+            if (player.isLocalPlayer && type != ProjPrefab.missile_devastator_mini && type != ProjPrefab.missile_smart_mini)
+            {
+                Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
                 {
-                    Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
-                    {
-                        m_player_id = player.netId,
-                        m_type = type,
-                        m_pos = pos,
-                        m_rot = rot,
-                        m_strength = strength,
-                        m_upgrade_lvl = upgrade_lvl,
-                        m_no_sound = no_sound,
-                        m_slot = slot,
-                        m_force_id = force_id
-                    });
+                    m_player_id = player.netId,
+                    m_type = type,
+                    m_pos = pos,
+                    m_rot = rot,
+                    m_strength = strength,
+                    m_upgrade_lvl = upgrade_lvl,
+                    m_no_sound = no_sound,
+                    m_slot = slot,
+                    m_force_id = force_id
+                });
+            }
+
+            var result = ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+
+            if (type == ProjPrefab.missile_devastator || type == ProjPrefab.missile_smart || type == ProjPrefab.missile_timebomb || type == ProjPrefab.missile_creeper)
+            {
+                foreach (var proj in ProjectileManager.proj_list[(int)type])
+                {
+                    proj.c_go.GetComponent<Collider>().enabled = false;
                 }
             }
 
-            return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+            return result;
         }
     }
 
@@ -132,7 +141,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1); // version
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_pos.x);
@@ -195,7 +204,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -235,7 +244,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -286,7 +295,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -312,7 +321,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write(m_missile_ammo[0]);
             writer.Write(m_missile_ammo[1]);
@@ -352,7 +361,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
         }
 

@@ -1,4 +1,5 @@
-﻿using Harmony;
+﻿using System.Linq;
+using Harmony;
 using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -9,6 +10,19 @@ namespace GameMod
     public class MPCreeperSync
     {
         public const int NET_VERSION_CREEPER_SYNC = 1;
+
+        public static Projectile FindSyncedProjectile(int proj_id, ProjPrefab[] types)
+        {
+            foreach (var type in types)
+            {
+                var proj = ProjectileManager.FindProjectileById(type, proj_id);
+                if (proj != null)
+                {
+                    return proj;
+                }
+            }
+            return null;
+        }
     }
 
     public struct ProjInfo
@@ -71,20 +85,20 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "SendSnapshotsToPlayers")]
     class CreeperSyncSend
     {
-        static ProjUpdateMsg msg = new ProjUpdateMsg() { m_proj_info = new ProjInfo[10] };
+        static ProjUpdateMsg msg = new ProjUpdateMsg() { m_proj_info = new ProjInfo[1] };
         public const int UPDATE_INTERVAL = 8; // must be power of 2
         static int frame_num;
 
         static void Postfix()
         {
-            var creeper_list = ProjectileManager.proj_list[(int)ProjPrefab.missile_creeper];
-            if (creeper_list.Count > msg.m_proj_info.Length)
-                msg.m_proj_info = new ProjInfo[creeper_list.Count];
+            var proj_list = ProjectileManager.proj_list[(int)ProjPrefab.missile_creeper].Union(ProjectileManager.proj_list[(int)ProjPrefab.missile_timebomb]).ToList();
+            if (proj_list.Count > msg.m_proj_info.Length)
+                msg.m_proj_info = new ProjInfo[proj_list.Count];
             var proj_info = msg.m_proj_info;
             int count = 0;
             if (++frame_num == UPDATE_INTERVAL)
                 frame_num = 0;
-            foreach (var proj in creeper_list)
+            foreach (var proj in proj_list)
             {
                 if (proj.m_alive)
                 {
@@ -120,7 +134,7 @@ namespace GameMod
             var proj_info = proj_msg.m_proj_info;
             for (int i = 0; i < count; i++)
             {
-                var proj = ProjectileManager.FindProjectileById(ProjPrefab.missile_creeper, proj_info[i].m_id);
+                var proj = MPCreeperSync.FindSyncedProjectile(proj_info[i].m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb });
                 if (proj == null)
                     continue;
                 var diff = proj_info[i].m_pos - proj.transform.position;
@@ -135,7 +149,7 @@ namespace GameMod
 
                 var rigidbody = proj.c_rigidbody;
 
-                // slow down just fired creeper to move to ping-delayed server pos
+                // slow down just fired projectile to move to ping-delayed server pos
                 if (proj.m_owner_player.isLocalPlayer)
                 {
                     float age = Time.time - proj.m_create_time;
@@ -156,16 +170,19 @@ namespace GameMod
 
         static void OnExplodeMsg(NetworkMessage msg)
         {
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Received explode message.");
             var explode_msg = msg.ReadMessage<ExplodeMsg>();
             if (Server.IsActive())
                 return;
-            var proj = ProjectileManager.FindProjectileById(ProjPrefab.missile_creeper, explode_msg.m_id);
-            if (proj == null && MPSniperPackets.enabled) // With sniper packets, also allow devastator explosions to synchronize correctly.
-                proj = ProjectileManager.FindProjectileById(ProjPrefab.missile_devastator, explode_msg.m_id);
+            var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb, ProjPrefab.missile_devastator, ProjPrefab.missile_smart }); // Extend to devastators and novas when sniper packets are enabled.
             if (proj == null)
+            {
+                Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Did not find projectile ID {explode_msg.m_id}.");
                 return;
+            }
             proj.c_rigidbody.MovePosition(explode_msg.m_pos);
             CreeperSyncExplode.m_allow_explosions = true;
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Did not find projectile ID {explode_msg.m_id}.");
             proj.Explode(explode_msg.m_damaged_something);
             CreeperSyncExplode.m_allow_explosions = false;
         }
@@ -182,7 +199,6 @@ namespace GameMod
                 return;
             ___m_network_client.RegisterHandler(MessageTypes.MsgCreeperSync, OnCreeperSyncMsg);
             ___m_network_client.RegisterHandler(MessageTypes.MsgExplode, OnExplodeMsg);
-            ___m_network_client.RegisterHandler(MessageTypes.MsgSetAlternatingMissleFire, OnSetAlternatingMissileFire);
         }
     }
 
@@ -193,19 +209,35 @@ namespace GameMod
 
         static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
         {
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Is Multiplayer Active: {GameplayManager.IsMultiplayerActive}");
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Prefab: {___m_type}");
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Sniper Packets Enabled: {MPSniperPackets.enabled}");
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Projectile ID: {__instance.m_projectile_id}");
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Remaining Lifetime: {__instance.RemainingLifetime()}");
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Boolean evaluation: {!GameplayManager.IsMultiplayerActive || (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f}");
             if (!GameplayManager.IsMultiplayerActive ||
-                (___m_type != ProjPrefab.missile_creeper && (!MPSniperPackets.enabled || ___m_type != ProjPrefab.missile_devastator)) || // Extend to devastators when sniper packets are enabled.
+                (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || // Extend to devastators and novas when sniper packets are enabled.
                 __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
+            {
+                Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: This is not something to sync.");
                 return true;
+            }
+            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: This is something to sync.");
             if (!Server.IsActive()) // ignore explosions on client if creeper-sync active
+            {
+                Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: This is {(m_allow_explosions ? "" : "not ")}being exploded.");
                 return m_allow_explosions;
+            }
             var msg = new ExplodeMsg();
             msg.m_id = __instance.m_projectile_id;
             msg.m_pos = __instance.c_transform.position;
             msg.m_damaged_something = damaged_something;
             foreach (var conn in NetworkServer.connections)
                 if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
+                {
+                    Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Syncing explosion with client {conn.connectionId}");
                     NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
+                }
             return true;
         }
     }
@@ -244,14 +276,6 @@ namespace GameMod
             // workaround for not updating missle name in hud
             ___c_player.CallRpcSetMissileType(___c_player.m_missile_type);
             ___c_player.CallTargetUpdateCurrentMissileName(___c_player.connectionToClient);
-
-            // make sure alternating missle fire is equal
-            int connectionId = ___c_player.connectionToClient.connectionId;
-            if (MPTweaks.ClientHasNetVersion(connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
-            {
-                var msg = new IntegerMessage(___c_player.c_player_ship.m_alternating_missile_fire ? 1 : 0);
-                NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetAlternatingMissleFire, msg);
-            }
         }
     }
 }

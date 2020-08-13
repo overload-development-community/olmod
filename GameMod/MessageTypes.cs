@@ -23,7 +23,7 @@ namespace GameMod
 
         public const short MsgCreeperSync = 130;
         public const short MsgExplode = 131;
-        public const short MsgSetAlternatingMissleFire = 132;
+        // public const short MsgSetAlternatingMissleFire = 132; // No longer used.
         public const short MsgSniperPacket = 133;
         public const short MsgPlayerWeaponSynchronization = 134;
         public const short MsgPlayerAddResource = 135;
