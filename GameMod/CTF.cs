@@ -72,16 +72,30 @@ namespace GameMod
 
         public static void SendCTFPickup(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
+            CTF.FlagStates[flag_id] = state;
+            if (CTF.PlayerHasFlag.ContainsKey(player_id))
+                return;
+            CTF.PlayerHasFlag.Add(player_id, flag_id);
+
             SendToClientOrAll(conn_id, MessageTypes.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
         public static void SendCTFLose(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
+            if (CTF.PlayerHasFlag.ContainsKey(player_id))
+                CTF.PlayerHasFlag.Remove(player_id);
+            CTF.FlagStates[flag_id] = state;
+
+            if (state == FlagState.LOST)
+                CTF.FlagReturnTime[flag_id] = Time.time + CTF.ReturnTimeAmount;
+
             SendToClientOrAll(conn_id, MessageTypes.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
         public static void SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
         {
+            CTF.FlagStates[flag_id] = state;
+
             SendToClientOrAll(conn_id, MessageTypes.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
         }
 
@@ -167,7 +181,7 @@ namespace GameMod
                     CTF.Score(player);
                 return false;
             }
-            if (!ownFlag && PlayerHasFlag.ContainsKey(player.netId))
+            if (!ownFlag && (PlayerHasFlag.ContainsKey(player.netId) || PlayerHasFlag.ContainsValue(flag)))
                 return false;
 
             // this also sends to 'client 0' so it'll get processed on the server as well
@@ -686,10 +700,14 @@ namespace GameMod
         private static void OnCTFPickup(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
-            CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
-            if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
-                return;
-            CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
+
+            if (!CTF.IsActiveServer)
+            {
+                CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+                if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
+                    return;
+                CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
+            }
 
             // copy flag ring effect to carrier ship
             CTF.PlayerEnableRing(CTF.FindPlayerForEffect(msg.m_player_id), msg.m_flag_id);
@@ -698,15 +716,19 @@ namespace GameMod
         private static void OnCTFLose(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
-            if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
-                CTF.PlayerHasFlag.Remove(msg.m_player_id);
-            CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+
+            if (!CTF.IsActiveServer)
+            {
+                if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
+                    CTF.PlayerHasFlag.Remove(msg.m_player_id);
+                CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+
+                if (msg.m_flag_state == FlagState.LOST)
+                    CTF.FlagReturnTime[msg.m_flag_id] = Time.time + CTF.ReturnTimeAmount;
+            }
 
             // remove flag ring effect from carrier ship
             CTF.PlayerDisableRing(CTF.FindPlayerForEffect(msg.m_player_id));
-
-            if (msg.m_flag_state == FlagState.LOST)
-                CTF.FlagReturnTime[msg.m_flag_id] = Time.time + CTF.ReturnTimeAmount;
         }
 
         private static void OnCTFNotifyOld(NetworkMessage rawMsg)
@@ -719,7 +741,11 @@ namespace GameMod
         private static void OnCTFFlagUpdate(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<PlayerFlagMessage>();
-            CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+
+            if (!CTF.IsActiveServer)
+            {
+                CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+            }
         }
 
         private static void OnCTFNotify(NetworkMessage rawMsg)
