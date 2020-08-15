@@ -28,9 +28,12 @@ namespace GameMod.Core
             MPInternet.CheckInternetServer();
             HarmonyInstance.DEBUG = FindArg("-harmonydebug");
             var harmony = HarmonyInstance.Create("olmod.olmod");
-            try {
+            try
+            {
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Debug.Log(ex.ToString());
             }
             Debug.Log("Done initializing " + Version);
@@ -104,7 +107,8 @@ namespace GameMod.Core
                     {
                         while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
                             i++;
-                        if (codes[i].opcode == OpCodes.Ldc_I4_1 && codes[i + 1].opcode == OpCodes.Ldc_I4_8) {
+                        if (codes[i].opcode == OpCodes.Ldc_I4_1 && codes[i + 1].opcode == OpCodes.Ldc_I4_8)
+                        {
                             codes[i + 1].opcode = OpCodes.Ldc_I4;
                             codes[i + 1].operand = 16;
                         }
@@ -184,8 +188,41 @@ namespace GameMod.Core
     [HarmonyPatch(typeof(Debug), "LogError", new Type[] { typeof(object) })]
     class RemoveTobiiErrors
     {
-        static bool Prefix(object message) {
+        static bool Prefix(object message)
+        {
             return !(message is string msg && msg.StartsWith("Could not find any window with process id"));
+        }
+    }
+
+    // Remove 10 FPS floor for the game time in multiplayer matches.
+    [HarmonyPatch(typeof(GameManager), "Update")]
+    class MPRemove10FPSFloor
+    {
+        static float MaybeMin(float a, float b)
+        {
+            if (GameplayManager.IsMultiplayer)
+            {
+                return b;
+            }
+
+            return Mathf.Min(a, b);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var found = false;
+            foreach (var code in instructions)
+            {
+                if (!found)
+                {
+                    if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "Min")
+                    {
+                        code.operand = AccessTools.Method(typeof(MPRemove10FPSFloor), "MaybeMin");
+                        found = true;
+                    }
+                }
+                yield return code;
+            }
         }
     }
 }
