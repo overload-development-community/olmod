@@ -139,13 +139,6 @@ namespace GameMod
                     continue;
                 var diff = proj_info[i].m_pos - proj.transform.position;
                 float sqrDiff = diff.sqrMagnitude;
-                /*
-                Debug.LogFormat("moving creeper {0} from {1},{2},{3} to {4},{5},{6} ({7})",
-                    proj_info[i].m_id,
-                    proj.transform.position.x, proj.transform.position.y, proj.transform.position.z,
-                    proj_info[i].m_pos.x, proj_info[i].m_pos.y, proj_info[i].m_pos.z,
-                    sqrDiff);
-                */
 
                 var rigidbody = proj.c_rigidbody;
 
@@ -170,19 +163,16 @@ namespace GameMod
 
         static void OnExplodeMsg(NetworkMessage msg)
         {
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Received explode message.");
             var explode_msg = msg.ReadMessage<ExplodeMsg>();
             if (Server.IsActive())
                 return;
             var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb, ProjPrefab.missile_devastator, ProjPrefab.missile_smart }); // Extend to devastators and novas when sniper packets are enabled.
             if (proj == null)
             {
-                Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Did not find projectile ID {explode_msg.m_id}.");
                 return;
             }
             proj.c_rigidbody.MovePosition(explode_msg.m_pos);
             CreeperSyncExplode.m_allow_explosions = true;
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Did not find projectile ID {explode_msg.m_id}.");
             proj.Explode(explode_msg.m_damaged_something);
             CreeperSyncExplode.m_allow_explosions = false;
         }
@@ -209,23 +199,14 @@ namespace GameMod
 
         static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
         {
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Is Multiplayer Active: {GameplayManager.IsMultiplayerActive}");
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Prefab: {___m_type}");
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Sniper Packets Enabled: {MPSniperPackets.enabled}");
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Projectile ID: {__instance.m_projectile_id}");
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Remaining Lifetime: {__instance.RemainingLifetime()}");
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Boolean evaluation: {!GameplayManager.IsMultiplayerActive || (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f}");
             if (!GameplayManager.IsMultiplayerActive ||
                 (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || // Extend to devastators and novas when sniper packets are enabled.
                 __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
             {
-                Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: This is not something to sync.");
                 return true;
             }
-            Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: This is something to sync.");
             if (!Server.IsActive()) // ignore explosions on client if creeper-sync active
             {
-                Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: This is {(m_allow_explosions ? "" : "not ")}being exploded.");
                 return m_allow_explosions;
             }
             var msg = new ExplodeMsg();
@@ -235,7 +216,6 @@ namespace GameMod
             foreach (var conn in NetworkServer.connections)
                 if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
                 {
-                    Debug.Log($"{(Server.IsActive() ? "Server" : "Client")}: Syncing explosion with client {conn.connectionId}");
                     NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
                 }
             return true;
