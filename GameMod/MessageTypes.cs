@@ -10,6 +10,7 @@ namespace GameMod
         public const short MsgSetMatchState = 101;
         public const short MsgAddMpStatus = 102;
         public const short MsgModPrivateData = 103;
+        public const short MsgJIPJustJoined = 104;
 
         public const short MsgClientCapabilities = 119;
         public const short MsgMPTweaksSet = 120;
