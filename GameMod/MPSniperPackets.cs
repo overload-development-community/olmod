@@ -14,6 +14,8 @@ namespace GameMod
     /// </summary>
     internal class MPSniperPackets
     {
+        public const int NET_VERSION_SNIPER_PACKETS = 1;
+
         /// <summary>
         /// Determines whether sniper packets are enabled for the current game.
         /// </summary>
@@ -71,7 +73,7 @@ namespace GameMod
         }
 
         /// <summary>
-        /// Replacement function for ProjectileManager.PlayerFire in MaybeFireWeapon, MaybeFireMissile, and other places where we don't want weapon fire getting simulated on the server.
+        /// Replacement function for ProjectileManager.PlayerFire in MaybeFireWeapon, MaybeFireMissile, and other places where we don't want weapon fire getting simulated on the server.  Also makes devastators, novas, creepers, and time bombs without collision on the client, so that they don't seemingly bounce off ships without actually hitting them.
         /// </summary>
         /// <param name="player"></param>
         /// <param name="type"></param>
@@ -86,41 +88,49 @@ namespace GameMod
         static ParticleElement MaybePlayerFire(Player player, ProjPrefab type, Vector3 pos, Quaternion rot, float strength = 0, WeaponUnlock upgrade_lvl = WeaponUnlock.LEVEL_0, bool no_sound = false, int slot = -1, int force_id = -1)
         {
             if (!enabled) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+            if (!GameplayManager.IsMultiplayerActive) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "sniper")) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
 
-            // Set this to false so that creepers and devastators do not explode unless the server tells us.
+            // Set this to false so that creepers and time bombs do not explode unless the server tells us.
             CreeperSyncExplode.m_allow_explosions = false;
 
-            if (GameplayManager.IsMultiplayerActive && player.isLocalPlayer && type == ProjPrefab.missile_devastator)
+            if (player.isLocalPlayer && type == ProjPrefab.missile_devastator)
             {
                 MPSniperPackets.justFiredDev = true;
             }
 
-            if (GameplayManager.IsMultiplayerActive)
+            if (NetworkServer.active)
             {
-                if (NetworkServer.active)
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                if (player.isLocalPlayer && type != ProjPrefab.missile_devastator_mini && type != ProjPrefab.missile_smart_mini)
+            if (player.isLocalPlayer && type != ProjPrefab.missile_devastator_mini && type != ProjPrefab.missile_smart_mini)
+            {
+                Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
                 {
-                    Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
-                    {
-                        m_player_id = player.netId,
-                        m_type = type,
-                        m_pos = pos,
-                        m_rot = rot,
-                        m_strength = strength,
-                        m_upgrade_lvl = upgrade_lvl,
-                        m_no_sound = no_sound,
-                        m_slot = slot,
-                        m_force_id = force_id
-                    });
+                    m_player_id = player.netId,
+                    m_type = type,
+                    m_pos = pos,
+                    m_rot = rot,
+                    m_strength = strength,
+                    m_upgrade_lvl = upgrade_lvl,
+                    m_no_sound = no_sound,
+                    m_slot = slot,
+                    m_force_id = force_id
+                });
+            }
+
+            var result = ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+
+            if (type == ProjPrefab.missile_devastator || type == ProjPrefab.missile_smart || type == ProjPrefab.missile_timebomb || type == ProjPrefab.missile_creeper)
+            {
+                foreach (var proj in ProjectileManager.proj_list[(int)type])
+                {
+                    proj.c_go.GetComponent<Collider>().enabled = false;
                 }
             }
 
-            return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+            return result;
         }
     }
 
@@ -131,7 +141,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1); // version
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_pos.x);
@@ -194,7 +204,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -234,7 +244,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -285,7 +295,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -311,7 +321,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
             writer.Write(m_missile_ammo[0]);
             writer.Write(m_missile_ammo[1]);
@@ -351,7 +361,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)1);
+            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
             writer.Write(m_player_id);
         }
 
@@ -803,9 +813,10 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
-            return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
+            return false;
         }
     }
 
@@ -818,12 +829,8 @@ namespace GameMod
         static bool Prefix(Player __instance, ref bool __result)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
-
-            if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active))
-            {
-                return true;
-            }
 
             __result = __instance.m_weapon_level[4] != WeaponUnlock.LOCKED || __instance.m_weapon_level[3] != WeaponUnlock.LOCKED || __instance.m_weapon_level[5] != WeaponUnlock.LOCKED;
 
@@ -961,12 +968,8 @@ namespace GameMod
         static bool Prefix(Player __instance, WeaponType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
-
-            if (!GameplayManager.IsMultiplayer)
-            {
-                return true;
-            }
 
             if (__instance.m_weapon_type != value)
             {
@@ -998,12 +1001,8 @@ namespace GameMod
         static bool Prefix(Player __instance, WeaponType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
-
-            if (!GameplayManager.IsMultiplayer)
-            {
-                return true;
-            }
 
             if (__instance.m_weapon_type_prev != value)
             {
@@ -1035,6 +1034,7 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
@@ -1050,6 +1050,7 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
@@ -1155,9 +1156,10 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
-            return !GameplayManager.IsMultiplayerActive;
+            return false;
         }
     }
 
@@ -1170,6 +1172,7 @@ namespace GameMod
         static bool Prefix(Player __instance, float amount)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (__instance.m_overdrive || Player.CheatUnlimited)
@@ -1221,9 +1224,10 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
-            return !GameplayManager.IsMultiplayerActive;
+            return false;
         }
     }
 
@@ -1236,6 +1240,7 @@ namespace GameMod
         static bool Prefix(Player __instance, int amount)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             if (__instance.m_overdrive || Player.CheatUnlimited)
@@ -1279,9 +1284,10 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
-            return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
+            return false;
         }
     }
 
@@ -1294,12 +1300,8 @@ namespace GameMod
         static bool Prefix(Player __instance, MissileType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
-
-            if (!GameplayManager.IsMultiplayer)
-            {
-                return true;
-            }
 
             if (!NetworkServer.active)
             {
@@ -1328,12 +1330,8 @@ namespace GameMod
         static bool Prefix(Player __instance, MissileType value)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
-
-            if (!GameplayManager.IsMultiplayer)
-            {
-                return true;
-            }
 
             if (__instance.m_missile_type_prev != value)
             {
@@ -1365,6 +1363,7 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
@@ -1380,6 +1379,7 @@ namespace GameMod
         static bool Prefix(Player __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
 
             return false;
@@ -1469,9 +1469,10 @@ namespace GameMod
         static bool Prefix(PlayerShip __instance)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(__instance.c_player.connectionToClient.connectionId, "sniper")) return true;
 
-            return !(GameplayManager.IsMultiplayerActive && NetworkServer.active);
+            return false;
         }
     }
 
@@ -1484,14 +1485,15 @@ namespace GameMod
         static bool Prefix(Player p)
         {
             if (!MPSniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
             if (NetworkServer.active && !MPTweaks.ClientHasTweak(p.connectionToClient.connectionId, "sniper")) return true;
 
-            if (GameplayManager.IsMultiplayer && NetworkServer.active && !MPSniperPackets.serverCanDetonate)
+            if (NetworkServer.active && !MPSniperPackets.serverCanDetonate)
             {
                 return false;
             }
 
-            if (GameplayManager.IsMultiplayer && !NetworkServer.active && p.isLocalPlayer)
+            if (!NetworkServer.active && p.isLocalPlayer)
             {
                 if (MPSniperPackets.justFiredDev)
                 {

@@ -13,6 +13,8 @@ namespace GameMod
 {
     class MPJoinInProgress
     {
+        public const int NET_VERSION_JIP = 1;
+
         public static bool NetworkMatchEnabled = true;
         public static bool MenuManagerEnabled = true;
         public static bool SingleMatchEnable = false;
@@ -30,6 +32,76 @@ namespace GameMod
             if (GameManager.MultiplayerMission.IsLevelAnAddon(m_match_force_playlist_level_idx))
                 return GameManager.MultiplayerMission.GetAddOnLevelIdStringHash(m_match_force_playlist_level_idx);
             return GameManager.MultiplayerMission.GetLevelFileName(m_match_force_playlist_level_idx);
+        }
+
+        public static void SetReady(Player player, bool ready)
+        {
+            player.c_player_ship.c_cockpit.gameObject.SetActive(ready);
+            player.c_player_ship.c_mesh_collider.enabled = ready;
+            player.c_player_ship.c_level_collider.enabled = ready;
+            player.c_player_ship.gameObject.layer = ready ? 9 : 2;
+            player.c_player_ship.enabled = ready;
+            player.enabled = ready;
+
+            if (ready)
+            {
+                player.c_player_ship.RestoreLights();
+            }
+            else
+            {
+                player.c_player_ship.DeactivateLights();
+
+            }
+        }
+    }
+
+    public class JIPJustJoinedMessage : MessageBase
+    {
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write((byte)MPJoinInProgress.NET_VERSION_JIP);
+            writer.Write(playerId);
+            writer.Write(ready);
+        }
+
+        public override void Deserialize(NetworkReader reader)
+        {
+            var version = reader.ReadByte();
+            playerId = reader.ReadNetworkId();
+            ready = reader.ReadBoolean();
+        }
+
+        public NetworkInstanceId playerId;
+        public bool ready;
+    }
+
+    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
+    class MPJoinInProgressClientHandlers
+    {
+        private static void OnJIPJustJoinedMessage(NetworkMessage rawMsg)
+        {
+            if (Server.IsActive())
+            {
+                return;
+            }
+
+            var msg = rawMsg.ReadMessage<JIPJustJoinedMessage>();
+
+            var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.playerId);
+
+            if (!player)
+            {
+                return;
+            }
+
+            MPJoinInProgress.SetReady(player, msg.ready);
+        }
+
+        static void Postfix()
+        {
+            if (Client.GetClient() == null)
+                return;
+            Client.GetClient().RegisterHandler(MessageTypes.MsgJIPJustJoined, OnJIPJustJoinedMessage);
         }
     }
 
@@ -218,12 +290,19 @@ namespace GameMod
 
         private static IEnumerator MatchStart(int connectionId)
         {
+            var newPlayer = Server.FindPlayerByConnectionId(connectionId);
+
+            if (!newPlayer.m_mp_name.StartsWith("OBSERVER"))
+            {
+                NetworkServer.SendToAll(MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = false });
+                MPJoinInProgress.SetReady(newPlayer, false);
+            }
+
             float pregameWait = 3f;
             pregameWait = SendPreGame(connectionId, pregameWait);
 
             yield return new WaitForSeconds(pregameWait);
 
-            var newPlayer = Server.FindPlayerByConnectionId(connectionId);
             if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {
                 Debug.LogFormat("Enabling spectator for {0}", newPlayer.m_mp_name);
@@ -231,6 +310,11 @@ namespace GameMod
                 Debug.LogFormat("Enabled spectator for {0}", newPlayer.m_mp_name);
 
                 yield return null; // make sure spectator change is received before sending MatchStart
+            }
+            else
+            {
+                NetworkServer.SendToAll(MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = true });;
+                MPJoinInProgress.SetReady(newPlayer, true);
             }
 
             if (NetworkMatch.GetMatchState() != MatchState.PLAYING)
