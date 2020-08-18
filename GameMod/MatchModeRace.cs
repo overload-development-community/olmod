@@ -544,7 +544,10 @@ namespace GameMod
             rp.Laps.Add(new RacePlayer.Lap { Num = plm.lapNum, Time = plm.lapTime });
             if (GameManager.m_local_player == rp.player)
             {
-                GameplayManager.AddHUDMessage(String.Format("Last Lap ({0:n2}), Personal Best ({1:n2}), Match Best ({2:n2})", rp.Laps.LastOrDefault().Time, rp.Laps.Min(x => x.Time), Race.Players.SelectMany(x => x.Laps).Min(y => y.Time)), -1, true);
+                var lastLap = TimeSpan.FromSeconds(rp.Laps.LastOrDefault().Time);
+                var personalBest = TimeSpan.FromSeconds(rp.Laps.Min(x => x.Time));
+                var matchBest = TimeSpan.FromSeconds(Race.Players.SelectMany(x => x.Laps).Min(y => y.Time));
+                GameplayManager.AddHUDMessage($"Last Lap ({lastLap.Minutes:0}:{lastLap.Seconds:00}.{lastLap.Milliseconds:000}), Personal Best ({personalBest.Minutes:0}:{personalBest.Seconds:00}.{personalBest.Milliseconds:000}), Match Best ({matchBest.Minutes:0}:{matchBest.Seconds:00}.{matchBest.Milliseconds:000})", -1, true);
             }
             Race.Sort();
         }
@@ -725,26 +728,29 @@ namespace GameMod
                 return;
 
             var rp = Race.Players.FirstOrDefault(x => x.player == GameManager.m_player_ship.c_player);
-            float last = rp.Laps.Any() ? rp.Laps.LastOrDefault().Time : 0f;
-            float best = rp.Laps.Any() ? rp.Laps.Min(x => x.Time) : 0f;
-            float leader = Race.Players.SelectMany(x => x.Laps).Any() ? Race.Players.SelectMany(x => x.Laps).Min(y => y.Time) : 0f;
+            var current = NetworkMatch.m_match_elapsed_seconds - (rp.Laps.Any() ? rp.Laps.Sum(l => l.Time) : 0f);
+            var last = TimeSpan.FromSeconds(rp.Laps.Any() ? rp.Laps.LastOrDefault().Time : 0f);
+            var best = TimeSpan.FromSeconds(rp.Laps.Any() ? rp.Laps.Min(x => x.Time) : 0f);
+            var leader = TimeSpan.FromSeconds(Race.Players.SelectMany(x => x.Laps).Any() ? Race.Players.SelectMany(x => x.Laps).Min(y => y.Time) : 0f);
             Vector2 vector = default(Vector2);
             vector.x = 0f;
             vector.y = UIManager.UI_TOP - 210f;
             var vel = GameManager.m_player_ship.c_rigidbody.velocity;
             if (!GameManager.m_player_ship.c_player.m_spectator)
-                __instance.DrawStringSmall("Vel: " + vel.magnitude.ToString("n2"), vector, 0.5f, StringOffset.CENTER, UIManager.m_col_ui4, 1f);
+                __instance.DrawStringSmall($"Vel: {vel.magnitude:n2}", vector, 0.5f, StringOffset.CENTER, UIManager.m_col_ui4, 1f);
 
-            vector.x = UIManager.UI_LEFT + 50f;
+            vector.x = UIManager.UI_LEFT + 10f;
             vector.y = UIManager.UI_TOP + 90f;
-            __instance.DrawStringSmall("Total: " + NetworkMatch.m_match_elapsed_seconds.ToString("n2"), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
-            vector.y += 24;
-            __instance.DrawStringSmall("Last: " + last.ToString("n2"), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
+            __instance.DrawStringSmall($"Current: {last.Minutes:0}:{last.Seconds:00}.{last.Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
+            vector.y += 24F;
+            __instance.DrawStringSmall($"Last: {last.Minutes:0}:{last.Seconds:00}.{last.Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
             vector.y += 24f;
-            __instance.DrawStringSmall("Best: " + best.ToString("n2"), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
+            __instance.DrawStringSmall($"Best: {best.Minutes:0}:{best.Seconds:00}.{best.Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
             vector.y += 24f;
-            __instance.DrawStringSmall("Leader: " + leader.ToString("n2"), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
+            __instance.DrawStringSmall($"Leader: {leader.Minutes:0}:{leader.Seconds:00}.{leader.Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
             vector.y += 24f;
+            __instance.DrawStringSmall($"Total: {TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Minutes:0}:{TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Seconds:00}.{TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
+            vector.y += 24F;
             //var rps = Race.Players.Where(x => x.player.m_mp_name.Length > 2);
             //if (rps.Count() > 1)
             //{
@@ -849,16 +855,16 @@ namespace GameMod
 
         public static void DrawMpScoreboardRaw(ref Vector2 pos, UIElement uie)
         {
-            float col = -330f;
-            float col2 = 10f;
+            float col = -380f;
+            float col2 = -40f;
             float col3 = 100f;
-            float col4 = 190f;
-            float col5 = 280f;
-            float col6 = 350f;
-            float col7 = 420f;
+            float col4 = 240f;
+            float col5 = 330f;
+            float col6 = 400f;
+            float col7 = 470f;
             DrawScoreHeader(uie, pos, col, col2, col3, col4, col5, col6, col7, true);
             pos.y += 15f;
-            uie.DrawVariableSeparator(pos, 350f);
+            uie.DrawVariableSeparator(pos, 450f);
             pos.y += 20f;
             DrawScoresWithoutTeams(uie, pos, col, col2, col3, col4, col5, col6, col7);
         }
@@ -890,7 +896,7 @@ namespace GameMod
                     Color c2;
                     if (player.isLocalPlayer)
                     {
-                        UIManager.DrawQuadUI(pos, 410f, 12f, UIManager.m_col_ui0, uie.m_alpha * num * UnityEngine.Random.Range(0.2f, 0.22f), 20);
+                        UIManager.DrawQuadUI(pos, 510f, 12f, UIManager.m_col_ui0, uie.m_alpha * num * UnityEngine.Random.Range(0.2f, 0.22f), 20);
                         c = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.5f));
                         c2 = UIManager.m_col_hi5;
                         UIManager.DrawQuadUI(pos - Vector2.up * 12f, 400f, 1.2f, c, uie.m_alpha * num * 0.5f, 4);
@@ -905,8 +911,21 @@ namespace GameMod
                     UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, c, uie.m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
                     float max_width = col2 - col1 - (float)((!NetworkMatch.m_head_to_head) ? 130 : 10);
                     uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, max_width);
-                    uie.DrawStringSmall(j == 0 ? Race.Players[j].Laps.Sum(x => x.Time).ToString("n2") : "", pos + Vector2.right * col2, 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
-                    uie.DrawStringSmall(Race.Players[j].Laps.Count > 0 ? Race.Players[j].Laps.Min(x => x.Time).ToString("n2") : "", pos + Vector2.right * col3, 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
+
+                    var total = TimeSpan.Zero;
+                    if (j == 0)
+                    {
+                        total = TimeSpan.FromSeconds(Race.Players[j].Laps.Sum(x => x.Time));
+                    }
+                    uie.DrawStringSmall(j == 0 ? $"{total.Minutes:0}:{total.Seconds:00}.{total.Milliseconds:000}" : "", pos + Vector2.right * col2, 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
+
+                    var best = TimeSpan.Zero;
+                    if (Race.Players[j].Laps.Count > 0)
+                    {
+                        best = TimeSpan.FromSeconds(Race.Players[j].Laps.Min(x => x.Time));
+                    }
+                    uie.DrawStringSmall(Race.Players[j].Laps.Count > 0 ? $"{best.Minutes:0}:{best.Seconds:00}.{best.Milliseconds:000}" : "", pos + Vector2.right * col3, 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
+
                     uie.DrawDigitsVariable(pos + Vector2.right * col4, Race.Players[j].Laps.Count(), 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
                     uie.DrawDigitsVariable(pos + Vector2.right * col5, player.m_kills, 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
                     uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_deaths, 0.65f, StringOffset.CENTER, c, uie.m_alpha * num);
