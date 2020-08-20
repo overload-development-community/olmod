@@ -166,7 +166,11 @@ namespace GameMod
             var explode_msg = msg.ReadMessage<ExplodeMsg>();
             if (Server.IsActive())
                 return;
-            var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb, ProjPrefab.missile_devastator, ProjPrefab.missile_smart }); // Extend to devastators and novas when sniper packets are enabled.
+            var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb }); 
+            if (proj == null && MPSniperPackets.enabled) // Extend to devs and novas when sniper packets are enabled.
+            {
+                proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_devastator, ProjPrefab.missile_smart });
+            }
             if (proj == null)
             {
                 return;
