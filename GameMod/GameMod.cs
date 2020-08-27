@@ -225,4 +225,14 @@ namespace GameMod.Core
             }
         }
     }
+
+    [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
+    class CycloneFlakTBAfterDeathFix
+    {
+        static void Prefix(Player __instance)
+        {
+            __instance.c_player_ship.GetType().GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance.c_player_ship, 0);
+            __instance.c_player_ship.m_thunder_power = 0;
+        }
+    }
 }
