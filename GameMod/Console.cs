@@ -168,16 +168,33 @@ namespace GameMod
         }
     }
 
+    // Changed from Postfix to Transpile to fix left arrow, insert processing directly after MaybeReverseOption
     [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
     class ConsoleOptionTogglePatch
     {
-        private static void Postfix()
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConsoleOptionTogglePatch), "HandleConsoleToggle"));
+                    continue;
+                }
+
+                yield return code;
+            }
+        }
+
+        private static void HandleConsoleToggle()
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) && 
                 MenuManager.m_menu_micro_state == 2 &&
                 UIManager.m_menu_selection == 9)
             {
+                uConsole.Log("PushedDir()=" + UIManager.PushedDir().ToString());
                 Console.KeyEnabled = !Console.KeyEnabled;
                 MenuManager.PlayCycleSound(1f);
             }
