@@ -194,7 +194,6 @@ namespace GameMod
                 MenuManager.m_menu_micro_state == 2 &&
                 UIManager.m_menu_selection == 9)
             {
-                uConsole.Log("PushedDir()=" + UIManager.PushedDir().ToString());
                 Console.KeyEnabled = !Console.KeyEnabled;
                 MenuManager.PlayCycleSound(1f);
             }
