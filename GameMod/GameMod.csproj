@@ -153,6 +153,7 @@
     <Compile Include="ServerPort.cs" />
     <Compile Include="ServerStatLog.cs" />
     <Compile Include="ServerTrackerPost.cs" />
+    <Compile Include="VSync.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
