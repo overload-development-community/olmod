@@ -38,10 +38,14 @@ namespace GameMod
         {
             player.c_player_ship.c_cockpit.gameObject.SetActive(ready);
             player.c_player_ship.c_mesh_collider.enabled = ready;
+            player.c_player_ship.c_mesh_collider.gameObject.SetActive(ready);
             player.c_player_ship.c_level_collider.enabled = ready;
+            player.c_player_ship.c_level_collider.gameObject.SetActive(ready);
             player.c_player_ship.gameObject.layer = ready ? 9 : 2;
             player.c_player_ship.enabled = ready;
+            player.c_player_ship.gameObject.SetActive(ready);
             player.enabled = ready;
+            player.gameObject.SetActive(ready);
 
             if (ready)
             {
@@ -50,7 +54,6 @@ namespace GameMod
             else
             {
                 player.c_player_ship.DeactivateLights();
-
             }
         }
     }
@@ -94,6 +97,7 @@ namespace GameMod
                 return;
             }
 
+            Debug.Log("Is this being called?");
             MPJoinInProgress.SetReady(player, msg.ready);
         }
 
@@ -280,7 +284,6 @@ namespace GameMod
             foreach (var idData in NetworkMatch.m_player_loadout_data)
                 idData.Value.lobby_id = idData.Key;
             //Debug.Log("JIP: SendLoadoutDataToClients: " + NetworkMatch.m_player_loadout_data.Join());
-            Server.SendLoadoutDataToClients();
             IntegerMessage durationMsg = new IntegerMessage((int)(pregameWait * 1000));
             NetworkServer.SendToClient(connectionId, CustomMsgType.StartPregameCountdown, durationMsg);
             Debug.Log("JIP: sending start pregame countdown");
@@ -292,16 +295,24 @@ namespace GameMod
         {
             var newPlayer = Server.FindPlayerByConnectionId(connectionId);
 
+            float pregameWait = 3f;
+
             if (!newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {
-                NetworkServer.SendToAll(MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = false });
+                foreach (Player player in Overload.NetworkManager.m_Players)
+                {
+                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
+                    {
+                        NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = false });
+                    }
+                }
                 MPJoinInProgress.SetReady(newPlayer, false);
             }
 
-            float pregameWait = 3f;
             pregameWait = SendPreGame(connectionId, pregameWait);
-
             yield return new WaitForSeconds(pregameWait);
+
+            Server.SendLoadoutDataToClients();
 
             if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {
@@ -313,7 +324,13 @@ namespace GameMod
             }
             else
             {
-                NetworkServer.SendToAll(MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = true });;
+                foreach (Player player in Overload.NetworkManager.m_Players)
+                {
+                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
+                    {
+                        NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = true });
+                    }
+                }
                 MPJoinInProgress.SetReady(newPlayer, true);
             }
 
@@ -355,6 +372,8 @@ namespace GameMod
 
         private static void Postfix(NetworkMessage msg)
         {
+            Server.SendLoadoutDataToClients();
+
             int connectionId = msg.conn.connectionId;
             if (!MPTweaks.ClientHasMod(connectionId) && MPTweaks.MatchNeedsMod())
                 return;
