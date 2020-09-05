@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -212,10 +213,14 @@ namespace GameMod
 
         public override void Deserialize(NetworkReader reader)
         {
-            var version = reader.ReadByte();
-            m_player_id = reader.ReadNetworkId();
-            m_type = (ValueType)reader.ReadByte();
-            m_value = reader.ReadInt32();
+            try
+            {
+                var version = reader.ReadByte();
+                m_player_id = reader.ReadNetworkId();
+                m_type = (ValueType)reader.ReadByte();
+                m_value = reader.ReadInt32();
+            }
+            catch (Exception) { }
         }
 
         public NetworkInstanceId m_player_id;
@@ -846,6 +851,11 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "ProcessFiringControls")]
     class MPSniperPacketsProcessFiringControls
     {
+        static bool Prefix(PlayerShip __instance)
+        {
+            return Server.IsActive() || __instance.c_player.isLocalPlayer;
+        }
+
         static void Postfix(PlayerShip __instance)
         {
             if (!MPSniperPackets.enabled) return;
@@ -916,6 +926,15 @@ namespace GameMod
 
                 yield return code;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(PlayerShip), "CallRpcFireFlare")]
+    class MPSniperPacketsCallRpcFireFlare
+    {
+        private static bool Prefix(PlayerShip __instance)
+        {
+            return !MPTweaks.ClientHasTweak(__instance.c_player.connectionToClient.connectionId, "sniper");
         }
     }
 
@@ -1254,7 +1273,7 @@ namespace GameMod
     }
 
     /// <summary>
-    /// Similar to MaybeFireWeapon, we redirect Projectile.PlayerFire to MPSniperPackets.MaybePlayerFire in order for the client to control where the flare gets fired from.
+    /// Similar to MaybeFireWeapon, we redirect Projectile.PlayerFire to MPSniperPackets.MaybePlayerFire in order for the client to control where the missile gets fired from.
     /// 
     /// We also want to try to switch to a new secondary on the client no matter what at the end of MaybeFireMissile.
     /// </summary>
@@ -1507,6 +1526,52 @@ namespace GameMod
             }
 
             return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(Server), "ProjectileTypeHasLaunchDataSynced")]
+    class MPSniperPacketsProjectileTypeHasLaunchDataSynced
+    {
+        static bool Prefix(ref bool __result)
+        {
+            if (!MPSniperPackets.enabled) return true;
+
+            __result = true;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Server), "SendJustPressedOrJustReleasedMessage")]
+    class MPSniperPacketsSendJustPressedOrJustReleasedMessage
+    {
+        static bool Prefix(Player player, CCInput button)
+        {
+            if (!MPSniperPackets.enabled) return true;
+
+            if (player.m_input_count[(int)button] == 1)
+            {
+                ButtonJustPressedMessage msg = new ButtonJustPressedMessage(player.netId, button);
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
+                {
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, 66, msg);
+                    }
+                }
+            }
+            else if (player.m_input_count[(int)button] == -1)
+            {
+                ButtonJustReleasedMessage msg2 = new ButtonJustReleasedMessage(player.netId, button);
+                foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
+                {
+                    if (MPTweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, 67, msg2);
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }
