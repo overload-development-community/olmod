@@ -297,25 +297,28 @@ namespace GameMod
             NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetMatchState, msg);
 
             // Send disconnected pilot stats as separate message
-            var dcPlayers = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !Overload.NetworkManager.m_Players.Contains(x));
-            var dcmsg = new DisconnectedPlayerMatchStateMessage()
+            if (MPTweaks.ClientHasTweak(connectionId, "jip"))
             {
-                m_player_states = new DisconnectedPlayerMatchState[dcPlayers.Count()]
-            };
-            int j = 0;
-            foreach (var player in dcPlayers)
-            {
-                dcmsg.m_player_states[j++] = new DisconnectedPlayerMatchState()
+                var dcPlayers = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !Overload.NetworkManager.m_Players.Contains(x));
+                var dcmsg = new DisconnectedPlayerMatchStateMessage()
                 {
-                    m_net_id = NetworkInstanceId.Invalid,
-                    m_kills = player.m_kills,
-                    m_deaths = player.m_deaths,
-                    m_assists = player.m_assists,
-                    m_mp_name = player.m_mp_name,
-                    m_mp_team = player.m_mp_team
+                    m_player_states = new DisconnectedPlayerMatchState[dcPlayers.Count()]
                 };
-            }
-            NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetDisconnectedMatchState, dcmsg);
+                int j = 0;
+                foreach (var player in dcPlayers)
+                {
+                    dcmsg.m_player_states[j++] = new DisconnectedPlayerMatchState()
+                    {
+                        m_net_id = NetworkInstanceId.Invalid,
+                        m_kills = player.m_kills,
+                        m_deaths = player.m_deaths,
+                        m_assists = player.m_assists,
+                        m_mp_name = player.m_mp_name,
+                        m_mp_team = player.m_mp_team
+                    };
+                }
+                NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetDisconnectedMatchState, dcmsg);
+            }            
         }
 
         private static float SendPreGame(int connectionId, float pregameWait)
