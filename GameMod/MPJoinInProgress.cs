@@ -3,6 +3,7 @@ using Overload;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
@@ -264,15 +265,60 @@ namespace GameMod
                     });
             //if (!MPTweaks.ClientHasMod(connectionId))
             //    return;
+
+            // Process any disconnected scoreboard entries, add them to active pilot, and remove stale scoreboard objects
+            foreach (var player in Overload.NetworkManager.m_Players)
+            {
+                // Add any previous records for pilot on join
+                var playersSameName = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !String.IsNullOrEmpty(x.m_mp_name) && x.m_mp_name == player.m_mp_name).ToList();
+                player.m_kills = playersSameName.Sum(x => x.m_kills);
+                player.m_deaths = playersSameName.Sum(x => x.m_deaths);
+                player.m_assists = playersSameName.Sum(x => x.m_assists);
+
+                // Remove previously DC'd players of same name from server scoreboard list
+                playersSameName.Where(x => x != player).ToList().ForEach(x => Overload.NetworkManager.m_PlayersForScoreboard.Remove(x));
+            }
+
             var n = Overload.NetworkManager.m_Players.Count;
-            var msg = new MatchStateMessage() {
-                m_match_elapsed_seconds = NetworkMatch.m_match_elapsed_seconds, 
-                m_player_states = new PlayerMatchState[n] };
+            var msg = new MatchStateMessage()
+            {
+                m_match_elapsed_seconds = NetworkMatch.m_match_elapsed_seconds,
+                m_player_states = new PlayerMatchState[n]
+            };
             int i = 0;
             foreach (var player in Overload.NetworkManager.m_Players)
-                msg.m_player_states[i++] = new PlayerMatchState() {
-                    m_net_id = player.netId, m_kills = player.m_kills, m_deaths = player.m_deaths, m_assists = player.m_assists };
+                msg.m_player_states[i++] = new PlayerMatchState()
+                {
+                    m_net_id = player.netId,
+                    m_kills = player.m_kills,
+                    m_deaths = player.m_deaths,
+                    m_assists = player.m_assists
+                };
             NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetMatchState, msg);
+
+            // Send disconnected pilot stats as separate message
+            if (MPTweaks.ClientHasTweak(connectionId, "jip"))
+            {
+                var dcPlayers = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !Overload.NetworkManager.m_Players.Contains(x));
+                var dcmsg = new DisconnectedPlayerMatchStateMessage()
+                {
+                    m_player_states = new DisconnectedPlayerMatchState[dcPlayers.Count()]
+                };
+                int j = 0;
+                foreach (var player in dcPlayers)
+                {
+                    dcmsg.m_player_states[j++] = new DisconnectedPlayerMatchState()
+                    {
+                        m_net_id = NetworkInstanceId.Invalid,
+                        m_kills = player.m_kills,
+                        m_deaths = player.m_deaths,
+                        m_assists = player.m_assists,
+                        m_mp_name = player.m_mp_name,
+                        m_mp_team = player.m_mp_team
+                    };
+                }
+                NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetDisconnectedMatchState, dcmsg);
+            }            
         }
 
         private static float SendPreGame(int connectionId, float pregameWait)
@@ -455,12 +501,12 @@ namespace GameMod
                 MenuManager.GetToggleSetting(MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 1 : 0),
                 Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1.5f, !MenuManager.m_mp_lan_match || MPJoinInProgress.SingleMatchEnable);
             position.y += 62f;
-            #if false // waits on olmod server detection
+#if false // waits on olmod server detection
             uie.SelectAndDrawStringOptionItem(Loc.LS("REAR VIEW MIRROR"), position, 8,
                 MenuManager.GetToggleSetting(RearView.MPMenuManagerEnabled ? 1 : 0),
                 Loc.LS("ENABLE REAR VIEW MIRROR"), 1.5f, !MenuManager.m_mp_lan_match);
             position.y += 62f;
-            #endif
+#endif
         }
 
         public static void DrawMpMatchCreateOpen(UIElement uie, ref Vector2 position)
@@ -577,6 +623,12 @@ namespace GameMod
         public int m_assists;
     }
 
+    public class DisconnectedPlayerMatchState : PlayerMatchState
+    {
+        public string m_mp_name;
+        public MpTeam m_mp_team;
+    }
+
     public class MatchStateMessage : MessageBase
     {
         public override void Serialize(NetworkWriter writer)
@@ -599,7 +651,8 @@ namespace GameMod
             var n = reader.ReadPackedUInt32();
             m_player_states = new PlayerMatchState[n];
             for (int i = 0; i < n; i++)
-                m_player_states[i] = new PlayerMatchState() {
+                m_player_states[i] = new PlayerMatchState()
+                {
                     m_net_id = reader.ReadNetworkId(),
                     m_kills = (int)reader.ReadPackedUInt32(),
                     m_deaths = (int)reader.ReadPackedUInt32(),
@@ -610,6 +663,41 @@ namespace GameMod
         public PlayerMatchState[] m_player_states;
     }
 
+    public class DisconnectedPlayerMatchStateMessage : MessageBase
+    {
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write((byte)0); // version
+            writer.WritePackedUInt32((uint)m_player_states.Length);
+            foreach (var pl_state in m_player_states)
+            {
+                writer.Write(pl_state.m_net_id);
+                writer.WritePackedUInt32((uint)pl_state.m_kills);
+                writer.WritePackedUInt32((uint)pl_state.m_deaths);
+                writer.WritePackedUInt32((uint)pl_state.m_assists);
+                writer.Write(pl_state.m_mp_name);
+                writer.WritePackedUInt32((uint)pl_state.m_mp_team);
+            }
+        }
+        public override void Deserialize(NetworkReader reader)
+        {
+            var version = reader.ReadByte();
+            var n = reader.ReadPackedUInt32();
+            m_player_states = new DisconnectedPlayerMatchState[n];
+            for (int i = 0; i < n; i++)
+                m_player_states[i] = new DisconnectedPlayerMatchState()
+                {
+                    m_net_id = reader.ReadNetworkId(),
+                    m_kills = (int)reader.ReadPackedUInt32(),
+                    m_deaths = (int)reader.ReadPackedUInt32(),
+                    m_assists = (int)reader.ReadPackedUInt32(),
+                    m_mp_name = reader.ReadString(),
+                    m_mp_team = (MpTeam)reader.ReadPackedUInt32()
+                };
+        }
+        public DisconnectedPlayerMatchState[] m_player_states;
+    }
+
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
     class JIPClientHandlers
     {
@@ -617,10 +705,39 @@ namespace GameMod
         {
             var msmsg = msg.ReadMessage<MatchStateMessage>();
             NetworkMatch.m_match_elapsed_seconds = msmsg.m_match_elapsed_seconds;
-            foreach (var pl_state in msmsg.m_player_states) {
+            foreach (var pl_state in msmsg.m_player_states)
+            {
                 GameObject gameObject = ClientScene.FindLocalObject(pl_state.m_net_id);
                 if (gameObject == null)
                     continue;
+                var player = gameObject.GetComponent<Player>();
+                player.m_kills = pl_state.m_kills;
+                player.m_deaths = pl_state.m_deaths;
+                player.m_assists = pl_state.m_assists;
+            }
+            NetworkMatch.SortAnarchyPlayerList();
+        }
+
+        private static void OnSetDisconnectedPlayerMatchStateMsg(NetworkMessage msg)
+        {
+            var msmsg = msg.ReadMessage<DisconnectedPlayerMatchStateMessage>();
+            foreach (var pl_state in msmsg.m_player_states)
+            {
+                GameObject gameObject = ClientScene.FindLocalObject(pl_state.m_net_id);
+                if (gameObject == null)
+                {
+                    // Disconnected players need instantiated client side to get added to scoreboard as proper Players
+                    gameObject = UnityEngine.Object.Instantiate<GameObject>(NetworkSpawnPlayer.m_player_prefab);
+                    var p = gameObject.GetComponent<Player>();
+                    p.m_kills = pl_state.m_kills;
+                    p.m_deaths = pl_state.m_deaths;
+                    p.m_assists = pl_state.m_assists;
+                    p.m_mp_name = pl_state.m_mp_name;
+                    p.m_mp_team = pl_state.m_mp_team;
+                    p.gameObject.SetActive(false);
+                    Overload.NetworkManager.m_PlayersForScoreboard.Add(p);
+                    continue;
+                }
                 var player = gameObject.GetComponent<Player>();
                 player.m_kills = pl_state.m_kills;
                 player.m_deaths = pl_state.m_deaths;
@@ -648,6 +765,7 @@ namespace GameMod
                 return;
             Client.GetClient().RegisterHandler(MessageTypes.MsgSetMatchState, OnSetMatchStateMsg);
             Client.GetClient().RegisterHandler(MessageTypes.MsgAddMpStatus, OnAddMpStatus);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgSetDisconnectedMatchState, OnSetDisconnectedPlayerMatchStateMsg);
         }
     }
 
@@ -660,4 +778,29 @@ namespace GameMod
             return state != NetworkMatch.m_match_state;
         }
     }
+
+    // Consolidate scores for multiple copies of pilot name client-side
+    [HarmonyPatch(typeof(NetworkMatch), "SortAnarchyPlayerList")]
+    class MPJoinInProgress_NetworkMatch_SortAnarchyPlayerList
+    {
+        static void Prefix()
+        {
+            foreach (var player in Overload.NetworkManager.m_Players)
+            {
+                // Add any previous records for pilot on join
+                var playersSameName = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !String.IsNullOrEmpty(x.m_mp_name) && x.m_mp_name == player.m_mp_name).ToList();
+
+                if (playersSameName.Count > 1)
+                {
+                    player.m_kills = playersSameName.Sum(x => x.m_kills);
+                    player.m_deaths = playersSameName.Sum(x => x.m_deaths);
+                    player.m_assists = playersSameName.Sum(x => x.m_assists);
+
+                    // Remove previously DC'd players from server scoreboard list
+                    playersSameName.Where(x => x != player).ToList().ForEach(x => Overload.NetworkManager.m_PlayersForScoreboard.Remove(x));
+                }
+            }
+        }
+    }
+
 }

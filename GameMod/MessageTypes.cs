@@ -31,5 +31,6 @@ namespace GameMod
         public const short MsgPlayerSyncResource = 136;
         public const short MsgPlayerSyncAllMissiles = 137;
         public const short MsgDetonate = 138;
+        public const short MsgSetDisconnectedMatchState = 139;
     }
 }
