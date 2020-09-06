@@ -226,6 +226,23 @@ namespace GameMod.Core
         }
     }
 
+    // GSync fix
+    [HarmonyPatch(typeof(GameManager), "UpdateTargetFramerate")]
+    class GSyncFix {
+        static bool Prefix()
+        {
+            if (GameplayManager.IsDedicatedServer())
+            {
+                Application.targetFrameRate = 120;
+            }
+            else
+            {
+                Application.targetFrameRate = -1;
+            }
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
     class CycloneFlakTBAfterDeathFix
     {
