@@ -569,8 +569,6 @@ namespace GameMod
             {
                 if (UIManager.m_menu_selection == 7)
                     MPJoinInProgress.MenuManagerEnabled = !MPJoinInProgress.MenuManagerEnabled;
-                if (UIManager.m_menu_selection == 8)
-                    RearView.MPMenuManagerEnabled = !RearView.MPMenuManagerEnabled;
                 MenuManager.PlayCycleSound(1f, (float)prev_dir);
             }
             else if (MenuManager.m_menu_micro_state == 0 && UIManager.m_menu_selection == 2) // create open match

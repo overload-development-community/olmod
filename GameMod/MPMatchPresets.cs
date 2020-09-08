@@ -54,7 +54,8 @@ namespace GameMod
                 jipEnabled = MPJoinInProgress.MenuManagerEnabled,
                 suddenDeathOvertime = MPSuddenDeath.SuddenDeathMenuEnabled,
                 lapLimit = ExtMenuManager.mms_ext_lap_limit,
-                sniperPackets = MPSniperPackets.enabled
+                sniperPackets = MPSniperPackets.enabled,
+                allowRearView = RearView.MPMenuManagerEnabled
             });
 
             presets.Add(new MPMatchPreset
@@ -83,7 +84,8 @@ namespace GameMod
                 jipEnabled = true,
                 suddenDeathOvertime = false,
                 lapLimit = 0,
-                sniperPackets = false
+                sniperPackets = true,
+                allowRearView = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -116,6 +118,7 @@ namespace GameMod
             public bool suddenDeathOvertime;
             public int lapLimit;
             public bool sniperPackets;
+            public bool allowRearView;
 
             public void Apply()
             {
@@ -143,6 +146,7 @@ namespace GameMod
                 MPSuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
                 ExtMenuManager.mms_ext_lap_limit = this.lapLimit;
                 MPSniperPackets.enabled = this.sniperPackets;
+                RearView.MPMenuManagerEnabled = this.allowRearView;
             }
         }
 
