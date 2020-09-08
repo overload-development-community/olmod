@@ -851,11 +851,6 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "ProcessFiringControls")]
     class MPSniperPacketsProcessFiringControls
     {
-        static bool Prefix(PlayerShip __instance)
-        {
-            return Server.IsActive() || __instance.c_player.isLocalPlayer;
-        }
-
         static void Postfix(PlayerShip __instance)
         {
             if (!MPSniperPackets.enabled) return;
@@ -1547,6 +1542,9 @@ namespace GameMod
         static bool Prefix(Player player, CCInput button)
         {
             if (!MPSniperPackets.enabled) return true;
+
+            // This is necessary for charge effects to be played across all clients.
+            if (button == CCInput.FIRE_WEAPON && player.m_weapon_type == WeaponType.THUNDERBOLT) return true;
 
             if (player.m_input_count[(int)button] == 1)
             {
