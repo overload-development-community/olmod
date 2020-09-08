@@ -901,5 +901,38 @@ namespace GameMod
         }
     }
 
+    /// <summary>
+    // If ScaleRespawnTime is set, automatically set respawn timer = player's team count
+    /// </summary>
+    [HarmonyPatch(typeof(PlayerShip), "DyingUpdate")]
+    class MPTeams_PlayerShip_DyingUpdate
+    {
+        static void MaybeUpdateDeadTimer(PlayerShip playerShip)
+        {
+            if (MPModPrivateData.ScaleRespawnTime)
+            {
+                playerShip.m_dead_timer = Overload.NetworkManager.m_Players.Count(x => x.m_mp_team == playerShip.c_player.m_mp_team && !x.m_spectator);
+            }
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_dead_timer"))
+                {
+                    state = 1;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_PlayerShip_DyingUpdate), "MaybeUpdateDeadTimer"));
+                    continue;
+                }
+
+                yield return code;
+            }
+        }
+    }
+
     // still missing: chat colors...
 }

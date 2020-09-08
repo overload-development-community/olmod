@@ -9,9 +9,21 @@ namespace GameMod
 {
     public static class Menus
     {
+        private static bool _mms_scale_respawn_time;
+        public static bool mms_scale_respawn_time
+        {
+            get { return _mms_scale_respawn_time && (MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL); }
+            set { _mms_scale_respawn_time = value; }
+        }
+
         public static string GetMMSRearViewPIP()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(RearView.MPMenuManagerEnabled));
+        }
+
+        public static string GetMMSScaleRespawnTime()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_scale_respawn_time));
         }
     }
 
@@ -38,6 +50,8 @@ namespace GameMod
             position.x += 600f;
             position.y = col_top - 250f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW REAR VIEW CAMERA"), position, 11, Menus.GetMMSRearViewPIP(), Loc.LS("CLIENTS CAN CHOOSE TO HAVE REAR VIEW"), 1f, false);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SCALE RESPAWN TO TEAM SIZE"), position, 12, Menus.GetMMSScaleRespawnTime(), Loc.LS("AUTOMATICALLY SCALE RESPAWN TIME TO TEAM SIZE (e.g. 4 = 4 seconds)"), 1f, !(MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL));
             position.y += 62f;
         }
 
@@ -119,6 +133,53 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RearView_UIElement_DrawHUDMenu), "DrawRearViewOption"));
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    // Process Scale Respawn option
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class Menus_MenuManager_MpMatchSetup
+    {
+        static void Postfix()
+        {
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3 &&
+                UIManager.m_menu_selection == 12)
+            {
+                Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+            }
+        }       
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class Menus_UIElement_DrawMpMatchSetup_ScaleRespawnTime
+    {
+        // Change fade parameter on respawn slider from MenuManager.mms_mode == MatchMode.MONSTERBALL to Menus.mms_scale_respawn
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "RESPAWN TIME")
+                    state = 1;
+
+                if (state == 1 && code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_mode"))
+                {
+                    state = 2;
+                    code.opcode = OpCodes.Call;
+                    code.operand = AccessTools.Property(typeof(Menus), "mms_scale_respawn_time").GetGetMethod();
+                }
+
+                if (state == 2 && code.opcode == OpCodes.Ldc_I4_2)
+                {
+                    state = 3;
+                    code.opcode = OpCodes.Ldc_I4_1;
                 }
 
                 yield return code;
