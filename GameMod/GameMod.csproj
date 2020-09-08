@@ -154,6 +154,7 @@
     <Compile Include="ServerPort.cs" />
     <Compile Include="ServerStatLog.cs" />
     <Compile Include="ServerTrackerPost.cs" />
+    <Compile Include="Menus.cs" />
     <Compile Include="VSync.cs" />
   </ItemGroup>
   <ItemGroup>

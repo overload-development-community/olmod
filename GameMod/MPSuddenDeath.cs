@@ -135,7 +135,7 @@ namespace GameMod
 
         private static void DrawSuddenDeathToggle(UIElement uie, ref Vector2 position)
         {
-            uie.SelectAndDrawStringOptionItem(Loc.LS("SUDDEN DEATH OVERTIME"), position, 10, GetMMSSuddenDeath(), string.Empty, 1.5f, MenuManager.mms_mode != MatchMode.NUM);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SUDDEN DEATH OVERTIME"), position, 10, GetMMSSuddenDeath(), string.Empty, 1f, MenuManager.mms_mode != MatchMode.NUM);
             position.y += 62f;
         }
 

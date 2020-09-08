@@ -960,7 +960,7 @@ namespace GameMod
 
         private static void DrawFriendlyFire(UIElement uie, ref Vector2 position)
         {
-            uie.SelectAndDrawStringOptionItem(Loc.LS("FRIENDLY FIRE"), position, 3, MenuManager.GetMMSFriendlyFire(), string.Empty, 1.5f, MenuManager.mms_mode == MatchMode.ANARCHY);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("FRIENDLY FIRE"), position, 3, MenuManager.GetMMSFriendlyFire(), string.Empty, 1f, MenuManager.mms_mode == MatchMode.ANARCHY);
             position.y += 62f;
         }
 

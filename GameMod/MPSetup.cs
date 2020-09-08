@@ -219,6 +219,7 @@ namespace GameMod
                 MPTeams.MenuManagerTeamCount = ModPrefs.GetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
                 RearView.MPMenuManagerEnabled = ModPrefs.GetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
+                RearView.MenuManagerEnabled = ModPrefs.GetBool("O_PM_REARVIEW", RearView.MenuManagerEnabled);
                 MPSuddenDeath.SuddenDeathMenuEnabled = ModPrefs.GetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
                 ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
@@ -256,6 +257,7 @@ namespace GameMod
             ModPrefs.SetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
             ModPrefs.SetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
+            ModPrefs.SetBool("O_PM_REARVIEW", RearView.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
             ModPrefs.SetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);

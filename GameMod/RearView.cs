@@ -1,5 +1,7 @@
 ﻿using Harmony;
 using Overload;
+using System.Collections.Generic;
+using System.Reflection.Emit;
 using UnityEngine;
 
 namespace GameMod
@@ -7,6 +9,7 @@ namespace GameMod
     static class RearView
     {
         public static bool Enabled;
+        public static bool MenuManagerEnabled;
         public static bool MPMenuManagerEnabled;
         public static bool MPNetworkMatchEnabled;
         public static Camera rearCam;
@@ -45,15 +48,8 @@ namespace GameMod
 
         public static void Toggle()
         {
-            Enabled = !Enabled;
-            if (Enabled)
-            {
-                GameManager.m_local_player.SetCheaterFlag(true);
-                GameplayManager.AddHUDMessage("CHEATER! REAR VIEW ENABLED!");
-            }
-            else
-                GameplayManager.AddHUDMessage("REAR VIEW DISABLED!");
-            if (Enabled)
+            MenuManagerEnabled = !MenuManagerEnabled;
+            if (MenuManagerEnabled)
             {
                 if (RearView.rearTex == null || RearView.rearCam == null || RearView.rearCam.gameObject == null)
                     RearView.Init();
@@ -74,9 +70,7 @@ namespace GameMod
             }
             else if (new_state == GameplayState.PLAYING)
             {
-                bool want = !NetworkManager.IsHeadless() && RearView.MPNetworkMatchEnabled &&
-                    NetworkMatch.m_client_server_location != null && NetworkMatch.m_client_server_location.StartsWith("OLMOD ") &&
-                    !GameManager.m_local_player.m_spectator;
+                bool want = !GameplayManager.IsDedicatedServer() && ((GameplayManager.IsMultiplayerActive && RearView.MenuManagerEnabled && RearView.MPNetworkMatchEnabled) || (!GameplayManager.IsMultiplayerActive && RearView.MenuManagerEnabled));
                 if (want != RearView.Enabled)
                 {
                     RearView.Enabled = want;
@@ -86,15 +80,6 @@ namespace GameMod
                         RearView.Pause();
                 }
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(Overload.Player), "ResetAllCheats")]
-    class RearViewResetCheatsPatch
-    {
-        static void Postfix()
-        {
-            RearView.Reset();
         }
     }
 
@@ -117,38 +102,49 @@ namespace GameMod
             UIManager.ResumeMainDrawing();
         }
     }
-
-    // detect "rearview" cheat code
-    [HarmonyPatch(typeof(Overload.PlayerShip), "FrameUpdateReadKeysFromInput")]
-    class RearViewReadKeys
+    
+    [HarmonyPatch(typeof(MenuManager), "HUDOptionsUpdate")]
+    class RearView_MenuManager_HUDOptionsUpdate
     {
-        private static string code = "rearview";
-        private static int codeIdx = 0;
 
-        static void Prefix()
+        static void HandleRearViewToggle()
         {
-            if (GameplayManager.IsMultiplayerActive)
-                return;
-            foreach (char c in Input.inputString)
+            if (UIManager.m_menu_selection == 11)
             {
-                if (code[codeIdx] == c)
-                    if (++codeIdx < code.Length)
-                        continue;
-                    else
-                        RearView.Toggle();
-                codeIdx = 0;
+                RearView.Toggle();
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+            }
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RearView_MenuManager_HUDOptionsUpdate), "HandleRearViewToggle"));
+                    continue;
+                }
+                yield return code;
             }
         }
     }
 
-    [HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
-    static class RearViewStartPlaying
+    // Process slider input
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class RearView_MenuManager_MpMatchSetup
     {
         static void Postfix()
         {
-            if (RearView.MPNetworkMatchEnabled)
-                foreach (var player in Overload.NetworkManager.m_Players)
-                    player.CallTargetAddHUDMessage(player.connectionToClient, "REARVIEW ENABLED", -1, true);
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3 &&
+                UIManager.m_menu_selection == 11)
+            {
+                RearView.MPMenuManagerEnabled = !RearView.MPMenuManagerEnabled;
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+            }
         }
     }
 }

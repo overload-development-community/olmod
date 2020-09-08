@@ -88,10 +88,7 @@ namespace GameMod
         {
             TeamCount = root["teamcount"].GetInt(MPTeams.Min);
 
-            // TODO: Re-enable after an option has been made for it.
-            //RearViewEnabled = root["rearviewenabled"].GetBool(false);
-            RearViewEnabled = false;
-
+            RearViewEnabled = root["rearviewenabled"].GetBool(false);
             JIPEnabled = root["jipenabled"].GetBool(false);
             SniperPacketsEnabled = root["sniperpacketsenabled"].GetBool(false);
             MatchMode = (MatchMode)root["matchmode"].GetInt(0);
