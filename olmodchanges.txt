@@ -1,3 +1,7 @@
+v0.3.4 - 2020-09-07
+
+- Bug fix for silent thunderbolt.
+
 v0.3.3 - 2020-09-07
 
 - VSync options no longer assume 60 Hz, and the left arrow now works for it.
