@@ -68,6 +68,7 @@ namespace GameMod
         public static int LapLimit;
         public static string MatchNotes { get; set; }
         public static bool HasPassword { get; set; }
+        public static bool ScaleRespawnTime { get; set; }
 
         public static JObject Serialize()
         {
@@ -81,13 +82,13 @@ namespace GameMod
             jobject["laplimit"] = LapLimit;
             jobject["matchnotes"] = MatchNotes;
             jobject["haspassword"] = HasPassword;
+            jobject["scalerespawntime"] = ScaleRespawnTime;
             return jobject;
         }
 
         public static void Deserialize(JToken root)
         {
             TeamCount = root["teamcount"].GetInt(MPTeams.Min);
-
             RearViewEnabled = root["rearviewenabled"].GetBool(false);
             JIPEnabled = root["jipenabled"].GetBool(false);
             SniperPacketsEnabled = root["sniperpacketsenabled"].GetBool(false);
@@ -96,6 +97,7 @@ namespace GameMod
             LapLimit = root["laplimit"].GetInt(0);
             MatchNotes = root["matchnotes"].GetString(String.Empty);
             HasPassword = root["haspassword"].GetBool(false);
+            ScaleRespawnTime = root["scalerespawntime"].GetBool(false);
         }
 
         public static string GetModeString(MatchMode mode)
@@ -378,6 +380,8 @@ namespace GameMod
             MPModPrivateData.LapLimit = ExtMenuManager.mms_ext_lap_limit;
             MPModPrivateData.MatchNotes = MPServerBrowser.mms_match_notes;
             MPModPrivateData.SniperPacketsEnabled = true;
+            MPModPrivateData.ScaleRespawnTime = Menus.mms_scale_respawn_time;
+
             var mpd = (PrivateMatchDataMessage)AccessTools.Field(typeof(NetworkMatch), "m_private_data").GetValue(null);
             MPModPrivateData.HasPassword = mpd.m_password.Contains('_');
             matchmakerPlayerRequest.PlayerAttributes["mod_private_data"] = MPModPrivateData.Serialize().ToString(Newtonsoft.Json.Formatting.None);

@@ -224,6 +224,7 @@ namespace GameMod
                 ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
+                Menus.mms_scale_respawn_time = ModPrefs.GetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
                 if (Core.GameMod.HasInternetMatch())
                     MPInternet.MenuIPAddress = ModPrefs.GetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             }
@@ -263,6 +264,7 @@ namespace GameMod
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.SetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
+            ModPrefs.SetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
             ModPrefs.Flush(filename + "mod");
         }
 
