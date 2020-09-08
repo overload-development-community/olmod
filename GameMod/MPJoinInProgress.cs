@@ -389,8 +389,8 @@ namespace GameMod
 
             NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
             MPTweaks.Send(connectionId);
-            if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
-                newPlayer.CallTargetAddHUDMessage(newPlayer.connectionToClient, "REARVIEW ENABLED", -1, true);
+            //if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
+            //    newPlayer.CallTargetAddHUDMessage(newPlayer.connectionToClient, "REARVIEW ENABLED", -1, true);
             CTF.SendJoinUpdate(newPlayer);
             Race.SendJoinUpdate(newPlayer);
             foreach (Player player in Overload.NetworkManager.m_Players)
@@ -499,7 +499,7 @@ namespace GameMod
         {
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW JOIN IN PROGRESS"), position, 7,
                 MenuManager.GetToggleSetting(MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 1 : 0),
-                Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1.5f, !MenuManager.m_mp_lan_match || MPJoinInProgress.SingleMatchEnable);
+                Loc.LS("ALLOW PLAYERS TO JOIN MATCH AFTER IT HAS STARTED"), 1f, !MenuManager.m_mp_lan_match || MPJoinInProgress.SingleMatchEnable);
             position.y += 62f;
 #if false // waits on olmod server detection
             uie.SelectAndDrawStringOptionItem(Loc.LS("REAR VIEW MIRROR"), position, 8,
