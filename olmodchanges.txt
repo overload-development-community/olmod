@@ -1,3 +1,22 @@
+v0.3.4 - 2020-09-07
+
+- Bug fix for silent thunderbolt.
+
+v0.3.3 - 2020-09-07
+
+- VSync options no longer assume 60 Hz, and the left arrow now works for it.
+- Sniper packet projectiles are now seen correctly by other clients for all primaries except thunderbolt.  Thunderbolt and all secondaries were already being seen correctly by all clients.  This should make receiving damage from most primaries feel more consistent.
+- Major JIP fixes, including preserving player scores, making players inactive until they spawn, and correctly-synchronized weapons.
+- Creeper sync has been expanded to include time bombs.
+- Projectiles are no longer able to be seen coming through walls on maps with multiple chunks.  These projectiles would not cause damage, but were confusing to players.
+- Thunderbolt charge and cyclone fire rate will no longer hold over after a death if you're holding the primary button down when you die and when you spawn.
+- CTF flag duplication should no longer occur.
+- 10 FPS floor for client-side ticks removed from multiplayer games.
+- Race mode times are now displayed in m:ss.fff format.
+- Servers should no longer crash when maps have missing resources, it should just bounce clients back to the lobby and continue functioning normally.
+- Console now accepts left key input.
+- Attempt to make GSync dnSpy fix more consistent.
+
 v0.3.2 - 2020-08-09
 
 - Client-side handling of games that use maps with missing resources.  Clients will now be booted to the lobby in this case.  Servers still crash, and is being tracked in issue #33.

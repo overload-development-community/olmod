@@ -11,7 +11,7 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static readonly string Version = "olmod 0.3.2";
+        public static readonly string Version = "olmod 0.3.4";
         private static Version GameVersion;
 
         public static void Initialize()
@@ -223,6 +223,23 @@ namespace GameMod.Core
                 }
                 yield return code;
             }
+        }
+    }
+
+    // GSync fix
+    [HarmonyPatch(typeof(GameManager), "UpdateTargetFramerate")]
+    class GSyncFix {
+        static bool Prefix()
+        {
+            if (GameplayManager.IsDedicatedServer())
+            {
+                Application.targetFrameRate = 120;
+            }
+            else
+            {
+                Application.targetFrameRate = -1;
+            }
+            return false;
         }
     }
 

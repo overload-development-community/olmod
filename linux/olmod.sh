@@ -30,15 +30,15 @@ then
 			cd "${olmoddir}"
 			OLMODDIR="${olmoddir}" LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}./olmod.so" "${overload}" ${olargs}
 		else
-			echo "Error: Overload.x86_64 not found."
-			echo "Looked in ${gamedir}"
-			echo "Use the -gamedir switch to specify the path that Overload.x86_64 resides in."
+			echo "Error: Overload.x86_64 not found." >&2
+			echo "Looked in ${gamedir}" >&2
+			echo "Use the -gamedir switch to specify the path that Overload.x86_64 resides in." >&2
 			exit 1
 		fi
 	else
-		echo "Error: olmod.so not found."
-		echo "Looked in ${olmoddir}"
-		echo "You must run olmod.sh while it's in the same directory as olmod.so."
+		echo "Error: olmod.so not found." >&2
+		echo "Looked in ${olmoddir}" >&2
+		echo "You must run olmod.sh while it's in the same directory as olmod.so." >&2
 		exit 1
 	fi
 else
@@ -51,15 +51,15 @@ else
 			cd "${olmoddir}"
 			OLMODDIR="${olmoddir}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES:+$DYLD_INSERT_LIBRARIES:}./olmod.dylib" "${overload}" ${olargs}
 		else
-			echo "Error: Overload.app not found."
-			echo "Looked in ${gamedir}"
-			echo "Use the -gamedir switch to specify the path that Overload.app resides in."
+			echo "Error: Overload.app not found." >&2
+			echo "Looked in ${gamedir}" >&2
+			echo "Use the -gamedir switch to specify the path that Overload.app resides in." >&2
 			exit 1
 		fi
 	else
-		echo "Error: olmod.dylib not found."
-		echo "Looked in ${olmoddir}"
-		echo "You must run olmod.sh while it's in the same directory as olmod.dylib."
+		echo "Error: olmod.dylib not found." >&2
+		echo "Looked in ${olmoddir}" >&2
+		echo "You must run olmod.sh while it's in the same directory as olmod.dylib." >&2
 		exit 1
 	fi
 fi
