@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using UnityEngine;
 using Harmony;
 using Overload;
-using System.IO;
+using UnityEngine;
 
 namespace GameMod.Core
 {
@@ -250,6 +251,21 @@ namespace GameMod.Core
         {
             __instance.c_player_ship.GetType().GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance.c_player_ship, 0);
             __instance.c_player_ship.m_thunder_power = 0;
+        }
+    }
+
+    [HarmonyPatch(typeof(StringParse), "IsNiceWord")]
+    class ReallyIsNiceWord
+    {
+        static bool Prefix(string s, ref bool __result)
+        {
+            if ((new string[] { "shenanigans" }).Contains(s.ToLower()))
+            {
+                __result = true;
+                return false;
+            }
+
+            return true;
         }
     }
 }

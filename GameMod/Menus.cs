@@ -9,7 +9,6 @@ namespace GameMod
 {
     public static class Menus
     {
-
         private static bool _mms_scale_respawn_time;
         public static bool mms_scale_respawn_time
         {

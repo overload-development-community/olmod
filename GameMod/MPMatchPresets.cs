@@ -57,6 +57,7 @@ namespace GameMod
                 sniperPackets = MPSniperPackets.enabled,
                 allowRearView = RearView.MPMenuManagerEnabled,
                 scaleRespawnTime = Menus.mms_scale_respawn_time
+                allowRearView = RearView.MPMenuManagerEnabled
             });
 
             presets.Add(new MPMatchPreset
