@@ -8,7 +8,22 @@ namespace GameMod
 {
     static class RearView
     {
-        public static bool Enabled;
+        public static bool Enabled
+        {
+            get
+            {
+                if (GameplayManager.IsMultiplayer)
+                {
+                    return RearView.MenuManagerEnabled
+                        && RearView.MPNetworkMatchEnabled
+                        && NetworkMatch.m_match_elapsed_seconds > 0f;
+                }
+                else
+                {
+                    return RearView.MenuManagerEnabled;
+                }
+            }
+        }
         public static bool MenuManagerEnabled;
         public static bool MPMenuManagerEnabled;
         public static bool MPNetworkMatchEnabled;
@@ -43,7 +58,6 @@ namespace GameMod
         public static void Reset()
         {
             Pause();
-            Enabled = false;
         }
 
         public static void Toggle()
@@ -70,15 +84,10 @@ namespace GameMod
             }
             else if (new_state == GameplayState.PLAYING)
             {
-                bool want = !GameplayManager.IsDedicatedServer() && ((GameplayManager.IsMultiplayerActive && RearView.MenuManagerEnabled && RearView.MPNetworkMatchEnabled) || (!GameplayManager.IsMultiplayerActive && RearView.MenuManagerEnabled));
-                if (want != RearView.Enabled)
-                {
-                    RearView.Enabled = want;
-                    if (RearView.Enabled)
-                        RearView.Init();
-                    else
-                        RearView.Pause();
-                }
+                if (RearView.Enabled)
+                    RearView.Init();
+                else
+                    RearView.Pause();
             }
         }
     }
@@ -151,4 +160,5 @@ namespace GameMod
             }
         }
     }
+
 }
