@@ -90,6 +90,10 @@ namespace GameMod
         {
             if (!GameplayManager.ShowHud || !RearView.Enabled)
                 return;
+
+            if (RearView.rearTex == null || RearView.rearCam == null || RearView.rearCam.gameObject == null)
+                RearView.Init();
+
             RearView.rearCam.enabled = true;
             var pos = new Vector2(288f, 288f);
             var posTile = new Vector2(pos.x, pos.y - 0.01f);
@@ -102,7 +106,7 @@ namespace GameMod
             UIManager.ResumeMainDrawing();
         }
     }
-    
+
     [HarmonyPatch(typeof(MenuManager), "HUDOptionsUpdate")]
     class RearView_MenuManager_HUDOptionsUpdate
     {
