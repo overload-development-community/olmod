@@ -543,7 +543,7 @@ namespace GameMod
             position.x = 0f;
             position.y = 170f + 62f * 2;
             //uie.DrawMenuSeparator(position - Vector2.up * 40f);
-            bool flag = NetworkMatch.m_last_lobby_status != null && NetworkMatch.m_last_lobby_status.m_can_start_now;
+            bool flag = NetworkMatch.m_last_lobby_status != null && NetworkMatch.m_last_lobby_status.m_can_start_now && MPModifiers.PlayerModifiersValid(Player.Mp_modifier1, Player.Mp_modifier2);
             uie.SelectAndDrawCheckboxItem(Loc.LS("START MATCH NOW"), position - Vector2.right * 250f, 0, MenuManager.m_mp_ready_to_start && flag,
                 !flag || MenuManager.m_mp_ready_vote_timer > 0f, 0.75f, -1);
             //position.y += 62f;
