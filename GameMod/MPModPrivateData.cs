@@ -26,7 +26,8 @@ namespace GameMod
 
         private static readonly string[] Names = new string[] {
             "ANARCHY", "TEAM ANARCHY", "MONSTERBALL", "CTF", "RACE" };
-        public static string ToString(MatchMode mode) {
+        public static string ToString(MatchMode mode)
+        {
             if ((int)mode < 0 || (int)mode >= Names.Length)
                 return "UNEXPECTED MODE: " + (int)mode;
             return Names[(int)mode];
@@ -51,7 +52,8 @@ namespace GameMod
             get { return MPJoinInProgress.NetworkMatchEnabled; }
             set { MPJoinInProgress.NetworkMatchEnabled = value; }
         }
-        public static bool SniperPacketsEnabled {
+        public static bool SniperPacketsEnabled
+        {
             get { return MPSniperPackets.enabled; }
             set { MPSniperPackets.enabled = value; }
         }
@@ -69,6 +71,7 @@ namespace GameMod
         public static string MatchNotes { get; set; }
         public static bool HasPassword { get; set; }
         public static bool ScaleRespawnTime { get; set; }
+        public static int ModifierFilterMask;
 
         public static JObject Serialize()
         {
@@ -83,6 +86,7 @@ namespace GameMod
             jobject["matchnotes"] = MatchNotes;
             jobject["haspassword"] = HasPassword;
             jobject["scalerespawntime"] = ScaleRespawnTime;
+            jobject["modifierfiltermask"] = ModifierFilterMask;
             return jobject;
         }
 
@@ -98,6 +102,7 @@ namespace GameMod
             MatchNotes = root["matchnotes"].GetString(String.Empty);
             HasPassword = root["haspassword"].GetBool(false);
             ScaleRespawnTime = root["scalerespawntime"].GetBool(false);
+            ModifierFilterMask = root["modifierfiltermask"].GetInt(255);
         }
 
         public static string GetModeString(MatchMode mode)
@@ -381,6 +386,7 @@ namespace GameMod
             MPModPrivateData.MatchNotes = MPServerBrowser.mms_match_notes;
             MPModPrivateData.SniperPacketsEnabled = true;
             MPModPrivateData.ScaleRespawnTime = Menus.mms_scale_respawn_time;
+            MPModPrivateData.ModifierFilterMask = RUtility.BoolArrayToBitmask(MPModifiers.mms_modifier_filter);
 
             var mpd = (PrivateMatchDataMessage)AccessTools.Field(typeof(NetworkMatch), "m_private_data").GetValue(null);
             MPModPrivateData.HasPassword = mpd.m_password.Contains('_');

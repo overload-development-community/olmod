@@ -307,6 +307,21 @@ namespace GameMod
                 conn.Disconnect();
         }
 
+        private static bool ClientLoadoutValid(int connectionId)
+        {
+            var conn = NetworkServer.connections[connectionId];
+            if (conn != null)
+            {
+                var player = NetworkMatch.m_player_loadout_data[conn.connectionId];
+                if (player != null)
+                {
+                    return MPModifiers.PlayerModifiersValid(player.m_mp_modifier1, player.m_mp_modifier2);
+                }
+            }
+
+            return false;
+        }
+
         private static void Postfix(NetworkMessage msg)
         {
             var connId = msg.conn.connectionId;
@@ -330,6 +345,11 @@ namespace GameMod
                 //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
                 NetworkServer.SendToClient(connId, 86, new StringMessage("You need OLMOD to join this match."));
+                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
+            }
+            if ((NetworkMatch.GetMatchState() != MatchState.LOBBY && NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN) && !ClientLoadoutValid(connId))
+            {
+                NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers: " + MPModifiers.GetDisabledModifiers()));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
             if (clientInfo.Capabilities.ContainsKey("ModPrivateData"))
