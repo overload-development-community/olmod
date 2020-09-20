@@ -259,7 +259,7 @@ namespace GameMod.Core
     {
         static bool Prefix(string s, ref bool __result)
         {
-            if ((new string[] { "shenanigans" }).Contains(s.ToLower()))
+            if ((new string[] { "shenanigans", "methinks" }).Contains(s.ToLower()))
             {
                 __result = true;
                 return false;
