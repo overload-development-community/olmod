@@ -98,7 +98,6 @@ namespace GameMod
                 return;
             }
 
-            Debug.Log("Is this being called?");
             MPJoinInProgress.SetReady(player, msg.ready);
         }
 
