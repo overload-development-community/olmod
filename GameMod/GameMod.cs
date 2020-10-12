@@ -12,8 +12,10 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static readonly string Version = "olmod 0.3.4";
+        public static string Version = "olmod 0.3.4";
         private static Version GameVersion;
+        public static bool Modded = false;
+        public static string ModsLoaded = "";
 
         public static void Initialize()
         {
@@ -22,6 +24,10 @@ namespace GameMod.Core
                 Debug.Log("olmod Initialize called but is already initialized!");
                 return;
             }
+
+            Modded = FindArg("-modded");
+            Version = $"{Version} **MODDED**";
+
             GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + Version + ", game " + GameVersion);
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
@@ -39,11 +45,14 @@ namespace GameMod.Core
             }
             Debug.Log("Done initializing " + Version);
 
-            if (Config.OLModDir != null && Config.OLModDir != "")
+            if (Modded && Config.OLModDir != null && Config.OLModDir != "")
             {
                 try
                 {
-                    foreach (var f in Directory.GetFiles(Config.OLModDir, "Mod-*.dll"))
+                    var files = Directory.GetFiles(Config.OLModDir, "Mod-*.dll");
+                    ModsLoaded = string.Join(",", files);
+
+                    foreach (var f in files)
                     {
                         Debug.Log("Loading mod " + f);
                         var asm = Assembly.LoadFile(f);
@@ -244,6 +253,7 @@ namespace GameMod.Core
         }
     }
 
+    // Fix bug with cyclone, flak, and thunderbolt maintaining their charge between lives.
     [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
     class CycloneFlakTBAfterDeathFix
     {
@@ -254,6 +264,7 @@ namespace GameMod.Core
         }
     }
 
+    // Shenanigans.
     [HarmonyPatch(typeof(StringParse), "IsNiceWord")]
     class ReallyIsNiceWord
     {
@@ -269,6 +280,7 @@ namespace GameMod.Core
         }
     }
 
+    // Fix next/previous resolution buttons.
     [HarmonyPatch(typeof(MenuManager), "SelectNextResolution")]
     class FixSelectNextResolution
     {

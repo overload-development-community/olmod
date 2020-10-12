@@ -288,6 +288,8 @@ namespace GameMod
             Debug.Log("MPTweaks: sending client capabilites");
             var caps = new Dictionary<string, string>();
             caps.Add("ModVersion", Core.GameMod.Version);
+            caps.Add("Modded", Core.GameMod.Modded ? "1" : "0");
+            caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
             caps.Add("SupportsTweaks", "proj,sniper,jip");
             caps.Add("ModPrivateData", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
