@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using UnityEngine;
 
-namespace mod_WeaponSelection
+namespace GameMod
 {
     class MPAutoSelection
     {
