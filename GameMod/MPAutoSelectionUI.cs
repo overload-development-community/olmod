@@ -428,46 +428,46 @@ namespace mod_WeaponSelection
 
             public static void Initialise()
             {
-                Primary[0] = PrimaryPriorityArray[0];
-                Primary[1] = PrimaryPriorityArray[1];
-                Primary[2] = PrimaryPriorityArray[2];
-                Primary[3] = PrimaryPriorityArray[3];
-                Primary[4] = PrimaryPriorityArray[4];
-                Primary[5] = PrimaryPriorityArray[5];
-                Primary[6] = PrimaryPriorityArray[6];
-                Primary[7] = PrimaryPriorityArray[7];
+                Primary[0] = MPAutoSelection.PrimaryPriorityArray[0];
+                Primary[1] = MPAutoSelection.PrimaryPriorityArray[1];
+                Primary[2] = MPAutoSelection.PrimaryPriorityArray[2];
+                Primary[3] = MPAutoSelection.PrimaryPriorityArray[3];
+                Primary[4] = MPAutoSelection.PrimaryPriorityArray[4];
+                Primary[5] = MPAutoSelection.PrimaryPriorityArray[5];
+                Primary[6] = MPAutoSelection.PrimaryPriorityArray[6];
+                Primary[7] = MPAutoSelection.PrimaryPriorityArray[7];
 
-                Secondary[0] = SecondaryPriorityArray[0];
-                Secondary[1] = SecondaryPriorityArray[1];
-                Secondary[2] = SecondaryPriorityArray[2];
-                Secondary[3] = SecondaryPriorityArray[3];
-                Secondary[4] = SecondaryPriorityArray[4];
-                Secondary[5] = SecondaryPriorityArray[5];
-                Secondary[6] = SecondaryPriorityArray[6];
-                Secondary[7] = SecondaryPriorityArray[7];
+                Secondary[0] = MPAutoSelection.SecondaryPriorityArray[0];
+                Secondary[1] = MPAutoSelection.SecondaryPriorityArray[1];
+                Secondary[2] = MPAutoSelection.SecondaryPriorityArray[2];
+                Secondary[3] = MPAutoSelection.SecondaryPriorityArray[3];
+                Secondary[4] = MPAutoSelection.SecondaryPriorityArray[4];
+                Secondary[5] = MPAutoSelection.SecondaryPriorityArray[5];
+                Secondary[6] = MPAutoSelection.SecondaryPriorityArray[6];
+                Secondary[7] = MPAutoSelection.SecondaryPriorityArray[7];
             }
 
             public static bool isInitialised = false;
 
             public static string[] Primary = {
-                PrimaryPriorityArray[0],
-                PrimaryPriorityArray[1],
-                PrimaryPriorityArray[2],
-                PrimaryPriorityArray[3],
-                PrimaryPriorityArray[4],
-                PrimaryPriorityArray[5],
-                PrimaryPriorityArray[6],
-                PrimaryPriorityArray[7],
+                MPAutoSelection.PrimaryPriorityArray[0],
+                MPAutoSelection.PrimaryPriorityArray[1],
+                MPAutoSelection.PrimaryPriorityArray[2],
+                MPAutoSelection.PrimaryPriorityArray[3],
+                MPAutoSelection.PrimaryPriorityArray[4],
+                MPAutoSelection.PrimaryPriorityArray[5],
+                MPAutoSelection.PrimaryPriorityArray[6],
+                MPAutoSelection.PrimaryPriorityArray[7],
             };
             public static string[] Secondary = {
-                SecondaryPriorityArray[0],
-                SecondaryPriorityArray[1],
-                SecondaryPriorityArray[2],
-                SecondaryPriorityArray[3],
-                SecondaryPriorityArray[4],
-                SecondaryPriorityArray[5],
-                SecondaryPriorityArray[6],
-                SecondaryPriorityArray[7]
+                MPAutoSelection.SecondaryPriorityArray[0],
+                MPAutoSelection.SecondaryPriorityArray[1],
+                MPAutoSelection.SecondaryPriorityArray[2],
+                MPAutoSelection.SecondaryPriorityArray[3],
+                MPAutoSelection.SecondaryPriorityArray[4],
+                MPAutoSelection.SecondaryPriorityArray[5],
+                MPAutoSelection.SecondaryPriorityArray[6],
+                MPAutoSelection.SecondaryPriorityArray[7]
             };
             public static bool[] isPrimarySelected = new bool[8];
             public static bool[] isSecondarySelected = new bool[8];
@@ -524,7 +524,7 @@ namespace mod_WeaponSelection
                 MPAutoSelection.PrimaryNeverSelect[selection[1]] = false;
 
                 saveToFile();
-                Initialise();
+                MPAutoSelection.Initialise();
             }
 
             public static void SwapSelectedSecondary()
@@ -553,7 +553,7 @@ namespace mod_WeaponSelection
                 MPAutoSelection.SecondaryNeverSelect[selection[1]] = false;
 
                 saveToFile();
-                Initialise();
+                MPAutoSelection.Initialise();
             }
 
             public static void saveToFile()
@@ -605,47 +605,38 @@ namespace mod_WeaponSelection
             {
                 if (n == 2100)
                 {
-                    MPAutoSelection.last_valid_description = "TOGGLES WETHER THE WHOLE MOD SHOULD BE ACTIVE";
-                    return "TOGGLES WETHER THE WHOLE MOD SHOULD BE ACTIVE";
+                    return "TOGGLES WETHER THE WHOLE FMOD SHOULD BE ACTIVE";
                 }
                 if (n == 2101)
                 {
-                    MPAutoSelection.last_valid_description = "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
                     return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
                 }
                 if (n <= 2017 && n >= 2000)
                 {
-                    MPAutoSelection.last_valid_description = "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
                     return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
                 }
                 if (n <= 1735 && n >= 1720)
                 {
-                    MPAutoSelection.last_valid_description = "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
                     return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
                 }
                 if (n == 2103)
                 {
-                    MPAutoSelection.last_valid_description = "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
                     return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
                 }
                 if (n == 2102)
                 {
-                    MPAutoSelection.last_valid_description = "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
                     return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
                 }
                 if (n == 2104)
                 {
                     // Alert
-                    MPAutoSelection.last_valid_description = "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
                     return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
                 }
                 if (n == 2105)
                 {
                     // On Swap
-                    MPAutoSelection.last_valid_description = "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
                     return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
                 }
-
                 else
                 {
                     return MPAutoSelection.last_valid_description;
@@ -672,9 +663,6 @@ namespace mod_WeaponSelection
 
             public static void DrawPriorityList(UIElement uie)
             {
-                //uConsole.Log("x:" +UIManager.m_mouse_pos.x + "| y:"+ UIManager.m_mouse_pos.y);
-
-
                 UIManager.X_SCALE = 0.2f;
                 UIManager.ui_bg_dark = true;
                 uie.DrawMenuBG();
@@ -683,14 +671,9 @@ namespace mod_WeaponSelection
                 position.y += 164f;
                 Vector2 position2 = position;
 
-
                 position.x -= 160f;
                 position2.x += 160f;
                 Vector2 temp_pos = position;
-
-                //this would be a good candidate to put into another method
-                //(string s, Vector2 pos, int selection, bool fade
-
 
                 Color ceas = UIManager.m_col_ui4;
 
@@ -702,12 +685,9 @@ namespace mod_WeaponSelection
                 //Draws the weapon / neverselect buttons
                 for (int i = 0; i < 8; i++)
                 {
-                    //uie.DrawWideBox(position, 100f, 28f, Color.red, 0.2f, 7); //TEST
-                    //UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30, Color.red, 12); //TEST
-                    //UIManager.DrawQuadUIInner(position, num, 10f, c, this.m_alpha, 11, 0.75f);
 
-                    int primaryindex = getWeaponIconIndex(PrimaryPriorityArray[i]); //temporary
-                    int secondaryindex = getWeaponIconIndex(SecondaryPriorityArray[i]);
+                    int primaryindex = getWeaponIconIndex(MPAutoSelection.PrimaryPriorityArray[i]); //temporary
+                    int secondaryindex = getWeaponIconIndex(MPAutoSelection.SecondaryPriorityArray[i]);
                     UIManager.DrawSpriteUI(left, 0.15f, 0.15f, ceas, uie.m_alpha, 26 + primaryindex);
 
                     UIManager.DrawSpriteUI(right, 0.15f, 0.15f, ceas, uie.m_alpha, 104 + secondaryindex);
@@ -730,6 +710,8 @@ namespace mod_WeaponSelection
                     {
                         s += "-";
                     }
+
+
                     uie.SelectAndDrawItem(s, position, 2000 + i, false, 0.022f, 1f);
                     position.x += 150f;
                     uie.SelectAndDrawHalfItem(Primary[i], position, 1720 + i, false);

@@ -591,7 +591,6 @@ namespace mod_WeaponSelection
             {
                 if (weapon.Equals(PrimaryPriorityArray[i])) return PrimaryNeverSelect[i];
             }
-            uConsole.Log("we shouldn't be here (1)");
             return false;
         }
 
@@ -604,7 +603,6 @@ namespace mod_WeaponSelection
                     if (sel.Equals(PrimaryPriorityArray[i])) return PrimaryPriorityArray[i];
                 }
             }
-            uConsole.Log("AUTOORDER-  This Case shouldnt be possible [Error 0]");
             return "a";
 
         }
