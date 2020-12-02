@@ -21,18 +21,54 @@ namespace GameMod
             public static int loadout1LastTick;
             public static int loadout2LastTick;
 
+            private static int last_menu_micro_state = 0;
+            public static void Prefix()
+            {
+                last_menu_micro_state = MenuManager.m_menu_micro_state;
+            }
             public static void Postfix()
             {
+                MenuManager.m_menu_micro_state = last_menu_micro_state;
+
                 selected = DrawMpAutoselectOrderingScreen.returnPrimarySelected();
                 selected2 = DrawMpAutoselectOrderingScreen.returnSecondarySelected();
+
+                switch (UIManager.m_menu_selection)
+                {
+                    case 200:
+                    case 201:
+                    case 202:
+                    case 203:
+                        if (UIManager.PushedSelect(100))
+                        {
+                            MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
+                            MenuManager.UIPulse(1f);
+                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
+                        }
+                        break;
+                }
+
                 switch (MenuManager.m_menu_sub_state)
                 {
                     case MenuSubState.ACTIVE:
+                        if (Controls.JustPressed(CCInput.MENU_PGUP) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 198))
+                        {
+                            MenuManager.m_menu_micro_state = (MenuManager.m_menu_micro_state + 3) % 4;
+                            MenuManager.UIPulse(1f);
+                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
+                        }
+                        else if (Controls.JustPressed(CCInput.MENU_PGDN) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 199))
+                        {
+                            MenuManager.m_menu_micro_state = (MenuManager.m_menu_micro_state + 1) % 4;
+                            MenuManager.UIPulse(1f);
+                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
+                        }
                         if (MenuManager.m_menu_micro_state == 3)
                         {
                             switch (UIManager.m_menu_selection)
                             {
-                                case 200:
+                                /*
+                                case 200: 
                                 case 201:
                                 case 202:
                                 case 203:
@@ -42,7 +78,7 @@ namespace GameMod
                                         MenuManager.UIPulse(1f);
                                         GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                                     }
-                                    break;
+                                    break;*/
                                 case 1720:
                                     if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(0);
                                     break;
@@ -153,6 +189,7 @@ namespace GameMod
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
                                             MPAutoSelection.secondarySwapFlag = true;
+                                            MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.enemy_detonatorB_alert, 0.8f, 0f, 0f, false);
                                             // SFXCueManager.PlayRawSoundEffect2D(SoundEffect.door_open2, 1f, -0.2f, 0.25f, false);
                                         }
@@ -160,6 +197,7 @@ namespace GameMod
                                     }
                                     break;
                                 case 2101: //REPLACE
+                                    /*
                                     if (UIManager.PushedSelect(100))
                                     {
                                         if (MPAutoSelection.patchPrevNext)
@@ -173,7 +211,7 @@ namespace GameMod
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
+                                    }*/
                                     break;
                                 case 2102:
                                     if (UIManager.PushedSelect(100))
@@ -186,6 +224,7 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.secondarySwapFlag = true;
+                                            MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
@@ -202,12 +241,13 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
+                                            MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2104: //
+                                case 2104: 
                                     if (UIManager.PushedSelect(100))
                                     {
                                         if (MPAutoSelection.zorc)
@@ -223,7 +263,7 @@ namespace GameMod
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2105: //
+                                case 2105: 
                                     if (UIManager.PushedSelect(100))
                                     {
                                         if (MPAutoSelection.COswapToHighest)
@@ -266,7 +306,6 @@ namespace GameMod
                         }
                         else
                         {
-                            //uConsole.Log("NOT 203 "+Player.Mp_loadout1 + " : " + Player.Mp_loadout2);
                             if (Player.Mp_loadout1 == 203 || Player.Mp_loadout2 == 203)
                             {
                                 Player.Mp_loadout1 = loadout1LastTick;
@@ -279,16 +318,12 @@ namespace GameMod
                             }
                             if (UIManager.PushedSelect(100) && UIManager.m_menu_selection == 203)
                             {
-                                //MenuManager.SetDefaultSelection(-1);
                                 MenuManager.m_menu_micro_state = 3;
                                 MenuManager.UIPulse(1f);
                                 GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                             }
 
                         }
-
-
-
                         break;
                 }
             }
@@ -359,7 +394,6 @@ namespace GameMod
 
 
         // Adds the Auto order entry in the customize menu
-        // Todo: fix the iteration to account for the new element
         [HarmonyPatch(typeof(UIElement), "DrawMpTabs")]
         internal class AddFourthTab
         {
@@ -399,6 +433,19 @@ namespace GameMod
         }
 
 
+        [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
+        internal class TrackNeverSelectStatus
+        {
+            public static void Postfix()
+            {
+                if(  MenuManager.opt_primary_autoswitch != 0 && (MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag) )
+                {
+                    MPAutoSelection.primarySwapFlag = false;
+                    MPAutoSelection.secondarySwapFlag = false;
+                }
+            }
+        }
+        
 
 
 
@@ -406,8 +453,6 @@ namespace GameMod
         [HarmonyPatch(typeof(UIElement), "DrawMpCustomize")]
         internal class DrawMpAutoselectOrderingScreen
         {
-            static string[] PrimaryPriorityArray = new string[8];
-            static string[] SecondaryPriorityArray = new string[8];
 
             static void Postfix(UIElement __instance)
             {
@@ -417,7 +462,6 @@ namespace GameMod
                     Initialise();
                     isInitialised = true; //should be set to false when leaving the MpCustomize Menu
                 }
-
                 int menu_micro_state = MenuManager.m_menu_micro_state;
                 if (menu_micro_state == 3)
                 {
@@ -428,49 +472,14 @@ namespace GameMod
 
             public static void Initialise()
             {
-                Primary[0] = MPAutoSelection.PrimaryPriorityArray[0];
-                Primary[1] = MPAutoSelection.PrimaryPriorityArray[1];
-                Primary[2] = MPAutoSelection.PrimaryPriorityArray[2];
-                Primary[3] = MPAutoSelection.PrimaryPriorityArray[3];
-                Primary[4] = MPAutoSelection.PrimaryPriorityArray[4];
-                Primary[5] = MPAutoSelection.PrimaryPriorityArray[5];
-                Primary[6] = MPAutoSelection.PrimaryPriorityArray[6];
-                Primary[7] = MPAutoSelection.PrimaryPriorityArray[7];
-
-                Secondary[0] = MPAutoSelection.SecondaryPriorityArray[0];
-                Secondary[1] = MPAutoSelection.SecondaryPriorityArray[1];
-                Secondary[2] = MPAutoSelection.SecondaryPriorityArray[2];
-                Secondary[3] = MPAutoSelection.SecondaryPriorityArray[3];
-                Secondary[4] = MPAutoSelection.SecondaryPriorityArray[4];
-                Secondary[5] = MPAutoSelection.SecondaryPriorityArray[5];
-                Secondary[6] = MPAutoSelection.SecondaryPriorityArray[6];
-                Secondary[7] = MPAutoSelection.SecondaryPriorityArray[7];
+                for (int i = 0; i < 8; i++)
+                {
+                    Primary[i] = MPAutoSelection.PrimaryPriorityArray[i];
+                    Secondary[i] = MPAutoSelection.SecondaryPriorityArray[i];
+                }
             }
 
-            public static bool isInitialised = false;
-
-            public static string[] Primary = {
-                MPAutoSelection.PrimaryPriorityArray[0],
-                MPAutoSelection.PrimaryPriorityArray[1],
-                MPAutoSelection.PrimaryPriorityArray[2],
-                MPAutoSelection.PrimaryPriorityArray[3],
-                MPAutoSelection.PrimaryPriorityArray[4],
-                MPAutoSelection.PrimaryPriorityArray[5],
-                MPAutoSelection.PrimaryPriorityArray[6],
-                MPAutoSelection.PrimaryPriorityArray[7],
-            };
-            public static string[] Secondary = {
-                MPAutoSelection.SecondaryPriorityArray[0],
-                MPAutoSelection.SecondaryPriorityArray[1],
-                MPAutoSelection.SecondaryPriorityArray[2],
-                MPAutoSelection.SecondaryPriorityArray[3],
-                MPAutoSelection.SecondaryPriorityArray[4],
-                MPAutoSelection.SecondaryPriorityArray[5],
-                MPAutoSelection.SecondaryPriorityArray[6],
-                MPAutoSelection.SecondaryPriorityArray[7]
-            };
-            public static bool[] isPrimarySelected = new bool[8];
-            public static bool[] isSecondarySelected = new bool[8];
+           
 
             public static int returnPrimarySelected()
             {
@@ -498,6 +507,7 @@ namespace GameMod
                 return counter;
             }
 
+
             public static void SwapSelectedPrimary()
             {
                 int counter = 0;
@@ -520,8 +530,9 @@ namespace GameMod
 
                 isPrimarySelected[selection[0]] = false;
                 isPrimarySelected[selection[1]] = false;
-                MPAutoSelection.PrimaryNeverSelect[selection[0]] = false;
-                MPAutoSelection.PrimaryNeverSelect[selection[1]] = false;
+                bool tmp = MPAutoSelection.PrimaryNeverSelect[selection[0]];
+                MPAutoSelection.PrimaryNeverSelect[selection[0]] = MPAutoSelection.PrimaryNeverSelect[selection[1]];
+                MPAutoSelection.PrimaryNeverSelect[selection[1]] = tmp;
 
                 saveToFile();
                 MPAutoSelection.Initialise();
@@ -549,8 +560,9 @@ namespace GameMod
 
                 isSecondarySelected[selection[0]] = false;
                 isSecondarySelected[selection[1]] = false;
-                MPAutoSelection.SecondaryNeverSelect[selection[0]] = false;
-                MPAutoSelection.SecondaryNeverSelect[selection[1]] = false;
+                bool tmp = MPAutoSelection.SecondaryNeverSelect[selection[0]];
+                MPAutoSelection.SecondaryNeverSelect[selection[0]] = MPAutoSelection.SecondaryNeverSelect[selection[1]];
+                MPAutoSelection.SecondaryNeverSelect[selection[1]] = tmp;
 
                 saveToFile();
                 MPAutoSelection.Initialise();
@@ -603,40 +615,14 @@ namespace GameMod
 
             public static string selectionToDescription(int n)
             {
-                if (n == 2100)
-                {
-                    return "TOGGLES WETHER THE WHOLE FMOD SHOULD BE ACTIVE";
-                }
-                if (n == 2101)
-                {
-                    return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
-                }
-                if (n <= 2017 && n >= 2000)
-                {
-                    return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
-                }
-                if (n <= 1735 && n >= 1720)
-                {
-                    return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
-                }
-                if (n == 2103)
-                {
-                    return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
-                }
-                if (n == 2102)
-                {
-                    return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
-                }
-                if (n == 2104)
-                {
-                    // Alert
-                    return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
-                }
-                if (n == 2105)
-                {
-                    // On Swap
-                    return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
-                }
+                if (n == 2100) return "TOGGLES WETHER THE WHOLE MOD SHOULD BE ACTIVE";
+                if (n == 2101) return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
+                if (n <= 2017 && n >= 2000) return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
+                if (n <= 1735 && n >= 1720) return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
+                if (n == 2103) return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
+                if (n == 2102) return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
+                if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
+                if (n == 2105) return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
                 else
                 {
                     return MPAutoSelection.last_valid_description;
@@ -655,7 +641,7 @@ namespace GameMod
                 if (weapon.Equals("LANCER") || weapon.Equals("VORTEX")) return 7;
                 else
                 {
-                    uConsole.Log("-AUTOORDERSELECT- [ERROR] getWeaponIconIndex didnt recognise the given weapon string");
+                    uConsole.Log("-AUTOSELECT- [ERROR] getWeaponIconIndex didnt recognise the given weapon string");
                     return 0;
                 }
             }
@@ -666,156 +652,111 @@ namespace GameMod
                 UIManager.X_SCALE = 0.2f;
                 UIManager.ui_bg_dark = true;
                 uie.DrawMenuBG();
-                Vector2 position = Vector2.up * (UIManager.UI_TOP + 70f);
 
+                Vector2 position = Vector2.up * (UIManager.UI_TOP + 70f);
                 position.y += 164f;
                 Vector2 position2 = position;
-
                 position.x -= 160f;
                 position2.x += 160f;
-                Vector2 temp_pos = position;
 
-                Color ceas = UIManager.m_col_ui4;
+                UIColorPrimaries = MPAutoSelection.primarySwapFlag ? UIManager.m_col_ui4 : UIManager.m_col_ui0;
+                UIColorSecondaries = MPAutoSelection.secondarySwapFlag ? UIManager.m_col_ui4 : UIManager.m_col_ub0;
 
                 Vector2 left = position;
                 Vector2 right = position;
                 left.x += 75;
                 right.x += 240;
 
-                //Draws the weapon / neverselect buttons
+                //Draw the neverselect Buttons
                 for (int i = 0; i < 8; i++)
                 {
-
-                    int primaryindex = getWeaponIconIndex(MPAutoSelection.PrimaryPriorityArray[i]); //temporary
+                    int primaryindex = getWeaponIconIndex(MPAutoSelection.PrimaryPriorityArray[i]);
                     int secondaryindex = getWeaponIconIndex(MPAutoSelection.SecondaryPriorityArray[i]);
-                    UIManager.DrawSpriteUI(left, 0.15f, 0.15f, ceas, uie.m_alpha, 26 + primaryindex);
-
-                    UIManager.DrawSpriteUI(right, 0.15f, 0.15f, ceas, uie.m_alpha, 104 + secondaryindex);
+                    UIManager.DrawSpriteUI(left, 0.15f, 0.15f, UIColorPrimaries, uie.m_alpha, 26 + primaryindex);
+                    UIManager.DrawSpriteUI(right, 0.15f, 0.15f, UIColorSecondaries, uie.m_alpha, 104 + secondaryindex);
 
                     left.y += 50;
                     right.y += 50;
-
-                    if (MPAutoSelection.PrimaryNeverSelect[i]) // irgendwas mit i
+                    if (MPAutoSelection.PrimaryNeverSelect[i])
                     {
                         uie.DrawWideBox(position, 100f, 28f, Color.red, 0.2f, 7);
                         UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.red, 12);
                     }
                     position.x -= 150f;
-                    string s = "";
-                    if (!MPAutoSelection.PrimaryNeverSelect[i])
-                    {
-                        s += "+";
-                    }
-                    else
-                    {
-                        s += "-";
-                    }
-
-
-                    uie.SelectAndDrawItem(s, position, 2000 + i, false, 0.022f, 1f);
+                    uie.SelectAndDrawItem((!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-"), position, 2000 + i, false, 0.022f, 1f);
                     position.x += 150f;
                     uie.SelectAndDrawHalfItem(Primary[i], position, 1720 + i, false);
                     position.y += 50;
+
+
                     if (MPAutoSelection.SecondaryNeverSelect[i])
                     {
                         uie.DrawWideBox(position2, 100f, 28f, Color.red, 0.2f, 7);
                         UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.red, 12);
                     }
                     position2.x += 150f;
-                    string a = "";
-                    if (!MPAutoSelection.SecondaryNeverSelect[i])
-                    {
-                        a += "+";
-                    }
-                    else
-                    {
-                        a += "-";
-                    }
-                    uie.SelectAndDrawItem(a, position2, 2010 + i, false, 0.022f, 1f);
+                    uie.SelectAndDrawItem((!MPAutoSelection.SecondaryNeverSelect[i] ? "+" : "-"), position2, 2010 + i, false, 0.022f, 1f);
                     position2.x -= 150f;
                     uie.SelectAndDrawHalfItem(Secondary[i], position2, 1728 + i, false);
                     position2.y += 50;
                 }
 
+
+                // other Buttons
                 position = Vector2.up * (UIManager.UI_TOP + 70f);
                 position.y += 164f;
                 position.x += 540f;
-                string mod = "";
-                string mod1 = "";
-                string mod2 = "";
-                if (MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag)
-                {
-                    mod += "ACTIVE";
-                }
-                else
-                {
-                    mod += "INACTIVE";
-                }
-                if (MPAutoSelection.primarySwapFlag)
-                {
-                    mod1 += "ON";
-                }
-                else if (!MPAutoSelection.primarySwapFlag)
-                {
-                    mod1 += "OFF";
-                }
-                if (MPAutoSelection.secondarySwapFlag)
-                {
-                    mod2 += "ON";
-                }
-                else if (!MPAutoSelection.secondarySwapFlag)
-                {
-                    mod2 += "OFF";
-                }
-
-
-                uie.SelectAndDrawItem("Mod: " + mod, position, 2100, false, 0.3f, 0.45f);
-                position.y += 2f;
-                Vector2 cust;
-                cust.x = 542;
-                cust.y = 123;
-
-                /*
-                MPWeaponAutoSelection.drag.x = position.x;//UIManager.m_mouse_pos.x;
-                MPWeaponAutoSelection.drag.y = UIManager.m_mouse_pos.y;
-                uConsole.Log("x:" + UIManager.m_mouse_pos.x + "| y:" + UIManager.m_mouse_pos.y);*/
-
-
-                cust.x = 540;
-                cust.y = -123;
-                //UIManager.DrawQuadUIInner(cust, 97f, 1f, UIManager.m_col_ui2, 0.6f, 11, 0.75f);
-
-                position.y += 50f;
+                uie.SelectAndDrawItem("Status: " + ((MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag) ? "ACTIVE" : "INACTIVE"), position, 2100, false, 0.3f, 0.45f);
+                position.y += 52f;
                 position.x += 5f;
-                uie.SelectAndDrawItem("Weapon Logic: " + mod1, position, 2103, false, 0.27f, 0.4f);
+                uie.SelectAndDrawItem("Weapon Logic: " + (MPAutoSelection.primarySwapFlag ? "ON" : "OFF"), position, 2103, false, 0.27f, 0.4f);
                 position.y += 50f;
-                uie.SelectAndDrawItem("Missile Logic: " + mod2, position, 2102, false, 0.27f, 0.4f);
-                cust.x = 540;
-                cust.y = -22;
-                //UIManager.DrawQuadUIInner(cust, 97f, 1f, UIManager.m_col_ui2, 0.6f, 11, 0.75f);
-                // 2101 is reserved for patch prev/next logic
+                uie.SelectAndDrawItem("Missile Logic: " + (MPAutoSelection.secondarySwapFlag ? "ON" : "OFF"), position, 2102, false, 0.27f, 0.4f);
 
-                string a1 = MPAutoSelection.patchPrevNext ? "ON" : "OFF";
-                string b = MPAutoSelection.zorc ? "ON" : "OFF";
-                string c = MPAutoSelection.COswapToHighest ? "HIGHEST" : "PICKUP";
 
                 position.x -= 5f;
-                position.y += 132; //original 147
-                //var MPWeaponAutoSelection.patchPrevNext
-                uie.SelectAndDrawItem("REPLACE: " + a1, position, 2101, false, 0.3f, 0.45f); // Possible Options: DEFAULT/PRIORITY
+                position.y += 182;
+                uie.SelectAndDrawItem("ALERT: " + (MPAutoSelection.zorc ? "ON" : "OFF"), position, 2104, false, 0.3f, 0.45f);
                 position.y += 50;
-                //var MPWeaponAutoSelection.zorc
-                uie.SelectAndDrawItem("ALERT: " + b, position, 2104, false, 0.3f, 0.45f); // Possible Options: OFF/ON
-                position.y += 50;
-                uie.SelectAndDrawItem("SWAP TO: " + c, position, 2105, false, 0.3f, 0.45f); // Possible Options: DEFAULT/PRIORITY
+                uie.SelectAndDrawItem("SWAP TO: " + (MPAutoSelection.COswapToHighest ? "HIGHEST" : "PICKUP"), position, 2105, false, 0.3f, 0.45f);
 
-                //this adds a short description of what the button that is currently selected does if its pressed
+
+
+                // Button description 
                 position2.x -= 160f;
                 position2.y -= 14f;
                 string k = selectionToDescription(UIManager.m_menu_selection);
                 MPAutoSelection.last_valid_description = k;
                 uie.DrawLabelSmall(position2, k, 500f);
             }
+
+            public static bool isInitialised = false;
+
+            public static string[] Primary = {
+                MPAutoSelection.PrimaryPriorityArray[0],
+                MPAutoSelection.PrimaryPriorityArray[1],
+                MPAutoSelection.PrimaryPriorityArray[2],
+                MPAutoSelection.PrimaryPriorityArray[3],
+                MPAutoSelection.PrimaryPriorityArray[4],
+                MPAutoSelection.PrimaryPriorityArray[5],
+                MPAutoSelection.PrimaryPriorityArray[6],
+                MPAutoSelection.PrimaryPriorityArray[7],
+            };
+            public static string[] Secondary = {
+                MPAutoSelection.SecondaryPriorityArray[0],
+                MPAutoSelection.SecondaryPriorityArray[1],
+                MPAutoSelection.SecondaryPriorityArray[2],
+                MPAutoSelection.SecondaryPriorityArray[3],
+                MPAutoSelection.SecondaryPriorityArray[4],
+                MPAutoSelection.SecondaryPriorityArray[5],
+                MPAutoSelection.SecondaryPriorityArray[6],
+                MPAutoSelection.SecondaryPriorityArray[7]
+            };
+            public static bool[] isPrimarySelected = new bool[8];
+            public static bool[] isSecondarySelected = new bool[8];
+
+            private static Color UIColorPrimaries;
+            private static Color UIColorSecondaries;
         }
 
 

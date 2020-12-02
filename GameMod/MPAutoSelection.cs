@@ -17,21 +17,26 @@ namespace GameMod
         [HarmonyPatch(typeof(GameManager), "Start")]
         internal class CommandsAndInitialisationPatch
         {
-            private static void Postfix(GameManager __instance)
+            private static void Postfix()
             {
                 uConsole.RegisterCommand("toggleprimaryorder", "toggles all Weapon Selection logic related to primary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdTogglePrimary)); 
                 uConsole.RegisterCommand("togglesecondaryorder", "toggles all Weapon Selection logic related to secondary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleSecondary)); 
                 uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud)); 
 
                 Initialise();
-                MenuManager.opt_primary_autoswitch = 0;  //TODO to implement: if the autoswitch /= 0 turn off the mod and if the mod gets turned on set autoswitch == 0
+				if( MenuManager.opt_primary_autoswitch != 0 )
+				{
+					primarySwapFlag = false;
+					secondarySwapFlag = false;
+                    MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
+                }
             }
 
             // COMMANDS
             private static void CmdToggleHud()
             {
                 miasmic = !miasmic;
-                uConsole.Log("Toggled HUD ! current state : " + miasmic);
+                uConsole.Log("Toggled HUD! current state : " + miasmic);
             }
 
             private static void CmdTogglePrimary()
@@ -56,7 +61,7 @@ namespace GameMod
         [HarmonyPatch(typeof(UIElement), "DrawHUDArmor")]
         internal class MaybeDrawHUDElement1
         {
-            public static bool Prefix(UIElement __instance)
+            public static bool Prefix()
             {
                 return !miasmic;
             }
@@ -74,7 +79,7 @@ namespace GameMod
         [HarmonyPatch(typeof(UIElement), "DrawHUDIndicators")]
         internal class MaybeDrawHUDElement3
         {
-            public static bool Prefix(UIElement __instance)
+            public static bool Prefix()
             {
                 return !miasmic;
             }
@@ -115,10 +120,9 @@ namespace GameMod
         /////////////////////////////////////////////////////////////////////////////////////
         //              INITIALISATION AND FETCH SETTINGS / PREFERENCES                  
         /////////////////////////////////////////////////////////////////////////////////////
-        //TODO: Store and Read the preferences in a better way
+        //TO-DO: Store and Read the preferences in a better way
         public static void Initialise()
         {
-            MenuManager.opt_primary_autoswitch = 0;
             if (File.Exists(textFile))
             {
                 readContent();
@@ -126,7 +130,7 @@ namespace GameMod
             else
             {
 
-                Debug.Log("-AUTOSELECTORDER- [ERROR] File does not exist. Creating default priority list");
+                Debug.Log("-AUTOSELECT- [ERROR] File does not exist. Creating default priority list");
                 createDefaultPriorityFile();
                 readContent();
             }
@@ -169,12 +173,12 @@ namespace GameMod
                 sw.WriteLine(SecondaryNeverSelect[5]);
                 sw.WriteLine(SecondaryNeverSelect[6]);
                 sw.WriteLine(SecondaryNeverSelect[7]);
-                sw.WriteLine(MPAutoSelection.primarySwapFlag);
-                sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                sw.WriteLine(MPAutoSelection.COswapToHighest);
-                sw.WriteLine(MPAutoSelection.patchPrevNext);
-                sw.WriteLine(MPAutoSelection.zorc);
-                sw.WriteLine(MPAutoSelection.miasmic);
+                sw.WriteLine(primarySwapFlag);
+                sw.WriteLine(secondarySwapFlag);
+                sw.WriteLine(COswapToHighest);
+                sw.WriteLine(patchPrevNext);
+                sw.WriteLine(zorc);
+                sw.WriteLine(miasmic);
             }
         }
 
@@ -192,6 +196,7 @@ namespace GameMod
 
         private static void readContent()
         {
+			
             using (StreamReader file = new StreamReader(textFile))
             {
                 int counter = 0;
@@ -210,7 +215,7 @@ namespace GameMod
                         }
                         else
                         {
-                            Debug.Log("-AUTOORDER- [ERROR](1) unexpected line content -> (content: " + ln + " )");
+                            createDefaultPriorityFile();
                             return;
                         }
 
@@ -225,12 +230,12 @@ namespace GameMod
                         }
                         else
                         {
-                            Debug.Log("-AUTOORDER- [ERROR](2) unexpected line content -> (content: " + ln + " )");
+                            createDefaultPriorityFile();
                             return;
                         }
                     }
 
-                    /// Contains true/false whether primary priorities are neverselected
+                    /// Contains true/false depending on whether primary priorities are neverselected
                     else if (counter < 24)
                     {
                         if (ln == "True" || ln == "False")
@@ -262,34 +267,27 @@ namespace GameMod
                     }
                     else if (counter == 32)
                     {
-                        if (ln == "True" || ln == "False") { primarySwapFlag = stringToBool(ln); }
+                        if (ln == "True" || ln == "False")  primarySwapFlag = stringToBool(ln); 
                     }
                     else if (counter == 33)
                     {
-                        if (ln == "True" || ln == "False") { secondarySwapFlag = stringToBool(ln); }
+                        if (ln == "True" || ln == "False")  secondarySwapFlag = stringToBool(ln); 
                     }
                     else if (counter == 34)
                     {
-                        if (ln == "True" || ln == "False") { COswapToHighest = stringToBool(ln); }
+                        if (ln == "True" || ln == "False")  COswapToHighest = stringToBool(ln); 
                     }
                     else if (counter == 35)
                     {
-                        if (ln == "True" || ln == "False") { patchPrevNext = stringToBool(ln); }
+                        if (ln == "True" || ln == "False")  patchPrevNext = stringToBool(ln); 
                     }
                     else if (counter == 36)
                     {
-                        if (ln == "True" || ln == "False") { zorc = stringToBool(ln); }
+                        if (ln == "True" || ln == "False")  zorc = stringToBool(ln); 
                     }
                     else if (counter == 37)
                     {
-                        if (ln == "True" || ln == "False") { miasmic = stringToBool(ln); }
-                    }
-
-                    else
-                    {
-                        Debug.Log("-AUTOORDER- [ERROR](3) unexpected line content -> (content: " + ln + " : " + counter + " )");
-
-                        return;
+                        if (ln == "True" || ln == "False")  miasmic = stringToBool(ln); 
                     }
                     counter++;
                 }
@@ -317,14 +315,11 @@ namespace GameMod
         /////////////////////////////////////////////////////////////////////////////////////
         //              PRIMARY WEAPONS CHAIN                   
         /////////////////////////////////////////////////////////////////////////////////////
-        // TODO: rewrite or never touch this
-
-
+        // TO-DO: rewrite or never touch this
         public static WeaponType returnNextPrimary(Player local, bool prev)
         {
             if (areThereAllowedPrimaries() && (local.m_ammo > 0 || local.m_energy > 0))
             {
-                WeaponType currentWeapon = local.m_weapon_type;
                 String currentWeaponName = WeaponTypeToString(local.m_weapon_type);
 
                 int index = getWeaponPriority(local.m_weapon_type);
@@ -953,7 +948,7 @@ namespace GameMod
         [HarmonyPatch(typeof(Player), "UnlockWeaponClient")]
         internal class WeaponPickup
         {
-            public static void Postfix(WeaponType wt, bool silent, Player __instance)
+            public static void Postfix(WeaponType wt, Player __instance)
             {
                 if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
                 {
@@ -985,7 +980,7 @@ namespace GameMod
         [HarmonyPatch(typeof(Player), "RpcSetMissileAmmo")]
         internal class SecondaryPickup
         {
-            public static void Postfix(int missile_type, int ammo, Player __instance)
+            public static void Postfix(int missile_type, Player __instance)
             {
                 if (MenuManager.opt_primary_autoswitch == 0 && secondarySwapFlag)
                 {
@@ -1030,13 +1025,13 @@ namespace GameMod
                         maybeSwapPrimary();
                         if (swap_failed)
                         {
-                            uConsole.Log("-AUTOORDER- [EB] swap failed on trying to switch to an ammo weapon");
+                            uConsole.Log("-AUTOORDER- swap failed on trying to switch to an ammo weapon");
                             swap_failed = false;
                             return true;
                         }
                         else
                         {
-                            uConsole.Log(" - Denied Execution of original Method because swap failed (SwitchToAmmoWeapon)");
+                            uConsole.Log("-AUTOORDER-  Denied Execution of the original Method because swap failed (SwitchToAmmoWeapon)");
                             return false;
                         }
                     }
@@ -1061,13 +1056,13 @@ namespace GameMod
                         maybeSwapPrimary();
                         if (swap_failed)
                         {
-                            uConsole.Log("-AUTOORDER- [EB] swap failed on trying to switch to an energy weapon");
+                            uConsole.Log("-AUTOORDER- swap failed on trying to switch to an energy weapon");
                             swap_failed = false;
                             return true;
                         }
                         else
                         {
-                            uConsole.Log(" - Denied Execution of original Method because swap failed (SwitchToEnergyWeapon)");
+                            uConsole.Log("-AUTOORDER-  Denied Execution of the original Method because swap failed (SwitchToEnergyWeapon)");
                             return false;
                         }
                     }
@@ -1136,7 +1131,7 @@ namespace GameMod
 
 
 
-        // This class is used to initiate a delayed swap in order to not confuse get overwritten by a slow server control
+        // This class is used to initiate a delayed swap in order to not get overwritten by a slow server control
         internal class DelayedSwitchTimer
         {
             Timer timer;
@@ -1179,10 +1174,8 @@ namespace GameMod
         public static String[] SecondaryPriorityArray = new String[8];
         public static bool[] PrimaryNeverSelect = new bool[8];
         public static bool[] SecondaryNeverSelect = new bool[8];
-        public static string[] EnergyWeapons = { "IMPULSE", "CYCLONE", "REFLEX", "THUNDERBOLT", "LANCER", };
+        public static string[] EnergyWeapons = { "IMPULSE", "CYCLONE", "REFLEX", "THUNDERBOLT", "LANCER" };
         public static string[] AmmoWeapons = { "CRUSHER", "FLAK", "DRILLER" };
-
-        public static string textFile = Path.Combine(Application.persistentDataPath, "Weapon-Priority-List.txt");
 
         public static bool swap_failed = false;
 
@@ -1198,8 +1191,6 @@ namespace GameMod
 
         public static string last_valid_description = "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
 
-        public static string OptionFilePath = Path.Combine(Application.persistentDataPath, "WPS-ModOptions-File.txt"); //path to config file // not needed anymore, delete on sight
-
         public static bool primarySwapFlag = true;   // toggles the whole primary selection logic
         public static bool secondarySwapFlag = true; // toggles the whole secondary selection logic
         public static bool COswapToHighest = false;  // toggles wether on pickup  the logic should switch to the highest weapon or the picked up weapon if its higher
@@ -1207,5 +1198,6 @@ namespace GameMod
         public static bool zorc = false;             // extra alert for old men when the devastator gets autoselected, still need to find an annoying sound for that
         public static bool miasmic = false;          // dont draw certain hud elements
 
+        public static string textFile = Path.Combine(Application.persistentDataPath, "Weapon-Priority-List.txt");
     }
 }
