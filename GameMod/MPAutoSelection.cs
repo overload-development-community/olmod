@@ -42,14 +42,14 @@ namespace GameMod
             private static void CmdTogglePrimary()
             {
                 primarySwapFlag = !primarySwapFlag;
-                uConsole.Log("[WPS] Primary weapon swapping: " + primarySwapFlag);
+                uConsole.Log("[AO] Primary weapon swapping: " + primarySwapFlag);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
 
             private static void CmdToggleSecondary()
             {
                 secondarySwapFlag = !secondarySwapFlag;
-                uConsole.Log("[WPS] Secondary weapon swapping: " + secondarySwapFlag);
+                uConsole.Log("[AO] Secondary weapon swapping: " + secondarySwapFlag);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
         }
@@ -292,7 +292,6 @@ namespace GameMod
                     counter++;
                 }
                 file.Close();
-
             }
         }
 
@@ -1198,6 +1197,6 @@ namespace GameMod
         public static bool zorc = false;             // extra alert for old men when the devastator gets autoselected, still need to find an annoying sound for that
         public static bool miasmic = false;          // dont draw certain hud elements
 
-        public static string textFile = Path.Combine(Application.persistentDataPath, "Weapon-Priority-List.txt");
+        public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
     }
 }
