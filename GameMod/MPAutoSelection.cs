@@ -24,11 +24,8 @@ namespace GameMod
                 uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud)); 
 
                 Initialise();
-				if( MenuManager.opt_primary_autoswitch != 0 )
-				{
-					primarySwapFlag = false;
-					secondarySwapFlag = false;
-                    MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
+		if( primarySwapFlag || secondarySwapFlag ) {
+                    MenuManager.opt_primary_autoswitch = 0;
                 }
             }
 
