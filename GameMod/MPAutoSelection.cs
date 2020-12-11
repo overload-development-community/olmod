@@ -13,7 +13,7 @@ namespace GameMod
 {
     class MPAutoSelection
     {
-
+        
         [HarmonyPatch(typeof(GameManager), "Start")]
         internal class CommandsAndInitialisationPatch
         {
@@ -21,12 +21,11 @@ namespace GameMod
             {
                 uConsole.RegisterCommand("toggleprimaryorder", "toggles all Weapon Selection logic related to primary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdTogglePrimary)); 
                 uConsole.RegisterCommand("togglesecondaryorder", "toggles all Weapon Selection logic related to secondary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleSecondary)); 
-                uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud)); 
+                uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud));
 
                 Initialise();
-		if( primarySwapFlag || secondarySwapFlag ) {
-                    MenuManager.opt_primary_autoswitch = 0;
-                }
+
+
             }
 
             // COMMANDS
@@ -34,19 +33,20 @@ namespace GameMod
             {
                 miasmic = !miasmic;
                 uConsole.Log("Toggled HUD! current state : " + miasmic);
+                MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
 
             private static void CmdTogglePrimary()
             {
                 primarySwapFlag = !primarySwapFlag;
-                uConsole.Log("[AO] Primary weapon swapping: " + primarySwapFlag);
+                uConsole.Log("[WPS] Primary weapon swapping: " + primarySwapFlag);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
 
             private static void CmdToggleSecondary()
             {
                 secondarySwapFlag = !secondarySwapFlag;
-                uConsole.Log("[AO] Secondary weapon swapping: " + secondarySwapFlag);
+                uConsole.Log("[WPS] Secondary weapon swapping: " + secondarySwapFlag);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
         }
@@ -106,10 +106,6 @@ namespace GameMod
                 isCurrentlyInLobby = false;
             }
         }
-
-
-
-
 
 
 
@@ -176,6 +172,7 @@ namespace GameMod
                 sw.WriteLine(patchPrevNext);
                 sw.WriteLine(zorc);
                 sw.WriteLine(miasmic);
+                sw.Close();
             }
         }
 
@@ -276,7 +273,7 @@ namespace GameMod
                     }
                     else if (counter == 35)
                     {
-                        if (ln == "True" || ln == "False")  patchPrevNext = stringToBool(ln); 
+                        if (ln == "True" || ln == "False")  patchPrevNext = stringToBool(ln);
                     }
                     else if (counter == 36)
                     {
@@ -944,9 +941,10 @@ namespace GameMod
         [HarmonyPatch(typeof(Player), "UnlockWeaponClient")]
         internal class WeaponPickup
         {
-            public static void Postfix(WeaponType wt, Player __instance)
+            public static bool Prefix(WeaponType wt, Player __instance)
             {
-                if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
+
+                if (primarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -955,17 +953,28 @@ namespace GameMod
 
                         if (new_weapon < current_weapon && !PrimaryNeverSelect[new_weapon])
                         {
-                            if (MPAutoSelection.COswapToHighest)
+                            if (!Controls.IsPressed(CCInput.FIRE_WEAPON))
                             {
-                                maybeSwapPrimary();
+                                if (MPAutoSelection.COswapToHighest)
+                                {
+                                    maybeSwapPrimary();
+                                }
+                                else
+                                {
+                                    swapToWeapon(wt.ToString());
+                                }
                             }
                             else
                             {
-                                // this method doesnt need to check wether there is ammo or energy as weapon pickups always come with a small amount of it
-                                swapToWeapon(wt.ToString());
+                                waitingSwapWeaponType = MPAutoSelection.COswapToHighest ? "NUM" : wt.ToString();
                             }
                         }
                     }
+                    return false;
+                }
+                else
+                {
+                    return true;
                 }
             }
         }
@@ -978,7 +987,8 @@ namespace GameMod
         {
             public static void Postfix(int missile_type, Player __instance)
             {
-                if (MenuManager.opt_primary_autoswitch == 0 && secondarySwapFlag)
+
+                if (secondarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -1014,7 +1024,8 @@ namespace GameMod
         {
             private static bool Prefix(Player __instance)
             {
-                if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
+
+                if (primarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -1044,7 +1055,8 @@ namespace GameMod
         {
             private static bool Prefix(Player __instance)
             {
-                if (MenuManager.opt_primary_autoswitch == 0 && primarySwapFlag)
+
+                if (primarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -1075,7 +1087,7 @@ namespace GameMod
             public static bool Prefix(Player __instance, bool prev)
             {
 
-                if (MenuManager.opt_primary_autoswitch == 0 && primarySwapFlag && patchPrevNext)
+                if (primarySwapFlag && patchPrevNext)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -1102,7 +1114,7 @@ namespace GameMod
             public static bool Prefix(Player __instance)
             {
 
-                if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.secondarySwapFlag)
+                if (secondarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -1122,9 +1134,34 @@ namespace GameMod
 
 
 
+        // checks wether there was a swap that didnt get completed due to the player firing
+        [HarmonyPatch(typeof(GameManager), "Update")]
+        internal class ProcessDelayedSwap
+        {
+            public static void Postfix()
+            {
 
+                if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
+                {
+                    if (!Controls.IsPressed(CCInput.FIRE_WEAPON) && !waitingSwapWeaponType.Equals("") )
+                    {
+                        if (waitingSwapWeaponType.Equals("NUM"))
+                        {
+                            maybeSwapPrimary();
+                        }
+                        else
+                        {
+                            swapToWeapon(waitingSwapWeaponType);
+                        }
+                        GameManager.m_local_player.UpdateCurrentWeaponName();
+                        waitingSwapWeaponType = "";
+                    }
+                }
 
+            }
+        }
 
+        
 
 
         // This class is used to initiate a delayed swap in order to not get overwritten by a slow server control
@@ -1166,33 +1203,34 @@ namespace GameMod
         /////////////////////////////////////////////////////////////////////////////////////
         //              VARIABLES (Switchlogic)                  
         /////////////////////////////////////////////////////////////////////////////////////
-        public static String[] PrimaryPriorityArray = new String[8];
-        public static String[] SecondaryPriorityArray = new String[8];
-        public static bool[] PrimaryNeverSelect = new bool[8];
-        public static bool[] SecondaryNeverSelect = new bool[8];
+        public static String[] PrimaryPriorityArray = new String[8];   // holds the current primary priorities with 0 being the highest
+        public static String[] SecondaryPriorityArray = new String[8]; // holds the current secondary priorities with 0 being the highest
+        public static bool[] PrimaryNeverSelect = new bool[8];         // parallel to the primary priorities
+        public static bool[] SecondaryNeverSelect = new bool[8];       // parallel to the secondary priorities
         public static string[] EnergyWeapons = { "IMPULSE", "CYCLONE", "REFLEX", "THUNDERBOLT", "LANCER" };
         public static string[] AmmoWeapons = { "CRUSHER", "FLAK", "DRILLER" };
 
         public static bool swap_failed = false;
 
+        private static string waitingSwapWeaponType = ""; // used to hold the weapon type value if a swap gets put on hold due to the player still firing
 
 
 
-
-        /////////////////////////////////////////////////////////////////////////////////////
-        //              PUBLIC VARIABLES                  
-        /////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////
+        //            PUBLIC VARIABLES             //                                  
+        /////////////////////////////////////////////
         public static bool isCurrentlyInLobby = false;
         public static bool isInitialised = false;
 
         public static string last_valid_description = "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
 
-        public static bool primarySwapFlag = true;   // toggles the whole primary selection logic
-        public static bool secondarySwapFlag = true; // toggles the whole secondary selection logic
-        public static bool COswapToHighest = false;  // toggles wether on pickup  the logic should switch to the highest weapon or the picked up weapon if its higher
-        public static bool patchPrevNext = false;    // toggles wether the default prev/next weapon swap methods should be replaced with a priority based prev/next
-        public static bool zorc = false;             // extra alert for old men when the devastator gets autoselected, still need to find an annoying sound for that
-        public static bool miasmic = false;          // dont draw certain hud elements
+        public static bool primarySwapFlag = true;      // toggles the whole primary selection logic
+        public static bool secondarySwapFlag = true;    // toggles the whole secondary selection logic
+        public static bool COswapToHighest = false;     // toggles wether on pickup  the logic should switch to the highest weapon or the picked up weapon if its higher
+        public static bool patchPrevNext = false;       // toggles wether the default prev/next weapon swap methods should be replaced with a priority based prev/next
+        public static bool zorc = false;                // extra alert for old men when the devastator gets autoselected, still need to find an annoying sound for that
+        public static bool miasmic = false;             // dont draw certain hud elements
+        public static bool allowSwapWhileFiring = true; // toggles wether weapon swaps are allowed to happen while the player is firing, if set to false it will delay the swap till the player is not firing anymore                                           
 
         public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
     }

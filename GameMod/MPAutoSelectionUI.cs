@@ -25,6 +25,11 @@ namespace GameMod
             public static void Prefix()
             {
                 last_menu_micro_state = MenuManager.m_menu_micro_state;
+                if (!init)
+                {
+                    init = true;
+                    MenuManager.opt_primary_autoswitch = 0;
+                }
             }
             public static void Postfix()
             {
@@ -189,14 +194,13 @@ namespace GameMod
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
                                             MPAutoSelection.secondarySwapFlag = true;
-                                            MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.enemy_detonatorB_alert, 0.8f, 0f, 0f, false);
                                             // SFXCueManager.PlayRawSoundEffect2D(SoundEffect.door_open2, 1f, -0.2f, 0.25f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2101: //REPLACE
+                                case 2101:
                                     /*
                                     if (UIManager.PushedSelect(100))
                                     {
@@ -224,7 +228,7 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.secondarySwapFlag = true;
-                                            MenuManager.opt_primary_autoswitch = 0;
+                                            //MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
@@ -241,7 +245,7 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
-                                            MenuManager.opt_primary_autoswitch = 0;
+                                            //MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
@@ -433,21 +437,6 @@ namespace GameMod
         }
 
 
-        [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
-        internal class TrackNeverSelectStatus
-        {
-            public static void Postfix()
-            {
-                if(  MenuManager.opt_primary_autoswitch != 0 && (MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag) )
-                {
-                    MPAutoSelection.primarySwapFlag = false;
-                    MPAutoSelection.secondarySwapFlag = false;
-                }
-            }
-        }
-        
-
-
 
 
         [HarmonyPatch(typeof(UIElement), "DrawMpCustomize")]
@@ -456,7 +445,6 @@ namespace GameMod
 
             static void Postfix(UIElement __instance)
             {
-                //Initialise();
                 if (isInitialised == false)
                 {
                     Initialise();
@@ -610,6 +598,7 @@ namespace GameMod
                     sw.WriteLine(MPAutoSelection.patchPrevNext);
                     sw.WriteLine(MPAutoSelection.zorc);
                     sw.WriteLine(MPAutoSelection.miasmic);
+                    sw.Close();
                 }
             }
 
@@ -649,6 +638,7 @@ namespace GameMod
 
             public static void DrawPriorityList(UIElement uie)
             {
+
                 UIManager.X_SCALE = 0.2f;
                 UIManager.ui_bg_dark = true;
                 uie.DrawMenuBG();
@@ -683,7 +673,7 @@ namespace GameMod
                         UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.red, 12);
                     }
                     position.x -= 150f;
-                    uie.SelectAndDrawItem((!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-"), position, 2000 + i, false, 0.022f, 1f);
+                    uie.SelectAndDrawItem(!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-", position, 2000 + i, false, 0.022f, 1f);
                     position.x += 150f;
                     uie.SelectAndDrawHalfItem(Primary[i], position, 1720 + i, false);
                     position.y += 50;
@@ -759,7 +749,7 @@ namespace GameMod
             private static Color UIColorSecondaries;
         }
 
-
+        public static bool init = false;
 
     }
 }
