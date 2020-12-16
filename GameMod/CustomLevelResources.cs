@@ -42,7 +42,9 @@ namespace GameMod
             { "entity_prop_fan_tn3", "entity_prop_fan_tn3" },
             { "entity_prop_fan_tn4", "entity_prop_fan_tn4" },
             { "entity_prop_fan_tn_corner", "entity_prop_fan_tn_corner" },
-            { "entity_prop_reactor_om16", "entity_prop_reactor_om16" } };
+            { "entity_prop_reactor_om16", "entity_prop_reactor_om16" },
+            { "entity_trigger_box_lava_alien", "entity_trigger_box_lava_alien" },
+            { "entity_trigger_box_lava_normal", "entity_trigger_box_lava_normal" }	};
 
         static MethodInfo TargetMethod()
         {
