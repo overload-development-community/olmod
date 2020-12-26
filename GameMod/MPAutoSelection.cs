@@ -1,12 +1,8 @@
-﻿using Harmony;
-using Overload;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
+using Harmony;
+using Overload;
 using UnityEngine;
 
 namespace GameMod
