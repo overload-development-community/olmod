@@ -33,6 +33,7 @@ namespace GameMod
         public const float ReturnTimeAmountDefault = 30;
         public static float ReturnTimeAmount = ReturnTimeAmountDefault;
         public static bool ShowReturnTimer = false;
+        public static bool CarrierBoostEnabled = true;
 
         public static bool IsActive
         {
@@ -48,6 +49,11 @@ namespace GameMod
             {
                 return IsActive && Overload.NetworkManager.IsServer();
             }
+        }
+
+        public static bool IsFlagrunner(PlayerShip playerShip)
+        {
+            return CTF.PlayerHasFlag.ContainsKey(playerShip.c_player.netId);
         }
 
         public static Color FlagColor(int teamIdx)
@@ -190,6 +196,11 @@ namespace GameMod
                 evt = CTFEvent.RETURN;
             } else {
                 SendCTFPickup(-1, player.netId, flag, FlagState.PICKEDUP);
+                if (!CTF.CarrierBoostEnabled)
+                {
+                    player.c_player_ship.m_boosting = false;
+                    player.c_player_ship.m_boost_overheat_timer = float.MaxValue;
+                }
                 evt = CTFEvent.PICKUP;
             }
 
@@ -285,6 +296,11 @@ namespace GameMod
                 return;
             PlayerHasFlag.Remove(player.netId);
             SendCTFLose(-1, player.netId, flag, FlagState.HOME);
+            if (!CTF.CarrierBoostEnabled)
+            {
+                player.c_player_ship.m_boost_overheat_timer = 0;
+                player.c_player_ship.m_boost_heat = 0;
+            }
             SpawnAtHome(flag);
             NetworkMatch.AddPointForTeam(player.m_mp_team);
 
@@ -311,6 +327,11 @@ namespace GameMod
             if (!PlayerHasFlag.TryGetValue(player.netId, out int flag))
                 return;
             SendCTFLose(-1, player.netId, flag, FlagState.LOST);
+            if (!CTF.CarrierBoostEnabled)
+            {
+                player.c_player_ship.m_boost_overheat_timer = 0;
+                player.c_player_ship.m_boost_heat = 0;
+            }
             NotifyAll(CTFEvent.DROP, null, player, flag);
             if (FlagReturnTimer[flag] != null)
                 GameManager.m_gm.StopCoroutine(FlagReturnTimer[flag]);
@@ -707,6 +728,12 @@ namespace GameMod
                 CTF.PlayerHasFlag.Add(msg.m_player_id, msg.m_flag_id);
             }
 
+            if (!CTF.CarrierBoostEnabled && GameManager.m_player_ship.netId == msg.m_player_id)
+            {
+                GameManager.m_player_ship.m_boosting = false;
+                GameManager.m_player_ship.m_boost_overheat_timer = float.MaxValue;
+            }
+
             // copy flag ring effect to carrier ship
             CTF.PlayerEnableRing(CTF.FindPlayerForEffect(msg.m_player_id), msg.m_flag_id);
         }
@@ -723,6 +750,12 @@ namespace GameMod
 
                 if (msg.m_flag_state == FlagState.LOST)
                     CTF.FlagReturnTime[msg.m_flag_id] = Time.time + CTF.ReturnTimeAmount;
+            }
+
+            if (!CTF.CarrierBoostEnabled && GameManager.m_player_ship.netId == msg.m_player_id)
+            {
+                GameManager.m_player_ship.m_boost_overheat_timer = 0;
+                GameManager.m_player_ship.m_boost_heat = 0;
             }
 
             // remove flag ring effect from carrier ship
@@ -903,6 +936,22 @@ namespace GameMod
             position.x -= 110f;
             position.y += 20f;
             CTF.DrawFlags(__instance, position, ___m_alpha);
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "IsPressed")]
+    class Player_IsPressed
+    {
+        static void Postfix(CCInput cc_type, ref bool __result, Player __instance)
+        {
+            if (!CTF.CarrierBoostEnabled && (!__instance.isLocalPlayer || !uConsole.IsOn()) && __instance.m_input_count[(int)cc_type] >= 1 && cc_type == CCInput.USE_BOOST && GameplayManager.IsMultiplayer && CTF.IsFlagrunner(__instance.c_player_ship))
+            {
+                __result = false;
+            }
+            else
+            {
+                __result = (!__instance.isLocalPlayer || !uConsole.IsOn()) && __instance.m_input_count[(int)cc_type] >= 1;
+            }
         }
     }
 }

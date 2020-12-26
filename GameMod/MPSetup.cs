@@ -20,6 +20,7 @@ namespace GameMod
             MPJoinInProgress.NetworkMatchEnabled = false;
             RearView.MPNetworkMatchEnabled = false;
             MPSuddenDeath.SuddenDeathMatchEnabled = false;
+            MPClassic.matchEnabled = false;
         }
     }
 

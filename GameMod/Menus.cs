@@ -9,12 +9,20 @@ namespace GameMod
 {
     public static class Menus
     {
+        public static bool mms_ctf_boost { get; set; }
+
+        public static string GetMMSCtfCarrierBoost()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_ctf_boost));
+        }
+
         private static bool _mms_scale_respawn_time;
         public static bool mms_scale_respawn_time
         {
             get { return _mms_scale_respawn_time && (MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL); }
             set { _mms_scale_respawn_time = value; }
         }
+        public static bool mms_classic_spawns { get; set; }
 
         public static string GetMMSRearViewPIP()
         {
@@ -24,6 +32,11 @@ namespace GameMod
         public static string GetMMSScaleRespawnTime()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_scale_respawn_time));
+        }
+
+        public static string GetMMSClassicSpawns()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_classic_spawns));
         }
     }
 
@@ -52,6 +65,10 @@ namespace GameMod
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW REAR VIEW CAMERA"), position, 11, Menus.GetMMSRearViewPIP(), Loc.LS("CLIENTS CAN CHOOSE TO HAVE REAR VIEW"), 1f, false);
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("SCALE RESPAWN TO TEAM SIZE"), position, 12, Menus.GetMMSScaleRespawnTime(), Loc.LS("AUTOMATICALLY SCALE RESPAWN TIME TO TEAM SIZE (e.g. 4 = 4 seconds)"), 1f, !(MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL));
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
             position.y += 62f;
         }
 
@@ -152,6 +169,24 @@ namespace GameMod
                 UIManager.m_menu_selection == 12)
             {
                 Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+            }
+
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3 &&
+                UIManager.m_menu_selection == 13)
+            {
+                Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+            }
+
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3 &&
+                UIManager.m_menu_selection == 14)
+            {
+                Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
                 MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
             }
         }       

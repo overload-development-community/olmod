@@ -551,8 +551,9 @@ namespace GameMod
                 teamCount = MPTeams.NetworkMatchTeamCount,
                 players = NetworkMatch.m_players.Values.Where(x => !x.m_name.StartsWith("OBSERVER")).Select(x => x.m_name),
                 hasPassword = MPModPrivateData.HasPassword,
-                matchNotes = MPModPrivateData.MatchNotes
-                //Overload.NetworkManager.m_Players.Where(x => !x.m_spectator).Select(x => x.m_mp_name)
+                matchNotes = MPModPrivateData.MatchNotes,
+                classicSpanwsEnabled = MPClassic.matchEnabled,
+                ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled
             });
         }
 
