@@ -1,11 +1,7 @@
 ﻿using Harmony;
 using Overload;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 using UnityEngine;
 
@@ -19,15 +15,15 @@ namespace GameMod
         {
             private static void Postfix(GameManager __instance)
             {
-                uConsole.RegisterCommand("toggleprimaryorder", "toggles all Weapon Selection logic related to primary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdTogglePrimary)); 
-                uConsole.RegisterCommand("togglesecondaryorder", "toggles all Weapon Selection logic related to secondary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleSecondary)); 
-                uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud)); 
+                uConsole.RegisterCommand("toggleprimaryorder", "toggles all Weapon Selection logic related to primary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdTogglePrimary));
+                uConsole.RegisterCommand("togglesecondaryorder", "toggles all Weapon Selection logic related to secondary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleSecondary));
+                uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud));
 
                 Initialise();
-                if( MenuManager.opt_primary_autoswitch != 0 )
-				{
-					primarySwapFlag = false;
-					secondarySwapFlag = false;
+                if (MenuManager.opt_primary_autoswitch != 0)
+                {
+                    primarySwapFlag = false;
+                    secondarySwapFlag = false;
                     //MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
                 }
             }
@@ -1016,7 +1012,7 @@ namespace GameMod
                                 {
                                     maybeSwapMissiles();
                                 }
-                                else 
+                                else
                                 {
                                     swapToMissile(missile_type);
                                 }
@@ -1178,7 +1174,7 @@ namespace GameMod
         {
             Timer timer;
 
-            public DelayedSwitchTimer(){}
+            public DelayedSwitchTimer() { }
 
             public void Awake()
             {

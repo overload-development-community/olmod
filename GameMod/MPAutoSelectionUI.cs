@@ -442,7 +442,7 @@ namespace GameMod
                 Secondary[7] = MPAutoSelection.SecondaryPriorityArray[7];
             }
 
-            
+
 
             public static int returnPrimarySelected()
             {
