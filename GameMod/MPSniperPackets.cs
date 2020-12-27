@@ -402,6 +402,9 @@ namespace GameMod
             }
 
             MPSniperPackets.SetWeapon(player, msg);
+
+            // Workaround for invisible players in JIP.  If they are invisible, make them visible if they sent any kind of sniper packet.
+            MPJoinInProgress.SetReady(player, true);
         }
 
         /// <summary>
@@ -513,6 +516,9 @@ namespace GameMod
                     }
                     break;
             }
+
+            // Workaround for invisible players in JIP.  If they are invisible, make them visible if they sent any kind of sniper packet.
+            MPJoinInProgress.SetReady(player, true);
         }
 
         /// <summary>
@@ -551,6 +557,9 @@ namespace GameMod
                     player.m_missile_ammo[(int)missileType] = (int)msg.m_value;
                     break;
             }
+
+            // Workaround for invisible players in JIP.  If they are invisible, make them visible if they sent any kind of sniper packet.
+            MPJoinInProgress.SetReady(player, true);
         }
 
         /// <summary>
@@ -573,6 +582,9 @@ namespace GameMod
             {
                 player.m_missile_ammo[i] = msg.m_missile_ammo[i];
             }
+
+            // Workaround for invisible players in JIP.  If they are invisible, make them visible if they sent any kind of sniper packet.
+            MPJoinInProgress.SetReady(player, true);
         }
 
         /// <summary>
@@ -594,6 +606,9 @@ namespace GameMod
             CreeperSyncExplode.m_allow_explosions = true;
             ProjectileManager.ExplodePlayerDetonators(player);
             CreeperSyncExplode.m_allow_explosions = false;
+
+            // Workaround for invisible players in JIP.  If they are invisible, make them visible if they sent any kind of sniper packet.
+            MPJoinInProgress.SetReady(player, true);
         }
 
         /// <summary>

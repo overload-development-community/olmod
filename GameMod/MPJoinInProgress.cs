@@ -20,6 +20,8 @@ namespace GameMod
         public static bool MenuManagerEnabled = true;
         public static bool SingleMatchEnable = false;
 
+        public static List<NetworkInstanceId> PlayersReady = new List<NetworkInstanceId>();
+
         public static bool MatchHasStartedMod(bool m_match_has_started)
         {
             return m_match_has_started && (!NetworkMatchEnabled || (int)NetworkMatch.GetMatchState() >= (int)MatchState.POSTGAME);
@@ -37,6 +39,20 @@ namespace GameMod
 
         public static void SetReady(Player player, bool ready)
         {
+            // Keep track of who has been set ready so we're not wasting CPU cycles making someone visible who is already visible.  Especially needed with the JIP visibility workaround.
+            if (ready)
+            {
+                if (PlayersReady.Contains(player.netId))
+                {
+                    return;
+                }
+                PlayersReady.Add(player.netId);
+            }
+            else
+            {
+                PlayersReady.Remove(player.netId);
+            }
+
             player.c_player_ship.c_cockpit.gameObject.SetActive(ready);
             player.c_player_ship.c_mesh_collider.enabled = ready;
             player.c_player_ship.c_mesh_collider.gameObject.SetActive(ready);
