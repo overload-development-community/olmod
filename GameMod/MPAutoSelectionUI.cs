@@ -1,11 +1,6 @@
-﻿using Harmony;
+﻿using System.IO;
+using Harmony;
 using Overload;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace GameMod
@@ -640,7 +635,7 @@ namespace GameMod
 
             public static void DrawPriorityList(UIElement uie)
             {
-UIManager.X_SCALE = 0.2f;
+                UIManager.X_SCALE = 0.2f;
                 UIManager.ui_bg_dark = true;
                 uie.DrawMenuBG();
 
@@ -720,7 +715,7 @@ UIManager.X_SCALE = 0.2f;
                 MPAutoSelection.last_valid_description = k;
                 uie.DrawLabelSmall(position2, k, 500f);
             }
-			public static bool isInitialised = false;
+            public static bool isInitialised = false;
 
             public static string[] Primary = {
                 MPAutoSelection.PrimaryPriorityArray[0],
