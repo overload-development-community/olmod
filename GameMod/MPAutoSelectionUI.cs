@@ -1,6 +1,11 @@
-﻿using System.IO;
-using Harmony;
+﻿using Harmony;
 using Overload;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace GameMod
@@ -16,59 +21,18 @@ namespace GameMod
             public static int loadout1LastTick;
             public static int loadout2LastTick;
 
-            private static int last_menu_micro_state = 0;
-            public static void Prefix()
-            {
-                last_menu_micro_state = MenuManager.m_menu_micro_state;
-                if (!init)
-                {
-                    init = true;
-                    MenuManager.opt_primary_autoswitch = 0;
-                }
-            }
             public static void Postfix()
             {
-                MenuManager.m_menu_micro_state = last_menu_micro_state;
-
                 selected = DrawMpAutoselectOrderingScreen.returnPrimarySelected();
                 selected2 = DrawMpAutoselectOrderingScreen.returnSecondarySelected();
-
-                switch (UIManager.m_menu_selection)
-                {
-                    case 200:
-                    case 201:
-                    case 202:
-                    case 203:
-                        if (UIManager.PushedSelect(100))
-                        {
-                            MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
-                            MenuManager.UIPulse(1f);
-                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
-                        }
-                        break;
-                }
-
                 switch (MenuManager.m_menu_sub_state)
                 {
                     case MenuSubState.ACTIVE:
-                        if (Controls.JustPressed(CCInput.MENU_PGUP) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 198))
-                        {
-                            MenuManager.m_menu_micro_state = (MenuManager.m_menu_micro_state + 3) % 4;
-                            MenuManager.UIPulse(1f);
-                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
-                        }
-                        else if (Controls.JustPressed(CCInput.MENU_PGDN) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 199))
-                        {
-                            MenuManager.m_menu_micro_state = (MenuManager.m_menu_micro_state + 1) % 4;
-                            MenuManager.UIPulse(1f);
-                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
-                        }
                         if (MenuManager.m_menu_micro_state == 3)
                         {
                             switch (UIManager.m_menu_selection)
                             {
-                                /*
-                                case 200: 
+                                case 200:
                                 case 201:
                                 case 202:
                                 case 203:
@@ -78,7 +42,7 @@ namespace GameMod
                                         MenuManager.UIPulse(1f);
                                         GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                                     }
-                                    break;*/
+                                    break;
                                 case 1720:
                                     if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(0);
                                     break;
@@ -195,8 +159,7 @@ namespace GameMod
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2101:
-                                    /*
+                                /*case 2101: //REPLACE
                                     if (UIManager.PushedSelect(100))
                                     {
                                         if (MPAutoSelection.patchPrevNext)
@@ -210,8 +173,8 @@ namespace GameMod
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }*/
-                                    break;
+                                    }
+                                    break;*/
                                 case 2102:
                                     if (UIManager.PushedSelect(100))
                                     {
@@ -223,7 +186,6 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.secondarySwapFlag = true;
-                                            //MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
@@ -240,13 +202,12 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
-                                            //MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2104: 
+                                case 2104: //
                                     if (UIManager.PushedSelect(100))
                                     {
                                         if (MPAutoSelection.zorc)
@@ -262,7 +223,7 @@ namespace GameMod
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2105: 
+                                case 2105: //
                                     if (UIManager.PushedSelect(100))
                                     {
                                         if (MPAutoSelection.COswapToHighest)
@@ -305,6 +266,7 @@ namespace GameMod
                         }
                         else
                         {
+                            //uConsole.Log("NOT 203 "+Player.Mp_loadout1 + " : " + Player.Mp_loadout2);
                             if (Player.Mp_loadout1 == 203 || Player.Mp_loadout2 == 203)
                             {
                                 Player.Mp_loadout1 = loadout1LastTick;
@@ -317,12 +279,16 @@ namespace GameMod
                             }
                             if (UIManager.PushedSelect(100) && UIManager.m_menu_selection == 203)
                             {
+                                //MenuManager.SetDefaultSelection(-1);
                                 MenuManager.m_menu_micro_state = 3;
                                 MenuManager.UIPulse(1f);
                                 GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                             }
 
                         }
+
+
+
                         break;
                 }
             }
@@ -393,6 +359,7 @@ namespace GameMod
 
 
         // Adds the Auto order entry in the customize menu
+        // Todo: fix the iteration to account for the new element
         [HarmonyPatch(typeof(UIElement), "DrawMpTabs")]
         internal class AddFourthTab
         {
@@ -434,17 +401,23 @@ namespace GameMod
 
 
 
+
+
         [HarmonyPatch(typeof(UIElement), "DrawMpCustomize")]
         internal class DrawMpAutoselectOrderingScreen
         {
+            static string[] PrimaryPriorityArray = new string[8];
+            static string[] SecondaryPriorityArray = new string[8];
 
             static void Postfix(UIElement __instance)
             {
+                //Initialise();
                 if (isInitialised == false)
                 {
                     Initialise();
                     isInitialised = true; //should be set to false when leaving the MpCustomize Menu
                 }
+
                 int menu_micro_state = MenuManager.m_menu_micro_state;
                 if (menu_micro_state == 3)
                 {
@@ -455,14 +428,26 @@ namespace GameMod
 
             public static void Initialise()
             {
-                for (int i = 0; i < 8; i++)
-                {
-                    Primary[i] = MPAutoSelection.PrimaryPriorityArray[i];
-                    Secondary[i] = MPAutoSelection.SecondaryPriorityArray[i];
-                }
+                Primary[0] = MPAutoSelection.PrimaryPriorityArray[0];
+                Primary[1] = MPAutoSelection.PrimaryPriorityArray[1];
+                Primary[2] = MPAutoSelection.PrimaryPriorityArray[2];
+                Primary[3] = MPAutoSelection.PrimaryPriorityArray[3];
+                Primary[4] = MPAutoSelection.PrimaryPriorityArray[4];
+                Primary[5] = MPAutoSelection.PrimaryPriorityArray[5];
+                Primary[6] = MPAutoSelection.PrimaryPriorityArray[6];
+                Primary[7] = MPAutoSelection.PrimaryPriorityArray[7];
+
+                Secondary[0] = MPAutoSelection.SecondaryPriorityArray[0];
+                Secondary[1] = MPAutoSelection.SecondaryPriorityArray[1];
+                Secondary[2] = MPAutoSelection.SecondaryPriorityArray[2];
+                Secondary[3] = MPAutoSelection.SecondaryPriorityArray[3];
+                Secondary[4] = MPAutoSelection.SecondaryPriorityArray[4];
+                Secondary[5] = MPAutoSelection.SecondaryPriorityArray[5];
+                Secondary[6] = MPAutoSelection.SecondaryPriorityArray[6];
+                Secondary[7] = MPAutoSelection.SecondaryPriorityArray[7];
             }
 
-           
+            
 
             public static int returnPrimarySelected()
             {
@@ -490,7 +475,6 @@ namespace GameMod
                 return counter;
             }
 
-
             public static void SwapSelectedPrimary()
             {
                 int counter = 0;
@@ -513,9 +497,8 @@ namespace GameMod
 
                 isPrimarySelected[selection[0]] = false;
                 isPrimarySelected[selection[1]] = false;
-                bool tmp = MPAutoSelection.PrimaryNeverSelect[selection[0]];
-                MPAutoSelection.PrimaryNeverSelect[selection[0]] = MPAutoSelection.PrimaryNeverSelect[selection[1]];
-                MPAutoSelection.PrimaryNeverSelect[selection[1]] = tmp;
+                MPAutoSelection.PrimaryNeverSelect[selection[0]] = false;
+                MPAutoSelection.PrimaryNeverSelect[selection[1]] = false;
 
                 saveToFile();
                 MPAutoSelection.Initialise();
@@ -543,9 +526,8 @@ namespace GameMod
 
                 isSecondarySelected[selection[0]] = false;
                 isSecondarySelected[selection[1]] = false;
-                bool tmp = MPAutoSelection.SecondaryNeverSelect[selection[0]];
-                MPAutoSelection.SecondaryNeverSelect[selection[0]] = MPAutoSelection.SecondaryNeverSelect[selection[1]];
-                MPAutoSelection.SecondaryNeverSelect[selection[1]] = tmp;
+                MPAutoSelection.SecondaryNeverSelect[selection[0]] = false;
+                MPAutoSelection.SecondaryNeverSelect[selection[1]] = false;
 
                 saveToFile();
                 MPAutoSelection.Initialise();
@@ -593,20 +575,45 @@ namespace GameMod
                     sw.WriteLine(MPAutoSelection.patchPrevNext);
                     sw.WriteLine(MPAutoSelection.zorc);
                     sw.WriteLine(MPAutoSelection.miasmic);
-                    sw.Close();
                 }
             }
 
             public static string selectionToDescription(int n)
             {
-                if (n == 2100) return "TOGGLES WETHER THE WHOLE MOD SHOULD BE ACTIVE";
-                if (n == 2101) return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
-                if (n <= 2017 && n >= 2000) return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
-                if (n <= 1735 && n >= 1720) return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
-                if (n == 2103) return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
-                if (n == 2102) return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
-                if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
-                if (n == 2105) return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
+                if (n == 2100)
+                {
+                    return "TOGGLES WETHER THE WHOLE FMOD SHOULD BE ACTIVE";
+                }
+                if (n == 2101)
+                {
+                    return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
+                }
+                if (n <= 2017 && n >= 2000)
+                {
+                    return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
+                }
+                if (n <= 1735 && n >= 1720)
+                {
+                    return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
+                }
+                if (n == 2103)
+                {
+                    return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
+                }
+                if (n == 2102)
+                {
+                    return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
+                }
+                if (n == 2104)
+                {
+                    // Alert
+                    return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
+                }
+                if (n == 2105)
+                {
+                    // On Swap
+                    return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
+                }
                 else
                 {
                     return MPAutoSelection.last_valid_description;
@@ -625,7 +632,7 @@ namespace GameMod
                 if (weapon.Equals("LANCER") || weapon.Equals("VORTEX")) return 7;
                 else
                 {
-                    uConsole.Log("-AUTOSELECT- [ERROR] getWeaponIconIndex didnt recognise the given weapon string");
+                    uConsole.Log("-AUTOORDERSELECT- [ERROR] getWeaponIconIndex didnt recognise the given weapon string");
                     return 0;
                 }
             }
@@ -633,8 +640,7 @@ namespace GameMod
 
             public static void DrawPriorityList(UIElement uie)
             {
-
-                UIManager.X_SCALE = 0.2f;
+UIManager.X_SCALE = 0.2f;
                 UIManager.ui_bg_dark = true;
                 uie.DrawMenuBG();
 
@@ -714,8 +720,7 @@ namespace GameMod
                 MPAutoSelection.last_valid_description = k;
                 uie.DrawLabelSmall(position2, k, 500f);
             }
-
-            public static bool isInitialised = false;
+			public static bool isInitialised = false;
 
             public static string[] Primary = {
                 MPAutoSelection.PrimaryPriorityArray[0],
@@ -744,7 +749,7 @@ namespace GameMod
             private static Color UIColorSecondaries;
         }
 
-        public static bool init = false;
+
 
     }
 }
