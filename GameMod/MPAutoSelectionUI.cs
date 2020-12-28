@@ -141,14 +141,14 @@ namespace GameMod
                                         {
                                             MPAutoSelection.primarySwapFlag = false;
                                             MPAutoSelection.secondarySwapFlag = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.enemy_detonatorA_death_roll, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                                             //SFXCueManager.PlayRawSoundEffect2D(SoundEffect.door_close2, 1f, -0.2f, 0.25f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
                                             MPAutoSelection.secondarySwapFlag = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.enemy_detonatorB_alert, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             // SFXCueManager.PlayRawSoundEffect2D(SoundEffect.door_open2, 1f, -0.2f, 0.25f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
@@ -160,12 +160,12 @@ namespace GameMod
                                         if (MPAutoSelection.patchPrevNext)
                                         {
                                             MPAutoSelection.patchPrevNext = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_response_negative, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.patchPrevNext = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
@@ -176,12 +176,12 @@ namespace GameMod
                                         if (MPAutoSelection.secondarySwapFlag)
                                         {
                                             MPAutoSelection.secondarySwapFlag = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_response_negative, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.secondarySwapFlag = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
@@ -192,12 +192,12 @@ namespace GameMod
                                         if (MPAutoSelection.primarySwapFlag)
                                         {
                                             MPAutoSelection.primarySwapFlag = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_response_negative, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
@@ -208,12 +208,12 @@ namespace GameMod
                                         if (MPAutoSelection.zorc)
                                         {
                                             MPAutoSelection.zorc = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_response_negative, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.zorc = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
@@ -224,12 +224,12 @@ namespace GameMod
                                         if (MPAutoSelection.COswapToHighest)
                                         {
                                             MPAutoSelection.COswapToHighest = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_response_negative, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.COswapToHighest = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
@@ -294,11 +294,11 @@ namespace GameMod
                 MPAutoSelection.PrimaryNeverSelect[i] = !MPAutoSelection.PrimaryNeverSelect[i];
                 if (!MPAutoSelection.PrimaryNeverSelect[i])
                 {
-                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                 }
                 else
                 {
-                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                 }
                 DrawMpAutoselectOrderingScreen.saveToFile();
             }
@@ -308,11 +308,11 @@ namespace GameMod
                 MPAutoSelection.SecondaryNeverSelect[i] = !MPAutoSelection.SecondaryNeverSelect[i];
                 if (!MPAutoSelection.SecondaryNeverSelect[i])
                 {
-                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                 }
                 else
                 {
-                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                    SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                 }
                 DrawMpAutoselectOrderingScreen.saveToFile();
             }
@@ -326,10 +326,17 @@ namespace GameMod
                 }
                 else
                 {
-                    DrawMpAutoselectOrderingScreen.isPrimarySelected[i] = true;
-                    DrawMpAutoselectOrderingScreen.SwapSelectedPrimary();
-                    SFXCueManager.PlayCue2D(SFXCue.ui_upgrade, 0.8f, 0f, 0f, false);
-
+                    if (DrawMpAutoselectOrderingScreen.isPrimarySelected[i])
+                    {
+                        DrawMpAutoselectOrderingScreen.isPrimarySelected[i] = false;
+                        GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
+                    }
+                    else
+                    {
+                        DrawMpAutoselectOrderingScreen.isPrimarySelected[i] = true;
+                        DrawMpAutoselectOrderingScreen.SwapSelectedPrimary();
+                        SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                    }
                 }
             }
 
@@ -343,9 +350,17 @@ namespace GameMod
                 }
                 else
                 {
-                    DrawMpAutoselectOrderingScreen.isSecondarySelected[i] = true;
-                    DrawMpAutoselectOrderingScreen.SwapSelectedSecondary();
-                    SFXCueManager.PlayCue2D(SFXCue.ui_upgrade, 0.8f, 0f, 0f, false);
+                    if (DrawMpAutoselectOrderingScreen.isSecondarySelected[i])
+                    {
+                        DrawMpAutoselectOrderingScreen.isSecondarySelected[i] = false;
+                        GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
+                    }
+                    else
+                    {
+                        DrawMpAutoselectOrderingScreen.isSecondarySelected[i] = true;
+                        DrawMpAutoselectOrderingScreen.SwapSelectedSecondary();
+                        SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
+                    }
                 }
             }
         }
@@ -663,7 +678,12 @@ namespace GameMod
 
                     left.y += 50;
                     right.y += 50;
-                    if (MPAutoSelection.PrimaryNeverSelect[i])
+                    if (DrawMpAutoselectOrderingScreen.isPrimarySelected[i])
+                    {
+                        uie.DrawWideBox(position, 100f, 28f, Color.blue, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.blue, 12);
+                    }
+                    else if (MPAutoSelection.PrimaryNeverSelect[i])
                     {
                         uie.DrawWideBox(position, 100f, 28f, Color.red, 0.2f, 7);
                         UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.red, 12);
@@ -675,7 +695,12 @@ namespace GameMod
                     position.y += 50;
 
 
-                    if (MPAutoSelection.SecondaryNeverSelect[i])
+                    if (DrawMpAutoselectOrderingScreen.isSecondarySelected[i])
+                    {
+                        uie.DrawWideBox(position2, 100f, 28f, Color.blue, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.blue, 12);
+                    }
+                    else if (MPAutoSelection.SecondaryNeverSelect[i])
                     {
                         uie.DrawWideBox(position2, 100f, 28f, Color.red, 0.2f, 7);
                         UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.red, 12);

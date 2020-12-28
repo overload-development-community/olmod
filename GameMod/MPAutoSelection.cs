@@ -1,8 +1,8 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.IO;
 using System.Timers;
+using Harmony;
+using Overload;
 using UnityEngine;
 
 namespace GameMod
@@ -808,7 +808,7 @@ namespace GameMod
 
         }
 
-        private static bool areThereAllowedSecondaries()
+        public static bool areThereAllowedSecondaries()
         {
             for (int i = 0; i < 8; i++)
             {
@@ -859,7 +859,7 @@ namespace GameMod
             return -1;
         }
 
-        private static void swapToMissile(int weapon_num)
+        public static void swapToMissile(int weapon_num)
         {
             if (GameManager.m_local_player.m_missile_level[weapon_num] == WeaponUnlock.LOCKED || GameManager.m_local_player.m_missile_ammo[weapon_num] == 0)//GameManager.m_local_player.m_missile_ammo[weapon_num] == 0)
             {
@@ -987,43 +987,6 @@ namespace GameMod
                 }
             }
         }
-
-
-
-
-        [HarmonyPatch(typeof(Player), "RpcSetMissileAmmo")]
-        internal class SecondaryPickup
-        {
-            public static void Postfix(int missile_type, int ammo, Player __instance)
-            {
-                if (MenuManager.opt_primary_autoswitch == 0 && secondarySwapFlag)
-                {
-                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
-                    {
-
-                        if (areThereAllowedSecondaries())
-                        {
-                            int new_missile = getMissilePriority(IntToMissileType(missile_type));
-                            int current_missile = getMissilePriority(GameManager.m_local_player.m_missile_type);
-
-                            if (new_missile < current_missile && !SecondaryNeverSelect[new_missile])
-                            {
-                                if (COswapToHighest)
-                                {
-                                    maybeSwapMissiles();
-                                }
-                                else
-                                {
-                                    swapToMissile(missile_type);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
 
         // WORKS (1.3.8)
         // last change: stopped prefix return false if the weapon couldnt get swapped because of an empty weapons array
