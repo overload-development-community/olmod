@@ -13,12 +13,31 @@ namespace GameMod
         [HarmonyPatch(typeof(MenuManager), "MpCustomizeUpdate")]
         class MpCustomizeMenuLogic
         {
-
-            // Prevent profile corruption when selecting autoselect options.  Adds a "case 203" to several switch statements in the function.
             static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
             {
+                var twoCount = 0;
+                var threeCount = 0;
                 foreach (var code in codes)
                 {
+                    // Allow all 4 menu options to be scrolled through.
+                    if (code.opcode == OpCodes.Ldc_I4_2)
+                    {
+                        twoCount++;
+                        if (twoCount == 1)
+                        {
+                            code.opcode = OpCodes.Ldc_I4_3;
+                        }
+                    }
+                    else if (code.opcode == OpCodes.Ldc_I4_3)
+                    {
+                        threeCount++;
+                        if (threeCount == 2 || threeCount == 3)
+                        {
+                            code.opcode = OpCodes.Ldc_I4_4;
+                        }
+                    }
+
+                    // Prevent profile corruption when selecting autoselect options.  Adds a "case 203" to several switch statements in the function.
                     if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(UIManager), "m_menu_selection"))
                     {
                         if (code.labels.Count == 3)
