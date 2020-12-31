@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Reflection.Emit;
 using Harmony;
 using Overload;
 using UnityEngine;
@@ -11,6 +13,24 @@ namespace GameMod
         [HarmonyPatch(typeof(MenuManager), "MpCustomizeUpdate")]
         class MpCustomizeMenuLogic
         {
+
+            // Prevent profile corruption when selecting autoselect options.  Adds a "case 203" to several switch statements in the function.
+            static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
+            {
+                foreach (var code in codes)
+                {
+                    if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(UIManager), "m_menu_selection"))
+                    {
+                        if (code.labels.Count == 3)
+                        {
+                            Label l = ilGen.DefineLabel();
+                            code.labels.Add(l);
+                        }
+                    }
+                    yield return code;
+                }
+            }
+
             public static int selected;
             public static int selected2;
             public static int loadout1LastTick;
@@ -768,8 +788,5 @@ namespace GameMod
             private static Color UIColorPrimaries;
             private static Color UIColorSecondaries;
         }
-
-
-
     }
 }
