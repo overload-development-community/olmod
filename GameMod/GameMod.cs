@@ -12,7 +12,7 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static string Version = "olmod 0.3.4";
+        public static string Version = "olmod 0.3.5 Alpha 12/30/20 10:53 PM";
         private static Version GameVersion;
         public static bool Modded = false;
         public static string ModsLoaded = "";
@@ -26,7 +26,6 @@ namespace GameMod.Core
             }
 
             Modded = FindArg("-modded");
-            Version = $"{Version} **MODDED**";
 
             GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + Version + ", game " + GameVersion);
@@ -47,6 +46,7 @@ namespace GameMod.Core
 
             if (Modded && Config.OLModDir != null && Config.OLModDir != "")
             {
+                Modded = false; // Modded mode was on, we turn it off here because we don't want to have it on if there aren't actually any mods.
                 try
                 {
                     var files = Directory.GetFiles(Config.OLModDir, "Mod-*.dll");
@@ -59,6 +59,7 @@ namespace GameMod.Core
                         try
                         {
                             harmony.PatchAll(asm);
+                            Modded = true; // At this point we're sure we're modded, so set to true.
                         }
                         catch (Exception ex)
                         {
@@ -70,6 +71,11 @@ namespace GameMod.Core
                 {
                     Debug.Log(ex);
                 }
+            }
+
+            if (Modded)
+            {
+                Version = $"{Version} **MODDED**"; // Only display modded tag if you're playing modded.
             }
         }
 
