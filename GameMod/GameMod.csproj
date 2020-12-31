@@ -108,6 +108,8 @@
     <Compile Include="MessageTypes.cs" />
     <Compile Include="MoreAudio.cs" />
     <Compile Include="MPAnticheat.cs" />
+    <Compile Include="MPAutoSelection.cs" />
+    <Compile Include="MPAutoSelectionUI.cs" />
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPClassic.cs" />
     <Compile Include="MPContinue.cs" />

@@ -514,6 +514,31 @@ namespace GameMod
                             player.UpdateCurrentMissileName();
                         }
                     }
+
+                    if (oldAmt == 0 && MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.secondarySwapFlag)
+                    {
+                        if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && player.isLocalPlayer)
+                        {
+                            if (MPAutoSelection.areThereAllowedSecondaries())
+                            {
+                                int new_missile = MPAutoSelection.getMissilePriority(missileType);
+                                int current_missile = MPAutoSelection.getMissilePriority(GameManager.m_local_player.m_missile_type);
+
+                                if (new_missile < current_missile && !MPAutoSelection.SecondaryNeverSelect[new_missile])
+                                {
+                                    if (MPAutoSelection.COswapToHighest)
+                                    {
+                                        MPAutoSelection.maybeSwapMissiles();
+                                    }
+                                    else
+                                    {
+                                        MPAutoSelection.swapToMissile((int)missileType);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     break;
             }
 
