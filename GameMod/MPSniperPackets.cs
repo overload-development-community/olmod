@@ -535,6 +535,15 @@ namespace GameMod
                                         MPAutoSelection.swapToMissile((int)missileType);
                                     }
                                 }
+
+                                if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR)
+                                {
+                                    if (MPAutoSelection.zorc)
+                                    {
+                                        SFXCueManager.PlayCue2D(SFXCue.enemy_boss1_alert, 1f, 0f, 0f, false);
+                                        GameplayManager.AlertPopup(Loc.LS("DEVASTATOR SELECTED"), string.Empty, 5f);
+                                    }
+                                }
                             }
                         }
                     }

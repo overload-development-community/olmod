@@ -872,15 +872,6 @@ namespace GameMod
                 GameManager.m_player_ship.MissileSelectFX();
                 GameManager.m_local_player.UpdateCurrentMissileName();
             }
-            if (MPAutoSelection.zorc)
-            {
-                if (IntToMissileType(weapon_num).Equals(MissileType.DEVASTATOR))
-                {
-                    SFXCueManager.PlayCue2D(SFXCue.enemy_boss1_alert, 1f, 0f, 0f, false);
-                    GameplayManager.AlertPopup(Loc.LS("DEVASTATOR SELECTED"), string.Empty, 5f);
-                }
-            }
-
         }
 
         public static int missileStringToInt(string missile)
@@ -900,57 +891,6 @@ namespace GameMod
                 return -1;
             }
         }
-
-        public static int missileProjectileTypeToInt(ProjPrefab missile)
-        {
-            if (missile == ProjPrefab.missile_falcon) return 0;
-            if (missile == ProjPrefab.missile_pod) return 1;
-            if (missile == ProjPrefab.missile_hunter) return 2;
-            if (missile == ProjPrefab.missile_creeper) return 3;
-            if (missile == ProjPrefab.missile_smart) return 4;
-            if (missile == ProjPrefab.missile_devastator) return 5;
-            if (missile == ProjPrefab.missile_timebomb) return 6;
-            if (missile == ProjPrefab.missile_vortex) return 7;
-            else
-            {
-                uConsole.Log("||ERROR IN TRIGGER (helper) hasMissileAmmo(ProjPrefab missile) missile: " + missile);
-                return -1;
-            }
-        }
-
-        public static int missileTypeToInt(MissileType missile)
-        {
-            if (missile == MissileType.FALCON) return 0;
-            if (missile == MissileType.MISSILE_POD) return 1;
-            if (missile == MissileType.HUNTER) return 2;
-            if (missile == MissileType.CREEPER) return 3;
-            if (missile == MissileType.NOVA) return 4;
-            if (missile == MissileType.DEVASTATOR) return 5;
-            if (missile == MissileType.TIMEBOMB) return 6;
-            if (missile == MissileType.VORTEX) return 7;
-            else
-            {
-                uConsole.Log("||ERROR IN TRIGGER (helper) missileTypeToInt(MissileType missile) missile: " + missile);
-                return -1;
-            }
-        }
-
-        public static MissileType IntToMissileType(int missile)
-        {
-            if (missile == 0) return MissileType.FALCON;
-            if (missile == 1) return MissileType.MISSILE_POD;
-            if (missile == 2) return MissileType.HUNTER;
-            if (missile == 3) return MissileType.CREEPER;
-            if (missile == 4) return MissileType.NOVA;
-            if (missile == 5) return MissileType.DEVASTATOR;
-            if (missile == 6) return MissileType.TIMEBOMB;
-            if (missile == 7) return MissileType.VORTEX;
-            else
-            {
-                return MissileType.NUM;
-            }
-        }
-
 
         [HarmonyPatch(typeof(Player), "UnlockWeaponClient")]
         internal class WeaponPickup
