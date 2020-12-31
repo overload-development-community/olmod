@@ -1036,7 +1036,7 @@ namespace GameMod
                         }
                     }
                 }
-                return true;
+                return false;
             }
         }
 
@@ -1081,7 +1081,7 @@ namespace GameMod
 
             public void Awake()
             {
-                var ntimer = new Timer(250);
+                var ntimer = new Timer(100);
                 ntimer.Elapsed += new ElapsedEventHandler(timer_Elapsed);
                 ntimer.Enabled = true;
                 ntimer.AutoReset = false;
