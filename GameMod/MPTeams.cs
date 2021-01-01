@@ -574,6 +574,7 @@ namespace GameMod
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             int state = 0; // 0 = before switch, 1 = after switch
+            int oneSixtyCount = 0;
             for (var codes = instructions.GetEnumerator(); codes.MoveNext(); )
             {
                 var code = codes.Current;
@@ -600,6 +601,14 @@ namespace GameMod
                 }
                 if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawDigitsOne") // allow >9 with same positioning
                     code.operand = AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawDigitsLikeOne");
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 160f)
+                {
+                    oneSixtyCount++;
+                    if (oneSixtyCount == 3)
+                    {
+                        code.operand = 300f;
+                    }
+                }
                 yield return code;
             }                
         }
