@@ -78,102 +78,56 @@ namespace GameMod
                                         GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                                     }
                                     break;
+
+                                // Triggers Swap Logic for the Primary Weapon Buttons
                                 case 1720:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(0);
-                                    break;
                                 case 1721:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(1);
-                                    break;
                                 case 1722:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(2);
-                                    break;
                                 case 1723:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(3);
-                                    break;
                                 case 1724:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(4);
-                                    break;
                                 case 1725:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(5);
-                                    break;
                                 case 1726:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(6);
+                                case 1727: // int nwhen (MenuManager.m_menu_micro_state > 1719 && MenuManager.m_menu_micro_state <= 1727):
+                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(UIManager.m_menu_selection - 1720);
                                     break;
-                                case 1727:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(7);
-                                    break;
+
+
+                                // Triggers Swap Logic for the Secondary Weapon Buttons
                                 case 1728:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(0);
-                                    break;
                                 case 1729:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(1);
-                                    break;
                                 case 1730:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(2);
-                                    break;
                                 case 1731:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(3);
-                                    break;
                                 case 1732:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(4);
-                                    break;
                                 case 1733:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(5);
-                                    break;
                                 case 1734:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(6);
-                                    break;
                                 case 1735:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(7);
+                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(UIManager.m_menu_selection - 1728);
                                     break;
+
+                                // Triggers Neverselect Logic for the Primary Buttons
                                 case 2000:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(0);
-                                    break;
                                 case 2001:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(1);
-                                    break;
                                 case 2002:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(2);
-                                    break;
                                 case 2003:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(3);
-                                    break;
                                 case 2004:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(4);
-                                    break;
                                 case 2005:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(5);
-                                    break;
                                 case 2006:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(6);
-                                    break;
                                 case 2007:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(7);
+                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(UIManager.m_menu_selection - 2000);
                                     break;
+
+                                // Triggers Neverselect Logic for the Secondary Buttons
                                 case 2010:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(0);
-                                    break;
                                 case 2011:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(1);
-                                    break;
                                 case 2012:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(2);
-                                    break;
                                 case 2013:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(3);
-                                    break;
                                 case 2014:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(4);
-                                    break;
                                 case 2015:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(5);
-                                    break;
                                 case 2016:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(6);
-                                    break;
                                 case 2017:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(7);
+                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(UIManager.m_menu_selection - 2010);
                                     break;
+
                                 case 2100:
                                     if (UIManager.PushedSelect(100))
                                     {
@@ -182,34 +136,17 @@ namespace GameMod
                                             MPAutoSelection.primarySwapFlag = false;
                                             MPAutoSelection.secondarySwapFlag = false;
                                             SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                            //SFXCueManager.PlayRawSoundEffect2D(SoundEffect.door_close2, 1f, -0.2f, 0.25f, false);
                                         }
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
                                             MPAutoSelection.secondarySwapFlag = true;
+                                            MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                            // SFXCueManager.PlayRawSoundEffect2D(SoundEffect.door_open2, 1f, -0.2f, 0.25f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                /*case 2101: //REPLACE
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.patchPrevNext)
-                                        {
-                                            MPAutoSelection.patchPrevNext = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.patchPrevNext = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;*/
                                 case 2102:
                                     if (UIManager.PushedSelect(100))
                                     {
@@ -237,6 +174,7 @@ namespace GameMod
                                         else
                                         {
                                             MPAutoSelection.primarySwapFlag = true;
+                                            MenuManager.opt_primary_autoswitch = 0;
                                             SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                         }
                                         DrawMpAutoselectOrderingScreen.saveToFile();
@@ -258,22 +196,7 @@ namespace GameMod
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-                                case 2105: //
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.COswapToHighest)
-                                        {
-                                            MPAutoSelection.COswapToHighest = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.COswapToHighest = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
+
 
 
 
@@ -409,7 +332,6 @@ namespace GameMod
 
 
         // Adds the Auto order entry in the customize menu
-        // Todo: fix the iteration to account for the new element
         [HarmonyPatch(typeof(UIElement), "DrawMpTabs")]
         internal class AddFourthTab
         {
@@ -621,8 +543,8 @@ namespace GameMod
                     sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[7]);
                     sw.WriteLine(MPAutoSelection.primarySwapFlag);
                     sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                    sw.WriteLine(MPAutoSelection.COswapToHighest);
-                    sw.WriteLine(MPAutoSelection.patchPrevNext);
+                    sw.WriteLine("False");//MPAutoSelection.COswapToHighest);
+                    sw.WriteLine("False");//MPAutoSelection.patchPrevNext);
                     sw.WriteLine(MPAutoSelection.zorc);
                     sw.WriteLine(MPAutoSelection.miasmic);
                 }
@@ -630,40 +552,14 @@ namespace GameMod
 
             public static string selectionToDescription(int n)
             {
-                if (n == 2100)
-                {
-                    return "TOGGLES WETHER THE WHOLE FMOD SHOULD BE ACTIVE";
-                }
-                if (n == 2101)
-                {
-                    return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
-                }
-                if (n <= 2017 && n >= 2000)
-                {
-                    return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
-                }
-                if (n <= 1735 && n >= 1720)
-                {
-                    return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
-                }
-                if (n == 2103)
-                {
-                    return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
-                }
-                if (n == 2102)
-                {
-                    return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
-                }
-                if (n == 2104)
-                {
-                    // Alert
-                    return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
-                }
-                if (n == 2105)
-                {
-                    // On Swap
-                    return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
-                }
+                if (n == 2100) return "TOGGLES WETHER THE WHOLE FMOD SHOULD BE ACTIVE";
+                if (n == 2101) return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
+                if (n <= 2017 && n >= 2000) return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
+                if (n <= 1735 && n >= 1720) return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
+                if (n == 2103) return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
+                if (n == 2102) return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
+                if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
+                if (n == 2105) return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
                 else
                 {
                     return MPAutoSelection.last_valid_description;
@@ -766,10 +662,8 @@ namespace GameMod
 
 
                 position.x -= 5f;
-                position.y += 182;
+                position.y += 247;
                 uie.SelectAndDrawItem("ALERT: " + (MPAutoSelection.zorc ? "ON" : "OFF"), position, 2104, false, 0.3f, 0.45f);
-                position.y += 50;
-                uie.SelectAndDrawItem("SWAP TO: " + (MPAutoSelection.COswapToHighest ? "HIGHEST" : "PICKUP"), position, 2105, false, 0.3f, 0.45f);
 
 
 

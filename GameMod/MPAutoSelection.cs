@@ -20,33 +20,27 @@ namespace GameMod
                 uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud));
 
                 Initialise();
-                if (MenuManager.opt_primary_autoswitch != 0)
-                {
-                    primarySwapFlag = false;
-                    secondarySwapFlag = false;
-                    //MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
-                }
             }
 
             // COMMANDS
             private static void CmdToggleHud()
             {
                 miasmic = !miasmic;
-                uConsole.Log("Toggled HUD ! current state : " + miasmic);
+                uConsole.Log("Toggled HUD! current state : " + miasmic);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
 
             private static void CmdTogglePrimary()
             {
                 primarySwapFlag = !primarySwapFlag;
-                uConsole.Log("[WPS] Primary weapon swapping: " + primarySwapFlag);
+                uConsole.Log("[AS] Primary weapon swapping: " + primarySwapFlag);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
 
             private static void CmdToggleSecondary()
             {
                 secondarySwapFlag = !secondarySwapFlag;
-                uConsole.Log("[WPS] Secondary weapon swapping: " + secondarySwapFlag);
+                uConsole.Log("[AS] Secondary weapon swapping: " + secondarySwapFlag);
                 MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
             }
         }
@@ -117,7 +111,6 @@ namespace GameMod
         /////////////////////////////////////////////////////////////////////////////////////
         //              INITIALISATION AND FETCH SETTINGS / PREFERENCES                  
         /////////////////////////////////////////////////////////////////////////////////////
-        //TODO: Store and Read the preferences in a better way
         public static void Initialise()
         {
             MenuManager.opt_primary_autoswitch = 0;
@@ -128,7 +121,7 @@ namespace GameMod
             else
             {
 
-                Debug.Log("-AUTOSELECTORDER- [ERROR] File does not exist. Creating default priority list");
+                Debug.Log("-AUTOSELECT- [ERROR] File does not exist. Creating default priority list");
                 createDefaultPriorityFile();
                 readContent();
             }
@@ -173,8 +166,8 @@ namespace GameMod
                 sw.WriteLine(SecondaryNeverSelect[7]);
                 sw.WriteLine(MPAutoSelection.primarySwapFlag);
                 sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                sw.WriteLine(MPAutoSelection.COswapToHighest);
-                sw.WriteLine(MPAutoSelection.patchPrevNext);
+                sw.WriteLine("False");//MPAutoSelection.COswapToHighest);
+                sw.WriteLine("False");//MPAutoSelection.patchPrevNext);
                 sw.WriteLine(MPAutoSelection.zorc);
                 sw.WriteLine(MPAutoSelection.miasmic);
             }
@@ -272,11 +265,11 @@ namespace GameMod
                     }
                     else if (counter == 34)
                     {
-                        if (ln == "True" || ln == "False") { COswapToHighest = stringToBool(ln); }
+                        //if (ln == "True" || ln == "False") { COswapToHighest = stringToBool(ln); }
                     }
                     else if (counter == 35)
                     {
-                        if (ln == "True" || ln == "False") { patchPrevNext = stringToBool(ln); }
+                        //if (ln == "True" || ln == "False") { patchPrevNext = stringToBool(ln); }
                     }
                     else if (counter == 36)
                     {
@@ -319,99 +312,6 @@ namespace GameMod
         /////////////////////////////////////////////////////////////////////////////////////
         //              PRIMARY WEAPONS CHAIN                   
         /////////////////////////////////////////////////////////////////////////////////////
-        // TODO: rewrite or never touch this
-
-
-        public static WeaponType returnNextPrimary(Player local, bool prev)
-        {
-            if (areThereAllowedPrimaries() && (local.m_ammo > 0 || local.m_energy > 0))
-            {
-                WeaponType currentWeapon = local.m_weapon_type;
-                String currentWeaponName = WeaponTypeToString(local.m_weapon_type);
-
-                int index = getWeaponPriority(local.m_weapon_type);
-                if (prev && !currentWeaponName.Equals(PrimaryPriorityArray[7]))
-                {
-                    index++;
-                    while (index < 8)
-                    {
-                        if (isWeaponAccessibleAndNotNeverselect(PrimaryPriorityArray[index]) && isThereAmmoForThisPrimary(PrimaryPriorityArray[index], local))
-                        {
-                            return stringToWeaponType(PrimaryPriorityArray[index]);
-                        }
-                        index++;
-                    }
-                }
-                else if (!prev && !currentWeaponName.Equals(PrimaryPriorityArray[0]))
-                {
-                    index--;
-                    while (index >= 0)
-                    {
-                        if (isWeaponAccessibleAndNotNeverselect(PrimaryPriorityArray[index]) && isThereAmmoForThisPrimary(PrimaryPriorityArray[index], local))
-                        {
-                            return stringToWeaponType(PrimaryPriorityArray[index]);
-                        }
-                        index--;
-                    }
-                }
-                return WeaponType.NUM;
-            }
-            else
-            {
-                return WeaponType.NUM;
-            }
-        }
-
-        public static WeaponType returnNextPrimary2(Player local, bool prev)
-        {
-            if (areThereAllowedPrimaries() && (local.m_ammo > 0 || local.m_energy > 0))
-            {
-                //WeaponType currentWeapon = local.m_weapon_type;
-                String currentWeaponName = WeaponTypeToString(local.m_weapon_type);
-
-                int index = 0;
-                while (!PrimaryPriorityArray[index].Equals(currentWeaponName) && index < 8)
-                {
-                    index++;
-                }
-                if (index == 8) return WeaponType.NUM;
-                else
-                {
-                    // switch to a lower prioritized weapon
-                    if (prev)
-                    {
-                        index++;
-                        while (index < 8)
-                        {
-                            if (isWeaponAccessibleAndNotNeverselect(PrimaryPriorityArray[index]) && isThereAmmoForThisPrimary(PrimaryPriorityArray[index], local))
-                            {
-                                return stringToWeaponType(PrimaryPriorityArray[index]);
-                            }
-                            index++;
-                        }
-                        return WeaponType.NUM;
-                    }
-                    // switch to higher prioritized weapon
-                    else
-                    {
-                        index--;
-                        while (index >= 0)
-                        {
-                            if (isWeaponAccessibleAndNotNeverselect(PrimaryPriorityArray[index]) && isThereAmmoForThisPrimary(PrimaryPriorityArray[index], local))
-                            {
-                                return stringToWeaponType(PrimaryPriorityArray[index]);
-                            }
-                            index--;
-                        }
-                        return WeaponType.NUM;
-                    }
-                }
-            }
-            else
-            {
-                return WeaponType.NUM;
-            }
-        }
 
         public static bool isThereAmmoForThisPrimary(string weapon, Player local)
         {
@@ -427,65 +327,7 @@ namespace GameMod
         }
 
 
-        public static WeaponType returnHighestAllowedPrimaryWithAmmo(Player local)
-        {
-            if (areThereAllowedPrimaries() && (local.m_ammo > 0 || local.m_energy > 0))
-            {
-                // find the highest primary of the energy weapons
-                string[] candidates = returnArrayOfUnlockedPrimaries(EnergyWeapons);
-                WeaponType highestEnergy = WeaponType.NUM;
-                if (candidates.Length > 0)
-                {
-                    string a = returnHighestPrimary(candidates);
-                    if (!a.Equals("a")) highestEnergy = stringToWeaponType(a);
-                }
-
-                // find the highest primary of the ammo weapons
-                candidates = returnArrayOfUnlockedPrimaries(AmmoWeapons);
-                WeaponType highestAmmo = WeaponType.NUM;
-                if (candidates.Length > 0)
-                {
-                    string a = returnHighestPrimary(candidates);
-                    if (!a.Equals("a")) highestAmmo = stringToWeaponType(a);
-                }
-
-                // check if one of the results is valid
-                if (highestEnergy == WeaponType.NUM && highestAmmo == WeaponType.NUM) return WeaponType.NUM;
-                else
-                {
-                    WeaponType first = WeaponType.NUM, second = WeaponType.NUM;
-                    foreach (String ele in PrimaryPriorityArray)
-                    {
-                        if (ele.Equals(WeaponTypeToString(highestEnergy)))
-                        {
-                            first = highestEnergy;
-                            second = highestAmmo;
-                            break;
-                        }
-                        if (ele.Equals(WeaponTypeToString(highestAmmo)))
-                        {
-                            first = highestAmmo;
-                            second = highestAmmo;
-                            break;
-                        }
-                    }
-                    if (first != WeaponType.NUM)
-                    {
-                        return first;
-                    }
-                    else
-                    {
-                        return second;
-                    }
-                }
-
-            }
-            else
-            {
-                return WeaponType.NUM;
-            }
-
-        }
+        
 
         public static void maybeSwapPrimary()
         {
@@ -584,7 +426,6 @@ namespace GameMod
             {
                 return false;
             }
-
         }
 
         private static bool isPrimaryOnNeverSelectList(string weapon)
@@ -672,12 +513,12 @@ namespace GameMod
                         return i;
                     }
                 }
-                uConsole.Log("-AUTOSELECTORDER- [WARN]: getWeaponPriority:-1, primary wasnt in array");
+                uConsole.Log("-AUTOSELECT- [WARN]: getWeaponPriority:-1, primary wasnt in array");
                 return -1;
             }
             else
             {
-                uConsole.Log("-AUTOSELECTORDER- [WARN]: getWeaponPriority:-1, priority didnt get initialised");
+                uConsole.Log("-AUTOSELECT- [WARN]: getWeaponPriority:-1, priority didnt get initialised");
                 return -1;
             }
         }
@@ -797,12 +638,12 @@ namespace GameMod
                         return i;
                     }
                 }
-                uConsole.Log("-AUTOSELECTORDER- [WARN]: getMissilePriority:-1, primary wasnt in array");
+                uConsole.Log("-AUTOSELECT- [WARN]: getMissilePriority:-1, primary wasnt in array");
                 return -1;
             }
             else
             {
-                uConsole.Log("-AUTOSELECTORDER- [WARN]: getMissilePriority:-1, priority didnt get initialised");
+                uConsole.Log("-AUTOSELECT- [WARN]: getMissilePriority:-1, priority didnt get initialised");
                 return -1;
             }
 
@@ -897,30 +738,29 @@ namespace GameMod
         {
             public static void Postfix(WeaponType wt, bool silent, Player __instance)
             {
+                UnlockWeaponEvent(wt, __instance);
+            }
+
+            public static void UnlockWeaponEvent(WeaponType wt, Player __instance)
+            {
                 if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
                         int new_weapon = getWeaponPriority(wt);
                         int current_weapon = getWeaponPriority(GameManager.m_local_player.m_weapon_type);
-
-                        if (new_weapon < current_weapon && !PrimaryNeverSelect[new_weapon])
+                        if (!PrimaryNeverSelect[new_weapon] && (new_weapon < current_weapon
+                            || (GameManager.m_local_player.m_weapon_type.Equals(WeaponType.IMPULSE) && GameManager.m_local_player.m_weapon_level[0].Equals(WeaponUnlock.LEVEL_1)) // Specific impulse upgrade case for classic mod
+                            ))
                         {
                             if (!Controls.IsPressed(CCInput.FIRE_WEAPON))
                             {
-                                if (MPAutoSelection.COswapToHighest)
-                                {
-                                    maybeSwapPrimary();
-                                }
-                                else
-                                {
-                                    swapToWeapon(wt.ToString());
-                                }
+                                swapToWeapon(wt.ToString());
                                 GameManager.m_local_player.UpdateCurrentWeaponName();
                             }
                             else
                             {
-                                waitingSwapWeaponType = MPAutoSelection.COswapToHighest ? "NUM" : wt.ToString();
+                                waitingSwapWeaponType = wt.ToString();
                             }
                         }
                     }
@@ -928,8 +768,9 @@ namespace GameMod
             }
         }
 
-        // WORKS (1.3.8)
-        // last change: stopped prefix return false if the weapon couldnt get swapped because of an empty weapons array
+        
+
+
         [HarmonyPatch(typeof(Player), "SwitchToAmmoWeapon")]
         internal class OutOfAmmo
         {
@@ -948,7 +789,6 @@ namespace GameMod
                         }
                         else
                         {
-                            uConsole.Log(" - Denied Execution of original Method because swap failed (SwitchToAmmoWeapon)");
                             return false;
                         }
                     }
@@ -958,8 +798,7 @@ namespace GameMod
             }
         }
 
-        // WORKS (1.3.8)
-        // last change: stopped prefix return false if the weapon couldnt get swapped because of an empty weapons array
+
         [HarmonyPatch(typeof(Player), "SwitchToEnergyWeapon")]
         internal class OutOfEnergy
         {
@@ -973,13 +812,12 @@ namespace GameMod
                         maybeSwapPrimary();
                         if (swap_failed)
                         {
-                            uConsole.Log("-AUTOORDER- [EB] swap failed on trying to switch to an energy weapon");
+                            uConsole.Log("-AUTOSELECT- [EB] swap failed on trying to switch to an energy weapon");
                             swap_failed = false;
                             return true;
                         }
                         else
                         {
-                            uConsole.Log(" - Denied Execution of original Method because swap failed (SwitchToEnergyWeapon)");
                             return false;
                         }
                     }
@@ -989,32 +827,7 @@ namespace GameMod
             }
         }
 
-        // WORKS (1.6.1)
-        [HarmonyPatch(typeof(Player), "NextWeapon")]
-        internal class NextLastWeaponBasedOnPriority
-        {
-            public static bool Prefix(Player __instance, bool prev)
-            {
 
-                if (MenuManager.opt_primary_autoswitch == 0 && primarySwapFlag && patchPrevNext)
-                {
-                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
-                    {
-                        // find the highest primary, set networkm type to it and update the weapon name
-                        WeaponType cand = returnNextPrimary(__instance, prev);
-                        if (cand == WeaponType.NUM) return false;
-                        else
-                        {
-                            __instance.Networkm_weapon_type = cand;
-                            __instance.UpdateCurrentWeaponName();
-                            return false;
-                        }
-                    }
-
-                }
-                return true;
-            }
-        }
 
 
         [HarmonyPatch(typeof(Player), "MaybeSwitchToNextMissile")]
@@ -1023,7 +836,7 @@ namespace GameMod
             public static bool Prefix(Player __instance)
             {
 
-                if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.secondarySwapFlag)
+                if (MPAutoSelection.secondarySwapFlag)
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
                     {
@@ -1032,7 +845,7 @@ namespace GameMod
 
                             DelayedSwitchTimer re = new DelayedSwitchTimer();
                             re.Awake();
-
+                            return false;
                         }
                     }
                 }
@@ -1052,14 +865,7 @@ namespace GameMod
                 {
                     if (!Controls.IsPressed(CCInput.FIRE_WEAPON) && !waitingSwapWeaponType.Equals(""))
                     {
-                        if (waitingSwapWeaponType.Equals("NUM"))
-                        {
-                            maybeSwapPrimary();
-                        }
-                        else
-                        {
-                            swapToWeapon(waitingSwapWeaponType);
-                        }
+                        swapToWeapon(waitingSwapWeaponType);
                         GameManager.m_local_player.UpdateCurrentWeaponName();
                         waitingSwapWeaponType = "";
                     }
@@ -1072,7 +878,7 @@ namespace GameMod
 
 
 
-        // This class is used to initiate a delayed swap in order to not confuse get overwritten by a slow server control
+        // This class is used to initiate a delayed swap in order to not confuse or get overwritten by a slow server control
         internal class DelayedSwitchTimer
         {
             Timer timer;
@@ -1135,8 +941,6 @@ namespace GameMod
 
         public static bool primarySwapFlag = true;      // toggles the whole primary selection logic
         public static bool secondarySwapFlag = true;    // toggles the whole secondary selection logic
-        public static bool COswapToHighest = false;     // toggles wether on pickup  the logic should switch to the highest weapon or the picked up weapon if its higher
-        public static bool patchPrevNext = false;       // toggles wether the default prev/next weapon swap methods should be replaced with a priority based prev/next
         public static bool zorc = false;                // extra alert for old men when the devastator gets autoselected, still need to find an annoying sound for that
         public static bool miasmic = false;             // dont draw certain hud elements
         public static bool allowSwapWhileFiring = true; // toggles wether weapon swaps are allowed to happen while the player is firing, if set to false it will delay the swap till the player is not firing anymore                                         

@@ -1,4 +1,4 @@
-﻿using Harmony;
+using Harmony;
 using Overload;
 using System.Collections.Generic;
 using System.Reflection.Emit;
@@ -67,6 +67,7 @@ namespace GameMod
                 {
                     __instance.m_weapon_level[(int)wt] = WeaponUnlock.LEVEL_2A;
                     __instance.m_weapon_picked_up[(int)wt] = true;
+                    MPAutoSelection.WeaponPickup.UnlockWeaponEvent(WeaponType.IMPULSE, __instance);
                 }
                 else
                 {

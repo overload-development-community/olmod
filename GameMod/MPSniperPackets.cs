@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -516,7 +516,7 @@ namespace GameMod
                         }
                     }
 
-                    if (oldAmt == 0 && MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.secondarySwapFlag)
+                    if (oldAmt == 0 && MPAutoSelection.secondarySwapFlag)
                     {
                         if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && player.isLocalPlayer)
                         {
@@ -527,14 +527,7 @@ namespace GameMod
 
                                 if (new_missile < current_missile && !MPAutoSelection.SecondaryNeverSelect[new_missile])
                                 {
-                                    if (MPAutoSelection.COswapToHighest)
-                                    {
-                                        MPAutoSelection.maybeSwapMissiles();
-                                    }
-                                    else
-                                    {
-                                        MPAutoSelection.swapToMissile((int)missileType);
-                                    }
+                                    MPAutoSelection.swapToMissile((int)missileType);
                                 }
 
                                 if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR && oldMissileType != MissileType.DEVASTATOR)
