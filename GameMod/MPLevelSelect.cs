@@ -122,7 +122,7 @@ namespace GameMod
             {
                 if (level.LevelDescription != null && level.LevelDescription[0] != null)
                     typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                        .Invoke(uie, new object[] { level.LevelDescription[0], position, 0.4f, 30f, 75f, StringOffset.CENTER, float.MaxValue, 0f, 0f });
+                        .Invoke(uie, new object[] { level.LevelDescription[0], position, 0.4f, 15f, 150f, StringOffset.CENTER, float.MaxValue, 0f, 0f });
             }
             else if (curLevelIdx >= 0)
             {
