@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Reflection.Emit;
 using Harmony;
 using Overload;
@@ -778,6 +779,9 @@ namespace GameMod
                 string k = selectionToDescription(UIManager.m_menu_selection);
                 MPAutoSelection.last_valid_description = k;
                 uie.DrawLabelSmall(position2, k, 500f);
+
+                typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                    .Invoke(uie, new object[] { "To enable autoselect, set the option at \"Options\", \"Control Options\", \"Advanced Options\", \"Primary Auto-Select\" to \"Never\".", new Vector2(UIManager.UI_LEFT + 35f, UIManager.UI_TOP + 234f), 0.4f, 15f, 220f, StringOffset.LEFT, float.MaxValue, 0f, 0f });
             }
             public static bool isInitialised = false;
 
