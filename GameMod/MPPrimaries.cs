@@ -220,18 +220,19 @@ namespace GameMod
     {
         public static bool Prefix(WeaponType wt)
         {
-            // Get the primary from the budget list.
+            // Get the primary from the budget list, bail if there isn't one.
             var primary = MPPrimaries.Budget.Find(b => b.Type == wt);
             if (primary == null)
             {
                 Debug.Log($"MPPrimaries - AddWeaponSpawn - Could not find a budget for {wt}");
-                // Short circuit the original code.
                 return false;
             }
 
+            // Bail if there are none active.
             if (primary.Active == 0)
             {
                 Debug.Log($"MPPrimaries - AddWeaponSpawn - Not adding weapon spawn for {wt}, 0 are active.");
+                return false;
             }
 
             // Restore some remaining budget, decrement the active count.
