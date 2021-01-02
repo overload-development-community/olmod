@@ -168,40 +168,11 @@ namespace GameMod
         }
     }
 
-    /// <summary>
-    /// Function to play with - changed this to multiply available primary spawn #s by player count
-    /// </summary>
-    [HarmonyPatch(typeof(NetworkMatch), "AddWeaponSpawn")]
-    class MPClassic_NetworkMatch_AddWeaponSpawn
-    {
-        static bool Prefix(WeaponType wt, ref int[] ___m_spawn_weapon_count, ref int[] ___m_initial_weapon_count, ref float[] ___m_spawn_weapon_timer)
-        {
-            if (!MPClassic.matchEnabled)
-                return true;
-
-            if (___m_spawn_weapon_count[(int)wt] < ___m_initial_weapon_count[(int)wt] * NetworkMatch.m_players.Count)
-            {
-                ___m_spawn_weapon_count[(int)wt]++;
-                if (___m_spawn_weapon_count[(int)wt] == 1)
-                {
-                    ___m_spawn_weapon_timer[(int)wt] = UnityEngine.Random.Range(30f * MPClassic.minRespawnTimerMultiplier, 60f * MPClassic.maxRespawnTimerMultiplier);
-                    Debug.Log(string.Format("Added {0} to spawn pool on a {1}s timer", wt, ___m_spawn_weapon_timer[(int)wt]));
-                }
-            }
-            else
-            {
-                Debug.Log("Tried to spawn a weapon when we're already at the initial count");
-            }
-            return false;
-        }
-    }
-
     [HarmonyPatch(typeof(Item), "OnTriggerEnter")]
     class MPClassic_Item_OnTriggerEnter
     {
         static bool flag2(Player player, bool flag, bool flag2, WeaponType wt)
         {
-            if (!MPClassic.matchEnabled)
             if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
                 return true;
 

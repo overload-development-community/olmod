@@ -77,7 +77,6 @@ namespace GameMod
                     }
                     return;
             }
-            Debug.Log("Unrecognized tag: " + words[0] + " Ignoring it!");
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)

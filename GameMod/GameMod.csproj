@@ -122,6 +122,7 @@
     <Compile Include="MPModifiers.cs" />
     <Compile Include="MPModPrivateData.cs" />
     <Compile Include="MPPickupCheck.cs" />
+    <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPServerBrowser.cs" />
     <Compile Include="MPSniperPackets.cs" />
     <Compile Include="MPSpawnBoostClear.cs" />
