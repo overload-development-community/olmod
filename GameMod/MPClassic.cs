@@ -211,4 +211,37 @@ namespace GameMod
             }
         }
     }
+
+    /// <summary>
+    /// Despawn spewed primaries after 30 seconds.
+    /// </summary>
+    [HarmonyPatch(typeof(Item), "MaybeDespawnPowerup")]
+    public class MPClassic_Item_MaybeDespawnPowerup
+    {
+        public static bool Prefix(Item __instance, ref float __result)
+        {
+            if (MPClassic.matchEnabled && GameplayManager.IsMultiplayerActive && Server.IsActive() &&
+                (bool)AccessTools.Field(typeof(Item), "m_spewed").GetValue(__instance)
+            )
+            {
+                switch (__instance.m_type)
+                {
+                    case ItemType.WEAPON_IMPULSE:
+                    case ItemType.WEAPON_CYCLONE:
+                    case ItemType.WEAPON_REFLEX:
+                    case ItemType.WEAPON_DRILLER:
+                    case ItemType.WEAPON_SHOTGUN:
+                    case ItemType.WEAPON_FLAK:
+                    case ItemType.WEAPON_THUNDERBOLT:
+                    case ItemType.WEAPON_LANCER:
+                        __result = 0.25f;
+                        return false;
+                    default:
+                        return true;
+                }
+            }
+
+            return true;
+        }
+    }
 }
