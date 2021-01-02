@@ -492,6 +492,7 @@ namespace GameMod
                     var missileType = (MissileType)(msg.m_type - PlayerAddResourceMessage.ValueType.FALCON);
                     var oldAmt = player.m_missile_ammo[(int)missileType];
                     player.m_missile_ammo[(int)missileType] = Mathf.Min(player.m_missile_ammo[(int)missileType] + (int)msg.m_value, (int)msg.m_max_value);
+                    var oldMissileType = player.m_missile_type;
                     var amt = player.m_missile_ammo[(int)missileType] - oldAmt;
 
                     if (amt > 0 && player.isLocalPlayer)
@@ -536,7 +537,7 @@ namespace GameMod
                                     }
                                 }
 
-                                if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR)
+                                if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR && oldMissileType != MissileType.DEVASTATOR)
                                 {
                                     if (MPAutoSelection.zorc)
                                     {
