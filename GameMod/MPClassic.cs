@@ -10,20 +10,8 @@ namespace GameMod
 
     static class MPClassic
     {
-        public static float minRespawnTimerMultiplier
-        {
-            get
-            {
-                return 1f; // Multiplier against default 30s
-            }
-        }
-        public static float maxRespawnTimerMultiplier
-        {
-            get
-            {
-                return 1f; // Multiplier against default 60s
-            }
-        }
+        public const float minRespawnTimerMultiplier = 1f; // Multiplier against default 30s
+        public const float maxRespawnTimerMultiplier = 1f; // Multiplier against default 60s
 
         public static bool matchEnabled { get; set; } = false;
     }
@@ -33,7 +21,7 @@ namespace GameMod
     {
         static bool Prefix(Player __instance, WeaponType wt, ref bool __result)
         {
-            if (!MPClassic.matchEnabled)
+            if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
                 return true;
 
             if (__instance.m_weapon_level[(int)wt] == WeaponUnlock.LOCKED || (wt == WeaponType.IMPULSE && __instance.m_weapon_level[(int)wt] == WeaponUnlock.LEVEL_1))
@@ -57,7 +45,7 @@ namespace GameMod
     {
         static bool Prefix(ref bool __result, Player __instance, WeaponType wt, bool silent = false, bool picked_up = false)
         {
-            if (!MPClassic.matchEnabled)
+            if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
                 return true;
 
             if (!NetworkServer.active)
@@ -106,7 +94,7 @@ namespace GameMod
     {
         static bool Prefix(Player __instance, WeaponType wt, bool silent)
         {
-            if (!MPClassic.matchEnabled)
+            if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
                 return true;
 
             if (wt != WeaponType.IMPULSE)
@@ -135,10 +123,9 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
     class MPClassic_PlayerShip_MaybeFireWeapon
     {
-
         static bool MatchEnabledHelper()
         {
-            return !MPClassic.matchEnabled;
+            return GameplayManager.IsMultiplayer && !MPClassic.matchEnabled;
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
@@ -215,6 +202,7 @@ namespace GameMod
         static bool flag2(Player player, bool flag, bool flag2, WeaponType wt)
         {
             if (!MPClassic.matchEnabled)
+            if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
                 return true;
 
             if (wt == WeaponType.IMPULSE && player.m_weapon_level[(int)wt] == WeaponUnlock.LEVEL_1)
@@ -262,7 +250,7 @@ namespace GameMod
     {
         static bool Prefix(ref int[] ___m_spawn_weapon_count, ref float[] ___m_spawn_weapon_timer, ref float ___m_spawn_basic_timer, ref float ___m_spawn_missile_timer, ref float ___m_spawn_super_timer)
         {
-            if (!MPClassic.matchEnabled)
+            if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
                 return true;
 
             for (int i = 0; i < 8; i++)
