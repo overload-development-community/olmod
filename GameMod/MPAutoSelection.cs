@@ -4,6 +4,7 @@ using System.Timers;
 using Harmony;
 using Overload;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod
 {
@@ -946,5 +947,48 @@ namespace GameMod
         public static bool allowSwapWhileFiring = true; // toggles wether weapon swaps are allowed to happen while the player is firing, if set to false it will delay the swap till the player is not firing anymore                                         
 
         public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
+    }
+
+    /// <summary>
+    /// Force the player's initially selected weapon to match the loadouts.
+    /// </summary>
+    [HarmonyPatch(typeof(Client), "OnRespawnMsg")]
+    class MPAutoSelection_Client_OnRespawnMessage
+    {
+        public static void Postfix(NetworkMessage msg)
+        {
+            msg.reader.SeekZero();
+            RespawnMessage respawnMessage = msg.ReadMessage<RespawnMessage>();
+
+            GameObject gameObject = ClientScene.FindLocalObject(respawnMessage.m_net_id);
+            if (gameObject == null)
+            {
+                return;
+            }
+            Player playerFromNetId = gameObject.GetComponent<Player>();
+            if (playerFromNetId == null)
+            {
+                return;
+            }
+
+            if (playerFromNetId.isLocalPlayer)
+            {
+                if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
+                {
+                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
+                    {
+                        MPAutoSelection.maybeSwapPrimary();
+                    }
+                }
+
+                if (MPAutoSelection.secondarySwapFlag)
+                {
+                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
+                    {
+                        MPAutoSelection.maybeSwapMissiles();
+                    }
+                }
+            }
+        }
     }
 }
