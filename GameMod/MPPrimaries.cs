@@ -144,7 +144,9 @@ namespace GameMod
             spawn.Remaining = Mathf.Max(0f, spawn.Remaining - max / totalBudget);
 
             // Reset weapon spawn timer.
-            MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
+            SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
+
+            Debug.Log($"MPPrimaries - Spawned {spawn.Type}, remaining budget {spawn.Remaining}/{spawn.Budget} with {spawn.Active} active, next spawn in {SpawnWeaponTimer}");
         }
     }
 
@@ -171,6 +173,8 @@ namespace GameMod
                         Active = 0
                     });
                 }
+
+                Debug.Log($"MPPrimaries - Added {weaponType}, budget {weapon.percent}");
             }
 
             // Spawn in initial primaries.
@@ -180,6 +184,7 @@ namespace GameMod
             {
                 MPPrimaries.SpawnPrimary();
             }
+            Debug.Log($"MPPrimaries - Initial spawn complete");
 
             // This is the rest of the PowerupLevelStart code, currently unmodified.
             var num = RobotManager.m_multi_missile_count;
@@ -219,8 +224,14 @@ namespace GameMod
             var primary = MPPrimaries.Budget.Find(b => b.Type == wt);
             if (primary == null)
             {
+                Debug.Log($"MPPrimaries - AddWeaponSpawn - Could not find a budget for {wt}");
                 // Short circuit the original code.
                 return false;
+            }
+
+            if (primary.Active == 0)
+            {
+                Debug.Log($"MPPrimaries - AddWeaponSpawn - Not adding weapon spawn for {wt}, 0 are active.");
             }
 
             // Restore some remaining budget, decrement the active count.
@@ -232,6 +243,8 @@ namespace GameMod
             {
                 MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(30f, 60f);
             }
+
+            Debug.Log($"MPPrimaries - Added a weapon spawn for {wt}, remaining budget {primary.Remaining}/{primary.Budget} with {primary.Active} active, next spawn in {MPPrimaries.SpawnWeaponTimer}");
 
             // Short circuit the original code.
             return false;
@@ -289,9 +302,9 @@ namespace GameMod
                             Debug.Log("No count set for lancer players " + words[1] + ", ignoring");
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Debug.Log("Error setting $lancer_players.  Format is \"$lancer_players;4\"");
+                        Debug.Log("Error setting $lancer_players.  Format is, for example, \"$lancer_players;4\"");
                     }
                     break;
             }

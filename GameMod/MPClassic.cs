@@ -10,9 +10,6 @@ namespace GameMod
 
     static class MPClassic
     {
-        public const float minRespawnTimerMultiplier = 1f; // Multiplier against default 30s
-        public const float maxRespawnTimerMultiplier = 1f; // Multiplier against default 60s
-
         public static bool matchEnabled { get; set; } = false;
     }
 
@@ -210,103 +207,6 @@ namespace GameMod
 
                 yield return code;
             }
-        }
-    }
-
-    /// <summary>
-    /// Spawn algorithm (currently stock)
-    /// </summary>
-    [HarmonyPatch(typeof(NetworkMatch), "MaybeSpawnPowerup")]
-    class MPClassic_NetworkMatch_MaybeSpawnPowerup
-    {
-        static bool Prefix(ref int[] ___m_spawn_weapon_count, ref float[] ___m_spawn_weapon_timer, ref float ___m_spawn_basic_timer, ref float ___m_spawn_missile_timer, ref float ___m_spawn_super_timer)
-        {
-            if (!GameplayManager.IsMultiplayer || !MPClassic.matchEnabled)
-                return true;
-
-            for (int i = 0; i < 8; i++)
-            {
-                if (___m_spawn_weapon_count[i] > 0)
-                {
-                    ___m_spawn_weapon_timer[i] -= RUtility.FRAMETIME_GAME;
-                    if (___m_spawn_weapon_timer[i] <= 0f)
-                    {
-                        //NetworkMatch.SpawnItem(ChallengeManager.WeaponTypeToPrefab((WeaponType)i), false);
-                        AccessTools.Method(typeof(NetworkMatch), "SpawnItem").Invoke(null, new object[] { ChallengeManager.WeaponTypeToPrefab((WeaponType)i), false });
-                        ___m_spawn_weapon_count[i]--;
-                        if (___m_spawn_weapon_count[i] > 0)
-                        {
-                            ___m_spawn_weapon_timer[i] = UnityEngine.Random.Range(30f * MPClassic.minRespawnTimerMultiplier, 60f * MPClassic.maxRespawnTimerMultiplier);
-                        }
-                    }
-                }
-            }
-            if (___m_spawn_basic_timer > 0f)
-            {
-                ___m_spawn_basic_timer -= RUtility.FRAMETIME_GAME;
-                if (___m_spawn_basic_timer <= 0f)
-                {
-                    int num = UnityEngine.Random.Range(0, 4);
-                    if (NetworkMatch.AnyPlayersHaveAmmoWeapons())
-                    {
-                        num = UnityEngine.Random.Range(0, 5);
-                    }
-                    ItemPrefab item;
-                    switch (num)
-                    {
-                        case 1:
-                        case 2:
-                            item = ItemPrefab.entity_item_energy;
-                            break;
-                        case 3:
-                        case 4:
-                            item = ItemPrefab.entity_item_ammo;
-                            break;
-                        default:
-                            item = ItemPrefab.entity_item_shields;
-                            break;
-                    }
-                    //NetworkMatch.SpawnItem(item, false);
-                    AccessTools.Method(typeof(NetworkMatch), "SpawnItem").Invoke(null, new object[] { item, false });
-                    NetworkMatch.SetSpawnBasicTimer();
-                }
-            }
-            if (___m_spawn_missile_timer > 0f)
-            {
-                ___m_spawn_missile_timer -= RUtility.FRAMETIME_GAME;
-                if (___m_spawn_missile_timer <= 0f)
-                {
-                    MissileType missileType = NetworkMatch.RandomAllowedMissileSpawn();
-                    if (missileType != MissileType.NUM)
-                    {
-                        ItemPrefab item2 = ChallengeManager.MissileTypeToPrefab(missileType);
-                        //NetworkMatch.SpawnItem(item2, false);
-                        AccessTools.Method(typeof(NetworkMatch), "SpawnItem").Invoke(null, new object[] { item2, false });
-                    }
-                    //NetworkMatch.UpdateLastMissileCount();
-                    AccessTools.Method(typeof(NetworkMatch), "UpdateLastMissileCount").Invoke(null, null);
-                    NetworkMatch.SetSpawnMissileTimer();
-                }
-            }
-            if (___m_spawn_super_timer > 0f)
-            {
-                float spawn_super_timer = ___m_spawn_super_timer;
-                ___m_spawn_super_timer -= RUtility.FRAMETIME_GAME;
-                if (spawn_super_timer > 10f && ___m_spawn_super_timer <= 10f)
-                {
-                    GameManager.m_local_player.CallRpcShowWarningMessage(0);
-                }
-                if (___m_spawn_super_timer <= 0f)
-                {
-                    if (NetworkMatch.SpawnSuperPowerup())
-                    {
-                        GameManager.m_local_player.CallRpcShowWarningMessage(1);
-                    }
-                    NetworkMatch.SetSpawnSuperTimer();
-                }
-            }
-
-            return false;
         }
     }
 }
