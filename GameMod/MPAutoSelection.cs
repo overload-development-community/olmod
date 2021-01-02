@@ -330,7 +330,7 @@ namespace GameMod
 
         
 
-        public static void maybeSwapPrimary()
+        public static void maybeSwapPrimary(bool silent = false)
         {
             //is there even a potential static option to switch to
             if (areThereAllowedPrimaries())
@@ -343,7 +343,7 @@ namespace GameMod
                     if (candidates.Length > 0)
                     {
                         string a = returnHighestPrimary(candidates);
-                        if (!a.Equals("a")) swapToWeapon(a);
+                        if (!a.Equals("a")) swapToWeapon(a, silent);
                     }
                     else
                     {
@@ -359,7 +359,7 @@ namespace GameMod
                     if (candidates.Length > 0)
                     {
                         string a = returnHighestPrimary(candidates);
-                        if (!a.Equals("a")) swapToWeapon(a);
+                        if (!a.Equals("a")) swapToWeapon(a, silent);
                     }
                     else
                     {
@@ -373,7 +373,7 @@ namespace GameMod
                 if (candidates1.Length > 0)
                 {
                     string a = returnHighestPrimary(candidates1);
-                    if (!a.Equals("a")) swapToWeapon(a);
+                    if (!a.Equals("a")) swapToWeapon(a, silent);
                 }
                 return;
             }
@@ -451,15 +451,35 @@ namespace GameMod
 
         }
 
-        private static void swapToWeapon(string weaponName)
+        private static void swapToWeapon(string weaponName, bool silent = false)
         {
             if (!(GameManager.m_local_player.m_weapon_type.Equals(stringToWeaponType(weaponName))))
             {
                 GameManager.m_local_player.Networkm_weapon_type = stringToWeaponType(weaponName);
                 GameManager.m_local_player.CallCmdSetCurrentWeapon(GameManager.m_local_player.m_weapon_type);
-                GameManager.m_player_ship.WeaponSelectFX();
+
+
+                if (GameManager.m_game_state != GameManager.GameState.GAMEPLAY)
+                {
+                    return;
+                }
+
+                UIElement.WEAPON_SELECT_FLASH = 1.25f;
+                UIElement.WEAPON_SELECT_NAME = string.Format(Loc.LS("{0} SELECTED"), Player.WeaponNames[GameManager.m_local_player.m_weapon_type]);
+                if (!silent)
+                {
+                    SFXCueManager.PlayCue2D(SFXCue.hud_cycle_typeA1, 1f, 0f, 0f, false);
+                    GameManager.m_audio.PlayCue2D(363, 0.1f, 0f, 0f, false);
+                    GameManager.m_local_player.c_player_ship.SetRefireDelayAfterWeaponSwitch();
+                }
+
+                GameManager.m_local_player.c_player_ship.m_thunder_power = 0f;
+                GameManager.m_local_player.c_player_ship.SwitchVisibleWeapon(false, WeaponType.NUM);
             }
-            SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_message1, 1f, 0.15f, 0.1f, false);
+            if (!silent)
+            {
+                SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_message1, 1f, 0.15f, 0.1f, false);
+            }
         }
 
         private static WeaponType stringToWeaponType(string weapon)
@@ -659,7 +679,7 @@ namespace GameMod
             return false;
         }
 
-        public static void maybeSwapMissiles()
+        public static void maybeSwapMissiles(bool silent = false)
         {
             int highestMissile = findHighestPrioritizedUseableMissile();
             if (highestMissile == -1)
@@ -668,7 +688,7 @@ namespace GameMod
             }
             else
             {
-                swapToMissile(highestMissile);
+                swapToMissile(highestMissile, silent);
                 return;
             }
 
@@ -701,7 +721,7 @@ namespace GameMod
             return -1;
         }
 
-        public static void swapToMissile(int weapon_num)
+        public static void swapToMissile(int weapon_num, bool silent = false)
         {
             if (GameManager.m_local_player.m_missile_level[weapon_num] == WeaponUnlock.LOCKED || GameManager.m_local_player.m_missile_ammo[weapon_num] == 0)//GameManager.m_local_player.m_missile_ammo[weapon_num] == 0)
             {
@@ -711,7 +731,26 @@ namespace GameMod
             {
                 GameManager.m_local_player.Networkm_missile_type = (MissileType)weapon_num;
                 GameManager.m_local_player.CallCmdSetCurrentMissile(GameManager.m_local_player.Networkm_missile_type);
-                GameManager.m_player_ship.MissileSelectFX();
+
+                if (GameManager.m_game_state != GameManager.GameState.GAMEPLAY)
+                {
+                    return;
+                }
+
+                UIElement.WEAPON_SELECT_FLASH = 1.25f;
+                UIElement.WEAPON_SELECT_NAME = string.Format(Loc.LS("{0} SELECTED"), Player.MissileNames[GameManager.m_local_player.m_missile_type]);
+                if (!silent)
+                {
+                    SFXCueManager.PlayCue2D(SFXCue.hud_cycle_typeA2, 1f, 0f, 0f, false);
+                    GameManager.m_audio.PlayCue2D(362, 0.1f, 0f, 0f, false);
+
+                    GameManager.m_local_player.c_player_ship.SetRefireDelayAfterMissileSwitch();
+                }
+                if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR)
+                {
+                    SFXCueManager.PlayCue2D(SFXCue.hud_warning_selected_dev, 1f, 0f, 0f, false);
+                }
+
                 GameManager.m_local_player.UpdateCurrentMissileName();
             }
         }
@@ -751,7 +790,7 @@ namespace GameMod
                         int new_weapon = getWeaponPriority(wt);
                         int current_weapon = getWeaponPriority(GameManager.m_local_player.m_weapon_type);
                         if (!PrimaryNeverSelect[new_weapon] && (new_weapon < current_weapon
-                            || (GameManager.m_local_player.m_weapon_type.Equals(WeaponType.IMPULSE) && GameManager.m_local_player.m_weapon_level[0].Equals(WeaponUnlock.LEVEL_1)) // Specific impulse upgrade case for classic mod
+                            || (MPClassic.matchEnabled && GameManager.m_local_player.m_weapon_type.Equals(WeaponType.IMPULSE) && GameManager.m_local_player.m_weapon_level[0].Equals(WeaponUnlock.LEVEL_1)) // Specific impulse upgrade case for classic mod
                             ))
                         {
                             if (!Controls.IsPressed(CCInput.FIRE_WEAPON))
@@ -977,7 +1016,7 @@ namespace GameMod
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
                     {
-                        MPAutoSelection.maybeSwapPrimary();
+                        MPAutoSelection.maybeSwapPrimary(true);
                     }
                 }
 
@@ -985,7 +1024,7 @@ namespace GameMod
                 {
                     if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
                     {
-                        MPAutoSelection.maybeSwapMissiles();
+                        MPAutoSelection.maybeSwapMissiles(true);
                     }
                 }
             }
