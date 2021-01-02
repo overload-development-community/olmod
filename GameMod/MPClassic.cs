@@ -66,6 +66,7 @@ namespace GameMod
                 if (wt == WeaponType.IMPULSE)
                 {
                     __instance.m_weapon_level[(int)wt] = WeaponUnlock.LEVEL_2A;
+                    __instance.m_weapon_picked_up[(int)wt] = true;
                 }
                 else
                 {
