@@ -61,6 +61,16 @@ namespace GameMod
             return (int)(Mathf.Lerp(RobotManager.m_multi_weapon_count2, RobotManager.m_multi_weapon_count8, (count - 2f) / 6f) + 0.5f);
         }
 
+        public static string GetBudgetString()
+        {
+            var ret = "";
+            foreach (var weapon in Budget)
+            {
+                ret = $"{ret}{weapon.Type.ToString().Substring(0, 2)} {weapon.Remaining:N2}/{weapon.Budget:N2} {weapon.Active} - ";
+            }
+            return ret;
+        }
+
         /// <summary>
         /// Determine if Lancer should spawn.
         /// </summary>
@@ -146,7 +156,7 @@ namespace GameMod
             // Reset weapon spawn timer.
             SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
 
-            Debug.Log($"MPPrimaries - Spawned {spawn.Type}, remaining budget {spawn.Remaining}/{spawn.Budget} with {spawn.Active} active, next spawn in {SpawnWeaponTimer}");
+            Debug.Log($"MPPrimaries - Spawned {spawn.Type}, remaining budget {spawn.Remaining}/{spawn.Budget} with {spawn.Active} active, next spawn in {SpawnWeaponTimer} - {MPPrimaries.GetBudgetString()}");
         }
     }
 
@@ -231,7 +241,7 @@ namespace GameMod
             // Bail if there are none active.
             if (primary.Active == 0)
             {
-                Debug.Log($"MPPrimaries - AddWeaponSpawn - Not adding weapon spawn for {wt}, 0 are active.");
+                Debug.Log($"MPPrimaries - AddWeaponSpawn - Not adding weapon spawn for {wt}, 0 are active. - {MPPrimaries.GetBudgetString()}");
                 return false;
             }
 
@@ -245,7 +255,7 @@ namespace GameMod
                 MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(30f, 60f);
             }
 
-            Debug.Log($"MPPrimaries - Added a weapon spawn for {wt}, remaining budget {primary.Remaining}/{primary.Budget} with {primary.Active} active, next spawn in {MPPrimaries.SpawnWeaponTimer}");
+            Debug.Log($"MPPrimaries - Added a weapon spawn for {wt}, remaining budget {primary.Remaining}/{primary.Budget} with {primary.Active} active, next spawn in {MPPrimaries.SpawnWeaponTimer} - {MPPrimaries.GetBudgetString()}");
 
             // Short circuit the original code.
             return false;

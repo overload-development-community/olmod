@@ -220,7 +220,7 @@ namespace GameMod
     {
         public static bool Prefix(Item __instance, ref float __result)
         {
-            if (MPClassic.matchEnabled && GameplayManager.IsMultiplayerActive && Server.IsActive() &&
+            if (MPClassic.matchEnabled && GameplayManager.IsMultiplayerActive && Server.IsActive() && __instance.m_spawn_point == -1 &&
                 (bool)AccessTools.Field(typeof(Item), "m_spewed").GetValue(__instance)
             )
             {
