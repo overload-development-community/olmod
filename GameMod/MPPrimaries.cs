@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Harmony;
 using Overload;
 using UnityEngine;
@@ -58,7 +57,7 @@ namespace GameMod
         public static int GetMaxPrimaries()
         {
             var count = NetworkMatch.m_players.Count;
-            return (int)(Mathf.Lerp(RobotManager.m_multi_weapon_count2, RobotManager.m_multi_weapon_count8, (count - 2f) / 6f) + 0.5f);
+            return (int)(Mathf.Lerp(RobotManager.m_multi_weapon_count2, RobotManager.m_multi_weapon_count8 + (RobotManager.m_multi_weapon_count8 - RobotManager.m_multi_weapon_count2) * (4f/3f), (count - 2f) / 14f) + 0.5f);
         }
 
         public static string GetBudgetString()
@@ -252,7 +251,7 @@ namespace GameMod
             // Set timer if it's less than 0.
             if (MPPrimaries.SpawnWeaponTimer <= 0)
             {
-                MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(30f, 60f);
+                MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(15f, 30f);
             }
 
             Debug.Log($"MPPrimaries - Added a weapon spawn for {wt}, remaining budget {primary.Remaining}/{primary.Budget} with {primary.Active} active, next spawn in {MPPrimaries.SpawnWeaponTimer} - {MPPrimaries.GetBudgetString()}");
