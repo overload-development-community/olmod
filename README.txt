@@ -1,4 +1,4 @@
-olmod 0.3.4 - Overload mod
+olmod 0.3.5 - Overload mod
 Community mods for Overload
 https://github.com/arbruijn/olmod
 
@@ -40,9 +40,9 @@ What does it do
   included tool `olgetdata`. The txt files must be in the same directory as
   olmod.exe. You can run olgetdata on linux with `mono olgetdata.exe`.
 
-- Adds `frametime` non-cheat code and `rearview` cheat code
+- Adds `frametime` non-cheat code
 
-- Allows MP with up to 16 players / 8 teams (server and all clients must run olmod)
+- Adds a rearview option for all game modes, with an option to allow it in a multiplayer game
 
 - Writes match log files on server (by luponix)
 
@@ -95,6 +95,20 @@ What does it do
 - Replaces default networking model with a sniper packets style, resulting in more consistent network play.  Older clients can still play with the newer clients, but won't experience the new networking model.
 
 - Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
+
+- Shows you in the version whether you are running a modded version of olmod or not.
+
+- Improves the primary spawning algorithm.
+
+- Adds weapon and missile autoselect for multiplayer games, by luponix.
+
+- Adds a multiplayer game option to scale respawn time by team size, by Tobias.
+
+- Adds a Classic Spawns game mode, which makes the game play like other 6DoF multiplayer games such as Descent 3, by Tobias.
+
+- Adds an option to allow or disallow boosting when running the flag in CTF, by Tobias.
+
+- Adds an option to allow or disallow specific modifiers for games, by Tobias.
 
 How does it work
 ----------------

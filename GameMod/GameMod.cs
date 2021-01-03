@@ -12,7 +12,7 @@ namespace GameMod.Core
 {
     public class GameMod
     {
-        public static string Version = "olmod 0.3.5 Alpha 12/30/20 11:24 PM";
+        public static string Version = "olmod 0.3.5";
         private static Version GameVersion;
         public static bool Modded = false;
         public static string ModsLoaded = "";

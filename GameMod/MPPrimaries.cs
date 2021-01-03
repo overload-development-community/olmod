@@ -154,8 +154,6 @@ namespace GameMod
 
             // Reset weapon spawn timer.
             SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
-
-            Debug.Log($"MPPrimaries - Spawned {spawn.Type}, remaining budget {spawn.Remaining}/{spawn.Budget} with {spawn.Active} active, next spawn in {SpawnWeaponTimer} - {MPPrimaries.GetBudgetString()}");
         }
     }
 
@@ -193,7 +191,6 @@ namespace GameMod
             {
                 MPPrimaries.SpawnPrimary();
             }
-            Debug.Log($"MPPrimaries - Initial spawn complete");
 
             // This is the rest of the PowerupLevelStart code, currently unmodified.
             var num = RobotManager.m_multi_missile_count;
@@ -233,14 +230,12 @@ namespace GameMod
             var primary = MPPrimaries.Budget.Find(b => b.Type == wt);
             if (primary == null)
             {
-                Debug.Log($"MPPrimaries - AddWeaponSpawn - Could not find a budget for {wt}");
                 return false;
             }
 
             // Bail if there are none active.
             if (primary.Active == 0)
             {
-                Debug.Log($"MPPrimaries - AddWeaponSpawn - Not adding weapon spawn for {wt}, 0 are active. - {MPPrimaries.GetBudgetString()}");
                 return false;
             }
 
@@ -253,8 +248,6 @@ namespace GameMod
             {
                 MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(15f, 30f);
             }
-
-            Debug.Log($"MPPrimaries - Added a weapon spawn for {wt}, remaining budget {primary.Remaining}/{primary.Budget} with {primary.Active} active, next spawn in {MPPrimaries.SpawnWeaponTimer} - {MPPrimaries.GetBudgetString()}");
 
             // Short circuit the original code.
             return false;
@@ -309,7 +302,7 @@ namespace GameMod
                         }
                         else
                         {
-                            Debug.Log("No count set for lancer players " + words[1] + ", ignoring");
+                            Debug.Log("No count set for lancer players, ignoring.  Format is, for example, \"$lancer_players;4\"");
                         }
                     }
                     catch (Exception)

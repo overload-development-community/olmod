@@ -1,3 +1,32 @@
+v0.3.5 - 2021-01-03
+
+Modding (using DLLs that start with Mod-) is now disabled by default.  To enable modding, you must pass the "-modded" command line switch to olmod.  You will know this works and your mod is enabled by seeing the word "**MODDED**" as part of your version number.  Works for servers as well, modded servers can be seen in the multiplayer lobby (the width of the text for the server version has been expanded for this purpose).
+
+The default method of primary weapon spawning in multiplayer maps has been changed.  For players, all you need to know is that you will see more consistent primary loadouts in levels, and that the Lancer will start spawning in JIP games when certain player thresholds are met (this threshold varies by level, which is 5 for Backfire and maps that don't set these values such as Burning Indika v1.1).  For map designers, here is what you need to know about the multiplayer mode file:
+
+- The "percent" field - which wasn't really a "percent" - on fields such as $weapon;IMPULSE;2.0 is now a weight.  This means that something like giving Imuplse a weight of 2.0 and Driller a weight of 1.0 is no different from giving the Impulse 50 and Driller 25, or Impulse 0.2 and Driller 0.1.  Previously, the higher the number, the *more* of that weapon would spawn, and numbers too high would potentially put a primary's spawn rate at 100%.
+- Previously, the game capped the number of available primary spawns at whatever was in the weapon count 8 field, regardless if there were more players than 8 in the game.  This cap has been lifted.  For instance, if you have $weapon_count2;2 and $weapon_count8;8, today 10 players would give you a maximum of 8 primaries spawned in at once.  Now, you will get 10.
+- Whether or not the Lancer spawn is controlled by three things.  First, if you set $weapon;LANCER;0, you will never see a Lancer.  Second, if you set the new command $lancer_players;4, you will not get a Lancer until there are 4 players in the game.  The number 4 is adjustable, if you want there to be 8 players before a Lancer is spawned, you set $lancer_players;8.  Lastly, if you do not specify $lancer_players, olmod will fallback on old behavior.  I'm not going to go into the formula to what this behavior here is, because it's complex and isn't exactly the greatest piece of code in Overload.  Generally, the lower the weight of the Lancer is ranked among the other primaries, the more players that will be required for it to spawn.
+- Finally, the max number of players is re-evaluated every time a weapon spawn happens.  That means as more players join via Join in Progress, more primaries may be available if the map maker allows for it.  This also means that if you fall below the player threshold for the Lancer to spawn, it will stop spawning until the player threshold is met.
+
+Autoselect is now available for multiplayer games.  To enable, you must go to Control Options -> Advanced Options and set Primary Auto-Select to Never.  You modify autoselect settings on the same screen you modify your loadout, ship graphics, and modifiers, the Multiplayer -> Customize menu.  Order the weapons you wish starting with the weapon you want to select always on top.  You can "X" out a weapon to make sure it never gets selected.  Also, never miss a devastator autoselect with the alert option.  Autoselect can be enabled for primaries, secondaries, both, or neither.  For Classic Spawns mode, Impulse+ (dual Impulse) is treated as being below everything in the list.  If you don't want a weapon to be selected above Impulse+, simply "X" it out.  Note that this will affect what weapon is selected in your loadouts.  For instance, if you have a loadout with Impulse, Thunderbolt, and Hunters, and you have Thunderbolt higher than Impulse in autoselect, you will now start with Thunderbolt selected, and NOT Impulse.  Works for missiles, too.
+
+New advanced settings are available for multiplayer games:
+
+- Allow Rear View Camera (defaults off).  This option allows players to use the rear view camera.  Note the cheat code has been removed.  You can now turn on rear view in Cockpit & HUD options.
+- Scale Respawn To Team Size (defaults off, only available in team games).  This option will scale a player's respawn time after death to be equal to the number of players on their team.
+- Classic Spawns (defaults to off).  In this mode, you do not get loadouts, but rather you start with Impulse+ (dual Impulse) and Falcons, and must collect the primaries you wish to use.  When you pick up an Impulse, you will be rewarded with the Impulse++ Q upgrade which gives quad Impulse.  Further, you are unable to pick up copies of weapons you already have, and spewed primaries from destroyed ships will disappear after 30 seconds if not collected to prevent level clutter.
+- CTF Carrier Boosting (defaults to off, only available in CTF).  This option will prevent flag carriers from using boost in CTF.  It will be shown in the UI by your boost always being in an overheat state.  Note that this is a change in defaults.  In 0.3.4 and prior it was always on.
+- Loadout Settings -> Allowed Modifiers (defaults to all modifiers allowed) - Allows you to fine tune which modifiers are allowed in the game.  If a player comes in with modifiers that are not allowed, they will be prevented from readying up, and will have to select one of the allowed modifiers before playing.  They will be forcefully removed from the game when it starts up, and will not be allowed in a join in progress game with the wrong modifiers.
+
+An attempt has been made to work around the known issue of ships being invisible when you join a multiplayer game in progress.
+
+The multiplayer level selection screen now properly shows map descriptions.
+
+entity_trigger_box_lava_alien and entity_trigger_box_lava_normal entities from the editor are now enabled in game.
+
+Shenanigans, methinks.
+
 v0.3.4 - 2020-09-07
 
 - Bug fix for silent thunderbolt.
