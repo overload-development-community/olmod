@@ -31,6 +31,7 @@ namespace GameMod
         public static bool mms_classic_spawns { get; set; }
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
+        public static bool mms_assist_scoring { get; set; } = true;
 
         public static string GetMMSRearViewPIP()
         {
@@ -60,6 +61,11 @@ namespace GameMod
         public static string GetMMSLagCompensationAdvanced()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_lag_compensation_advanced));
+        }
+
+        public static string GetMMSAssistScoring()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_assist_scoring));
         }
 
         public static string GetMMSLagCompensation()
@@ -173,6 +179,8 @@ namespace GameMod
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
                 position.y += 62f;
             }
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ASSIST SCORING"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("INCLUDE ASSISTS IN PLAYER SCORE"), 1f, false);
+            position.y += 62f;
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -347,6 +355,11 @@ namespace GameMod
                         break;
                     case 17:
                         Menus.mms_allow_smash = !Menus.mms_allow_smash;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+
+                    case 18:
+                        Menus.mms_assist_scoring = !Menus.mms_assist_scoring;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                 }

@@ -137,6 +137,7 @@
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPRespawn.cs" />
+    <Compile Include="MPScores.cs" />
     <Compile Include="MPServerBrowser.cs" />
     <Compile Include="MPSmash.cs" />
     <Compile Include="MPSniperPackets.cs" />
