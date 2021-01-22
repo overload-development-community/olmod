@@ -204,8 +204,8 @@ namespace GameMod
                 evt = CTFEvent.PICKUP;
             }
 
-            var msg = FlagStates[flag] == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
-                ownFlag ? "{0} RETURNS THE {2} FLAG!" :
+            var msg = evt == CTFEvent.RETURN ? "{0} RETURNS THE {2} FLAG!" : 
+                FlagStates[flag] == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
                 "{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!";
             CTF.NotifyAll(evt, string.Format(Loc.LS(msg), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
                 MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
