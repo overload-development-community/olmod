@@ -145,17 +145,28 @@ namespace GameMod.Core
         [HarmonyPatch(typeof(Overload.UIElement), "DrawMainMenu")]
         class VersionPatch
         {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            static string GetVersion(string stockVersion)
             {
-                var codes = new List<CodeInstruction>(instructions);
-                for (var i = 0; i < codes.Count; i++)
+                return $"{stockVersion} {Version.ToUpperInvariant()}";
+            }
+
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            {
+                int state = 0;
+
+                foreach (var code in codes)
                 {
-                    if (codes[i].opcode == OpCodes.Ldstr && codes[i].operand as string == "VERSION {0}.{1} BUILD {2}")
+                    // this.DrawStringSmall(string.Format(Loc.LS("VERSION {0}.{1} BUILD {2}"), GameManager.Version.Major, GameManager.Version.Minor, GameManager.Version.Build), position, 0.5f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
+                    if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(System.String), "Format", new Type[] { typeof(string), typeof(object), typeof(object), typeof(object) }))
                     {
-                        codes[i].operand = "VERSION {0}.{1} BUILD {2} " + Version.ToUpperInvariant();
+                        state = 1;
+                        yield return code;
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(VersionPatch), "GetVersion"));
+                        continue;
                     }
+
+                    yield return code;
                 }
-                return codes;
             }
 
             static void Postfix(UIElement __instance)
@@ -244,7 +255,8 @@ namespace GameMod.Core
 
     // GSync fix
     [HarmonyPatch(typeof(GameManager), "UpdateTargetFramerate")]
-    class GSyncFix {
+    class GSyncFix
+    {
         static bool Prefix()
         {
             if (GameplayManager.IsDedicatedServer())
