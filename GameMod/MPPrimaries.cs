@@ -120,6 +120,10 @@ namespace GameMod
             var totalBudget = filteredBudget.Sum(b => b.Budget);
             var totalRemaining = filteredBudget.Sum(b => b.Remaining);
 
+            if (totalRemaining == 0) {
+                return;
+            }
+
             // Pick a random number from 0 to totalRemaining.
             var random = UnityEngine.Random.Range(0f, totalRemaining);
 
@@ -128,6 +132,10 @@ namespace GameMod
             PrimaryBudget spawn = null;
             foreach (var weapon in filteredBudget)
             {
+                if (weapon.Remaining <= 0) {
+                    continue;
+                }
+
                 current += weapon.Remaining;
                 if (random <= current)
                 {
