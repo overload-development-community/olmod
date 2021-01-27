@@ -143,7 +143,7 @@ namespace GameMod
                 var rigidbody = proj.c_rigidbody;
 
                 // slow down just fired projectile to move to ping-delayed server pos
-                if (proj.m_owner_player.isLocalPlayer)
+                if (proj.m_owner_player.m_mp_player_id == GameManager.m_local_player.m_mp_player_id)
                 {
                     float age = Time.time - proj.m_create_time;
                     if (age < 1f)
