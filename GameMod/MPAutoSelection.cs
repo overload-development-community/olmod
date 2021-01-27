@@ -882,9 +882,7 @@ namespace GameMod
                     {
                         if (!__instance.CanFireMissileAmmo(MissileType.NUM))
                         {
-
-                            DelayedSwitchTimer re = new DelayedSwitchTimer();
-                            re.Awake();
+                            new DelayedSwitchTimer().Awake();
                             return false;
                         }
                     }
@@ -894,6 +892,8 @@ namespace GameMod
         }
 
 
+        static float ThunderboltSwapDelay = 0.025f;
+        
         // checks wether there was a swap that didnt get completed due to the player firing
         [HarmonyPatch(typeof(GameManager), "Update")]
         internal class ProcessDelayedSwap
@@ -905,6 +905,18 @@ namespace GameMod
                 {
                     if (!Controls.IsPressed(CCInput.FIRE_WEAPON) && !waitingSwapWeaponType.Equals(""))
                     {
+                        // Thunderbolt needs atleast a 4ms delay after releasing the fire button to actually release the shot.
+                        // so swapping on release would swallow an already charged shot if the client picked up a weapon
+                        if( GameManager.m_local_player.m_weapon_type.Equals(WeaponType.THUNDERBOLT))
+                        {
+                            if(ThunderboltSwapDelay > 0f)
+                            {
+                                ThunderboltSwapDelay -= Time.deltaTime;
+                                return;
+                            }
+                            ThunderboltSwapDelay = 0.025f; // 25ms to ensure that it is fully reliable
+                        }
+
                         swapToWeapon(waitingSwapWeaponType);
                         GameManager.m_local_player.UpdateCurrentWeaponName();
                         waitingSwapWeaponType = "";
