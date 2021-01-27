@@ -51,6 +51,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(OverloadDir)\Overload_Data\Managed\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="Rewired_Core">
+      <HintPath>$(OverloadDir)\Overload_Data\Managed\Rewired_Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -97,6 +100,7 @@
     <Compile Include="AddOnLevelSort.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
+    <Compile Include="Controllers.cs" />
     <Compile Include="CTF.cs" />
     <Compile Include="CustomLevelResources.cs" />
     <Compile Include="DisableTimeCheat.cs" />
