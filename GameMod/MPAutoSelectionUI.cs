@@ -196,7 +196,38 @@ namespace GameMod
                                         DrawMpAutoselectOrderingScreen.saveToFile();
                                     }
                                     break;
-
+                                case 2105: //
+                                    if (UIManager.PushedSelect(100))
+                                    {
+                                        if (MPAutoSelection.dontAutoselectAfterFiring)
+                                        {
+                                            MPAutoSelection.dontAutoselectAfterFiring = false;
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                        }
+                                        else
+                                        {
+                                            MPAutoSelection.dontAutoselectAfterFiring = true;
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                        }
+                                        DrawMpAutoselectOrderingScreen.saveToFile();
+                                    }
+                                    break;
+                                case 2106: //
+                                    if (UIManager.PushedSelect(100))
+                                    {
+                                        if (MPAutoSelection.swapWhileFiring)
+                                        {
+                                            MPAutoSelection.swapWhileFiring = false;
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                        }
+                                        else
+                                        {
+                                            MPAutoSelection.swapWhileFiring = true;
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                        }
+                                        DrawMpAutoselectOrderingScreen.saveToFile();
+                                    }
+                                    break;
 
 
 
@@ -543,8 +574,8 @@ namespace GameMod
                     sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[7]);
                     sw.WriteLine(MPAutoSelection.primarySwapFlag);
                     sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                    sw.WriteLine("False");//MPAutoSelection.COswapToHighest);
-                    sw.WriteLine("False");//MPAutoSelection.patchPrevNext);
+                    sw.WriteLine(MPAutoSelection.swapWhileFiring);
+                    sw.WriteLine(MPAutoSelection.dontAutoselectAfterFiring);
                     sw.WriteLine(MPAutoSelection.zorc);
                     sw.WriteLine(MPAutoSelection.miasmic);
                 }
@@ -559,7 +590,8 @@ namespace GameMod
                 if (n == 2103) return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
                 if (n == 2102) return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
                 if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
-                if (n == 2105) return "SETS WETHER ON PICKUP SHOULD SWAP TO THE PICKED UP (IF VALID) OR THE HIGHEST";
+                if (n == 2105) return "DELAY SWAPS TILL THE PLAYER IS NOT FIRING ANYMORE";
+                if (n == 2106) return "SWAP EVEN IF THE PLAYER IS CURRENTLY FIRING";
                 else
                 {
                     return MPAutoSelection.last_valid_description;
@@ -662,7 +694,11 @@ namespace GameMod
 
 
                 position.x -= 5f;
-                position.y += 247;
+                position.y += 147;
+                uie.SelectAndDrawItem("DONT SWAP WHILE FIRING: " + (!MPAutoSelection.swapWhileFiring ? "ON" : "OFF"), position, 2106, false, 0.3f, 0.40f);
+                position.y += 50;
+                uie.SelectAndDrawItem("RETRY SWAP AFTER FIRING: " + (!MPAutoSelection.dontAutoselectAfterFiring ? "ON" : "OFF"), position, 2105, false, 0.3f, 0.40f);
+                position.y += 50;
                 uie.SelectAndDrawItem("ALERT: " + (MPAutoSelection.zorc ? "ON" : "OFF"), position, 2104, false, 0.3f, 0.45f);
 
 

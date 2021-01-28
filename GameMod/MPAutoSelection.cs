@@ -165,12 +165,12 @@ namespace GameMod
                 sw.WriteLine(SecondaryNeverSelect[5]);
                 sw.WriteLine(SecondaryNeverSelect[6]);
                 sw.WriteLine(SecondaryNeverSelect[7]);
-                sw.WriteLine(MPAutoSelection.primarySwapFlag);
-                sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                sw.WriteLine("False");//MPAutoSelection.COswapToHighest);
-                sw.WriteLine("False");//MPAutoSelection.patchPrevNext);
-                sw.WriteLine(MPAutoSelection.zorc);
-                sw.WriteLine(MPAutoSelection.miasmic);
+                sw.WriteLine(primarySwapFlag);
+                sw.WriteLine(secondarySwapFlag);
+                sw.WriteLine(swapWhileFiring);
+                sw.WriteLine(dontAutoselectAfterFiring);
+                sw.WriteLine(zorc);
+                sw.WriteLine(miasmic);
             }
         }
 
@@ -266,11 +266,11 @@ namespace GameMod
                     }
                     else if (counter == 34)
                     {
-                        //if (ln == "True" || ln == "False") { COswapToHighest = stringToBool(ln); }
+                        if (ln == "True" || ln == "False") { swapWhileFiring = stringToBool(ln); }
                     }
                     else if (counter == 35)
                     {
-                        //if (ln == "True" || ln == "False") { patchPrevNext = stringToBool(ln); }
+                        if (ln == "True" || ln == "False") { dontAutoselectAfterFiring = stringToBool(ln); }
                     }
                     else if (counter == 36)
                     {
@@ -793,7 +793,7 @@ namespace GameMod
                             || (MPClassic.matchEnabled && GameManager.m_local_player.m_weapon_type.Equals(WeaponType.IMPULSE) && GameManager.m_local_player.m_weapon_level[0].Equals(WeaponUnlock.LEVEL_1)) // Specific impulse upgrade case for classic mod
                             ))
                         {
-                            if (!Controls.IsPressed(CCInput.FIRE_WEAPON))
+                            if (!Controls.IsPressed(CCInput.FIRE_WEAPON) | swapWhileFiring)
                             {
                                 swapToWeapon(wt.ToString());
                                 GameManager.m_local_player.UpdateCurrentWeaponName();
@@ -892,6 +892,7 @@ namespace GameMod
         }
 
 
+
         static float ThunderboltSwapDelay = 0.025f;
         
         // checks wether there was a swap that didnt get completed due to the player firing
@@ -903,7 +904,7 @@ namespace GameMod
 
                 if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
                 {
-                    if (!Controls.IsPressed(CCInput.FIRE_WEAPON) && !waitingSwapWeaponType.Equals(""))
+                    if (!dontAutoselectAfterFiring && !Controls.IsPressed(CCInput.FIRE_WEAPON) && !waitingSwapWeaponType.Equals(""))
                     {
                         // Thunderbolt needs atleast a 4ms delay after releasing the fire button to actually release the shot.
                         // so swapping on release would swallow an already charged shot if the client picked up a weapon
@@ -914,7 +915,7 @@ namespace GameMod
                                 ThunderboltSwapDelay -= Time.deltaTime;
                                 return;
                             }
-                            ThunderboltSwapDelay = 0.025f; // 25ms to ensure that it is fully reliable
+                            ThunderboltSwapDelay = 0.025f; // 25ms to ensure that it is 100% reliable
                         }
 
                         swapToWeapon(waitingSwapWeaponType);
@@ -995,7 +996,8 @@ namespace GameMod
         public static bool secondarySwapFlag = true;    // toggles the whole secondary selection logic
         public static bool zorc = false;                // extra alert for old men when the devastator gets autoselected, still need to find an annoying sound for that
         public static bool miasmic = false;             // dont draw certain hud elements
-        public static bool allowSwapWhileFiring = true; // toggles wether weapon swaps are allowed to happen while the player is firing, if set to false it will delay the swap till the player is not firing anymore                                         
+        public static bool swapWhileFiring = false;     // toggles wether weapon swaps are allowed to happen while the player is firing                                   
+        public static bool dontAutoselectAfterFiring = false; // sets wether it should not if the original swap couldnt happen due to the player firing
 
         public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
     }
