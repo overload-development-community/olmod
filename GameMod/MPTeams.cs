@@ -943,5 +943,39 @@ namespace GameMod
         }
     }
 
+    /// <summary>
+    /// Sort players in Team Anarchy scoreboard by Kills, Assists, then Deaths instead of Anarchy scoring
+    /// </summary>
+    [HarmonyPatch(typeof(UIElement), "DrawScoresForTeam")]
+    class MPTeams_UIElement_DrawScoresForTeams
+    {
+        static List<int> SortTeamScores(List<int> list)
+        {
+            List<Player> players = Overload.NetworkManager.m_PlayersForScoreboard;
+            list.Sort((int a, int b) =>
+                players[a].m_kills != players[b].m_kills
+                    ? players[b].m_kills.CompareTo(players[a].m_kills)
+                    : (players[a].m_assists != players[b].m_assists ? players[b].m_assists.CompareTo(players[a].m_assists) : players[a].m_deaths.CompareTo(players[b].m_deaths))
+            );
+            return list;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(System.Collections.Generic.List<Int32>), "Reverse"))
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldloc_2);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_UIElement_DrawScoresForTeams), "SortTeamScores"));
+                    yield return new CodeInstruction(OpCodes.Stloc_2);
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
     // still missing: chat colors...
 }
