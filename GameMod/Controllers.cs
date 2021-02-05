@@ -69,7 +69,7 @@ namespace GameMod
             }
         }
     }
-    
+
     [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
     class Controllers_UIElement_DrawControlsMenu
     {
@@ -274,14 +274,14 @@ namespace GameMod
                 int numAxes = int.Parse(sr.ReadLine());
                 for (int j = 0; j < numAxes; j++)
                 {
-                    Controllers.controllers[i].axes[j].deadzone = int.Parse(sr.ReadLine());
-                    Controllers.controllers[i].axes[j].sensitivity = int.Parse(sr.ReadLine());
+                    Controllers.controllers[i].axes[j].deadzone = float.Parse(sr.ReadLine());
+                    Controllers.controllers[i].axes[j].sensitivity = float.Parse(sr.ReadLine());
                     Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
                     Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
                 }
             }
         }
-        
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             foreach (var code in codes)
@@ -318,8 +318,8 @@ namespace GameMod
                             string text = streamReader.ReadToEnd();
                             //if (Controllers.m_serialized_data != text)
                             //{
-                                Controllers.m_serialized_data = text;
-                                Platform.WriteTextUserData(fn, Controllers.m_serialized_data);
+                            Controllers.m_serialized_data = text;
+                            Platform.WriteTextUserData(fn, Controllers.m_serialized_data);
                             //}
                         }
                     }
@@ -393,5 +393,5 @@ namespace GameMod
             }
         }
     }
-    
+
 }
