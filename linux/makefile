@@ -10,6 +10,9 @@ olmod.so: olmod.o
 olmod.dylib: olmod.o
 	$(CC) -dynamiclib -o $@ $^
 
+GameMod.dll:
+	./mono_build.sh
+
 clean:
 	rm -f olmod.so
 
