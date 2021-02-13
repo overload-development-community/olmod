@@ -167,6 +167,7 @@
     <Compile Include="ServerStatLog.cs" />
     <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
+    <Compile Include="Shaders.cs" />
     <Compile Include="VSync.cs" />
   </ItemGroup>
   <ItemGroup>
