@@ -1,22 +1,22 @@
-﻿using GameMod.Core;
-using Harmony;
-using Overload;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Core;
+using Harmony;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     static class Console
     {
         public static bool KeyEnabled;
         public static int CustomUIColor;
 
+        private static MethodInfo _GameManager_InitializeMissionList_Method = typeof(GameManager).GetMethod("InitializeMissionList", AccessTools.all);
         public static void CmdReloadMissions()
         {
             MBLevelPatch.SLInit = false;
-            typeof(GameManager).GetMethod("InitializeMissionList", AccessTools.all).Invoke(GameManager.m_gm, null);
+            _GameManager_InitializeMissionList_Method.Invoke(GameManager.m_gm, null);
             uConsole.Log("Missions reloaded (" + GameManager.GetAvailableMissions().Length + " sp, " +
                 GameManager.ChallengeMission.NumLevels + " cm, " + GameManager.MultiplayerMission.NumLevels + " mp)");
         }
@@ -146,6 +146,8 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var consoleOptionPatch_DrawConsoleOption_Method = AccessTools.Method(typeof(ConsoleOptionPatch), "DrawConsoleOption");
+
             int state = 0; // 0 = before adv.ctrl, 1 = before 248f, 2 = before stloc (last opt), 3 = before last SelectAndDrawStringOptionItem, 4 = rest
             foreach (var code in codes) {
                 if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "CONTROL OPTIONS - ADVANCED") {
@@ -159,7 +161,7 @@ namespace GameMod
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConsoleOptionPatch), "DrawConsoleOption"));
+                    yield return new CodeInstruction(OpCodes.Call, consoleOptionPatch_DrawConsoleOption_Method);
                     state = 4;
                     continue;
                 }
@@ -174,12 +176,14 @@ namespace GameMod
     {
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var consoleOptionTogglePatch_HandleConsoleToggle_Method = AccessTools.Method(typeof(ConsoleOptionTogglePatch), "HandleConsoleToggle");
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
                 {
                     yield return code;
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConsoleOptionTogglePatch), "HandleConsoleToggle"));
+                    yield return new CodeInstruction(OpCodes.Call, consoleOptionTogglePatch_HandleConsoleToggle_Method);
                     continue;
                 }
 

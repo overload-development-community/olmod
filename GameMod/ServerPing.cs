@@ -1,17 +1,13 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using UnityEngine;
+using Harmony;
+using Overload;
 
-namespace GameMod
-{
+namespace GameMod {
     [HarmonyPatch(typeof(BroadcastState), "Tick")]
     class ServerPingTick
     {
@@ -58,6 +54,9 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var broadcastState_m_receiveClient_Field = typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance);
+            var serverPingTick_CheckPing_Method = AccessTools.Method(typeof(ServerPingTick), "CheckPing");
+
             object lastLdloc = 0;
             foreach (var code in codes)
             {
@@ -70,13 +69,12 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Ldloc_S, lastLdloc); // this is byte[] packet, since also passed to ClassifyPacket
                     yield return new CodeInstruction(OpCodes.Ldloc_S, ((LocalBuilder)lastLdloc).LocalIndex - 1); // this should be IPEndPoint senderEndPoint
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Ldfld, typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance));
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ServerPingTick), "CheckPing"));
+                    yield return new CodeInstruction(OpCodes.Ldfld, broadcastState_m_receiveClient_Field);
+                    yield return new CodeInstruction(OpCodes.Call, serverPingTick_CheckPing_Method);
                     continue;
                 }
                 yield return code;
             }
         }
-
     }
 }

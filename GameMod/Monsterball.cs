@@ -33,6 +33,42 @@ namespace GameMod
         }
     }
 
+    // enable monsterball mode, allow max players up to 16
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class MBModeSelPatch {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+            int n = 0;
+            var codes = new List<CodeInstruction>(instructions);
+            for (var i = 0; i < codes.Count; i++) {
+                // increase max mode to allow monsterball mode
+                if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_mode") {
+                    i++;
+                    if (codes[i].opcode == OpCodes.Ldc_I4_2)
+                        codes[i].opcode = OpCodes.Ldc_I4_4;
+                    i++;
+                    while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
+                        i++;
+                    if (codes[i].opcode == OpCodes.Ldc_I4_2)
+                        codes[i].opcode = OpCodes.Ldc_I4_4;
+                    n++;
+                }
+                if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_max_players" &&
+                    i > 0 && codes[i - 1].opcode == OpCodes.Br) // take !online branch
+                {
+                    while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
+                        i++;
+                    if (codes[i].opcode == OpCodes.Ldc_I4_1 && codes[i + 1].opcode == OpCodes.Ldc_I4_8) {
+                        codes[i + 1].opcode = OpCodes.Ldc_I4;
+                        codes[i + 1].operand = 16;
+                    }
+                    n++;
+                }
+            }
+            Debug.Log("Patched MpMatchSetup n=" + n);
+            return codes;
+        }
+    }
+
     //Increases mass/drag on Monsterball, enables collision with wind tunnels and other potentially useful layers
     [HarmonyPatch(typeof(MonsterBall), "Awake")]
     class MonsterballEnableWeaponCollision

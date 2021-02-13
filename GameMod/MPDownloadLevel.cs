@@ -1,20 +1,19 @@
-﻿using Harmony;
-using Ionic.Zip;
-using Newtonsoft.Json.Linq;
-using Overload;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Harmony;
+using Ionic.Zip;
+using Newtonsoft.Json.Linq;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod
-{
+namespace GameMod {
     static class MPDownloadLevel
     {
         private const string MapHiddenMarker = "_OCT_Hidden";
@@ -59,10 +58,10 @@ namespace GameMod
             return -1;
         }
 
+        private static FieldInfo _Mission_Levels_Field = typeof(Mission).GetField("Levels", BindingFlags.NonPublic | BindingFlags.Instance);
         private static List<LevelInfo> GetMPLevels()
         {
-            return typeof(Mission).GetField("Levels", BindingFlags.NonPublic | BindingFlags.Instance)
-                .GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
+            return _Mission_Levels_Field.GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
         }
 
         private static string DifferentVersionFilename(string levelIdHash, out List<LevelInfo> levels, out int idx)
@@ -75,6 +74,7 @@ namespace GameMod
             return level.ZipPath ?? level.FilePath;
         }
 
+        private static PropertyInfo _LevelInfo_LevelNum_property = typeof(LevelInfo).GetProperty("LevelNum", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         // return false if failed
         private static bool DisableDifferentVersion(string levelIdHash, Action<string, bool> log)
         {
@@ -100,9 +100,9 @@ namespace GameMod
                 return false;
             }
             levels.RemoveAt(idx);
-            PropertyInfo propLevelNum = typeof(LevelInfo).GetProperty("LevelNum", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            for (int i = 0, count = levels.Count; i < count; i++)
-                propLevelNum.SetValue(levels[i], i, null);
+            for (int i = 0, count = levels.Count; i < count; i++) {
+                _LevelInfo_LevelNum_property.SetValue(levels[i], i, null);
+            }
             log("OTHER VERSION " + Path.GetFileName(fn) + " DISABLED", false);
             return true;
         }
@@ -344,6 +344,7 @@ namespace GameMod
             Debug.Log("DoGetLevel last download status: " + lastMsg);
         }
 
+        private static FieldInfo _NetworkMatch_m_match_force_playlist_level_idx_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", BindingFlags.NonPublic | BindingFlags.Static);
         private static IEnumerator DoGetLevel(string levelIdHash)
         {
             Debug.Log("DoGetLevel " + levelIdHash);
@@ -369,10 +370,11 @@ namespace GameMod
             if (Overload.NetworkManager.IsServer())
             {
                 int idx = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(levelIdHash);
-                if (idx < 0)
+                if (idx < 0) {
                     DownloadFailed(lastMsg); // if we don't have the level the last message was the error message
-                else
-                    typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, idx);
+                } else {
+                    _NetworkMatch_m_match_force_playlist_level_idx_Field.SetValue(null, idx);
+                }
             }
             DownloadBusy = false;
         }
@@ -383,8 +385,6 @@ namespace GameMod
                 return;
             DownloadBusy = true;
             LastDownloadAttempt = levelIdHash;
-            //var tasks = typeof(NetworkMatch).GetField("m_gatewayWebTasks", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-            //tasks.GetType().GetMethod("Add").Invoke(tasks, new object[] { DoGetLevel(level).GetEnumerator() });
             GameManager.m_gm.StartCoroutine(DoGetLevel(levelIdHash));
         }
     }

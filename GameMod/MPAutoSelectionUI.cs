@@ -6,8 +6,7 @@ using Harmony;
 using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     class MPAutoSelectionUI
     {
         // Menu manager
@@ -16,6 +15,8 @@ namespace GameMod
         {
             static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
             {
+                var uiManager_m_menu_selection_Field = AccessTools.Field(typeof(UIManager), "m_menu_selection");
+
                 var twoCount = 0;
                 var threeCount = 0;
                 foreach (var code in codes)
@@ -39,7 +40,7 @@ namespace GameMod
                     }
 
                     // Prevent profile corruption when selecting autoselect options.  Adds a "case 203" to several switch statements in the function.
-                    if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(UIManager), "m_menu_selection"))
+                    if (code.opcode == OpCodes.Ldsfld && code.operand == uiManager_m_menu_selection_Field)
                     {
                         if (code.labels.Count == 3)
                         {
@@ -359,9 +360,6 @@ namespace GameMod
             }
         }
 
-
-
-
         // Adds the Auto order entry in the customize menu
         [HarmonyPatch(typeof(UIElement), "DrawMpTabs")]
         internal class AddFourthTab
@@ -400,11 +398,6 @@ namespace GameMod
                 return false;
             }
         }
-
-
-
-
-
 
         [HarmonyPatch(typeof(UIElement), "DrawMpCustomize")]
         internal class DrawMpAutoselectOrderingScreen
@@ -615,7 +608,7 @@ namespace GameMod
                 }
             }
 
-
+            private static MethodInfo _UIElement_DrawWrappedText_Method = typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             public static void DrawPriorityList(UIElement uie)
             {
                 UIManager.X_SCALE = 0.2f;
@@ -710,8 +703,7 @@ namespace GameMod
                 MPAutoSelection.last_valid_description = k;
                 uie.DrawLabelSmall(position2, k, 500f);
 
-                typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                    .Invoke(uie, new object[] { "To enable autoselect, set the option at \"Options\", \"Control Options\", \"Advanced Options\", \"Primary Auto-Select\" to \"Never\".", new Vector2(UIManager.UI_LEFT + 35f, UIManager.UI_TOP + 234f), 0.4f, 15f, 220f, StringOffset.LEFT, float.MaxValue, 0f, 0f });
+                _UIElement_DrawWrappedText_Method.Invoke(uie, new object[] { "To enable autoselect, set the option at \"Options\", \"Control Options\", \"Advanced Options\", \"Primary Auto-Select\" to \"Never\".", new Vector2(UIManager.UI_LEFT + 35f, UIManager.UI_TOP + 234f), 0.4f, 15f, 220f, StringOffset.LEFT, float.MaxValue, 0f, 0f });
             }
             public static bool isInitialised = false;
 

@@ -1,16 +1,14 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
+using Harmony;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace GameMod
-{
+namespace GameMod {
     public static class Race
     {
         public static List<RacePlayer> Players = new List<RacePlayer>();
@@ -973,6 +971,8 @@ namespace GameMod
         // Skip out of applying velocity to creepers in race mode
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var matchModeRace_TriggerWindTunnel_OnTriggerStay_MaybePatchCreepers_Method = AccessTools.Method(typeof(MatchModeRace_TriggerWindTunnel_OnTriggerStay), "MaybePatchCreepers");
+
             int state = 0;
             object brjump = null;
             foreach (var code in codes)
@@ -991,7 +991,7 @@ namespace GameMod
                     state = 3;
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloc_3);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MatchModeRace_TriggerWindTunnel_OnTriggerStay), "MaybePatchCreepers"));
+                    yield return new CodeInstruction(OpCodes.Call, matchModeRace_TriggerWindTunnel_OnTriggerStay_MaybePatchCreepers_Method);
                     yield return new CodeInstruction(OpCodes.Brtrue, brjump);
 
                 }
@@ -1048,16 +1048,18 @@ namespace GameMod
     [HarmonyPatch(typeof(Item), "OnTriggerEnter")]
     public class MatchModeRace_Item_OnTriggerEnter
     {
-
+        private static FieldInfo _Item_m_fake_picked_up_Field = AccessTools.Field(typeof(Item), "m_fake_picked_up");
+        private static MethodInfo _Item_HideItem_Method = AccessTools.Method(typeof(Item), "HideItem");
+        private static MethodInfo _Item_PlayItemPickupFX = AccessTools.Method(typeof(Item), "PlayItemPickupFX");
         public static void TryFakePickup(ref Item item, Player player)
         {
             //bool m_fake_picked_up = (bool)AccessTools.Field(typeof(Item), "m_fake_picked_up").GetValue(item);
             bool m_fake_picked_up = FakePickUp(ref item, player);
-            AccessTools.Field(typeof(Item), "m_fake_picked_up").SetValue(item, m_fake_picked_up);
+            _Item_m_fake_picked_up_Field.SetValue(item, m_fake_picked_up);
             if (m_fake_picked_up)
             {
-                AccessTools.Method(typeof(Item), "HideItem").Invoke(item, new object[] { true });
-                AccessTools.Method(typeof(Item), "PlayItemPickupFX").Invoke(item, new object[] { player });
+                _Item_HideItem_Method.Invoke(item, new object[] { true });
+                _Item_PlayItemPickupFX.Invoke(item, new object[] { player });
             }
         }
 
@@ -1124,6 +1126,7 @@ namespace GameMod
             }
         }
 
+        private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", AccessTools.all);
         static bool Prefix(ref Collider other, ref Item __instance, ref bool ___m_fake_picked_up)
         {
             if (!GameplayManager.IsMultiplayerActive || MPModPrivateData.MatchMode != ExtMatchMode.RACE)
@@ -1139,7 +1142,7 @@ namespace GameMod
                 return false;
             }
             Player c_player = component.c_player;
-            bool itemIsReachable = (bool)typeof(Item).GetMethod("ItemIsReachable", AccessTools.all).Invoke(__instance, new object[] { other });
+            bool itemIsReachable = (bool)_Item_ItemIsReachable_Method.Invoke(__instance, new object[] { other });
             if (!itemIsReachable || component.m_dying)
             {
                 return false;
@@ -1389,6 +1392,7 @@ namespace GameMod
             }
         }
 
+        private static FieldInfo _Item_m_spewed_Field = AccessTools.Field(typeof(Item), "m_spewed");
         public static GameObject Spew(GameObject prefab, Vector3 pos, Vector3 vel, int spawn_idx = -1, bool make_super = false)
         {
             GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(prefab, pos, Quaternion.identity);
@@ -1419,7 +1423,7 @@ namespace GameMod
                 component.CallRpcMakeSuper();
             }
             component.c_rigidbody.velocity = vel * component.m_push_multiplier;
-            AccessTools.Field(typeof(Item), "m_spewed").SetValue(component, true);
+            _Item_m_spewed_Field.SetValue(component, true);
             //component.m_spewed = true;
             component.m_spawn_point = spawn_idx;
             if (spawn_idx > -1 && spawn_idx < Item.HasLiveItem.Length)
@@ -1436,10 +1440,12 @@ namespace GameMod
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var menuManager_mms_respawn_time_Field = AccessTools.Field(typeof(MenuManager), "mms_respawn_time");
+
             int state = 0;
             foreach (var code in codes)
             {
-                if (state == 0 && code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_respawn_time"))
+                if (state == 0 && code.opcode == OpCodes.Ldsfld && code.operand == menuManager_mms_respawn_time_Field)
                     state = 1;
 
                 else if (state == 1 && code.opcode == OpCodes.Ldc_I4_2)

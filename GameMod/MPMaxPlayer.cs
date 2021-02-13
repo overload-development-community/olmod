@@ -1,15 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 using Harmony;
 using Overload;
-using System.Reflection.Emit;
-using System.Reflection;
 using UnityEngine;
-using System;
 
-namespace GameMod
-{
+namespace GameMod {
     // fixup max 0 players (because of truncation to 4 bits) to 16 players
-    [HarmonyPatch(typeof(Overload.PrivateMatchDataMessage), "DeserializePacked")]
+    [HarmonyPatch(typeof(PrivateMatchDataMessage), "DeserializePacked")]
     class MPMaxPlayerPMD
     {
         static void Postfix(PrivateMatchDataMessage __result)
@@ -20,7 +19,7 @@ namespace GameMod
     }
 
     // set ConfigureConnection max connections to 16
-    [HarmonyPatch(typeof(Overload.Server), "ConfigureConnection")]
+    [HarmonyPatch(typeof(Server), "ConfigureConnection")]
     class MPMaxPlayerServConn
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)

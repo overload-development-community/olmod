@@ -1,7 +1,4 @@
-﻿using Harmony;
-using Newtonsoft.Json;
-using Overload;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,13 +6,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using System.Threading;
+using Harmony;
+using Newtonsoft.Json;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace GameMod
-{
+namespace GameMod {
 
     static class MPServerBrowser
     {
@@ -239,9 +236,9 @@ namespace GameMod
                     return;
                 var receivedPacket = new ReceivedPacketInfo {
                     packet = inPacket, endPoint = endPoint, time = DateTime.UtcNow.Ticks };
-				lock (receivedPackets) {
-					receivedPackets.Add(receivedPacket);
-				}
+                lock (receivedPackets) {
+                    receivedPackets.Add(receivedPacket);
+                }
                 socket.BeginReceive(receiver, arSocket);
             });
             socket.BeginReceive(receiver, socket);
@@ -435,6 +432,8 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpServerBrowser_UIElement_DrawMpMenu_Method = AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMenu), "DrawBrowserButton");
+
             int state = 0;
             foreach (var code in codes)
             {
@@ -443,7 +442,7 @@ namespace GameMod
                     loadCount++;
                     state = 1;
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMenu), "DrawBrowserButton"));
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMenu_Method);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
                 yield return code;
@@ -463,9 +462,9 @@ namespace GameMod
             {
                 if (UIManager.m_menu_selection == 5)
                 {
-					UIManager.DestroyAll();
-					MenuManager.ChangeMenuState(MPServerBrowser.msServerBrowser);
-					MenuManager.PlaySelectSound();
+                    UIManager.DestroyAll();
+                    MenuManager.ChangeMenuState(MPServerBrowser.msServerBrowser);
+                    MenuManager.PlaySelectSound();
                 }
             }
         }
@@ -477,7 +476,7 @@ namespace GameMod
 
         private static void Postfix(UIElement __instance)
         {
-			if (__instance.m_type == MPServerBrowser.uiServerBrowser && __instance.m_alpha > 0f)
+            if (__instance.m_type == MPServerBrowser.uiServerBrowser && __instance.m_alpha > 0f)
                 DrawBrowserWindow(__instance);
         }
 
@@ -593,9 +592,9 @@ namespace GameMod
             uie.DrawStringSmall(s, pos, scale, so, c, (!fade) ? 1f : 0.2f, -1f);
         }
 
-		public static void SelectAndDrawSmallerItem(UIElement uie, string s, Vector2 pos, int selection, bool fade, float width = 1f, float text_size = 0.75f)
-		{
-			float drawWidth = 500f * width;
+        public static void SelectAndDrawSmallerItem(UIElement uie, string s, Vector2 pos, int selection, bool fade, float width = 1f, float text_size = 0.75f)
+        {
+            float drawWidth = 500f * width;
 
             var so = StringOffset.CENTER;
             if (!fade && !uie.m_fade_die)
@@ -612,38 +611,38 @@ namespace GameMod
                 uie.TestMouseInRect(pos2, drawWidth / 2f, 20f * text_size, selection, true);
             }
 
-			float num2 = 12.36f;
-			float d = drawWidth * 0.5f + num2 * 0.9f - 1f;
-			Color color;
-			if (UIManager.m_menu_selection == selection)
-			{
-				color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!uie.m_fade_die) ? 0f : 0.5f));
-				float a = color.a = 1f - Mathf.Pow(1f - uie.m_alpha, 8f);
-				UIManager.DrawQuadBarHorizontal(pos, 16f, 16f, drawWidth, color, 12);
-				color = UIManager.m_col_ub3;
-				color.a = a;
-				UIManager.DrawQuadUI(pos - d * Vector2.right, num2 * 0.1f, num2, color, color.a, 13);
-				UIManager.DrawQuadUI(pos + d * Vector2.right, num2 * 0.1f, num2, color, color.a, 13);
-			}
-			else
-			{
-				float alpha = uie.m_alpha;
-				//color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.6f * UIElement.FLICKER));
-				//color.a = alpha * ((!fade) ? 1f : 0.3f);
-				//UIManager.DrawQuadBarHorizontal(pos, 22f, 22f, drawWidth, color, 7);
-				color = UIManager.m_col_ui2;
-				color.a = alpha * ((!fade) ? 1f : 0.5f);
-			}
-			if (fade)
-			{
-				color.a *= 0.5f;
-				uie.DrawStringSmallOverrideAlpha(s, pos, text_size, so, color, 500f * width);
-			}
-			else
-			{
-				uie.DrawStringSmallOverrideAlpha(s, pos, text_size, so, color, 500f * width);
-			}
-		}
+            float num2 = 12.36f;
+            float d = drawWidth * 0.5f + num2 * 0.9f - 1f;
+            Color color;
+            if (UIManager.m_menu_selection == selection)
+            {
+                color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!uie.m_fade_die) ? 0f : 0.5f));
+                float a = color.a = 1f - Mathf.Pow(1f - uie.m_alpha, 8f);
+                UIManager.DrawQuadBarHorizontal(pos, 16f, 16f, drawWidth, color, 12);
+                color = UIManager.m_col_ub3;
+                color.a = a;
+                UIManager.DrawQuadUI(pos - d * Vector2.right, num2 * 0.1f, num2, color, color.a, 13);
+                UIManager.DrawQuadUI(pos + d * Vector2.right, num2 * 0.1f, num2, color, color.a, 13);
+            }
+            else
+            {
+                float alpha = uie.m_alpha;
+                //color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.6f * UIElement.FLICKER));
+                //color.a = alpha * ((!fade) ? 1f : 0.3f);
+                //UIManager.DrawQuadBarHorizontal(pos, 22f, 22f, drawWidth, color, 7);
+                color = UIManager.m_col_ui2;
+                color.a = alpha * ((!fade) ? 1f : 0.5f);
+            }
+            if (fade)
+            {
+                color.a *= 0.5f;
+                uie.DrawStringSmallOverrideAlpha(s, pos, text_size, so, color, 500f * width);
+            }
+            else
+            {
+                uie.DrawStringSmallOverrideAlpha(s, pos, text_size, so, color, 500f * width);
+            }
+        }
 
     }
 
@@ -657,6 +656,8 @@ namespace GameMod
                 MPServerBrowserUpdate(ref ___m_menu_state_timer);
         }
 
+        private static MethodInfo _MenuManager_CheckPaging_Method = typeof(MenuManager).GetMethod("CheckPaging", BindingFlags.NonPublic | BindingFlags.Static);
+        private static FieldInfo _InternetMatch_ServerAddress_Field = typeof(GameManager).Assembly.GetType("InternetMatch").GetField("ServerAddress", BindingFlags.Static | BindingFlags.Public);
         private static void MPServerBrowserUpdate(ref float m_menu_state_timer)
         {
             UIManager.MouseSelectUpdate();
@@ -712,7 +713,7 @@ namespace GameMod
                         bool flag = false;
                         var args = new object[] {  MenuManager.m_list_items_first, MenuManager.m_list_items_last,
                                 MenuManager.m_list_items_total_count, MenuManager.m_list_items_max_per_page };
-                        flag = (bool)typeof(MenuManager).GetMethod("CheckPaging", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
+                        flag = (bool)_MenuManager_CheckPaging_Method.Invoke(null, args);
 
                         if (MenuManager.m_list_items_first != (int)args[0])
                             m_menu_state_timer = 0f;
@@ -770,8 +771,9 @@ namespace GameMod
                                                 NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
                                                 NetworkMatch.m_match_req_password = MPServerBrowser.selectedItem.ip;
                                                 MPInternet.ServerAddress = MPInternet.FindPasswordAddress(MPServerBrowser.selectedItem.ip, out string msg);
-                                                if (Core.GameMod.HasInternetMatch())
-                                                    typeof(GameManager).Assembly.GetType("InternetMatch").GetField("ServerAddress", BindingFlags.Static | BindingFlags.Public).SetValue(null, MPInternet.ServerAddress);
+                                                if (Core.GameMod.HasInternetMatch()) {
+                                                    _InternetMatch_ServerAddress_Field.SetValue(null, MPInternet.ServerAddress);
+                                                }
                                                 MenuManager.m_mp_status = Loc.LS("JOINING " + MPInternet.ClientModeName());
                                                 NetworkMatch.JoinPrivateLobby(MPInternet.MenuPassword);
                                             }
@@ -838,6 +840,8 @@ namespace GameMod
             }
         }
 
+        private static FieldInfo _MenuManager_m_back_stack_Field = AccessTools.Field(typeof(MenuManager), "m_back_stack");
+        private static FieldInfo _MenuManager_m_menu_state_timer_Field = AccessTools.Field(typeof(MenuManager), "m_menu_state_timer");
         private static void MpBackButton()
         {
             switch (MenuManager.m_menu_sub_state)
@@ -846,8 +850,8 @@ namespace GameMod
                     if (UIManager.PushedSelect(100))
                     {
                         Debug.Log("Pushed back");
-                        Stack<MenuState> m_back_stack = (Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null);
-                        AccessTools.Field(typeof(MenuManager), "m_menu_state_timer").SetValue(null, 0f);
+                        Stack<MenuState> m_back_stack = (Stack<MenuState>)_MenuManager_m_back_stack_Field.GetValue(null);
+                        _MenuManager_m_menu_state_timer_Field.SetValue(null, 0f);
                         UIManager.DestroyAll(false);
                         if (m_back_stack.Peek() == MenuState.MP_MENU)
                         {
@@ -893,6 +897,9 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpServerBrowser_MenuManager_MpMatchSetup_MpBackButton_Method = AccessTools.Method(typeof(MPServerBrowser_MenuManager_MpMatchSetup), "MpBackButton");
+            var mpServerBrowser_MenuManager_MpMatchSetup_MpMatchSetupMicrostate_Method = AccessTools.Method(typeof(MPServerBrowser_MenuManager_MpMatchSetup), "MpMatchSetupMicrostate");
+
             int state = 0;
             foreach (var code in codes)
             {
@@ -901,7 +908,7 @@ namespace GameMod
                 {
                     List<Label> labels = code.labels;
                     code.labels = new List<Label>();
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPServerBrowser_MenuManager_MpMatchSetup), "MpBackButton")) { labels = labels };
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_MenuManager_MpMatchSetup_MpBackButton_Method) { labels = labels };
                 }
 
                 // MpMatchSetup init always sets m_menu_micro_state = 0, override if initiated by browser select
@@ -909,7 +916,7 @@ namespace GameMod
                     (((FieldInfo)code.operand).Name == "_mms_match_password" || ((FieldInfo)code.operand).Name == "mms_match_password"))
                 {
                     state = 1;
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPServerBrowser_MenuManager_MpMatchSetup), "MpMatchSetupMicrostate"));
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_MenuManager_MpMatchSetup_MpMatchSetupMicrostate_Method);
                 }
 
                 yield return code;
@@ -966,6 +973,9 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method = AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMatchSetup), "DrawMatchNotes");
+            var mpServerBrowser_UIElement_DrawMpMatchSetup_DrawFriendlyFire_Method = AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMatchSetup), "DrawFriendlyFire");
+
             int state = 0;
 
             foreach (var code in codes)
@@ -987,7 +997,7 @@ namespace GameMod
                 {
                     state = 3;
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMatchSetup), "DrawMatchNotes"));
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
 
@@ -996,7 +1006,7 @@ namespace GameMod
                 {
                     state = 4;
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMatchSetup), "DrawFriendlyFire"));
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMatchSetup_DrawFriendlyFire_Method);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
 
@@ -1008,6 +1018,8 @@ namespace GameMod
             }
         }
 
+        private static FieldInfo _UIElement_m_cursor_blink_timer_Field = AccessTools.Field(typeof(UIElement), "m_cursor_blink_timer");
+        private static FieldInfo _UIElement_m_cursor_on_Field = AccessTools.Field(typeof(UIElement), "m_cursor_on");
         private static void SelectAndDrawTextEntry(UIElement uie, string label, string text, Vector2 pos, int selection, float width_scale = 1.5f, bool fade = false)
         {
             float width = 500f * width_scale;
@@ -1054,19 +1066,19 @@ namespace GameMod
             pos.x += (width - text_width - text_right) * 0.5f;
             uie.DrawOutlineBackdrop(pos, 17f, text_width, text_color, 2);
 
-            float m_cursor_blink_timer = (float)AccessTools.Field(typeof(UIElement), "m_cursor_blink_timer").GetValue(uie);
-            bool m_cursor_on = (bool)AccessTools.Field(typeof(UIElement), "m_cursor_on").GetValue(uie);
+            float m_cursor_blink_timer = (float)_UIElement_m_cursor_blink_timer_Field.GetValue(uie);
+            bool m_cursor_on = (bool)_UIElement_m_cursor_on_Field.GetValue(uie);
             m_cursor_blink_timer -= RUtility.FRAMETIME_UI;
             if (m_cursor_blink_timer < 0f)
             {
                 m_cursor_blink_timer += 0.25f;
                 m_cursor_on = !m_cursor_on;
-                AccessTools.Field(typeof(UIElement), "m_cursor_on").SetValue(uie, m_cursor_on);
+                _UIElement_m_cursor_on_Field.SetValue(uie, m_cursor_on);
             }
-            AccessTools.Field(typeof(UIElement), "m_cursor_blink_timer").SetValue(uie, m_cursor_blink_timer);
+            _UIElement_m_cursor_blink_timer_Field.SetValue(uie, m_cursor_blink_timer);
             bool show_cursor = m_cursor_on && selected;
             
-			float scale = 0.5f * 20f;
+            float scale = 0.5f * 20f;
             var textCursor = text + "_";
             float stringWidth = UIManager.GetStringWidth(textCursor, scale);
             DrawStringAlignCenterWidth(show_cursor ? textCursor : text, pos, scale, text_color, stringWidth, 200f + 22f * 2 + 22f);
@@ -1077,12 +1089,12 @@ namespace GameMod
             }
         }
 
-		private static void DrawStringAlignCenterWidth(string s, Vector2 position, float scale, Color c, float stringWidth, float max_width = -1f)
-		{
-			Vector2 scl_pos = position;
-			position.x -= ((!(max_width > 0f)) ? stringWidth : ((!(max_width < stringWidth)) ? stringWidth : max_width)) * 0.5f;
-			UIManager.DrawStringScaled(s, position, scl_pos, scale, c, max_width, stringWidth, 0.5f);
-		}
+        private static void DrawStringAlignCenterWidth(string s, Vector2 position, float scale, Color c, float stringWidth, float max_width = -1f)
+        {
+            Vector2 scl_pos = position;
+            position.x -= ((!(max_width > 0f)) ? stringWidth : ((!(max_width < stringWidth)) ? stringWidth : max_width)) * 0.5f;
+            UIManager.DrawStringScaled(s, position, scl_pos, scale, c, max_width, stringWidth, 0.5f);
+        }
 
     }
 }

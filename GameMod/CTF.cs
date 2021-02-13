@@ -9,8 +9,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod
-{
+namespace GameMod {
     public enum FlagState
     {
         HOME, PICKEDUP, LOST
@@ -444,6 +443,7 @@ namespace GameMod
     class CTFRegisterSpawnHandlers
     {
         private static Dictionary<NetworkHash128, GameObject> m_registered_prefabs = new Dictionary<NetworkHash128, GameObject>();
+        private static FieldInfo _NetworkIdentity_m_AssetId_Field = typeof(NetworkIdentity).GetField("m_AssetId", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static GameObject NetworkSpawnItemHandler(Vector3 pos, NetworkHash128 asset_id)
         {
@@ -464,7 +464,7 @@ namespace GameMod
             //Debug.Log("Spawning flag " + asset_id + " active " + gameObject.activeSelf + " seg " + gameObject.GetComponent<Item>().m_current_segment);
 
             var netId = gameObject.GetComponent<NetworkIdentity>();
-            netId.GetType().GetField("m_AssetId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(netId, asset_id);
+            _NetworkIdentity_m_AssetId_Field.SetValue(netId, asset_id);
             //Debug.Log("post spawn assetid " + gameObject.GetComponent<NetworkIdentity>().assetId);
 
             return gameObject;
@@ -520,7 +520,7 @@ namespace GameMod
                 }
                 var assetId = CTF.FlagAssetId(i);
                 var netId = flag.GetComponent<NetworkIdentity>();
-                netId.GetType().GetField("m_AssetId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(netId, assetId);
+                _NetworkIdentity_m_AssetId_Field.SetValue(netId, assetId);
                 UnityEngine.Object.DontDestroyOnLoad(flag);
                 flag.SetActive(false);
                 var item = flag.GetComponent<Item>();
@@ -574,11 +574,8 @@ namespace GameMod
     [HarmonyPatch(typeof(Item), "OnTriggerEnter")]
     class CTFOnTriggerEnter
     {
-        static MethodInfo ItemIsReachable;
-        static void Prepare()
-        {
-            ItemIsReachable = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
-        }
+        private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
+
         static bool Prefix(Item __instance, Collider other)
         {
             //Debug.Log("OnTriggerEnter " + __instance.m_type + " server =" + Overload.NetworkManager.IsServer() + " index=" + __instance.m_index);
@@ -594,7 +591,7 @@ namespace GameMod
                 return false;
             }
             Player c_player = component.c_player;
-            if (!(bool)ItemIsReachable.Invoke(__instance, new object[] { other }) || (bool)component.m_dying)
+            if (!(bool)_Item_ItemIsReachable_Method.Invoke(__instance, new object[] { other }) || (bool)component.m_dying)
             {
                 return false;
             }

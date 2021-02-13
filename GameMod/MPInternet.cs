@@ -1,7 +1,4 @@
-﻿using Harmony;
-using Newtonsoft.Json.Linq;
-using Overload;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,12 +6,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 using System.Text.RegularExpressions;
+using Harmony;
+using Newtonsoft.Json.Linq;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     class MPInternet
     {
         public static bool OldEnabled; // this is only used on the old non-internet-match builds!
@@ -65,55 +63,62 @@ namespace GameMod
                 Debug.Log("Internet server enabled");
             }
         }
+
+        private static FieldInfo _InternetMatch_Enabled_Field = typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public);
         public static bool Enabled
         {
             get
             {
                 if (Core.GameMod.HasInternetMatch())
-                    return (bool)typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+                    return (bool)_InternetMatch_Enabled_Field.GetValue(null);
                 else
                     return OldEnabled;
             }
             set
             {
                 if (Core.GameMod.HasInternetMatch())
-                    typeof(GameManager).Assembly.GetType("InternetMatch").GetField("Enabled", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+                    _InternetMatch_Enabled_Field.SetValue(null, value);
                 else
                     OldEnabled = value;
             }
         }
+
+        private static PropertyInfo _MenuManager_mms_match_password_Property = typeof(MenuManager).GetProperty("mms_match_password", BindingFlags.Static | BindingFlags.Public);
+        private static FieldInfo _MenuManager_mms_match_password_Field = typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public);
         public static string MenuPassword
         {
             get
             {
                 if (Core.GameMod.HasInternetMatch())
-                    return (string)typeof(MenuManager).GetProperty("mms_match_password", BindingFlags.Static | BindingFlags.Public).GetValue(null, null);
+                    return (string)_MenuManager_mms_match_password_Property.GetValue(null, null);
                 else
-                    return (string)typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+                    return (string)_MenuManager_mms_match_password_Field.GetValue(null);
             }
             set
             {
                 if (Core.GameMod.HasInternetMatch())
-                    typeof(MenuManager).GetProperty("mms_match_password", BindingFlags.Static | BindingFlags.Public).SetValue(null, value, null);
+                    _MenuManager_mms_match_password_Property.SetValue(null, value, null);
                 else
-                    typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+                    _MenuManager_mms_match_password_Field.SetValue(null, value);
             }
         }
+
+        private static FieldInfo _MenuManager__mms_ip_address_Field = typeof(MenuManager).GetField("_mms_ip_address", BindingFlags.Static | BindingFlags.Public);
         public static string MenuIPAddress
         {
             get
             {
                 if (Core.GameMod.HasInternetMatch())
-                    return (string)typeof(MenuManager).GetField("_mms_ip_address", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+                    return (string)_MenuManager__mms_ip_address_Field.GetValue(null);
                 else
-                    return (string)typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).GetValue(null);
+                    return (string)_MenuManager_mms_match_password_Field.GetValue(null);
             }
             set
             {
                 if (Core.GameMod.HasInternetMatch())
-                    typeof(MenuManager).GetField("_mms_ip_address", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+                    _MenuManager__mms_ip_address_Field.SetValue(null, value);
                 else
-                    typeof(MenuManager).GetField("mms_match_password", BindingFlags.Static | BindingFlags.Public).SetValue(null, value);
+                    _MenuManager_mms_match_password_Field.SetValue(null, value);
             }
         }
     }
@@ -133,13 +138,15 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpInternetMainDraw_DrawItem_Method = AccessTools.Method(typeof(MPInternetMainDraw), "DrawItem");
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "CUSTOMIZE")
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternetMainDraw), "DrawItem"));
+                    yield return new CodeInstruction(OpCodes.Call, mpInternetMainDraw_DrawItem_Method);
                 }
                 yield return code;
             }
@@ -191,6 +198,11 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
         {
+            var menuManager_m_menu_state_Field = AccessTools.Field(typeof(MenuManager), "m_menu_state");
+            var menuManager_m_next_menu_state_Field = AccessTools.Field(typeof(MenuManager), "m_next_menu_state");
+            var mpInternet_ClientModeName_Method = AccessTools.Method(typeof(MPInternet), "ClientModeName");
+            var mpInternet_PasswordFieldName_Method = AccessTools.Method(typeof(MPInternet), "PasswordFieldName");
+
             int state = 0; // 0 = before Start/JoinPrivLob, 1 = before call DestroyAll, 2 = just after call DestroyAll
             string name;
             Label l = ilGen.DefineLabel();
@@ -207,8 +219,8 @@ namespace GameMod
                     if (state == 0 && (((name = ((MemberInfo)code.operand).Name) == "StartPrivateLobby") || name == "JoinPrivateLobby"))
                     {
                         yield return code;
-                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MenuManager), "m_menu_state"));
-                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MenuManager), "m_next_menu_state"));
+                        yield return new CodeInstruction(OpCodes.Ldsfld, menuManager_m_menu_state_Field);
+                        yield return new CodeInstruction(OpCodes.Ldsfld, menuManager_m_next_menu_state_Field);
                         yield return new CodeInstruction(OpCodes.Beq, l);
                         state = 1;
                         continue;
@@ -220,12 +232,12 @@ namespace GameMod
                 }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "LAN MATCH")
                 {
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "ClientModeName")) { labels = code.labels };
+                    yield return new CodeInstruction(OpCodes.Call, mpInternet_ClientModeName_Method) { labels = code.labels };
                     continue;
                 }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "PASSWORD")
                 {
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "PasswordFieldName")) { labels = code.labels };
+                    yield return new CodeInstruction(OpCodes.Call, mpInternet_PasswordFieldName_Method) { labels = code.labels };
                     continue;
                 }
                 yield return code;
@@ -243,11 +255,13 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpInternet_PasswordFieldName_Method = AccessTools.Method(typeof(MPInternet), "PasswordFieldName");
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "PASSWORD")
                 {
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternet), "PasswordFieldName")) { labels = code.labels };
+                    yield return new CodeInstruction(OpCodes.Call, mpInternet_PasswordFieldName_Method) { labels = code.labels };
                     continue;
                 }
                 yield return code;
@@ -290,6 +304,7 @@ namespace GameMod
             return !Core.GameMod.HasInternetMatch();
         }
 
+        private static FieldInfo _NetworkMatch_m_private_data_Field = typeof(NetworkMatch).GetField("m_private_data", BindingFlags.NonPublic | BindingFlags.Static);
         private static bool Prefix()
         {
             if (!MPInternet.OldEnabled || MPInternet.ServerEnabled)
@@ -297,7 +312,7 @@ namespace GameMod
             string pwd = NetworkMatch.m_match_req_password;
             if (pwd == "")
             {
-                var pmd = (PrivateMatchDataMessage)typeof(NetworkMatch).GetField("m_private_data", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+                var pmd = (PrivateMatchDataMessage)_NetworkMatch_m_private_data_Field.GetValue(null);
                 pwd = pmd != null ? pmd.m_password : "";
             }
             MPInternet.ServerAddress = MPInternet.FindPasswordAddress(pwd.Trim(), out string msg);
@@ -333,16 +348,6 @@ namespace GameMod
         {
             if (!MPInternet.OldEnabled)
                 return true;
-            /*
-            var IntfType = typeof(BroadcastState).Assembly.GetType("Overload.EnumeratedNetworkInterface");
-            object intf = Activator.CreateInstance(IntfType);
-            IntfType.GetField("ipAddress").SetValue(intf, IPAddress.Any);
-            IntfType.GetField("netMaskAddress").SetValue(intf, new IPAddress(~MPInternet.ServerAddress.Address));
-            IntfType.GetField("isUp").SetValue(intf, true);
-            IntfType.GetField("hasBroadcast").SetValue(intf, true);
-            IntfType.GetField("isLoopback").SetValue(intf, false);
-            callback(intf);
-            */
             return false;
         }
     }
@@ -364,6 +369,10 @@ namespace GameMod
         }
         */
 
+        private static Type _InterfaceState_Type = typeof(BroadcastState).Assembly.GetType("Overload.BroadcastState").GetNestedType("InterfaceState", BindingFlags.NonPublic);
+        private static FieldInfo _BroadcastState_m_interfaces_Field = typeof(BroadcastState).GetField("m_interfaces", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static MethodInfo _List_BroadcastState_InterfaceState_Add_Method = _BroadcastState_m_interfaces_Field.FieldType.GetMethod("Add");
+        private static FieldInfo _BroadcastState_m_receiveClient_Field = typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance);
         // create receiving socket and also use it for sending by adding it to m_interfaces
         public static bool InitReceiveClient(BroadcastState bs)
         {
@@ -394,27 +403,20 @@ namespace GameMod
                 client.Connect(ep);
 
                 // add socket to sending sockets (m_interfaces)
-                var IntfType = typeof(BroadcastState).Assembly.GetType("Overload.BroadcastState").GetNestedType("InterfaceState", BindingFlags.NonPublic);
-                object intf = Activator.CreateInstance(IntfType, new object[] { client, ep.Address, null, new IPAddress(-1) });
-                var intfs = typeof(BroadcastState).GetField("m_interfaces", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(bs);
-                intfs.GetType().GetMethod("Add").Invoke(intfs, new object[] { intf });
+                object intf = Activator.CreateInstance(_InterfaceState_Type, new object[] { client, ep.Address, null, new IPAddress(-1) });
+                var intfs = _BroadcastState_m_interfaces_Field.GetValue(bs);
+                _List_BroadcastState_InterfaceState_Add_Method.Invoke(intfs, new object[] { intf });
             }
 
-            typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(bs, client);
+            _BroadcastState_m_receiveClient_Field.SetValue(bs, client);
 
-            /*
-            ICollection intfs = typeof(BroadcastState).GetField("m_interfaces", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(bs) as ICollection;
-            foreach (var intf in intfs) {
-                var client = intf.GetType().GetField("m_client").GetValue(intf);
-                typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(bs, client);
-                break;
-            }
-            */
             return true;
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
         {
+            var mpInternetState_InitReceiveClient_Method = AccessTools.Method(typeof(MPInternetState), "InitReceiveClient");
+
             int state = 0; // 0 = before 1st LogFormat, 1 = before 2nd LogFormat, 2 = before rc Bind, 3 = after rc Bind, 4 = after Bind label
             Label initRCLabel = ilGen.DefineLabel();
             foreach (var code in codes) //Trans.FieldReadModifier("listenPort", AccessTools.Method(typeof(MPInternetState), "ListenPortMod"), codes))
@@ -424,7 +426,7 @@ namespace GameMod
                 {
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternetState), "InitReceiveClient"));
+                    yield return new CodeInstruction(OpCodes.Call, mpInternetState_InitReceiveClient_Method);
                     yield return new CodeInstruction(OpCodes.Brtrue, initRCLabel);
                     continue;
                 }
@@ -445,6 +447,7 @@ namespace GameMod
     [HarmonyPatch(typeof(BroadcastState), "InitInternetMatch")]
     class MPInternetServer
     {
+        private static FieldInfo _BroadcastState_m_receiveClient_Field = typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance);
         private static bool Prepare() {
             return Core.GameMod.HasInternetMatch();
         }
@@ -466,7 +469,7 @@ namespace GameMod
                 Application.Quit();
             }
 
-            typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, client);
+            _BroadcastState_m_receiveClient_Field.SetValue(__instance, client);
 
             return false;
         }
@@ -532,10 +535,13 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            foreach (var code in Trans.FieldReadModifier("listenPort", AccessTools.Method(typeof(MPInternetState), "ListenPortMod"), codes))
+            var mpInternetState_ListenPortMod_Method = AccessTools.Method(typeof(MPInternetState), "ListenPortMod");
+            var mpInternetConnInfo_ConnInfoMod_Method = AccessTools.Method(typeof(MPInternetConnInfo), "ConnInfoMod");
+
+            foreach (var code in Trans.FieldReadModifier("listenPort", mpInternetState_ListenPortMod_Method, codes))
             {
                 if (code.opcode == OpCodes.Stfld && ((FieldInfo)code.operand).Name == "GameSessionConnectionInfo")
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPInternetConnInfo), "ConnInfoMod"));
+                    yield return new CodeInstruction(OpCodes.Call, mpInternetConnInfo_ConnInfoMod_Method);
                 yield return code;
             }
         }

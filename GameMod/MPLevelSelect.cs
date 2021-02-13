@@ -1,14 +1,10 @@
-﻿using Harmony;
-using Overload;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Reflection;
-using System.Text;
+using Harmony;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     static class MPLevelSelect
     {
         public static int[] LevelIndex;
@@ -68,6 +64,8 @@ namespace GameMod
             }
         }
 
+        private static MethodInfo _UIElement_DrawMiniLevelImage_Method = typeof(UIElement).GetMethod("DrawMiniLevelImage", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+        private static MethodInfo _UIElement_DrawWrappedText_Method = typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
         static bool Prefix(UIElement __instance)
         {
             if (MenuManager.m_menu_micro_state != 8)
@@ -105,24 +103,24 @@ namespace GameMod
                 DrawPageArrows(uie, position, true, true, 435f);
             position.x = -535f;
             position.y = -60f;
-            typeof(UIElement).GetMethod("DrawMiniLevelImage", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                .Invoke(uie, new object[] { position, 300f, UIManager.m_menu_selection >= 1000 });
+            _UIElement_DrawMiniLevelImage_Method.Invoke(uie, new object[] { position, 300f, UIManager.m_menu_selection >= 1000 });
             //uie.DrawMiniLevelImage(position, 300f, UIManager.m_menu_selection >= 1000);
 
             var curLevelIdx = UIManager.m_menu_selection >= 1000 && UIManager.m_menu_selection < 1000 + MPLevelSelect.LevelIndex.Length ?
                 MPLevelSelect.LevelIndex[UIManager.m_menu_selection - 1000] : -1;
 
             position.y -= 70f;
-            if (curLevelIdx >= 0)
+            if (curLevelIdx >= 0) {
                 uie.DrawMiniHeaderBright(position, GameManager.MultiplayerMission.GetLevelDisplayName(curLevelIdx), 75f);
+            }
             position.y += 140f;
 
             LevelInfo level = curLevelIdx >= 0 ? GameManager.MultiplayerMission.OpenLevel(curLevelIdx) : null;
             if (level != null && level.IsAddOn)
             {
-                if (level.LevelDescription != null && level.LevelDescription[0] != null)
-                    typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                        .Invoke(uie, new object[] { level.LevelDescription[0], position, 0.4f, 15f, 150f, StringOffset.CENTER, float.MaxValue, 0f, 0f });
+                if (level.LevelDescription != null && level.LevelDescription[0] != null) {
+                    _UIElement_DrawWrappedText_Method.Invoke(uie, new object[] { level.LevelDescription[0], position, 0.4f, 15f, 150f, StringOffset.CENTER, float.MaxValue, 0f, 0f });
+                }
             }
             else if (curLevelIdx >= 0)
             {
@@ -175,6 +173,7 @@ namespace GameMod
             }
         }
 
+        private static MethodInfo _MenuManager_CheckPaging_Method = typeof(MenuManager).GetMethod("CheckPaging", BindingFlags.NonPublic | BindingFlags.Static);
         private static bool Prefix()
         {
             if (MenuManager.m_menu_micro_state != 8 || MenuManager.m_menu_sub_state != MenuSubState.ACTIVE)
@@ -193,8 +192,7 @@ namespace GameMod
             //bool flag = MenuManager.CheckPaging(ref MenuManager.m_list_items_first, ref MenuManager.m_list_items_last, MenuManager.m_selected_mission.NumLevels, 6);
             var args = new object[] {  MenuManager.m_list_items_first, MenuManager.m_list_items_last,
                 MenuManager.m_list_items_total_count, MenuManager.m_list_items_max_per_page };
-            bool flag = (bool)typeof(MenuManager).GetMethod("CheckPaging", BindingFlags.NonPublic | BindingFlags.Static)
-                .Invoke(null, args);
+            bool flag = (bool)_MenuManager_CheckPaging_Method.Invoke(null, args);
             MenuManager.m_list_items_first = (int)args[0];
             MenuManager.m_list_items_last = (int)args[1];
             if (!flag)

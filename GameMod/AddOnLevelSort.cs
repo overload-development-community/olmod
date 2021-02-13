@@ -14,25 +14,25 @@ namespace GameMod
     /// Email: tobiasksu@gmail.com
     /// Sort addon levels by DisplayName instead of arbitrary load
     /// </summary>
-    [HarmonyPatch(typeof(Overload.GameManager), "InitializeMissionList")]
+    [HarmonyPatch(typeof(GameManager), "InitializeMissionList")]
     class AddOnLevelSort
     {
+        private static FieldInfo _Mission_Levels_Field = typeof(Mission).GetField("Levels", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static PropertyInfo _LevelInfo_LevelNum_Property = typeof(LevelInfo).GetProperty("LevelNum");
         static void Postfix()
         {
             try
             {
-                FieldInfo fi = typeof(Mission).GetField("Levels", BindingFlags.NonPublic | BindingFlags.Instance);
-                object __obj = fi.GetValue(GameManager.MultiplayerMission);
+                object __obj = _Mission_Levels_Field.GetValue(GameManager.MultiplayerMission);
                 List<LevelInfo> __m_mission_list = (List<LevelInfo>)__obj;
 
                 __m_mission_list.Sort((a, b) => a.IsAddOn && b.IsAddOn ? a.DisplayName.CompareTo(b.DisplayName) : a.LevelNum-b.LevelNum);
                 for (var i = 0; i < __m_mission_list.Count; i++)
                 {
-                    PropertyInfo ln = typeof(LevelInfo).GetProperty("LevelNum");
-                    ln.DeclaringType.GetProperty("LevelNum");
-                    ln.SetValue(__m_mission_list[i], i, BindingFlags.NonPublic | BindingFlags.Instance, null, null, null);
+                    _LevelInfo_LevelNum_Property.DeclaringType.GetProperty("LevelNum");
+                    _LevelInfo_LevelNum_Property.SetValue(__m_mission_list[i], i, BindingFlags.NonPublic | BindingFlags.Instance, null, null, null);
                 }
-                fi.SetValue(GameManager.MultiplayerMission, __m_mission_list);
+                _Mission_Levels_Field.SetValue(GameManager.MultiplayerMission, __m_mission_list);
             } catch (Exception ex)
             {
                 Debug.Log("InitializeMissionList() patch failed - " + ex.Message);

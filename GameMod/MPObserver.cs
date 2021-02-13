@@ -1,34 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 using Harmony;
 using Overload;
 using UnityEngine;
-using UnityEngine.Networking;
 
-namespace GameMod
-{
-    /*
-    [HarmonyPatch(typeof(Overload.Player), "NeedToSendFixedUpdateMessages")]
-    class MPObserverFixedUpdate
-    {
-        static bool Prefix(ref bool __result)
-        {
-            if (MPObserver.Enabled)
-            {
-                __result = false;
-                return false;
-            }
-            return true;
-        }
-    }
-    */
-
+namespace GameMod {
     // disable receiving server position on observer mode
-    [HarmonyPatch(typeof(Overload.Client), "ReconcileServerPlayerState")]
+    [HarmonyPatch(typeof(Client), "ReconcileServerPlayerState")]
     class MPObserverReconcile
     {
         static bool Prefix()
@@ -37,7 +17,7 @@ namespace GameMod
         }
     }
 
-    static class MPObserver
+    public static class MPObserver
     {
         public static bool Enabled;
         public static Player ObservedPlayer = null;
@@ -133,7 +113,7 @@ namespace GameMod
     }
 
     // detect "observer" cheat code
-    [HarmonyPatch(typeof(Overload.PlayerShip))]
+    [HarmonyPatch(typeof(PlayerShip))]
     [HarmonyPatch("FrameUpdateReadKeysFromInput")]
     class MPObserverReadKeys
     {
@@ -155,7 +135,7 @@ namespace GameMod
     }
 
     // disable observer mode on new game
-    [HarmonyPatch(typeof(Overload.GameplayManager), "CreateNewGame")]
+    [HarmonyPatch(typeof(GameplayManager), "CreateNewGame")]
     class MPObserverReset
     {
         static void Prefix()
@@ -213,38 +193,6 @@ namespace GameMod
         }
     }
 
-    /*
-    [HarmonyPatch(typeof(Overload.Client))]
-    [HarmonyPatch("SendReadyForCountdownMessage")]
-    class MPObserverDeadUpdatePatch
-    {
-        static void Postfix()
-        {
-            if (PilotManager.PilotName == "OBSERVER")
-                MPObserver.Enable();
-        }
-    }
-    */
-
-    // enable observer mode in server for player with name starting with "OBSERVER"
-    /*
-    [HarmonyPatch(typeof(Overload.Server), "OnAddPlayerMessage")]
-    class MPObserverSpawnPatch
-    {
-        static void Postfix(NetworkMessage msg)
-        {
-            Debug.LogFormat("OnAddPlayerMessage postfix");
-            Player player = Server.FindPlayerByConnectionId(msg.conn.connectionId);
-            if (player.m_mp_name.StartsWith("OBSERVER"))
-            {
-                Debug.LogFormat("Enabling spectator for {0}", player.m_mp_name);
-                player.Networkm_spectator = true;
-                Debug.LogFormat("Enabled spectator for {0}", player.m_mp_name);
-            }
-        }
-    }
-    */
-
     // Modify level / settings for observer. Need to wait for OnMatchStart to be sure m_spectator is set
     [HarmonyPatch(typeof(Client), "OnMatchStart")]
     class MPObserverModifyLevel
@@ -258,7 +206,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Overload.Server), "AllConnectionsHavePlayerReadyForCountdown")]
+    [HarmonyPatch(typeof(Server), "AllConnectionsHavePlayerReadyForCountdown")]
     class MPObserverSpawnPatch
     {
         static void Postfix(bool __result)
@@ -321,6 +269,9 @@ namespace GameMod
 
         static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> instructions)
         {
+            var playerShip_c_player_Field = AccessTools.Field(typeof(PlayerShip), "c_player");
+            var player_m_spectator_Field = AccessTools.Field(typeof(Player), "m_spectator");
+
             int n = 0;
             var codes = new List<CodeInstruction>(instructions);
             for (var i = 0; i < codes.Count; i++)
@@ -332,8 +283,8 @@ namespace GameMod
                     codes[i + 2].labels.Add(l);
                     var newCodes = new[] {
                         new CodeInstruction(OpCodes.Ldarg_0),
-                        new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerShip), "c_player")),
-                        new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Player), "m_spectator")),
+                        new CodeInstruction(OpCodes.Ldfld, playerShip_c_player_Field),
+                        new CodeInstruction(OpCodes.Ldfld, player_m_spectator_Field),
                         new CodeInstruction(OpCodes.Brfalse, l),
                         new CodeInstruction(OpCodes.Ldc_R4, 2f),
                         new CodeInstruction(OpCodes.Mul) };
@@ -414,16 +365,16 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawHUD")]
     class MPObserverHUD
     {
+        private static MethodInfo _UIElement_getAlphaEyeGaze_Method = typeof(UIElement).GetMethod("getAlphaEyeGaze", BindingFlags.NonPublic | BindingFlags.Instance);
         static float getAlphaEyeGaze(UIElement uie, string pos)
         {
-            return (float)typeof(UIElement).GetMethod("getAlphaEyeGaze", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(
-                                uie, new object[] { pos });
+            return (float)_UIElement_getAlphaEyeGaze_Method.Invoke(uie, new object[] { pos });
         }
 
+        private static MethodInfo _UIElement_DrawMpScoreboardRaw_Method = typeof(UIElement).GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance);
         static void DrawMpScoreboardRaw(UIElement uie, Vector2 vector)
         {
-            typeof(UIElement).GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(
-                    uie, new object[] { vector });
+            _UIElement_DrawMpScoreboardRaw_Method.Invoke(uie, new object[] { vector });
         }
 
         public static void DrawFullScreenEffects()
@@ -635,7 +586,7 @@ namespace GameMod
     }
 
     // Handle what happens when a player leaves.
-    [HarmonyPatch(typeof(Overload.NetworkManager), "RemovePlayer")]
+    [HarmonyPatch(typeof(NetworkManager), "RemovePlayer")]
     class MPObserverNetworkManagerRemovePlayer {
         static void Prefix(Player player)
         {
@@ -646,7 +597,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Overload.PlayerShip), "DrawEffectMesh")]
+    [HarmonyPatch(typeof(PlayerShip), "DrawEffectMesh")]
     class MPObserverDisableEffectMeshForObservedPlayer
     {
         static bool Prefix(PlayerShip __instance)
@@ -655,7 +606,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Overload.PlayerShip), "RpcApplyDamage")]
+    [HarmonyPatch(typeof(PlayerShip), "RpcApplyDamage")]
     class MPObserverSetDamageEffects
     {
         static void Postfix(PlayerShip __instance, float hitpoints, float damage, float damage_scaled, float damage_min)

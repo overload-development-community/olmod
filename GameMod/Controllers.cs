@@ -327,7 +327,8 @@ namespace GameMod
             }
             catch (Exception ex)
             {
-                GameManager.DebugOut(ex.GetType() + " in ControlsMod.SaveControlData: " + ex.Message, 15f);
+                Debug.LogException(ex);
+                GameManager.DebugOut("Error in ControlsMod.SaveControlData: " + ex.Message, 15f);
             }
         }
 

@@ -1,16 +1,14 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
+using Harmony;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     class MPCustomModeFile
     {
         public static bool PickupCheck;
@@ -42,6 +40,8 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpCustomModeFileRead_ReadCustomFile_Method = AccessTools.Method(typeof(MPCustomModeFileRead), "ReadCustomFile");
+
             int state = 0;
             foreach (var code in codes)
             {
@@ -49,7 +49,7 @@ namespace GameMod
                 if (state == 0 && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "Empty")
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0) { labels = code.labels };
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPCustomModeFileRead), "ReadCustomFile"));
+                    yield return new CodeInstruction(OpCodes.Call, mpCustomModeFileRead_ReadCustomFile_Method);
                     state = 1;
                     continue;
                 }
@@ -61,6 +61,7 @@ namespace GameMod
     [HarmonyPatch(typeof(LevelInfo), "CheckReloadStory")]
     class MPCustomLevelInfoCheck
     {
+        private static MethodInfo _LevelInfo_ReadChallengeModeText_Method = typeof(LevelInfo).GetMethod("ReadChallengeModeText", BindingFlags.NonPublic | BindingFlags.Instance);
         private static bool Prefix(LevelInfo __instance, ref string ___m_loaded_language)
         {
             /*
@@ -72,7 +73,7 @@ namespace GameMod
             */
             if (___m_loaded_language != Loc.CurrentLanguageCode &&
                 __instance.Mission.Type == MissionType.MULTIPLAYER) {
-                typeof(LevelInfo).GetMethod("ReadChallengeModeText", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
+                _LevelInfo_ReadChallengeModeText_Method.Invoke(__instance, null);
                 Debug.Log("CheckReloadStory: did MP file, music is " + __instance.MusicTrack);
                 ___m_loaded_language = Loc.CurrentLanguageCode;
                 return false;
@@ -96,10 +97,12 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpCustomLevelInfoRead_DoReadModeFile_Method = AccessTools.Method(typeof(MPCustomLevelInfoRead), "DoReadModeFile");
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Call && ((MemberInfo)code.operand).Name == "DoReadChallengeModeFile")
-                    code.operand = AccessTools.Method(typeof(MPCustomLevelInfoRead), "DoReadModeFile");
+                    code.operand = mpCustomLevelInfoRead_DoReadModeFile_Method;
                 yield return code;
             }
         }

@@ -8,8 +8,7 @@ using Harmony;
 using Overload;
 using UnityEngine;
 
-namespace GameMod.Core
-{
+namespace GameMod.Core {
     public class GameMod
     {
         public static string Version = "olmod 0.3.5";
@@ -27,7 +26,7 @@ namespace GameMod.Core
 
             Modded = FindArg("-modded");
 
-            GameVersion = typeof(Overload.GameManager).Assembly.GetName().Version;
+            GameVersion = typeof(GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + Version + ", game " + GameVersion);
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             Config.Init();
@@ -95,54 +94,13 @@ namespace GameMod.Core
             return true;
         }
 
-        // enable monsterball mode, allow max players up to 16
-        [HarmonyPatch(typeof(Overload.MenuManager), "MpMatchSetup")]
-        class MBModeSelPatch
-        {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-            {
-                int n = 0;
-                var codes = new List<CodeInstruction>(instructions);
-                for (var i = 0; i < codes.Count; i++)
-                {
-                    // increase max mode to allow monsterball mode
-                    if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_mode")
-                    {
-                        i++;
-                        if (codes[i].opcode == OpCodes.Ldc_I4_2)
-                            codes[i].opcode = OpCodes.Ldc_I4_4;
-                        i++;
-                        while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
-                            i++;
-                        if (codes[i].opcode == OpCodes.Ldc_I4_2)
-                            codes[i].opcode = OpCodes.Ldc_I4_4;
-                        n++;
-                    }
-                    if (codes[i].opcode == OpCodes.Ldsfld && (codes[i].operand as FieldInfo).Name == "mms_max_players" &&
-                        i > 0 && codes[i - 1].opcode == OpCodes.Br) // take !online branch
-                    {
-                        while (codes[i].opcode == OpCodes.Add || codes[i].opcode == OpCodes.Ldsfld)
-                            i++;
-                        if (codes[i].opcode == OpCodes.Ldc_I4_1 && codes[i + 1].opcode == OpCodes.Ldc_I4_8)
-                        {
-                            codes[i + 1].opcode = OpCodes.Ldc_I4;
-                            codes[i + 1].operand = 16;
-                        }
-                        n++;
-                    }
-                }
-                Debug.Log("Patched MpMatchSetup n=" + n);
-                return codes;
-            }
-        }
-
         public static bool HasInternetMatch()
         {
             return GameVersion.CompareTo(new Version(1, 0, 1885)) >= 0;
         }
 
         // add modified indicator to main menu
-        [HarmonyPatch(typeof(Overload.UIElement), "DrawMainMenu")]
+        [HarmonyPatch(typeof(UIElement), "DrawMainMenu")]
         class VersionPatch
         {
             static string GetVersion(string stockVersion)
@@ -152,16 +110,19 @@ namespace GameMod.Core
 
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
             {
+                var _string_Format_Method = AccessTools.Method(typeof(String), "Format", new Type[] { typeof(string), typeof(object), typeof(object), typeof(object) });
+                var _versionPatch_GetVersion_Method = AccessTools.Method(typeof(VersionPatch), "GetVersion");
+
                 int state = 0;
 
                 foreach (var code in codes)
                 {
                     // this.DrawStringSmall(string.Format(Loc.LS("VERSION {0}.{1} BUILD {2}"), GameManager.Version.Major, GameManager.Version.Minor, GameManager.Version.Build), position, 0.5f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
-                    if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(System.String), "Format", new Type[] { typeof(string), typeof(object), typeof(object), typeof(object) }))
+                    if (state == 0 && code.opcode == OpCodes.Call && code.operand == _string_Format_Method)
                     {
                         state = 1;
                         yield return code;
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(VersionPatch), "GetVersion"));
+                        yield return new CodeInstruction(OpCodes.Call, _versionPatch_GetVersion_Method);
                         continue;
                     }
 
@@ -180,7 +141,7 @@ namespace GameMod.Core
     }
 
     // add monsterball mb_arena1 level to multiplayer levels
-    [HarmonyPatch(typeof(Overload.GameManager), "ScanForLevels")]
+    [HarmonyPatch(typeof(GameManager), "ScanForLevels")]
     class MBLevelPatch
     {
         public static bool SLInit = false;
@@ -237,6 +198,8 @@ namespace GameMod.Core
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var mpRemove10FPSFloor_MaybeMin_Method = AccessTools.Method(typeof(MPRemove10FPSFloor), "MaybeMin");
+
             var found = false;
             foreach (var code in instructions)
             {
@@ -244,7 +207,7 @@ namespace GameMod.Core
                 {
                     if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "Min")
                     {
-                        code.operand = AccessTools.Method(typeof(MPRemove10FPSFloor), "MaybeMin");
+                        code.operand = mpRemove10FPSFloor_MaybeMin_Method;
                         found = true;
                     }
                 }
@@ -275,9 +238,10 @@ namespace GameMod.Core
     [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
     class CycloneFlakTBAfterDeathFix
     {
+        private static FieldInfo _PlayerShip_flak_fire_count_Field = typeof(PlayerShip).GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance);
         static void Prefix(Player __instance)
         {
-            __instance.c_player_ship.GetType().GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance.c_player_ship, 0);
+            _PlayerShip_flak_fire_count_Field.SetValue(__instance.c_player_ship, 0);
             __instance.c_player_ship.m_thunder_power = 0;
         }
     }

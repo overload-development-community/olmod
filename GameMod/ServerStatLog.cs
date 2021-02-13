@@ -15,8 +15,7 @@ using UnityEngine.Networking;
 
 // by luponix, roncli
 
-namespace GameMod
-{
+namespace GameMod {
     public static class ServerStatLog
     {
         private struct PlayerPlayerWeaponDamage
@@ -504,12 +503,14 @@ namespace GameMod
             }
         }
 
+        private static FieldInfo _Networkmatch_m_match_force_playlist_addon_idstringhash_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_addon_idstringhash", AccessTools.all);
+        private static FieldInfo _Networkmatch_m_match_force_playlist_level_idx_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all);
         public static string GetCurrentLevelName()
         {
-            string match_force_playlist_addon_idstringhash = (string)typeof(NetworkMatch).GetField("m_match_force_playlist_addon_idstringhash", AccessTools.all).GetValue(null);
+            string match_force_playlist_addon_idstringhash = (string)_Networkmatch_m_match_force_playlist_addon_idstringhash_Field.GetValue(null);
             int idx;
             if (string.IsNullOrEmpty(match_force_playlist_addon_idstringhash)) {
-                idx = (int)typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all).GetValue(null);
+                idx = (int)_Networkmatch_m_match_force_playlist_level_idx_Field.GetValue(null);
             } else {
                 idx = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(match_force_playlist_addon_idstringhash);
                 if (idx < 0) // unknown level
@@ -616,7 +617,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Overload.Player), "OnKilledByPlayer")]
+    [HarmonyPatch(typeof(Player), "OnKilledByPlayer")]
     internal class LogOnKill
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -653,7 +654,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Overload.Server), "InvokeDisconnectFlashOnClients")]
+    [HarmonyPatch(typeof(Server), "InvokeDisconnectFlashOnClients")]
     internal class LogOnDisconnect
     {
         static void Prefix(Player disconnected_player)

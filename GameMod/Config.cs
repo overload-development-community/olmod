@@ -1,13 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
 using System.Linq;
-using System.Text;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     static class Config
     {
         public static string OLModDir;

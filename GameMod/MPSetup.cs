@@ -1,15 +1,14 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Harmony;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     [HarmonyPatch(typeof(NetworkMatch), "SetDefaultMatchSettings")]
     class MPSetupDefault
     {
@@ -122,24 +121,22 @@ namespace GameMod
 
         private static object oldPrefs, oldData;
 
+        private static FieldInfo _GamePreferences_m_prefs_hashtable_Field = typeof(GamePreferences).GetField("m_prefs_hashtable", BindingFlags.NonPublic | BindingFlags.Static);
+        private static FieldInfo _GamePreferences_m_serialized_data_Field = typeof(GamePreferences).GetField("m_serialized_data", BindingFlags.NonPublic | BindingFlags.Static);
         private static void SwapPre()
         {
-            var fieldPrefs = typeof(GamePreferences).GetField("m_prefs_hashtable", BindingFlags.NonPublic | BindingFlags.Static);
-            var fieldData = typeof(GamePreferences).GetField("m_serialized_data", BindingFlags.NonPublic | BindingFlags.Static);
-            oldPrefs = fieldPrefs.GetValue(null);
-            oldData = fieldData.GetValue(null);
-            fieldPrefs.SetValue(null, m_prefs_hashtable);
-            fieldData.SetValue(null, m_serialized_data);
+            oldPrefs = _GamePreferences_m_prefs_hashtable_Field.GetValue(null);
+            oldData = _GamePreferences_m_serialized_data_Field.GetValue(null);
+            _GamePreferences_m_prefs_hashtable_Field.SetValue(null, m_prefs_hashtable);
+            _GamePreferences_m_serialized_data_Field.SetValue(null, m_serialized_data);
         }
 
         private static void SwapPost()
         {
-            var fieldPrefs = typeof(GamePreferences).GetField("m_prefs_hashtable", BindingFlags.NonPublic | BindingFlags.Static);
-            var fieldData = typeof(GamePreferences).GetField("m_serialized_data", BindingFlags.NonPublic | BindingFlags.Static);
-            m_prefs_hashtable = (Hashtable)fieldPrefs.GetValue(null);
-            m_serialized_data = (string)fieldData.GetValue(null);
-            fieldPrefs.SetValue(null, oldPrefs);
-            fieldData.SetValue(null, oldData);
+            m_prefs_hashtable = (Hashtable)_GamePreferences_m_prefs_hashtable_Field.GetValue(null);
+            m_serialized_data = (string)_GamePreferences_m_serialized_data_Field.GetValue(null);
+            _GamePreferences_m_prefs_hashtable_Field.SetValue(null, oldPrefs);
+            _GamePreferences_m_serialized_data_Field.SetValue(null, oldData);
             oldPrefs = null;
             oldData = null;
         }
@@ -271,10 +268,11 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpSetupSave_Store_Method = AccessTools.Method(typeof(MPSetupSave), "Store");
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "Flush")
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPSetupSave), "Store"));
+                    yield return new CodeInstruction(OpCodes.Call, mpSetupSave_Store_Method);
                 yield return code;
             }
         }

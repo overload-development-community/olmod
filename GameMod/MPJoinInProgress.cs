@@ -1,17 +1,16 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Harmony;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod
-{
+namespace GameMod {
     class MPJoinInProgress
     {
         public const int NET_VERSION_JIP = 1;
@@ -27,9 +26,10 @@ namespace GameMod
             return m_match_has_started && (!NetworkMatchEnabled || (int)NetworkMatch.GetMatchState() >= (int)MatchState.POSTGAME);
         }
 
+        private static FieldInfo _NetworkMatch_m_match_force_playlist_level_idx = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all);
         public static string NetworkMatchLevelName()
         {
-            int m_match_force_playlist_level_idx = (int)typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all).GetValue(null);
+            int m_match_force_playlist_level_idx = (int)_NetworkMatch_m_match_force_playlist_level_idx.GetValue(null);
             if (m_match_force_playlist_level_idx < 0 || m_match_force_playlist_level_idx >= GameManager.MultiplayerMission.NumLevels)
                 return null;
             if (GameManager.MultiplayerMission.IsLevelAnAddon(m_match_force_playlist_level_idx))
@@ -453,10 +453,10 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "OnDisconnect")]
     class JIPDisconnectRemovePing
     {
+        private static FieldInfo _ServerPing_m_pings_Field = typeof(ServerPing).GetField("m_pings", BindingFlags.NonPublic | BindingFlags.Static);
         private static void Postfix(NetworkMessage msg)
         {
-            var pings = typeof(ServerPing).GetField("m_pings", BindingFlags.NonPublic | BindingFlags.Static)
-                .GetValue(null) as Dictionary<int, PingForConnection>;
+            var pings = _ServerPing_m_pings_Field.GetValue(null) as Dictionary<int, PingForConnection>;
             pings.Remove(msg.conn.connectionId);
         }
     }
@@ -543,6 +543,9 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var jipMatchSetup_DrawMpMatchCreateOpen_Method = AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchCreateOpen");
+            var jipMatchSetup_DrawMpMatchJIP_Method = AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchJIP");
+
             int state = 0;
             foreach (var code in codes)
             {
@@ -550,7 +553,7 @@ namespace GameMod
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchCreateOpen"));
+                    yield return new CodeInstruction(OpCodes.Call, jipMatchSetup_DrawMpMatchCreateOpen_Method);
                     state = 1;
                 }
                 if (state == 1 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
@@ -559,7 +562,7 @@ namespace GameMod
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchJIP"));
+                    yield return new CodeInstruction(OpCodes.Call, jipMatchSetup_DrawMpMatchJIP_Method);
                     state = 2;
                 }
                 yield return code;
@@ -610,6 +613,8 @@ namespace GameMod
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var jipMinPlayerPatch_FinalizeRequest_Method = AccessTools.Method(typeof(JIPMinPlayerPatch), "FinalizeRequest");
+
             LocalBuilder reqVar = null;
             CodeInstruction last = null;
             foreach (var code in codes)
@@ -620,7 +625,7 @@ namespace GameMod
                 if (reqVar != null && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "m_system_game_client")
                 {
                     yield return new CodeInstruction(OpCodes.Ldloc, reqVar);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JIPMinPlayerPatch), "FinalizeRequest"));
+                    yield return new CodeInstruction(OpCodes.Call, jipMinPlayerPatch_FinalizeRequest_Method);
                 }
                 yield return code;
                 last = code;

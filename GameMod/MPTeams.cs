@@ -1,17 +1,13 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
+using Harmony;
+using Overload;
 using UnityEngine;
-using UnityEngine.Networking;
-using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod
-{
+namespace GameMod {
     static class MPTeams
     {
         public static int NetworkMatchTeamCount;
@@ -180,23 +176,22 @@ namespace GameMod
             uie.DrawDigitsVariable(pos + Vector2.right * w, score, 0.7f, StringOffset.RIGHT, color, uie.m_alpha);
             uie.DrawStringSmall(NetworkMatch.GetTeamName(team), pos - Vector2.right * (w + 9f), 0.6f, StringOffset.LEFT, color, 1f, -1f);
         }
-        
+
+        private static MethodInfo _UIElement_DrawScoresForTeam_Method = AccessTools.Method(typeof(UIElement), "DrawScoresForTeam");
         public static int DrawScoresForTeam(UIElement uie, MpTeam team, Vector2 pos, float col1, float col2, float col3, float col4, float col5)
         {
-            //return (int)uie.GetType().GetMethod("DrawScoresForTeam", BindingFlags.NonPublic).Invoke(uie,
-            //    new object[] { team, pos, col1, col2, col3, col4, col5 });
-            return (int)AccessTools.Method(typeof(UIElement), "DrawScoresForTeam").Invoke(uie,
+            return (int)_UIElement_DrawScoresForTeam_Method.Invoke(uie,
                 new object[] { team, pos, col1, col2, col3, col4, col5 });
         }
 
+        private static MethodInfo _UIElement_DrawScoreHeader_Method = AccessTools.Method(typeof(UIElement), "DrawScoreHeader");
         public static void DrawScoreHeader(UIElement uie, Vector2 pos, float col1, float col2, float col3, float col4, float col5, bool score = false)
         {
-            //uie.GetType().GetMethod("DrawScoreHeader", BindingFlags.NonPublic | BindingFlags.InvokeMethod).Invoke(uie,
-            //    new object[] { pos, col1, col2, col3, col4, col5, score });
-            AccessTools.Method(typeof(UIElement), "DrawScoreHeader").Invoke(uie, new object[] { pos, col1, col2, col3, col4, col5, score });
+            _UIElement_DrawScoreHeader_Method.Invoke(uie, new object[] { pos, col1, col2, col3, col4, col5, score });
             return;
         }
 
+        private static MethodInfo _UIElement_DrawMpScoreboardRaw_Method = typeof(UIElement).GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void DrawPostgame(UIElement uie)
         {
             Vector2 pos = Vector2.zero;
@@ -213,7 +208,7 @@ namespace GameMod
             uie.DrawWideBox(pos, 300f, 25f, c, a, 11);
             uie.DrawStringSmall(s, pos, 1.35f, StringOffset.CENTER, UIManager.m_col_ub3, uie.m_alpha, -1f);
             pos.y = -200f;
-            uie.GetType().GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(uie, new object[] { pos });
+            _UIElement_DrawMpScoreboardRaw_Method.Invoke(uie, new object[] { pos });
             pos.y = -290f;
             pos.x = 610f;
             uie.DrawStringSmall(NetworkMatch.GetModeString(MatchMode.NUM), pos, 0.75f, StringOffset.RIGHT, UIManager.m_col_ui5, 1f, -1f);
@@ -454,11 +449,11 @@ namespace GameMod
     {
         static bool Prefix(ref MpTeam __result, int connection_id)
         {
-		    if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
-		    {
-			    __result = MpTeam.ANARCHY;
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+            {
+                __result = MpTeam.ANARCHY;
                 return false;
-		    }
+            }
             if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (MPTeams.NetworkMatchTeamCount == 2 &&
                 !MPJoinInProgress.NetworkMatchEnabled)) // use this simple balancing method for JIP to hopefully solve JIP team imbalances
                 return true;
@@ -508,7 +503,7 @@ namespace GameMod
     }
 
 
-    [HarmonyPatch] //(typeof(NetworkMatch.HostActiveMatchInfo), "CanStartNow")]
+    [HarmonyPatch]
     static class MPTeamsCanStartNow
     {
         static MethodBase TargetMethod()
@@ -573,6 +568,9 @@ namespace GameMod
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var mpTeamsLobbyPos_DrawLast_Method = AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawLast");
+            var mpTeamsLobbyPos_DrawDigitsLikeOne_Method = AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawDigitsLikeOne");
+
             int state = 0; // 0 = before switch, 1 = after switch
             int oneSixtyCount = 0;
             for (var codes = instructions.GetEnumerator(); codes.MoveNext(); )
@@ -592,7 +590,7 @@ namespace GameMod
                     while (codes.MoveNext() && (code = codes.Current).opcode != OpCodes.Br)
                         buf.Add(code);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawLast"));
+                    yield return new CodeInstruction(OpCodes.Call, mpTeamsLobbyPos_DrawLast_Method);
                     yield return new CodeInstruction(OpCodes.Brfalse, code.operand); // returns false? skip to end of switch
                     // preserve switch jump
                     foreach (var bcode in buf)
@@ -600,7 +598,7 @@ namespace GameMod
                     state = 1;
                 }
                 if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawDigitsOne") // allow >9 with same positioning
-                    code.operand = AccessTools.Method(typeof(MPTeamsLobbyPos), "DrawDigitsLikeOne");
+                    code.operand = mpTeamsLobbyPos_DrawDigitsLikeOne_Method;
                 if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 160f)
                 {
                     oneSixtyCount++;
@@ -619,6 +617,8 @@ namespace GameMod
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var mpTeams_NextTeam_Method = AccessTools.Method(typeof(MPTeams), "NextTeam");
+
             for (var codes = instructions.GetEnumerator(); codes.MoveNext();)
             {
                 var code = codes.Current;
@@ -627,7 +627,7 @@ namespace GameMod
                 if (code.opcode == OpCodes.Ldfld && ((FieldInfo)code.operand).Name == "m_team")
                 {
                     yield return code;
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams), "NextTeam"));
+                    yield return new CodeInstruction(OpCodes.Call, mpTeams_NextTeam_Method);
                     // skip until RequestSwitchTeam call
                     while (codes.MoveNext() && codes.Current.opcode != OpCodes.Call)
                         ;
@@ -776,51 +776,6 @@ namespace GameMod
         }
     }
 
-    /*
-    public class TeamCountMessage : MessageBase
-    {
-        public override void Serialize(NetworkWriter writer)
-        {
-            writer.WritePackedUInt32((uint)m_team_count);
-        }
-        public override void Deserialize(NetworkReader reader)
-        {
-            m_team_count = (int)reader.ReadPackedUInt32();
-        }
-        public int m_team_count;
-    }
-
-    public class ModCustomMsg
-    {
-        public const short MsgTeamCount = 101;
-    }
-
-    [HarmonyPatch(typeof(Server), "SendAcceptedToLobby")]
-    class MPTeamsSendLobby
-    {
-        static void Postfix(NetworkConnection conn)
-        {
-            NetworkServer.SendToClient(conn.connectionId, ModCustomMsg.MsgTeamCount,
-                new IntegerMessage(MPTeams.NetworkMatchTeamCount));
-        }
-    }
-    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
-    class MPTeamsClientHandlers
-    {
-        private static void OnTeamCountMsg(NetworkMessage msg)
-        {
-            MPTeams.NetworkMatchTeamCount = msg.ReadMessage<IntegerMessage>().value;
-        }
-
-        static void Postfix()
-        {
-            if (Client.GetClient() == null)
-                return;
-            Client.GetClient().RegisterHandler(ModCustomMsg.MsgTeamCount, OnTeamCountMsg);
-        }
-    }
-    */
-
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class MPTeamsMenuDraw
     {
@@ -835,16 +790,17 @@ namespace GameMod
         }
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> cs)
         {
+            var vector2_y_Field = AccessTools.Field(typeof(Vector2), "y");
+
             int lastAdv = 0;
             foreach (var c in cs) {
                 if (lastAdv == 0 && c.opcode == OpCodes.Ldstr && (string)c.operand == "ADVANCED SETTINGS") {
-                    FieldInfo vec2y = AccessTools.Field(typeof(Vector2), "y");
                     yield return new CodeInstruction(OpCodes.Ldloca_S, 0);
                     yield return new CodeInstruction(OpCodes.Dup);
-                    yield return new CodeInstruction(OpCodes.Ldfld, vec2y);
+                    yield return new CodeInstruction(OpCodes.Ldfld, vector2_y_Field);
                     yield return new CodeInstruction(OpCodes.Ldc_R4, 62f);
                     yield return new CodeInstruction(OpCodes.Add);
-                    yield return new CodeInstruction(OpCodes.Stfld, vec2y);
+                    yield return new CodeInstruction(OpCodes.Stfld, vector2_y_Field);
                     lastAdv = 1;
                 } else if ((lastAdv == 1 || lastAdv == 2) && c.opcode == OpCodes.Call) {
                     lastAdv++;
@@ -852,13 +808,12 @@ namespace GameMod
                     if (c.opcode != OpCodes.Ldloca_S)
                         continue;
                     lastAdv = 4;
-                    FieldInfo vec2y = AccessTools.Field(typeof(Vector2), "y");
                     yield return new CodeInstruction(OpCodes.Ldloca_S, 0);
                     yield return new CodeInstruction(OpCodes.Dup);
-                    yield return new CodeInstruction(OpCodes.Ldfld, vec2y);
+                    yield return new CodeInstruction(OpCodes.Ldfld, vector2_y_Field);
                     yield return new CodeInstruction(OpCodes.Ldc_R4, 62f - 93f);
                     yield return new CodeInstruction(OpCodes.Add);
-                    yield return new CodeInstruction(OpCodes.Stfld, vec2y);
+                    yield return new CodeInstruction(OpCodes.Stfld, vector2_y_Field);
                 }
                 yield return c;
             }
@@ -884,12 +839,14 @@ namespace GameMod
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var mpTeamsMenuHandle_HandleTeamCount_Method = AccessTools.Method(typeof(MPTeamsMenuHandle), "HandleTeamCount");
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
                 {
                     yield return code;
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeamsMenuHandle), "HandleTeamCount"));
+                    yield return new CodeInstruction(OpCodes.Call, mpTeamsMenuHandle_HandleTeamCount_Method);
                     continue;
                 }
 
@@ -926,15 +883,18 @@ namespace GameMod
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var playerShip_m_dead_timer_Field = AccessTools.Field(typeof(PlayerShip), "m_dead_timer");
+            var mpTeams_PlayerShip_DyingUpdate_Method = AccessTools.Method(typeof(MPTeams_PlayerShip_DyingUpdate), "MaybeUpdateDeadTimer");
+
             int state = 0;
             foreach (var code in codes)
             {
-                if (state == 0 && code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_dead_timer"))
+                if (state == 0 && code.opcode == OpCodes.Stfld && code.operand == playerShip_m_dead_timer_Field)
                 {
                     state = 1;
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_PlayerShip_DyingUpdate), "MaybeUpdateDeadTimer"));
+                    yield return new CodeInstruction(OpCodes.Call, mpTeams_PlayerShip_DyingUpdate_Method);
                     continue;
                 }
 
@@ -962,13 +922,16 @@ namespace GameMod
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            var list_int_Reverse_Method = AccessTools.Method(typeof(List<int>), "Reverse");
+            var mpTeams_UIElement_DrawScoresForTeams_SortTeamScores_Method = AccessTools.Method(typeof(MPTeams_UIElement_DrawScoresForTeams), "SortTeamScores");
+
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(System.Collections.Generic.List<Int32>), "Reverse"))
+                if (code.opcode == OpCodes.Callvirt && code.operand == list_int_Reverse_Method)
                 {
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldloc_2);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_UIElement_DrawScoresForTeams), "SortTeamScores"));
+                    yield return new CodeInstruction(OpCodes.Call, mpTeams_UIElement_DrawScoresForTeams_SortTeamScores_Method);
                     yield return new CodeInstruction(OpCodes.Stloc_2);
                     continue;
                 }

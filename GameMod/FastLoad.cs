@@ -1,11 +1,10 @@
-﻿using Harmony;
-using Overload;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
+using Harmony;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     // load faster by doing multiple steps in the same frame
     [HarmonyPatch(typeof(GameManager), "MaybeEnableDeveloperMode")]
     class FastLoadInit
@@ -38,6 +37,8 @@ namespace GameMod
                 Debug.Log("nosound enabled");
             return enabled;
         }
+
+        private static MethodInfo _UnityAudio_CreateAudioSourceAndObject_Method = typeof(UnityAudio).GetMethod("CreateAudioSourceAndObject", BindingFlags.NonPublic | BindingFlags.Instance);
         private static bool Prefix(ref IEnumerable<float> __result, AudioClip[] ___m_sound_effects, float[] ___m_sound_effects_volume,
             float[] ___m_sound_effects_pitch_amt, float[] ___m_sound_effects_cooldown, UnityAudio __instance)
         {
@@ -47,12 +48,11 @@ namespace GameMod
                 ___m_sound_effects_volume[i] = 1f;
             }
             __instance.InitSoundFX();
-            var CreateAudioSourceAndObject = typeof(UnityAudio).GetMethod("CreateAudioSourceAndObject", BindingFlags.NonPublic | BindingFlags.Instance);
             var args = new object[] { 0, "" };
             for (int j = 0; j < 512; j++)
             {
                 args[0] = j;
-                CreateAudioSourceAndObject.Invoke(__instance, args);
+                _UnityAudio_CreateAudioSourceAndObject_Method.Invoke(__instance, args);
             }
             __instance.SFXVolume = MenuManager.opt_volume_sfx;
             __result = new float[0];

@@ -1,17 +1,15 @@
-﻿using Harmony;
-using Overload;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using Harmony;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod
-{
+namespace GameMod {
     class MPTweaks
     {
         public const int NET_VERSION = 1;
@@ -74,7 +72,7 @@ namespace GameMod
             if (keyParts[0] == "proj" && Enum.IsDefined(typeof(ProjPrefab), keyParts[1]))
             {
                 var obj = ProjectileManager.proj_info[(int)Enum.Parse(typeof(ProjPrefab), keyParts[1])];
-                var oldValue = obj.GetType().GetField(keyParts[2]).GetValue(obj).ToString();
+                var oldValue = typeof(Projectile).GetField(keyParts[2]).GetValue(obj).ToString();
                 RUtility.ReadField(obj, keyParts[2], value);
                 return oldValue;
             }

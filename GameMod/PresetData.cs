@@ -1,13 +1,13 @@
-﻿using Harmony;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
+using Harmony;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     static class DataReader
     {
         public static string GetData(TextAsset ta, string filename)
@@ -32,14 +32,15 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Overload.ProjectileManager), "ReadProjPresetData")]
+    [HarmonyPatch(typeof(ProjectileManager), "ReadProjPresetData")]
     class ReadProjPresetDataPatch
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var dataReader_GetProjData_Method = typeof(DataReader).GetMethod("GetProjData");
             foreach (var code in instructions)
                 if (code.opcode == OpCodes.Callvirt && ((MethodInfo)code.operand).Name == "get_text")
-                    yield return new CodeInstruction(OpCodes.Call, typeof(DataReader).GetMethod("GetProjData"));
+                    yield return new CodeInstruction(OpCodes.Call, dataReader_GetProjData_Method);
                 else
                     yield return code;
         }
@@ -50,9 +51,10 @@ namespace GameMod
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var dataReader_GetRobotData_Method = typeof(DataReader).GetMethod("GetRobotData");
             foreach (var code in instructions)
                 if (code.opcode == OpCodes.Callvirt && ((MethodInfo)code.operand).Name == "get_text")
-                    yield return new CodeInstruction(OpCodes.Call, typeof(DataReader).GetMethod("GetRobotData"));
+                    yield return new CodeInstruction(OpCodes.Call, dataReader_GetRobotData_Method);
                 else
                     yield return code;
         }

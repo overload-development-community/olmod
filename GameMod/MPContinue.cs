@@ -1,23 +1,13 @@
-﻿using Harmony;
+﻿using System.Reflection;
+using Harmony;
 using Overload;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchEndedScoreboard")]
     class MPContinueDrawPostMatch
     {
-        static MethodInfo DrawMpScoreboardRaw;
-
-        static void Prepare()
-        {
-            DrawMpScoreboardRaw = typeof(UIElement).GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance);
-        }
+        private static MethodInfo _UIElement_DrawMpScoreboardRaw_Method = typeof(UIElement).GetMethod("DrawMpScoreboardRaw", BindingFlags.NonPublic | BindingFlags.Instance);
 
         static bool Prefix(UIElement __instance)
         {
@@ -37,7 +27,7 @@ namespace GameMod
             position.y += 20f;
             position.x = 0f;
             position.y += 10f;
-            DrawMpScoreboardRaw.Invoke(uie, new object[] { position });
+            _UIElement_DrawMpScoreboardRaw_Method.Invoke(uie, new object[] { position });
             position.y = UIManager.UI_BOTTOM - 30f;
             uie.SelectAndDrawItem(Loc.LS("MULTIPLAYER MENU"), position, 100, false);
             position.y -= 62f;
@@ -63,12 +53,6 @@ namespace GameMod
 
             if (NetworkMatch.m_match_req_password == "")
             {
-                //MenuManager.m_updating_pm_settings = true;
-                //MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH);
-
-                //var pmd = (PrivateMatchDataMessage)typeof(MenuManager).GetMethod("BuildPrivateMatchData", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { false });
-                //NetworkMatch.StartPrivateLobby(pmd);
-                //MenuManager.m_updating_pm_settings = true;
                 MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH);
             }
             else
