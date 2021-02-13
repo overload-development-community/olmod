@@ -229,7 +229,7 @@ namespace GameMod
                 {
                     int dz_index = Controls.m_controllers[i].GetAxisDeadzone(j);
                     int sens_index = Controls.m_controllers[i].GetAxisSensitivity(j);
-                    float sens = (RWInput.sens_multiplier[sens_index] / 2.2f) * 100f;
+                    float sens = ((RWInput.sens_multiplier[sens_index] - 0.75f) / 1.45f) * 100f;
                     float deadzone = (Controls.DEADZONE_ADDITIONAL[dz_index] / 0.5f) * 100f;
 
                     Controllers.controllers[i].axes.Add(new Controllers.Controller.Axis()
