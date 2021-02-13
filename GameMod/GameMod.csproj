@@ -132,7 +132,7 @@
     <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPServerBrowser.cs" />
     <Compile Include="MPSniperPackets.cs" />
-    <Compile Include="MPSpawnBoostClear.cs" />
+    <Compile Include="MPSpawnInitialization.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTags.cs" />
