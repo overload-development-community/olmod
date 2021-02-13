@@ -221,9 +221,6 @@ namespace GameMod
             string fn = PilotManager.FileName(PilotFileType.CONFIG) + "mod";
             for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
-                int[] m_sensitivity = (int[])AccessTools.Field(typeof(Overload.Controller), "m_sensitivity").GetValue(Controls.m_controllers[i]);
-                int[] m_deadzone = (int[])AccessTools.Field(typeof(Overload.Controller), "m_deadzone").GetValue(Controls.m_controllers[i]);
-
                 Controllers.controllers.Add(new Controllers.Controller
                 {
                     axes = new List<Controllers.Controller.Axis>()
@@ -232,8 +229,8 @@ namespace GameMod
                 {
                     int dz_index = Controls.m_controllers[i].GetAxisDeadzone(j);
                     int sens_index = Controls.m_controllers[i].GetAxisSensitivity(j);
-                    float sens = (RWInput.sens_multiplier[m_sensitivity[sens_index]] / 2.2f) * 100f;
-                    float deadzone = (Controls.DEADZONE_ADDITIONAL[m_deadzone[dz_index]] / 0.5f) * 100f;
+                    float sens = (RWInput.sens_multiplier[sens_index] / 2.2f) * 100f;
+                    float deadzone = (Controls.DEADZONE_ADDITIONAL[dz_index] / 0.5f) * 100f;
 
                     Controllers.controllers[i].axes.Add(new Controllers.Controller.Axis()
                     {
