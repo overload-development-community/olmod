@@ -1,18 +1,16 @@
-﻿using Harmony;
-using Newtonsoft.Json.Linq;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
+using Harmony;
+using Newtonsoft.Json.Linq;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod
-{
+namespace GameMod {
     public static class ExtMatchMode
     {
         public const MatchMode ANARCHY = MatchMode.ANARCHY;

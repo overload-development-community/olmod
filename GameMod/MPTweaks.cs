@@ -290,6 +290,7 @@ namespace GameMod {
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
             caps.Add("SupportsTweaks", "proj,sniper,jip");
             caps.Add("ModPrivateData", "1");
+            caps.Add("ClassicWeaponSpawns", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }
@@ -327,33 +328,27 @@ namespace GameMod {
             var connId = msg.conn.connectionId;
             if (connId == 0) // ignore local connection
                 return;
-            if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo))
+            if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo)) {
                 clientInfo = MPTweaks.ClientCapabilitiesSet(connId, new Dictionary<string, string>());
-            /*
-            if (!clientInfo.SupportsTweaks.Contains("proj") && !MPTweaks.IncompatibleMatchReported)
-            {
-                MPTweaks.IncompatibleMatchReported = true;
-                string name = NetworkMatch.m_players.TryGetValue(connId, out var playerData) ? playerData.m_name : connId.ToString();
-                var text = "DISABLED HUNTER SPEED CHANGE! OLD OLMOD: " + name;
-                Debug.LogFormat("MPTweaks: IncompatibleMatchReported {0}", text);
-                JIPClientHandlers.SendAddMpStatus(text);
             }
-            */
             Debug.Log("MPTweaks: conn " + connId + " OnLoadoutDataMessage clientInfo is now " + clientInfo.Capabilities.Join());
-            if (!MPTweaks.ClientHasMod(connId) && MPTweaks.MatchNeedsMod())
-            {
+            if (!MPTweaks.ClientHasMod(connId) && MPTweaks.MatchNeedsMod()) {
                 //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
-                NetworkServer.SendToClient(connId, 86, new StringMessage("You need OLMOD to join this match."));
+                NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires OLMod to play."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
-            if ((NetworkMatch.GetMatchState() != MatchState.LOBBY && NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN) && !ClientLoadoutValid(connId))
-            {
-                NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers: " + MPModifiers.GetDisabledModifiers()));
+            if ((NetworkMatch.GetMatchState() != MatchState.LOBBY && NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN) && !ClientLoadoutValid(connId)) {
+                NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers.  Please disable these modifiers and try again: " + MPModifiers.GetDisabledModifiers()));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
-            if (clientInfo.Capabilities.ContainsKey("ModPrivateData"))
+            if (!clientInfo.Capabilities.ContainsKey("ClassicWeaponSpawns") && (MPClassic.matchEnabled || MPModPrivateData.ClassicSpawnsEnabled)) {
+                NetworkServer.SendToClient(connId, 86, new StringMessage("This match has classic weapon spawns and requires OLMod 0.3.6 or greater."));
+                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
+            }
+            if (clientInfo.Capabilities.ContainsKey("ModPrivateData")) {
                 MPModPrivateDataTransfer.SendTo(connId);
+            }
         }
     }
 }
