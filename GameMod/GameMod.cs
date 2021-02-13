@@ -14,6 +14,7 @@ namespace GameMod.Core {
         public static string Version = "olmod 0.3.5";
         private static Version GameVersion;
         public static bool Modded = false;
+        public static bool VREnabled = false;
         public static string ModsLoaded = "";
 
         public static void Initialize()
@@ -25,6 +26,7 @@ namespace GameMod.Core {
             }
 
             Modded = FindArg("-modded");
+            VREnabled = FindArg("-vrmode");
 
             GameVersion = typeof(GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + Version + ", game " + GameVersion);
