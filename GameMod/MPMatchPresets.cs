@@ -55,6 +55,7 @@ namespace GameMod
                 suddenDeathOvertime = MPSuddenDeath.SuddenDeathMenuEnabled,
                 lapLimit = ExtMenuManager.mms_ext_lap_limit,
                 sniperPackets = MPSniperPackets.enabled,
+                noCompression = MPNoPositionCompression.enabled,
                 allowRearView = RearView.MPMenuManagerEnabled,
                 scaleRespawnTime = Menus.mms_scale_respawn_time,
                 ctfCarrierBoostEnabled = Menus.mms_ctf_boost,
@@ -88,6 +89,7 @@ namespace GameMod
                 suddenDeathOvertime = false,
                 lapLimit = 0,
                 sniperPackets = true,
+                noCompression = true,
                 allowRearView = false,
                 scaleRespawnTime = false,
                 ctfCarrierBoostEnabled = false,
@@ -124,6 +126,7 @@ namespace GameMod
             public bool suddenDeathOvertime;
             public int lapLimit;
             public bool sniperPackets;
+            public bool noCompression;
             public bool allowRearView;
             public bool scaleRespawnTime;
             public bool classicSpawnsEnabled;
@@ -155,6 +158,7 @@ namespace GameMod
                 MPSuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
                 ExtMenuManager.mms_ext_lap_limit = this.lapLimit;
                 MPSniperPackets.enabled = this.sniperPackets;
+                MPNoPositionCompression.enabled = this.noCompression;
                 RearView.MPMenuManagerEnabled = this.allowRearView;
                 Menus.mms_scale_respawn_time = this.scaleRespawnTime;
                 Menus.mms_classic_spawns = this.classicSpawnsEnabled;

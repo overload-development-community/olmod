@@ -32,6 +32,7 @@ namespace GameMod
         public const short MsgPlayerSyncAllMissiles = 137;
         public const short MsgDetonate = 138;
         public const short MsgSetDisconnectedMatchState = 139;
+        public const short MsgNewPlayerSnapshotToClient = 140;
         // Do not use 400, it is in use by Mod-Projdata.dll.
     }
 }
