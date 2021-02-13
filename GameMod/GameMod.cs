@@ -234,18 +234,6 @@ namespace GameMod.Core {
         }
     }
 
-    // Fix bug with cyclone, flak, and thunderbolt maintaining their charge between lives.
-    [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
-    class CycloneFlakTBAfterDeathFix
-    {
-        private static FieldInfo _PlayerShip_flak_fire_count_Field = typeof(PlayerShip).GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance);
-        static void Prefix(Player __instance)
-        {
-            _PlayerShip_flak_fire_count_Field.SetValue(__instance.c_player_ship, 0);
-            __instance.c_player_ship.m_thunder_power = 0;
-        }
-    }
-
     // Shenanigans.
     [HarmonyPatch(typeof(StringParse), "IsNiceWord")]
     class ReallyIsNiceWord
