@@ -140,6 +140,38 @@ namespace GameMod {
         }
     }
 
+    [HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
+    class MPClientExtrapolation_UpdateInterpolationBuffer {
+
+        static bool Prefix(){
+            if (Client.m_InterpolationBuffer[0] == null)
+            {
+                return true;
+            }
+            else
+            {
+                if(Client.m_PendingPlayerSnapshotMessages.Count < 1){
+                    return false;
+                }
+                else if(Client.m_PendingPlayerSnapshotMessages.Count == 1){
+                    Client.m_InterpolationBuffer[1] = Client.m_InterpolationBuffer[2];
+                    Client.m_InterpolationBuffer[2] = Client.m_PendingPlayerSnapshotMessages.Dequeue();
+                }
+                else{
+                    while (Client.m_PendingPlayerSnapshotMessages.Count > 2)
+                    {
+                        Client.m_PendingPlayerSnapshotMessages.Dequeue();
+                    }
+                    Client.m_InterpolationBuffer[1] = Client.m_PendingPlayerSnapshotMessages.Dequeue();
+                    Client.m_InterpolationBuffer[2] = Client.m_PendingPlayerSnapshotMessages.Dequeue();
+                }
+                Client.m_InterpolationStartTime = Time.time;
+
+                return false;
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(Client), "InterpolateRemotePlayers")]
     class MPClientExtrapolation_InterpolateRemotePlayers {
         static private MethodInfo _Client_GetPlayerSnapshotFromInterpolationBuffer_Method = AccessTools.Method(typeof(Client), "GetPlayerSnapshotFromInterpolationBuffer");
@@ -172,9 +204,11 @@ namespace GameMod {
             }
 
             var lookahead = 1f + (GameManager.m_local_player.m_avg_ping_ms / (1000f / 60f)) * 0.75f;
+            // reduce oversteer by extrapolating less for rotation
+            var rot_lookahead = lookahead * .5f;
 
             player.c_player_ship.c_transform.localPosition = Vector3.LerpUnclamped(A.m_pos, B.m_pos, t + lookahead);
-            player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(A.m_rot, B.m_rot, t + lookahead);
+            player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(A.m_rot, B.m_rot, t + rot_lookahead);
             player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
 
             //// Bail if we're observing.
@@ -199,36 +233,10 @@ namespace GameMod {
             //};
         }
 
+        // Not the same as vanilla
         private static float CalculateLerpParameter() {
             float num = Mathf.Max(0f, Time.time - Client.m_InterpolationStartTime);
-            return Mathf.Clamp01(num / (2f * Time.fixedDeltaTime));
-        }
-
-        private static PlayerSnapshot GetPlayerSnapshotFromInterpolationBuffer(Player p, PlayerSnapshotToClientMessage msg) {
-            for (int i = 0; i < msg.m_num_snapshots; i++) {
-                PlayerSnapshot playerSnapshot = msg.m_snapshots[i];
-                if (GetPlayerFromNetId(playerSnapshot.m_net_id) == p) {
-                    return playerSnapshot;
-                }
-            }
-            return null;
-        }
-
-        private static Player GetPlayerFromNetId(NetworkInstanceId net_id) {
-            GameObject gameObject = ClientScene.FindLocalObject(net_id);
-            if (gameObject == null) {
-                return null;
-            }
-            Player component = gameObject.GetComponent<Player>();
-            if (component == null) {
-                Debug.LogErrorFormat("Failed to find Player component on gameObject {0} with netId {1}", new object[]
-                {
-                    gameObject.name,
-                    net_id
-                });
-                return null;
-            }
-            return component;
+            return num / Time.fixedDeltaTime;
         }
     }
 }
