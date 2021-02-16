@@ -55,7 +55,7 @@ namespace GameMod {
         public static float GetWeaponExtrapolationTime() {
             float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
                                       Menus.mms_weapon_lag_compensation);
-            return time_ms / 1000f;
+            return GetFactor() * time_ms / 1000f;
 
         }
         //
@@ -63,7 +63,7 @@ namespace GameMod {
         public static float GetShipExtrapolationTime() {
             float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
                                       Menus.mms_ship_lag_compensation);
-            return time_ms / 1000f;
+            return GetFactor() * time_ms / 1000f;
 
         }
 
