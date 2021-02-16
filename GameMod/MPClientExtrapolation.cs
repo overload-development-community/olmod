@@ -51,6 +51,22 @@ namespace GameMod {
             return MPObserver.Enabled ? 0f : 0.75f;
         }
 
+        // how far ahead to advance weapons, in seconds
+        public static float GetWeaponExtrapolationTime() {
+            float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
+                                      Menus.mms_weapon_lag_compensation);
+            return time_ms / 1000f;
+
+        }
+        //
+        // how far ahead to advance ships, in seconds
+        public static float GetShipExtrapolationTime() {
+            float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
+                                      Menus.mms_ship_lag_compensation);
+            return time_ms / 1000f;
+
+        }
+
         public static void InitForMatch() {
             bodies_to_resolve.Clear();
             //players_to_resolve.Clear();
@@ -71,7 +87,7 @@ namespace GameMod {
                 return;
             }
 
-            var amount = (MPClientExtrapolation.GetFactor() * Math.Min(GameManager.m_local_player.m_avg_ping_ms, MPClientExtrapolation.MAX_PING)) / 1000f;
+            var amount = MPClientExtrapolation.GetWeaponExtrapolationTime();
             if (amount <= 0f) {
                 return;
             }
@@ -203,7 +219,7 @@ namespace GameMod {
                 return;
             }
 
-            var lookahead = 1f + (GameManager.m_local_player.m_avg_ping_ms / (1000f / 60f)) * 0.75f;
+            float lookahead = 1f + (MPClientExtrapolation.GetShipExtrapolationTime() * Time.fixedDeltaTime);
             // reduce oversteer by extrapolating less for rotation
             var rot_lookahead = lookahead * .5f;
 

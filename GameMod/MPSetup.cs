@@ -225,6 +225,8 @@ namespace GameMod {
                 Menus.mms_scale_respawn_time = ModPrefs.GetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
                 if (Core.GameMod.HasInternetMatch())
                     MPInternet.MenuIPAddress = ModPrefs.GetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
+                Menus.mms_weapon_lag_compensation = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation);
+                Menus.mms_ship_lag_compensation = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -263,6 +265,8 @@ namespace GameMod {
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.SetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             ModPrefs.SetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
+            ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation);
+            ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation);
             ModPrefs.Flush(filename + "mod");
         }
 

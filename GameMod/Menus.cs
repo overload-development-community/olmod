@@ -38,6 +38,9 @@ namespace GameMod
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_classic_spawns));
         }
+
+        public static int mms_weapon_lag_compensation = 100;
+        public static int mms_ship_lag_compensation = 100;
     }
 
 
@@ -219,6 +222,115 @@ namespace GameMod
 
                 yield return code;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpOptions")]
+    class Menus_UIElement_DrawMpOptions
+    {
+
+        // Ugly hack, rewrite
+        private static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt)
+        {
+            float num = 750f;
+            uie.TestMouseInRect(pos, num * 0.5f + 22f, 24f, selection, true);
+            float x = pos.x;
+            pos.x += num * 0.5f - 123f;
+            uie.TestMouseInRectSlider(pos, 132f, 22f, selection, false);
+            pos.x = x;
+            bool flag = UIManager.m_menu_selection == selection;
+            if (flag)
+            {
+                MenuManager.option_dir = true;
+            }
+            float num2 = 17f;
+            Color c;
+            Color color;
+            Color color2;
+            if (flag)
+            {
+                c = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.2f * UIElement.FLICKER) + UIManager.m_select_flash * 0.05f);
+                float a = 1f - Mathf.Pow(1f - uie.m_alpha, 8f);
+                c.a = a;
+                UIManager.DrawQuadBarHorizontal(pos, 22f, 22f, num, c, 12);
+                color = UIManager.m_col_ub3;
+                color.a = a;
+                color2 = color;
+                c = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui7, UnityEngine.Random.Range(0f, 0.1f) + UIManager.m_select_flash * 0.5f);
+                c.a = a;
+            }
+            else
+            {
+                c = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER));
+                float num3 = 1f - Mathf.Pow(1f - uie.m_alpha, 6f);
+                c.a = num3;
+                UIManager.DrawQuadBarHorizontal(pos, 22f, 22f, num, c, 7);
+                color2 = UIManager.m_col_ub0;
+                color2.a = num3 * 0.1f;
+                UIManager.DrawQuadBarHorizontal(pos, num2, num2, num, color2, 12);
+                color = UIManager.m_col_ui2;
+                color.a = uie.m_alpha;
+                color2 = UIManager.m_col_ui0;
+                color2.a = uie.m_alpha;
+            }
+            uie.DrawStringSmallOverrideAlpha(s, pos - Vector2.right * (num * 0.5f + 15f), 0.75f, StringOffset.LEFT, color2, 450f);
+            UIManager.DrawQuadUI(pos + Vector2.right * 90f - Vector2.up * 15f, 20f, 1.25f, color2, uie.m_alpha, 12);
+            uie.DrawDigitsThree(pos + Vector2.right * 90f, (int)(amt), 0.6f, StringOffset.CENTER, color, uie.m_alpha);
+            UIManager.DrawQuadUI(pos + Vector2.right * 90f + Vector2.up * 15f, 20f, 1.25f, color2, uie.m_alpha, 12);
+            pos.x += num * 0.5f - 123f;
+            if (flag)
+            {
+                UIManager.DrawQuadBarHorizontal(pos, 17f, 17f, 246f, color, 12);
+            }
+            else
+            {
+                uie.DrawOutlineBackdrop(pos, 17f, 246f, color, 2);
+            }
+            UIManager.DrawQuadUIInner(pos - Vector2.right * (132f - (132f * (amt / 250f))), 132f * (amt / 250f), 10f, c, uie.m_alpha, 11, 0.75f);
+        }
+
+        static void DrawLagSliders(UIElement uie, ref Vector2 position)
+        {
+            SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION"), position, 6, Menus.mms_weapon_lag_compensation);
+            position.y += 62f;
+            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION"), position, 7, Menus.mms_ship_lag_compensation);
+            position.y += 62f;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
+                {
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawLagSliders"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(MenuManager), "MpOptionsUpdate")]
+    class Menus_MenuManager_MpOptionsUpdate
+    {
+        static void Postfix()
+        {
+            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
+            {
+                switch (UIManager.m_menu_selection)
+                {
+                    case 6:
+                        Menus.mms_weapon_lag_compensation = (int)(UIElement.SliderPos * 250f);
+                        break;
+                    case 7:
+                        Menus.mms_ship_lag_compensation = (int)(UIElement.SliderPos * 250f);
+                        break;
+                    default:
+                        break;
+                }
+            }                
         }
     }
 }
