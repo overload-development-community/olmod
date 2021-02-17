@@ -51,19 +51,25 @@ namespace GameMod {
             return MPObserver.Enabled ? 0f : 0.75f;
         }
 
-        // how far ahead to advance weapons, in seconds
+        // How far ahead to advance weapons, in seconds.
         public static float GetWeaponExtrapolationTime() {
+            if (MPObserver.Enabled) {
+                return 0f;
+            }
             float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
-                                      Menus.mms_weapon_lag_compensation);
-            return GetFactor() * time_ms / 1000f;
+                                      Menus.mms_weapon_lag_compensation_max);
+            return (Menus.mms_weapon_lag_compensation_scale / 100f) * time_ms / 1000f;
 
         }
-        //
-        // how far ahead to advance ships, in seconds
+
+        // How far ahead to advance ships, in seconds.
         public static float GetShipExtrapolationTime() {
+            if (MPObserver.Enabled) {
+                return 0f;
+            }
             float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
-                                      Menus.mms_ship_lag_compensation);
-            return GetFactor() * time_ms / 1000f;
+                                      Menus.mms_ship_lag_compensation_max);
+            return (Menus.mms_ship_lag_compensation_scale / 100f) * time_ms / 1000f;
 
         }
 
@@ -219,7 +225,9 @@ namespace GameMod {
                 return;
             }
 
-            float lookahead = 1f + (MPClientExtrapolation.GetShipExtrapolationTime() * Time.fixedDeltaTime);
+            // Lookahead in frames.
+            float lookahead = 1f + (MPClientExtrapolation.GetShipExtrapolationTime() / Time.fixedDeltaTime);
+
             // reduce oversteer by extrapolating less for rotation
             var rot_lookahead = lookahead * .5f;
 

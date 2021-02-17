@@ -39,8 +39,10 @@ namespace GameMod
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_classic_spawns));
         }
 
-        public static int mms_weapon_lag_compensation = 100;
-        public static int mms_ship_lag_compensation = 100;
+        public static int mms_weapon_lag_compensation_max = 100;
+        public static int mms_ship_lag_compensation_max = 100;
+        public static int mms_weapon_lag_compensation_scale = 75;
+        public static int mms_ship_lag_compensation_scale = 75;
     }
 
 
@@ -230,7 +232,7 @@ namespace GameMod
     {
 
         // Ugly hack, rewrite
-        private static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt)
+        private static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max)
         {
             float num = 750f;
             uie.TestMouseInRect(pos, num * 0.5f + 22f, 24f, selection, true);
@@ -286,14 +288,18 @@ namespace GameMod
             {
                 uie.DrawOutlineBackdrop(pos, 17f, 246f, color, 2);
             }
-            UIManager.DrawQuadUIInner(pos - Vector2.right * (132f - (132f * (amt / 250f))), 132f * (amt / 250f), 10f, c, uie.m_alpha, 11, 0.75f);
+            UIManager.DrawQuadUIInner(pos - Vector2.right * (132f - (132f * (amt / max))), 132f * (amt / max), 10f, c, uie.m_alpha, 11, 0.75f);
         }
 
         static void DrawLagSliders(UIElement uie, ref Vector2 position)
         {
-            SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION"), position, 6, Menus.mms_weapon_lag_compensation);
+            SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION MAX"), position, 6, Menus.mms_weapon_lag_compensation_max, 250);
             position.y += 62f;
-            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION"), position, 7, Menus.mms_ship_lag_compensation);
+            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION MAX"), position, 7, Menus.mms_ship_lag_compensation_max, 250);
+            position.y += 62f;
+            SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100);
+            position.y += 62f;
+            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100);
             position.y += 62f;
         }
 
@@ -301,6 +307,9 @@ namespace GameMod
         {
             foreach (var code in codes)
             {
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f) {
+                    code.operand = 279f;
+                }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
                 {
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
@@ -322,10 +331,16 @@ namespace GameMod
                 switch (UIManager.m_menu_selection)
                 {
                     case 6:
-                        Menus.mms_weapon_lag_compensation = (int)(UIElement.SliderPos * 250f);
+                        Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
                         break;
                     case 7:
-                        Menus.mms_ship_lag_compensation = (int)(UIElement.SliderPos * 250f);
+                        Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                        break;
+                    case 8:
+                        Menus.mms_weapon_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
+                        break;
+                    case 9:
+                        Menus.mms_ship_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
                         break;
                     default:
                         break;
