@@ -20,7 +20,8 @@ namespace GameMod {
 			INTERPOLATE_BEGIN,
 			INTERPOLATE_END,
 			LERP_BEGIN,
-			LERP_END
+			LERP_END,
+			FINISH
 		}	
 		public class Buffer {
 			private FileStream fs;
@@ -69,6 +70,7 @@ namespace GameMod {
 					return;
 				}
 				try {
+					bw.Write((uint)Command.FINISH);
 					Flush(true);
 					fs.Close();
 					Debug.Log("MPPlayerStateDump: dump finished");

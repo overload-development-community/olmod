@@ -281,6 +281,9 @@ bool Interpreter::ProcessCommand()
 		case LERP_END:
 			ProcessLerpEnd();
 			break;
+		case FINISH:
+			process = false;
+			return true;
 		default:
 			if (file) {
 				std::printf("INVALID COMMAND\n");
@@ -313,7 +316,6 @@ bool Interpreter::ProcessFile(const char *filename)
 	process = true;
 	// process the file until end or error is reached
 	while (ProcessCommand());
-	process = false;
 
 	CloseFile();
 	return true;
