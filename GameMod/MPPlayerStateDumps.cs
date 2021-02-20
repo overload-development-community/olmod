@@ -83,6 +83,7 @@ namespace GameMod {
 			{
 				if (force || ms.Position > maxMemBuffer) {
 					Debug.Log("MPPlayerStateDump: dumping " + ms.Position + " bytes");
+					ms.SetLength(ms.Position);
 					ms.WriteTo(fs);
 					fs.Flush();
 					ms.Position=0;
