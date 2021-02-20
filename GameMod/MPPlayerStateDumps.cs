@@ -187,6 +187,24 @@ namespace GameMod {
 				}
 			}
 
+			public void AddInterpolateBegin(float timestamp, int ping) {
+				if (!go) {
+					return;
+				}
+				mtx.WaitOne();
+				try {
+					bw.Write((uint)Command.INTERPOLATE_BEGIN);
+					bw.Write(timestamp);
+					bw.Write(ping);
+
+					Flush(false);
+				} catch (Exception e) {
+					Debug.Log("MPPlayerStateDump: failed to dump command: " + e);
+				} finally {
+					mtx.ReleaseMutex();
+				}
+			}
+
 			public void AddLerpBegin(bool wait_for_respawn, ref PlayerSnapshot A, ref PlayerSnapshot B, float t)
 			{
 				if (!go) {
@@ -299,7 +317,8 @@ namespace GameMod {
 		[HarmonyPatch(typeof(Client), "InterpolateRemotePlayers")]
 		class MPPlayerStateDump_InterpolateRemotePlayers {
 		        static void Prefix() {
-				buf.AddCommand((uint)Command.INTERPOLATE_BEGIN,Time.time);
+            			int ping = GameManager.m_local_player.m_avg_ping_ms;
+				buf.AddInterpolateBegin(Time.time, ping);
 			}
 		        static void Postfix() {
 				buf.AddCommand((uint)Command.INTERPOLATE_END);

@@ -48,6 +48,18 @@ bool Interpreter::OpenFile(const char *filename)
 	return true;
 }
 
+int32_t Interpreter::ReadInt()
+{
+	int32_t value = 0;
+	if (file) {
+		if (std::fread(&value, sizeof(value), 1, file) != 1) {
+			value = 0;
+			CloseFile();
+		}
+	}
+	return value;
+}
+
 uint32_t Interpreter::ReadUint()
 {
 	uint32_t value = 0;
@@ -121,6 +133,7 @@ void Interpreter::ProcessUpdateBegin()
 void Interpreter::ProcessUpdateEnd()
 {
 	update.m_InterpolationStartTime_after = ReadFloat();
+	update.ping = ReadInt();
 
 	if (update.valid) {
 		SimulateBufferUpdate();

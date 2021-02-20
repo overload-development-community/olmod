@@ -42,6 +42,7 @@ struct UpdateCycle {
 	float timestamp;
 	float m_InterpolationStartTime_before;
 	float m_InterpolationStartTime_after;
+	int ping;
 
 	UpdateCycle() :
 		valid(false)
@@ -94,6 +95,7 @@ class Interpreter {
 		bool OpenFile(const char *filename);
 		void CloseFile();
 
+		int32_t ReadInt();
 		uint32_t ReadUint();
 		float ReadFloat();
 		void ReadPlayerSnapshot(PlayerSnapshot& s);
