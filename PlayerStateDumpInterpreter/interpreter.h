@@ -26,6 +26,20 @@ struct PlayerState {
 	float pos[3];
 	float rot[3];
 	float timestamp;
+
+	void Invalidate()
+	{
+		pos[0] = 0.0f;
+		pos[1] = 0.0f;
+		pos[2] = 0.0f;
+
+		rot[0] = 0.0f;
+		rot[1] = 0.0f;
+		rot[2] = 0.0f;
+		rot[3] = 0.0f;
+
+		timestamp = -1;
+	}
 };
 
 struct PlayerSnapshot {
@@ -42,7 +56,6 @@ struct UpdateCycle {
 	float timestamp;
 	float m_InterpolationStartTime_before;
 	float m_InterpolationStartTime_after;
-	int ping;
 
 	UpdateCycle() :
 		valid(false)
@@ -59,6 +72,7 @@ struct LerpCycle {
 struct InterpolationCycle {
 	bool valid;
 	float timestamp;
+	int ping;
 	std::vector<LerpCycle> lerps;
 
 	InterpolationCycle() :
@@ -66,31 +80,60 @@ struct InterpolationCycle {
 	{}
 };
 
-class Player {
-	protected:
-		uint32_t id;
-		PlayerState origState;
+struct Player {
+	uint32_t id;
+	float firstSeen;
+	float lastSeen;
+	uint32_t waitForRespawn;
+	PlayerState origState;
+	PlayerState mostRecentState;
 	
-	public:
+	Player() {
+		id = (uint32_t)-1;
+		firstSeen = lastSeen = -1.0f;
+		waitForRespawn=0;
+		origState.Invalidate();
+		mostRecentState.Invalidate();
+	}
+};
 
+typedef std::map<uint32_t, Player> PlayerMap;
+
+struct GameState {
+	PlayerMap players;
+	float m_InterpolationStartTime;
+
+	GameState();
+	Player& GetPlayer(uint32_t id);
+};
+
+class InterpolationResults {
+	std::vector<PlayerSnapshot> players;
 };
 
 class SimulatorBase {
 	
 	public:
-		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg);
-		virtual void DoBufferUpdate(const UpdateCycle& upateInfo);
-		virtual void DoInterpolation(const InterpolationCycle& interpolationInfo);
+		SimulatorBase();
+
+		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg, GameState& gameState);
+		virtual void DoBufferUpdate(const UpdateCycle& upateInfo, GameState& gameState);
+		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, GameState& gameState, InterpolationResults& results);
 };
+
+typedef std::vector<SimulatorBase*> SimulatorSet;
 
 class Interpreter {
 	protected:
-		std::map<uint32_t, PlayerState> players;
+		GameState gameState;
 		std::FILE *file;
 		const char *fileName;
+		bool process;
 		PlayerSnapshotMessage currentSnapshots;
 		UpdateCycle update;
 		InterpolationCycle interpolation;
+		SimulatorSet simulators;
+
 
 		bool OpenFile(const char *filename);
 		void CloseFile();
@@ -118,6 +161,8 @@ class Interpreter {
 		Interpreter();
 		~Interpreter();
 
+		void AddSimulator(SimulatorBase& simulator);
+		void DropSimulators();
 		bool ProcessFile(const char *filename);
 
 };	

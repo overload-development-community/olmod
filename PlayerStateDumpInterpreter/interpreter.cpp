@@ -2,15 +2,61 @@
 
 namespace OlmodPlayerDumpState {
 
+GameState::GameState() :
+	m_InterpolationStartTime(-1.0f)
+{}
+
+Player& GameState::GetPlayer(uint32_t id)
+{
+	PlayerMap::iterator it = players.find(id);
+	if (it == players.end()) {
+		Player p;
+		p.id = id;
+		players[id] = p;
+		return players[id];
+	}
+	return (it->second);
+}
+
+SimulatorBase::SimulatorBase()
+{}
+
+void SimulatorBase::DoBufferEnqueue(const PlayerSnapshotMessage& msg, GameState& gameState)
+{
+	printf("Base: DoBufferEnqueue\n");
+}
+
+void SimulatorBase::DoBufferUpdate(const UpdateCycle& upateInfo, GameState& gameState)
+{
+	printf("Base: DoBufferUpdate\n");
+}
+
+bool SimulatorBase::DoInterpolation(const InterpolationCycle& interpolationInfo, GameState& gameState, InterpolationResults& results)
+{
+	printf("Base: DoInterpolation\n");
+	return false;
+}
+
 Interpreter::Interpreter() :
 	file(NULL),
-	fileName(NULL)
+	fileName(NULL),
+	process(false)
 {
 }
 
 Interpreter::~Interpreter()
 {
 	CloseFile();
+}
+
+void Interpreter::AddSimulator(SimulatorBase& simulator)
+{
+	simulators.push_back(&simulator);
+}
+
+void Interpreter::DropSimulators()
+{
+	simulators.clear();
 }
 
 bool Interpreter::OpenFile(const char *filename)
@@ -99,16 +145,29 @@ void Interpreter::ReadPlayerSnapshot(PlayerSnapshot& s)
 void Interpreter::SimulateBufferEnqueue()
 {
 	std::printf("ENQUEUE: %u\n", (unsigned)currentSnapshots.snapshot.size());
+	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
+		(*it)->DoBufferEnqueue(currentSnapshots, gameState);
+	}
 }
 
 void Interpreter::SimulateBufferUpdate()
 {
 	std::printf("UPDATE\n");
+	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
+		(*it)->DoBufferUpdate(update, gameState);
+	}
 }
 
 void Interpreter::SimulateInterpolation()
 {
 	std::printf("Interpol: %u\n",(unsigned)interpolation.lerps.size());
+	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
+		InterpolationResults results;
+		bool res= (*it)->DoInterpolation(interpolation, gameState, results);
+		if (res) {
+			// take results and add them to the per-player log
+		}
+	}
 }
 
 void Interpreter::ProcessEnqueue()
@@ -119,6 +178,14 @@ void Interpreter::ProcessEnqueue()
 	for (i=0; i<num; i++) {
 		ReadPlayerSnapshot(currentSnapshots.snapshot[i]);
 		currentSnapshots.snapshot[i].state.timestamp = ts;
+		if (file) {
+			Player& p = gameState.GetPlayer(currentSnapshots.snapshot[i].id);
+			p.mostRecentState = currentSnapshots.snapshot[i].state;
+			if (p.firstSeen < 0.0f) {
+				p.firstSeen = ts;
+			}
+			p.lastSeen = ts;
+		}
 	}
 	SimulateBufferEnqueue();
 }
@@ -133,7 +200,6 @@ void Interpreter::ProcessUpdateBegin()
 void Interpreter::ProcessUpdateEnd()
 {
 	update.m_InterpolationStartTime_after = ReadFloat();
-	update.ping = ReadInt();
 
 	if (update.valid) {
 		SimulateBufferUpdate();
@@ -145,6 +211,7 @@ void Interpreter::ProcessInterpolateBegin()
 {
 	interpolation.valid=true;
 	interpolation.timestamp = ReadFloat();
+	interpolation.ping = ReadInt();
 	interpolation.lerps.clear();
 }
 
@@ -176,6 +243,12 @@ void Interpreter::ProcessLerpEnd()
 	}
 	LerpCycle &c = interpolation.lerps[interpolation.lerps.size()-1];
 	c.waitForRespawn_after = waitForRespawn;
+	Player &p=gameState.GetPlayer(c.A.id);
+	if (!p.waitForRespawn && c.waitForRespawn_after) {
+		// was enabled outside of the stuff we were inspecting...
+		p.waitForRespawn = 1;
+	}
+
 }
 
 bool Interpreter::ProcessCommand()
@@ -209,7 +282,9 @@ bool Interpreter::ProcessCommand()
 			ProcessLerpEnd();
 			break;
 		default:
-			// unknown command, can't parse file any further
+			if (file) {
+				std::printf("INVALID COMMAND\n");
+			}
 			CloseFile(); 
 	}
 
@@ -219,6 +294,9 @@ bool Interpreter::ProcessCommand()
 void Interpreter::CloseFile()
 {
 	if (file) {
+		if (process) {
+			printf("READ ERROR OR PREMATURE END OF FILE\n");
+		}
 		std::fclose(file);
 		file = NULL;
 	}
@@ -227,12 +305,15 @@ void Interpreter::CloseFile()
 
 bool Interpreter::ProcessFile(const char *filename)
 {
+
 	if (!OpenFile(filename)) {
 		return false;
 	}
 
+	process = true;
 	// process the file until end or error is reached
 	while (ProcessCommand());
+	process = false;
 
 	CloseFile();
 	return true;
@@ -244,8 +325,9 @@ bool Interpreter::ProcessFile(const char *filename)
 
 int main(int argc, char **argv)
 {
-
+	OlmodPlayerDumpState::SimulatorBase s1;
 	OlmodPlayerDumpState::Interpreter interpreter;
+	interpreter.AddSimulator(s1);
 	int exit_code = !interpreter.ProcessFile((argc > 1)?argv[1]:"playerstatedump0.olmd");
 	return exit_code;
 }
