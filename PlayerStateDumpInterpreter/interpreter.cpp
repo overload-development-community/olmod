@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "math_helper.h"
 
 #include <sstream>
 
@@ -123,11 +124,176 @@ void Logger::Log(LogLevel l, const char *fmt, ...)
 	}
 }
 
-SimulatorBase::SimulatorBase() :
+ResultProcessorChannel::ResultProcessorChannel(uint32_t player, uint32_t object) :
+	fStream(NULL),
+	log(NULL),
+	objectId(object),
+	playerId(player)
+{
+	SetName("unknown");
+}
+
+ResultProcessorChannel::~ResultProcessorChannel()
+{
+	StopStream();
+}
+
+void ResultProcessorChannel::Clear()
+{
+	if (log) {
+		log->Log(Logger::INFO,"rpc: Clear");
+	}
+	data.clear();
+}
+
+void ResultProcessorChannel::Finish()
+{
+	if (log) {
+		log->Log(Logger::INFO,"rpc: Finish");
+	}
+	StopStream();
+}
+
+void ResultProcessorChannel::SetName(const char *n)
+{
+	std::stringstream str;
+
+	str << "res_o" << objectId << "_p" << playerId;
+
+	if (n) {
+		str << "_" << n;
+	}
+	name=str.str();
+	if (log) {
+		log->Log(Logger::INFO,"rpc: my name is '%s'", name.c_str());
+	}
+}
+
+bool ResultProcessorChannel::StartStream(const char *dir)
+{
+	std::stringstream str;
+
+	if (fStream) {
+		StopStream();
+	}
+
+	if (dir) {
+		str << dir << '/';
+	}
+	str << name << ".csv";
+	fStream = std::fopen(str.str().c_str(), "wt");
+	if (log) {
+		if (fStream) {
+			log->Log(Logger::INFO,"rpc: streaming to '%s'", name.c_str());
+		} else {
+			log->Log(Logger::WARN,"rpc: failed to stream to '%s'", name.c_str());
+		}
+	}
+	return (fStream != NULL);
+}
+
+void ResultProcessorChannel::StopStream()
+{
+	if (fStream) {
+		if (log) {
+			log->Log(Logger::INFO, "rpc: stream stopped");
+		}
+		std::fclose(fStream);
+		fStream = NULL;
+	}
+}
+
+void ResultProcessorChannel::StreamOut(const PlayerState& s)
+{
+	fprintf(fStream, "%f\t%f\t%f\t%f\n",
+			s.timestamp,
+			s.pos[0],
+			s.pos[1],
+			s.pos[2]);
+}
+
+void ResultProcessorChannel::Add(const PlayerState& s)
+{
+	if (log) {
+		log->Log(Logger::DEBUG, "rpc: adding data point at timestamp %fs", s.timestamp);
+	}
+	if (fStream) {
+		StreamOut(s);
+	}
+	data.push_back(s);
+}
+
+void ResultProcessorChannel::Add(const PlayerSnapshot& s)
+{
+	if (s.id != playerId) {
+		if (log) {
+			log->Log(Logger::WARN, "rpc: adding data point for wrong player %u, exptected %u", (unsigned)s.id,(unsigned)playerId);
+		}
+	}
+	Add(s.state);
+}
+
+ResultProcessor::ResultProcessor()
+{
+}
+
+ResultProcessor::~ResultProcessor()
+{
+	for (ChannelMap::iterator it=channels.begin(); it !=channels.end(); it++) {
+		if (it->second) {
+			delete it->second;
+		}
+	}
+	channels.clear();
+}
+
+ResultProcessorChannel* ResultProcessor::CreateChannel(channelID id)
+{
+	return new ResultProcessorChannel(id.first, id.second);
+}
+
+void ResultProcessor::Clear()
+{
+	for (ChannelMap::iterator it=channels.begin(); it !=channels.end(); it++) {
+		if (it->second) {
+			it->second->Clear();
+		}
+	}
+}
+
+void ResultProcessor::Finish()
+{
+	for (ChannelMap::iterator it=channels.begin(); it !=channels.end(); it++) {
+		if (it->second) {
+			it->second->Finish();
+		}
+	}
+}
+
+ResultProcessorChannel* ResultProcessor::GetChannel(uint32_t playerId, uint32_t objectId, bool& isNew)
+{
+	channelID id(playerId,objectId);
+	ChannelMap::iterator it=channels.find(id);
+	if (it == channels.end()) {
+		ResultProcessorChannel *ch=CreateChannel(id);
+		channels[id]=ch;
+		isNew = true;
+		return ch;
+	}
+	isNew = false;
+	return it->second;
+}
+
+SimulatorBase::SimulatorBase(ResultProcessor& rp) :
+	resultProcessor(rp),
 	registerID(0),
 	ip(NULL)
 {
 	UpdateName();
+}
+
+SimulatorBase::~SimulatorBase()
+{
 }
 
 void SimulatorBase::SyncGamestate(const GameState& gs)
@@ -180,6 +346,9 @@ void SimulatorBase::UpdateWaitForRespawn(const GameState& gs)
 void SimulatorBase::NewPlayer(Player& p, size_t idx)
 {
 	log.Log(Logger::INFO, "new player %u, total players: %u", (unsigned)p.id,(unsigned)gameState.playerCnt);
+	if (idx != resultProcessors.size()) {
+		log.Log(Logger::ERROR, "mismatch in player to resultProcessors mapping!!!!");
+	}
 }
 
 void SimulatorBase::UpdateWaitForRespawn(uint32_t id, uint32_t doReset, size_t idx)
@@ -205,6 +374,22 @@ bool SimulatorBase::DoInterpolation(const InterpolationCycle& interpolationInfo,
 {
 	log.Log(Logger::INFO, "Interpolation at %fs original ping %d", interpolationInfo.timestamp, interpolationInfo.ping);
 	return false;
+}
+
+void SimulatorBase::ProcessResults(const InterpolationCycle& interpolationInfo, InterpolationResults& results)
+{
+	size_t i;
+	for (i=0; i<results.playerCnt; i++) {
+		bool isNew;
+		ResultProcessorChannel *rpc = resultProcessor.GetChannel(results.player[i].id,registerID, isNew);
+		if (isNew) {
+			rpc->SetLogger(&log);
+			rpc->SetName(fullName.c_str());
+			rpc->StartStream(ip->GetOutputDir());
+			log.Log(Logger::INFO,"created new result process channel '%s'", rpc->GetName());
+		}
+		rpc->Add(results.player[i]);
+	}
 }
 
 const char * SimulatorBase::GetBaseName() const
@@ -246,9 +431,11 @@ void SimulatorBase::SetSuffix(const char* suffix)
 	}
 }
 
-Interpreter::Interpreter() :
+Interpreter::Interpreter(ResultProcessor& rp, const char *outputPath) :
+	resultProcessor(rp),
 	file(NULL),
 	fileName(NULL),
+	outputDir(outputPath),
 	process(false)
 {
 }
@@ -260,7 +447,7 @@ Interpreter::~Interpreter()
 
 void Interpreter::AddSimulator(SimulatorBase& simulator)
 {
-	unsigned int id = (unsigned)simulators.size() + 1;
+	unsigned int id = (unsigned)simulators.size() + 100;
 	simulators.push_back(&simulator);
 	simulator.ip=this;
 	simulator.registerID = id;
@@ -401,7 +588,7 @@ void Interpreter::SimulateInterpolation()
 		results.playerCnt = 0;
 		bool res = sim->DoInterpolation(interpolation, results);
 		if (res && results.playerCnt) {
-			// take results and add them to the per-player log
+			sim->ProcessResults(interpolation, results);
 		}
 	}
 	size_t i;
@@ -429,6 +616,15 @@ void Interpreter::ProcessEnqueue()
 				p.firstSeen = ts;
 			}
 			p.lastSeen = ts;
+			bool isNew;
+			ResultProcessorChannel *rpc = resultProcessor.GetChannel(p.id, 1, isNew);
+			if (isNew) {
+				rpc->SetLogger(&log);
+				rpc->SetName("raw_buffers");
+				rpc->StartStream(GetOutputDir());
+				log.Log(Logger::INFO,"created new result process channel '%s'", rpc->GetName());
+			}
+			rpc->Add(currentSnapshots.snapshot[i]);
 		}
 	}
 	SimulateBufferEnqueue();
@@ -505,7 +701,28 @@ void Interpreter::ProcessLerpEnd()
 	c.waitForRespawn_after = waitForRespawn;
 	log.Log(Logger::DEBUG, "got LERP_END for player %u waitForRespwan=%u",c.A.id,c.waitForRespawn_after);
 	Player &p=gameState.GetPlayer(c.A.id);
+	// process the original interpolation
+	lerp(c.A.state.pos,c.B.state.pos,p.origState.pos,c.t);
+	slerp(c.A.state.rot,c.B.state.rot,p.origState.rot,c.t);
+	p.origState.timestamp = interpolation.timestamp;
 
+	bool isNew;
+	ResultProcessorChannel *rpc = resultProcessor.GetChannel(p.id, 0, isNew);
+	if (isNew) {
+		rpc->SetLogger(&log);
+		rpc->SetName("original_interpolation");
+		rpc->StartStream(GetOutputDir());
+		log.Log(Logger::INFO,"created new result process channel '%s'", rpc->GetName());
+	}
+	rpc->Add(p.origState);
+	rpc = resultProcessor.GetChannel(p.id, 2, isNew);
+	if (isNew) {
+		rpc->SetLogger(&log);
+		rpc->SetName("raw_most_recent");
+		rpc->StartStream(GetOutputDir());
+		log.Log(Logger::INFO,"created new result process channel '%s'", rpc->GetName());
+	}
+	rpc->Add(p.mostRecentState);
 }
 
 bool Interpreter::ProcessCommand()
@@ -573,32 +790,15 @@ bool Interpreter::ProcessFile(const char *filename)
 	}
 
 	process = true;
+	resultProcessor.Clear();
 	// process the file until end or error is reached
 	while (process && ProcessCommand());
 
 	CloseFile();
+	resultProcessor.Finish();
+
 	return true;
 }
 
 
 }; // namespace OlmodPlayerDumpState 
-
-
-int main(int argc, char **argv)
-{
-	const char *dir = (argc>2)?argv[2]:".";
-
-	OlmodPlayerDumpState::SimulatorBase s1;
-	OlmodPlayerDumpState::Interpreter interpreter;
-
-	s1.SetSuffix("test1");
-
-	interpreter.GetLogger().SetLogFile("interpreter.log",dir);
-	interpreter.GetLogger().SetLogLevel(OlmodPlayerDumpState::Logger::DEBUG);
-	interpreter.GetLogger().SetStdoutStderr(false);
-	interpreter.AddSimulator(s1);
-
-	s1.SetLogging(OlmodPlayerDumpState::Logger::DEBUG,  dir);
-	int exit_code = !interpreter.ProcessFile((argc > 1)?argv[1]:"playerstatedump0.olmd");
-	return exit_code;
-}

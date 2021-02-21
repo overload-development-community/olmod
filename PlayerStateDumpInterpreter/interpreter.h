@@ -48,6 +48,11 @@ struct PlayerState {
 struct PlayerSnapshot {
 	uint32_t id;
 	PlayerState state;
+
+	void Copy(uint32_t pId, const PlayerState& pState) {
+		id = pId;
+		state = pState;
+	}
 };
 
 struct PlayerSnapshotMessage {
@@ -168,15 +173,67 @@ class Logger {
 };
 
 class Interpreter;
+class ResultProcessor;
+
+class ResultProcessorChannel {
+	protected:
+		std::FILE *fStream;
+		Logger* log;
+		std::vector<PlayerState> data;
+		std::string name;
+		uint32_t objectId;
+		uint32_t playerId;
+		friend class ResultProcessor;
+
+		virtual void Clear();
+		virtual void Finish();
+		virtual void StreamOut(const PlayerState& s);
+
+	public:
+		ResultProcessorChannel(uint32_t player, uint32_t object);
+		virtual ~ResultProcessorChannel();
+
+		virtual void Add(const PlayerState& s);
+		void Add(const PlayerSnapshot& s);
+
+		virtual void SetName(const char *n);
+		virtual bool StartStream(const char *dir);
+		virtual void StopStream();
+		virtual void SetLogger(Logger* l) {log=l;}
+
+		virtual const char *GetName() const {return name.c_str();}
+};
+
+class ResultProcessor {
+	protected:
+		typedef std::pair<uint32_t,uint32_t> channelID;
+		typedef std::map<channelID,ResultProcessorChannel*> ChannelMap;
+		ChannelMap channels;
+
+		friend class Interpreter;
+
+		virtual ResultProcessorChannel* CreateChannel(channelID id);
+		virtual void Clear();
+		virtual void Finish();
+	public:
+		ResultProcessor();
+		virtual ~ResultProcessor();
+
+		virtual ResultProcessorChannel* GetChannel(uint32_t playerId, uint32_t objectId, bool& isNew);
+};
+
 class SimulatorBase {
 
 	protected:
+		ResultProcessor& resultProcessor;
+
 		std::string fullName;
 		std::string nameSuffix;
 		unsigned int registerID;
 
 		const Interpreter* ip;
 		SimulatorGameState gameState;
+		std::vector<ResultProcessorChannel*> resultProcessors;
 		Logger log;
 
 		friend class Interpreter;
@@ -190,12 +247,14 @@ class SimulatorBase {
 		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg);
 		virtual void DoBufferUpdate(const UpdateCycle& updateInfo);
 		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
+		virtual void ProcessResults(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
 
 		virtual void UpdateName();
 		virtual const char *GetName() const;
 		virtual const char *GetBaseName() const;
 	public:
-		SimulatorBase();
+		SimulatorBase(ResultProcessor& rp);
+		virtual ~SimulatorBase();
 
 		Logger& GetLogger() {return log;}
 		bool SetLogging(Logger::LogLevel l=Logger::WARN, const char *dir=".", bool enableStd=false);
@@ -207,9 +266,11 @@ typedef std::vector<SimulatorBase*> SimulatorSet;
 class Interpreter {
 	protected:
 		Logger log;
+		ResultProcessor& resultProcessor;
 		GameState gameState;
 		std::FILE *file;
 		const char *fileName;
+		const char *outputDir;
 		bool process;
 		PlayerSnapshotMessage currentSnapshots;
 		UpdateCycle update;
@@ -239,7 +300,7 @@ class Interpreter {
 		bool ProcessCommand();
 
 	public:
-		Interpreter();
+		Interpreter(ResultProcessor& rp, const char *outputPath=".");
 		~Interpreter();
 
 		void AddSimulator(SimulatorBase& simulator);
@@ -248,6 +309,7 @@ class Interpreter {
 
 		Logger& GetLogger() {return log;};
 		const GameState& GetGameState() const {return gameState;}
+		const char *GetOutputDir() const {return outputDir;}
 
 };	
 
