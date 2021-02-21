@@ -233,7 +233,25 @@ class ResultProcessor {
 		virtual ResultProcessorChannel* GetChannel(uint32_t playerId, uint32_t objectId, bool& isNew);
 };
 
+struct InstrumentationPoint {
+	uint64_t count;
+	std::string name;
+
+	InstrumentationPoint();
+	void ToLog(Logger& log) const;
+};
+
 class SimulatorBase {
+	private:
+		typedef enum {
+			INSTR_ENQUEUE=0,
+			INSTR_UPDATE,
+			INSTR_INTERPOLATE,
+
+			INSTR_COUNT
+		} InstrumentationPointEnums;
+
+		InstrumentationPoint instrp[INSTR_COUNT];
 
 	protected:
 		ResultProcessor& resultProcessor;
@@ -259,10 +277,13 @@ class SimulatorBase {
 		virtual void DoBufferUpdate(const UpdateCycle& updateInfo);
 		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
 		virtual void ProcessResults(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
+		void DumpInstrumentationPoints(const InstrumentationPoint* insts, size_t count);
+		virtual void Finish();
 
 		virtual void UpdateName();
 		virtual const char *GetName() const;
 		virtual const char *GetBaseName() const;
+
 	public:
 		SimulatorBase(ResultProcessor& rp);
 		virtual ~SimulatorBase();

@@ -9,6 +9,21 @@ namespace OlmodPlayerDumpState {
 namespace Simulator {
 
 class Original : public SimulatorBase {
+
+	private:
+		typedef enum {
+			INSTR_UPDATE_BUFFERS_SKIPPED,
+			INSTR_UPDATE_PATH_INIT_3,
+			INSTR_UPDATE_PATH_TAKE_1,
+			INSTR_UPDATE_PATH_TAKE_2,
+			INSTR_INTERPOLATE_FRAME_01,
+			INSTR_INTERPOLATE_FRAME_12,
+
+			INSTR_COUNT
+		} InstrumentationPointEnums;
+
+		InstrumentationPoint instrp[INSTR_COUNT];
+
 	protected:
 		typedef std::queue<PlayerSnapshotMessage> MsgQueue;
 
@@ -36,6 +51,7 @@ class Original : public SimulatorBase {
 		bool LerpRemotePlayer(PlayerSnapshot& p, size_t idx, const InterpolationCycle& interpolationInfo, const PlayerSnapshot&A, const PlayerSnapshot& B, float t);
 		float CalculateLerpParameter(float timestamp);
 
+		virtual void Finish();
 	public:
 		Original(ResultProcessor& rp);
 		virtual ~Original();

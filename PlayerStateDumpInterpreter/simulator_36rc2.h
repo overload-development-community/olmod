@@ -7,6 +7,18 @@ namespace OlmodPlayerDumpState {
 namespace Simulator {
 
 class Olmod36RC2 : public Original {
+	private:
+		typedef enum {
+			INSTR_UPDATE_BUFFERS_SKIPPED,
+			INSTR_UPDATE_NO_BUFFER,
+			INSTR_UPDATE_1_BUFFER,
+			INSTR_UPDATE_2_BUFFERS,
+
+			INSTR_COUNT
+		} InstrumentationPointEnums;
+
+		InstrumentationPoint instrp[INSTR_COUNT];
+
 	protected:
 		float mms_ship_lag_compensation_max;
 		float mms_ship_lag_compensation_scale;
@@ -21,6 +33,7 @@ class Olmod36RC2 : public Original {
 		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
 		bool LerpRemotePlayer(PlayerSnapshot& p, size_t idx, const InterpolationCycle& interpolationInfo, const PlayerSnapshot&A, const PlayerSnapshot& B, float t);
 		float CalculateLerpParameter(float timestamp);
+		virtual void Finish();
 
 	public:
 		Olmod36RC2(ResultProcessor& rp);

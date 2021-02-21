@@ -12,6 +12,10 @@ Olmod36RC2::Olmod36RC2(ResultProcessor& rp) :
 	mms_ship_lag_compensation_scale(50.0f),
 	ping(-1000)
 {
+	instrp[INSTR_UPDATE_BUFFERS_SKIPPED].name = "36RC2_BUFFER_UPDATE_SKIPPED";
+	instrp[INSTR_UPDATE_NO_BUFFER].name = "36RC2_BUFFER_UPDATE_NONE";
+	instrp[INSTR_UPDATE_1_BUFFER].name = "36RC2_BUFFER_UPDATE_1";
+	instrp[INSTR_UPDATE_2_BUFFERS].name = "36RC2_BUFFER_UPDATE_2";
 }
 
 Olmod36RC2::~Olmod36RC2()
@@ -62,16 +66,20 @@ void Olmod36RC2::DoBufferUpdate(const UpdateCycle& updateInfo)
 		Original::DoBufferUpdate(updateInfo);
 	} else {
 		if (m_PendingPlayerSnapshotMesages.size() < 1) {
+			instrp[INSTR_UPDATE_NO_BUFFER].count++;
 			return;
 		} else if (m_PendingPlayerSnapshotMesages.size() == 1) {
 			SetInterpolationBuffer(1, m_InterpolationBuffer_contents[2]);
 			SetInterpolationBuffer(2, PendingSnapshotDequeue());
+			instrp[INSTR_UPDATE_1_BUFFER].count++;
 		} else {
 			while (m_PendingPlayerSnapshotMesages.size() > 2) {
+				instrp[INSTR_UPDATE_BUFFERS_SKIPPED].count++;
 				m_PendingPlayerSnapshotMesages.pop();
 			}
 			SetInterpolationBuffer(1, PendingSnapshotDequeue());
 			SetInterpolationBuffer(2, PendingSnapshotDequeue());
+			instrp[INSTR_UPDATE_2_BUFFERS].count++;
 
 		}
 		m_InterpolationStartTime = updateInfo.timestamp;
@@ -136,6 +144,12 @@ float Olmod36RC2::CalculateLerpParameter(float timestamp)
 		num = 0.0f;
 	}
 	return num / fixedDeltaTime;
+}
+
+void Olmod36RC2::Finish()
+{
+	Original::Finish();
+	DumpInstrumentationPoints(instrp, INSTR_COUNT);
 }
 
 } // namespace Simulator;

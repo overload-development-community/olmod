@@ -291,11 +291,24 @@ ResultProcessorChannel* ResultProcessor::GetChannel(uint32_t playerId, uint32_t 
 	return it->second;
 }
 
+InstrumentationPoint::InstrumentationPoint() :
+	count(0)
+{
+}
+
+void InstrumentationPoint::ToLog(Logger& log) const
+{
+	log.Log(Logger::INFO, "instrumentation point '%s': %llu times", name.c_str(), (unsigned long long)count);
+}
+
 SimulatorBase::SimulatorBase(ResultProcessor& rp) :
 	resultProcessor(rp),
 	registerID(0),
 	ip(NULL)
 {
+	instrp[INSTR_ENQUEUE].name = "BASE_BUFFER_ENQUEUE";
+	instrp[INSTR_UPDATE].name = "BASE_BUFFER_UPDATE";
+	instrp[INSTR_INTERPOLATE].name = "BASE_INTERPOLATE";
 	UpdateName();
 }
 
@@ -369,17 +382,20 @@ void SimulatorBase::UpdateWaitForRespawn(uint32_t id, uint32_t doReset, size_t i
 void SimulatorBase::DoBufferEnqueue(const PlayerSnapshotMessage& msg)
 {
 	log.Log(Logger::INFO, "BufferEnqueue for %u players", (unsigned)msg.snapshot.size());
+	instrp[INSTR_ENQUEUE].count++;
 }
 
 void SimulatorBase::DoBufferUpdate(const UpdateCycle& updateInfo)
 {
 
 	log.Log(Logger::INFO, "BufferUpdate at %fs %fs", updateInfo.timestamp, updateInfo.m_InterpolationStartTime_before);
+	instrp[INSTR_UPDATE].count++;
 }
 
 bool SimulatorBase::DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results)
 {
 	log.Log(Logger::INFO, "Interpolation at %fs original ping %d", interpolationInfo.timestamp, interpolationInfo.ping);
+	instrp[INSTR_INTERPOLATE].count++;
 	return false;
 }
 
@@ -436,6 +452,19 @@ void SimulatorBase::SetSuffix(const char* suffix)
 	} else {
 		nameSuffix.clear();
 	}
+}
+
+void SimulatorBase::DumpInstrumentationPoints(const InstrumentationPoint* insts, size_t count)
+{
+	for (size_t i=0; i<count; i++) {
+		insts[i].ToLog(log);
+	}
+}
+
+void SimulatorBase::Finish()
+{
+	log.Log(Logger::INFO, "finish");
+	DumpInstrumentationPoints(instrp, INSTR_COUNT);
 }
 
 Interpreter::Interpreter(ResultProcessor& rp, const char *outputPath) :
@@ -802,6 +831,11 @@ bool Interpreter::ProcessFile(const char *filename)
 	while (process && ProcessCommand());
 
 	CloseFile();
+
+	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
+		SimulatorBase *sim = (*it);
+		sim->Finish();
+	}
 	resultProcessor.Finish();
 
 	return true;

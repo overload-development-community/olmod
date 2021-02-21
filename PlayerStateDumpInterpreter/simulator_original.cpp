@@ -9,6 +9,13 @@ Original::Original(ResultProcessor& rp) :
 	m_InterpolationStartTime(0.0f),
 	fixedDeltaTime(1.0f/60.0f)
 {
+	instrp[INSTR_UPDATE_BUFFERS_SKIPPED].name = "ORIGINAL_BUFFERS_SKIPPED";
+	instrp[INSTR_UPDATE_PATH_INIT_3].name = "ORIGINAL_BUFFER_INIT_3";
+	instrp[INSTR_UPDATE_PATH_TAKE_1].name = "ORIGINAL_BUFFER_UPDATE_TAKE_1";
+	instrp[INSTR_UPDATE_PATH_TAKE_2].name = "ORIGINAL_BUFFER_UPDATE_TAKE_2";
+	instrp[INSTR_INTERPOLATE_FRAME_01].name = "ORIGINAL_INTERPOLATE_01";
+	instrp[INSTR_INTERPOLATE_FRAME_12].name = "ORIGINAL_INTERPOLATE_12";
+
 	m_InterpolationBuffer[0] = NULL;
 	m_InterpolationBuffer[1] = NULL;
 	m_InterpolationBuffer[2] = NULL;
@@ -70,12 +77,13 @@ void Original::DoBufferEnqueue(const PlayerSnapshotMessage& msg)
 void Original::DoBufferUpdate(const UpdateCycle& updateInfo)
 {
 	SimulatorBase::DoBufferUpdate(updateInfo);
-	if (m_InterpolationBuffer[0] = NULL) {
+	if (m_InterpolationBuffer[0] == NULL) {
 		if (m_PendingPlayerSnapshotMesages.size() >= 3) {
 			SetInterpolationBuffer(0, PendingSnapshotDequeue());
 			SetInterpolationBuffer(1, PendingSnapshotDequeue());
 			SetInterpolationBuffer(2, PendingSnapshotDequeue());
 			m_InterpolationStartTime = updateInfo.timestamp;
+			instrp[INSTR_UPDATE_PATH_INIT_3].count++;
 		}
 	} else {
 		if (m_PendingPlayerSnapshotMesages.size() == 0) {
@@ -86,7 +94,8 @@ void Original::DoBufferUpdate(const UpdateCycle& updateInfo)
 		if ( num2 == 2 && m_PendingPlayerSnapshotMesages.size() < 2) {
 			return;
 		}
-		while (m_PendingPlayerSnapshotMesages.size() > 3 + num2) {
+		while (m_PendingPlayerSnapshotMesages.size() > 3 + (size_t)num2) {
+			instrp[INSTR_UPDATE_BUFFERS_SKIPPED].count++;
 			m_PendingPlayerSnapshotMesages.pop();
 		}
 		if (num2 == 1) {
@@ -98,11 +107,13 @@ void Original::DoBufferUpdate(const UpdateCycle& updateInfo)
 			} else {
 				m_InterpolationStartTime += fixedDeltaTime;
 			}
+			instrp[INSTR_UPDATE_PATH_TAKE_1].count++;
 		} else {
 			SetInterpolationBuffer(0, m_InterpolationBuffer_contents[1]);
 			SetInterpolationBuffer(1, PendingSnapshotDequeue());
 			SetInterpolationBuffer(2, PendingSnapshotDequeue());
 			m_InterpolationStartTime = updateInfo.timestamp;
+			instrp[INSTR_UPDATE_PATH_TAKE_2].count++;
 		}
 	}
 }
@@ -120,10 +131,12 @@ bool Original::DoInterpolation(const InterpolationCycle& interpolationInfo, Inte
 		playerSnapshotToClientMessage = m_InterpolationBuffer[0];
 		playerSnapshotToClientMessage2 = m_InterpolationBuffer[1];
 		num = clamp(num/0.5f, 0.0f, 1.0f);
+		instrp[INSTR_INTERPOLATE_FRAME_01].count++;
 	} else {
 		playerSnapshotToClientMessage = m_InterpolationBuffer[1];
 		playerSnapshotToClientMessage2 = m_InterpolationBuffer[2];
 		num = clamp((num-0.5f)/0.5f, 0.0f, 1.0f);
+		instrp[INSTR_INTERPOLATE_FRAME_12].count++;
 	}
 
 	for (size_t i=0; i<gameState.playerCnt; i++) {
@@ -177,6 +190,12 @@ float Original::CalculateLerpParameter(float timestamp)
 		num = 0.0f;
 	}
 	return clamp(num / (2.0f * fixedDeltaTime), 0.0f, 1.0f);
+}
+
+void Original::Finish()
+{
+	SimulatorBase::Finish();
+	DumpInstrumentationPoints(instrp, INSTR_COUNT);
 }
 
 } // namespace Simulator;
