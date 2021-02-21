@@ -306,6 +306,9 @@ SimulatorBase::SimulatorBase(ResultProcessor& rp) :
 	registerID(0),
 	ip(NULL)
 {
+	instrp[INSTR_DMAX_SHENANIGANS].name = "DMAX_SHENANIGANS";
+	instrp[INSTR_DMAX_SHENANIGANS].count = (uint64_t)-1;  //we still love you, dmax...
+
 	instrp[INSTR_ENQUEUE].name = "BASE_BUFFER_ENQUEUE";
 	instrp[INSTR_UPDATE].name = "BASE_BUFFER_UPDATE";
 	instrp[INSTR_INTERPOLATE].name = "BASE_INTERPOLATE";

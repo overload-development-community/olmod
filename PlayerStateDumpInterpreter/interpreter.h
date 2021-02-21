@@ -244,7 +244,8 @@ struct InstrumentationPoint {
 class SimulatorBase {
 	private:
 		typedef enum {
-			INSTR_ENQUEUE=0,
+			INSTR_DMAX_SHENANIGANS=0,
+			INSTR_ENQUEUE,
 			INSTR_UPDATE,
 			INSTR_INTERPOLATE,
 
