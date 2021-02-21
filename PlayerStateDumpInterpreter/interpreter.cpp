@@ -1,5 +1,7 @@
 #include "interpreter.h"
 
+#include <sstream>
+
 namespace OlmodPlayerDumpState {
 
 GameState::GameState() :
@@ -19,6 +21,15 @@ Player& GameState::GetPlayer(uint32_t id)
 		return players[id];
 	}
 	return (it->second);
+}
+
+const Player* GameState::FindPlayer(uint32_t id) const
+{
+	PlayerMap::const_iterator it = players.find(id);
+	if (it == players.cend()) {
+		return NULL;
+	}
+	return &(it->second);
 }
 
 SimulatorGameState::SimulatorGameState() :
@@ -54,11 +65,15 @@ void Logger::Stop()
 
 bool Logger::SetLogFile(const char *filename, const char *dir)
 {
-	char buf[16384];
+
 	Stop();
-	if (buf) {
-		snprintf(buf, sizeof(buf), "%s/%s", dir, filename);
-		return Start(buf);
+	if (filename) {
+		std::stringstream str;
+		if (dir) {
+			str << dir << '/';
+		}
+		str << filename;
+		return Start(str.str().c_str());
 	}
 	return true;
 }
@@ -109,8 +124,11 @@ void Logger::Log(LogLevel l, const char *fmt, ...)
 }
 
 SimulatorBase::SimulatorBase() :
+	registerID(0),
 	ip(NULL)
-{}
+{
+	UpdateName();
+}
 
 void SimulatorBase::SyncGamestate(const GameState& gs)
 {
@@ -146,9 +164,30 @@ void SimulatorBase::SyncGamestate(const GameState& gs)
 	gameState.playersCycle = gs.playersCycle;
 }
 
+void SimulatorBase::UpdateWaitForRespawn(const GameState& gs)
+{
+	size_t i;
+	for (i=0; i<gameState.playerCnt; i++) {
+		const Player* master = gs.FindPlayer(gameState.player[i].id);
+		if (master) {
+			UpdateWaitForRespawn(gameState.player[i].id, master->waitForRespawnReset, i);
+		} else {
+			log.Log(Logger::WARN, "failed to find player %u in global gamestate (UpdateWaitForRespawn)", (unsigned)gameState.player[i].id);
+		}
+	}
+}
+
 void SimulatorBase::NewPlayer(Player& p, size_t idx)
 {
-	log.Log(Logger::DEBUG, "new player %u", (unsigned)p.id);
+	log.Log(Logger::INFO, "new player %u, total players: %u", (unsigned)p.id,(unsigned)gameState.playerCnt);
+}
+
+void SimulatorBase::UpdateWaitForRespawn(uint32_t id, uint32_t doReset, size_t idx)
+{
+	if (doReset) {
+		log.Log(Logger::DEBUG, "player %u: waitForRespwan was reset to true in the original dump", (unsigned)id);
+		gameState.player[idx].waitForRespawn = 0;
+	}
 }
 
 void SimulatorBase::DoBufferEnqueue(const PlayerSnapshotMessage& msg)
@@ -168,19 +207,43 @@ bool SimulatorBase::DoInterpolation(const InterpolationCycle& interpolationInfo,
 	return false;
 }
 
-const char * SimulatorBase::GetName() const
+const char * SimulatorBase::GetBaseName() const
 {
 	return "base";
 }
 
-bool SimulatorBase::SetLogging(Logger::LogLevel l, const char *id, const char *dir, bool enableStd)
+const char * SimulatorBase::GetName() const
 {
-	char buf[16384];
+	return fullName.c_str();
+}
 
-	snprintf(buf, sizeof(buf), "sim_%s_%s.log", GetName(),id);
+void SimulatorBase::UpdateName()
+{
+	std::stringstream str;
+	str << "sim" << registerID << "_" << GetBaseName();
+	if (!nameSuffix.empty()) {
+		str << "_" << nameSuffix;
+	}
+	fullName = str.str();
+}
+
+bool SimulatorBase::SetLogging(Logger::LogLevel l, const char *dir, bool enableStd)
+{
+	std::stringstream str;
+
 	log.SetLogLevel(l);
 	log.SetStdoutStderr(enableStd);
-	return log.SetLogFile(buf, dir);
+	str << fullName << ".log";
+	return log.SetLogFile(str.str().c_str(), dir);
+}
+
+void SimulatorBase::SetSuffix(const char* suffix)
+{
+	if (suffix) {
+		nameSuffix = std::string(suffix);
+	} else {
+		nameSuffix.clear();
+	}
 }
 
 Interpreter::Interpreter() :
@@ -197,9 +260,12 @@ Interpreter::~Interpreter()
 
 void Interpreter::AddSimulator(SimulatorBase& simulator)
 {
-	log.Log(Logger::DEBUG, "adding simulator");
+	unsigned int id = (unsigned)simulators.size() + 1;
 	simulators.push_back(&simulator);
 	simulator.ip=this;
+	simulator.registerID = id;
+	simulator.UpdateName();
+	log.Log(Logger::DEBUG, "added simulator '%s'", simulator.GetName());
 }
 
 void Interpreter::DropSimulators()
@@ -330,6 +396,7 @@ void Interpreter::SimulateInterpolation()
 	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
 		SimulatorBase *sim = (*it);
 		sim->SyncGamestate(gameState);
+		sim->UpdateWaitForRespawn(gameState);
 		InterpolationResults results;
 		results.playerCnt = 0;
 		bool res = sim->DoInterpolation(interpolation, results);
@@ -523,12 +590,15 @@ int main(int argc, char **argv)
 
 	OlmodPlayerDumpState::SimulatorBase s1;
 	OlmodPlayerDumpState::Interpreter interpreter;
+
+	s1.SetSuffix("test1");
+
 	interpreter.GetLogger().SetLogFile("interpreter.log",dir);
 	interpreter.GetLogger().SetLogLevel(OlmodPlayerDumpState::Logger::DEBUG);
 	interpreter.GetLogger().SetStdoutStderr(false);
 	interpreter.AddSimulator(s1);
 
-	s1.SetLogging(OlmodPlayerDumpState::Logger::DEBUG, "s1", dir);
+	s1.SetLogging(OlmodPlayerDumpState::Logger::DEBUG,  dir);
 	int exit_code = !interpreter.ProcessFile((argc > 1)?argv[1]:"playerstatedump0.olmd");
 	return exit_code;
 }
