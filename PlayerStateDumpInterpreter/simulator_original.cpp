@@ -162,6 +162,7 @@ bool Original::LerpRemotePlayer(PlayerSnapshot& p, size_t idx, const Interpolati
 		}
 	} 
 
+	t = clamp(t,0.0f, 1.0f);
 	lerp(A.state.pos,B.state.pos,p.state.pos,t);
 	slerp(A.state.rot, B.state.rot,p.state.rot,t);
 	p.state.timestamp = interpolationInfo.timestamp;
