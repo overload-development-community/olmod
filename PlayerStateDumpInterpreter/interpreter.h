@@ -1,6 +1,8 @@
 #ifndef OLMD_INTERPRETER_H
 #define OLMD_INTERPRETER_H
 
+#include "math_helper.h"
+
 #include <string>
 #include <map>
 #include <vector>
@@ -27,7 +29,7 @@ enum Command {
 
 struct PlayerState {
 	float pos[3];
-	float rot[3];
+	CQuaternion rot;
 	float timestamp;
 
 	void Invalidate()
@@ -36,10 +38,10 @@ struct PlayerState {
 		pos[1] = 0.0f;
 		pos[2] = 0.0f;
 
-		rot[0] = 0.0f;
-		rot[1] = 0.0f;
-		rot[2] = 0.0f;
-		rot[3] = 0.0f;
+		rot.v[0] = 0.0f;
+		rot.v[1] = 0.0f;
+		rot.v[2] = 0.0f;
+		rot.v[3] = 1.0f;
 
 		timestamp = -1;
 	}

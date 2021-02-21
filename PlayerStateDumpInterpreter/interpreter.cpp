@@ -206,11 +206,17 @@ void ResultProcessorChannel::StopStream()
 
 void ResultProcessorChannel::StreamOut(const PlayerState& s)
 {
-	fprintf(fStream, "%f\t%f\t%f\t%f\n",
+	float yawPitchRoll[3];
+
+	s.rot.ToEuler(yawPitchRoll);
+	fprintf(fStream, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n",
 			s.timestamp,
 			s.pos[0],
 			s.pos[1],
-			s.pos[2]);
+			s.pos[2],
+			yawPitchRoll[0],
+			yawPitchRoll[1],
+			yawPitchRoll[2]);
 }
 
 void ResultProcessorChannel::Add(const PlayerState& s)
@@ -549,10 +555,10 @@ void Interpreter::ReadPlayerSnapshot(PlayerSnapshot& s)
 	s.state.pos[0] = ReadFloat();
 	s.state.pos[1] = ReadFloat();
 	s.state.pos[2] = ReadFloat();
-	s.state.rot[0] = ReadFloat();
-	s.state.rot[1] = ReadFloat();
-	s.state.rot[2] = ReadFloat();
-	s.state.rot[3] = ReadFloat();
+	s.state.rot.v[0] = ReadFloat();
+	s.state.rot.v[1] = ReadFloat();
+	s.state.rot.v[2] = ReadFloat();
+	s.state.rot.v[3] = ReadFloat();
 	if (!file) {
 		log.Log(Logger::WARN, "failed to read PlayerSnapshot");
 	}
