@@ -5,9 +5,11 @@
 #include <map>
 #include <vector>
 #include <cstdio>
-
+#include <cstdarg>
 
 namespace OlmodPlayerDumpState {
+
+const int MAX_PLAYERS = 32;
 
 enum Command {
 	NONE = 0,
@@ -108,24 +110,72 @@ struct GameState {
 	Player& GetPlayer(uint32_t id);
 };
 
-class InterpolationResults {
-	std::vector<PlayerSnapshot> players;
+struct SimulatorGameState {
+	Player player[MAX_PLAYERS];
+	size_t playerCnt;
+	float m_InterpolationStartTime;
 };
 
+struct InterpolationResults {
+	Player player[MAX_PLAYERS];
+	size_t playerCnt;
+};
+
+class Logger {
+	public:
+		typedef enum {
+			FATAL=0,
+			ERROR,
+			WARN,
+			INFO,
+			DEBUG
+		} LogLevel;
+	protected:
+		std::FILE *file;
+		std::FILE *copyWarnings;
+		std::FILE *copyInfos;
+
+		LogLevel level;
+
+		bool Start(const char *filename);
+		void Stop();
+
+	public:
+		Logger();
+		~Logger();
+
+		bool SetLogFile(const char *filename, const char *dir=".");
+		void SetLogLevel(LogLevel l);
+		void SetStdoutStderr(bool enabled=true);
+		void Log(LogLevel l, const char *fmt, ...);
+};
+
+class Interpreter;
 class SimulatorBase {
-	
+
+	protected:
+		SimulatorGameState gameState;
+		Logger log;
+
+		friend class Interpreter;
+
+		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg);
+		virtual void DoBufferUpdate(const UpdateCycle& updateInfo);
+		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
+
+		virtual const char *GetName() const;
 	public:
 		SimulatorBase();
 
-		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg, GameState& gameState);
-		virtual void DoBufferUpdate(const UpdateCycle& upateInfo, GameState& gameState);
-		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, GameState& gameState, InterpolationResults& results);
+		Logger& GetLogger() {return log;}
+		bool SetLogging(Logger::LogLevel l=Logger::WARN, const char *id="", const char *dir=".", bool enableStd=false);
 };
 
 typedef std::vector<SimulatorBase*> SimulatorSet;
 
 class Interpreter {
 	protected:
+		Logger log;
 		GameState gameState;
 		std::FILE *file;
 		const char *fileName;
@@ -165,6 +215,8 @@ class Interpreter {
 		void AddSimulator(SimulatorBase& simulator);
 		void DropSimulators();
 		bool ProcessFile(const char *filename);
+
+		Logger& GetLogger() {return log;};
 
 };	
 
