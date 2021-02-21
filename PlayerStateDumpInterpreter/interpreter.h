@@ -86,6 +86,15 @@ struct InterpolationCycle {
 	InterpolationCycle() :
 		valid(false)
 	{}
+
+	const LerpCycle* FindLerp(uint32_t id) const {
+		for (size_t i=0; i<lerps.size(); i++) {
+			if (lerps[i].A.id == id) {
+				return &lerps[i];
+			}
+		}
+		return NULL;
+	}
 };
 
 struct Player {

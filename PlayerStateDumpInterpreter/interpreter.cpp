@@ -106,6 +106,7 @@ void Logger::Log(LogLevel l, const char *fmt, ...)
 		va_start(args, fmt);
 		std::vfprintf(file, fmt, args);
 		std::fputc('\n', file);
+		std::fflush(file);
 		va_end(args);
 	}
 	if (l >= INFO && copyInfos) {

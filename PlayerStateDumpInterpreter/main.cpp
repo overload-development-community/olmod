@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "simulator_original.h"
 
 #include <clocale>
 
@@ -8,7 +9,7 @@ int main(int argc, char **argv)
 
 	std::setlocale(LC_ALL,"C");
 	OlmodPlayerDumpState::ResultProcessor rp;
-	OlmodPlayerDumpState::SimulatorBase s1(rp);
+	OlmodPlayerDumpState::Simulator::Original s1(rp);
 	OlmodPlayerDumpState::Interpreter interpreter(rp, dir);
 
 	s1.SetSuffix("test1");

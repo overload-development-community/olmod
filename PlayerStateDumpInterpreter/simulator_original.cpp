@@ -1,0 +1,182 @@
+#include "simulator_original.h"
+#include "math_helper.h"
+
+namespace OlmodPlayerDumpState {
+namespace Simulator {
+
+Original::Original(ResultProcessor& rp) :
+	SimulatorBase(rp),
+	m_InterpolationStartTime(0.0f),
+	fixedDeltaTime(1.0f/60.0f)
+{
+	m_InterpolationBuffer[0] = NULL;
+	m_InterpolationBuffer[1] = NULL;
+	m_InterpolationBuffer[2] = NULL;
+}
+
+Original::~Original()
+{
+}
+
+const char *Original::GetBaseName() const
+{
+	return "original";
+}
+
+void Original::SetInterpolationBuffer(int idx, const PlayerSnapshotMessage& msg)
+{
+	m_InterpolationBuffer_contents[idx]=msg;
+	m_InterpolationBuffer[idx] = &m_InterpolationBuffer_contents[idx];
+}
+
+void Original::ResetInterpolationBuffer(int idx)
+{
+	m_InterpolationBuffer[idx] = NULL;
+}
+
+PlayerSnapshot* Original::GetPlayerSnapshotFromInterpolationBuffer(uint32_t playerId, PlayerSnapshotMessage* msg)
+{
+	if (!msg) {
+		return NULL;
+	}
+	for (size_t i=0; i< msg->snapshot.size(); i++) {
+		if (msg->snapshot[i].id == playerId) {
+			return &msg->snapshot[i];
+		}
+	}
+	return NULL;
+}
+
+PlayerSnapshotMessage Original::PendingSnapshotDequeue()
+{
+	PlayerSnapshotMessage msg;
+
+	if (m_PendingPlayerSnapshotMesages.size() > 0) {
+		msg = m_PendingPlayerSnapshotMesages.front();
+		m_PendingPlayerSnapshotMesages.pop();
+	} else {
+		log.Log(Logger::WARN, "attempt to dequeue from empyty m_PendingPlayerSnapshotMesages queue!");
+	}
+
+	return msg;
+}
+
+void Original::DoBufferEnqueue(const PlayerSnapshotMessage& msg)
+{
+	SimulatorBase::DoBufferEnqueue(msg);
+	m_PendingPlayerSnapshotMesages.push(msg);
+}
+
+void Original::DoBufferUpdate(const UpdateCycle& updateInfo)
+{
+	SimulatorBase::DoBufferUpdate(updateInfo);
+	if (m_InterpolationBuffer[0] = NULL) {
+		if (m_PendingPlayerSnapshotMesages.size() >= 3) {
+			SetInterpolationBuffer(0, PendingSnapshotDequeue());
+			SetInterpolationBuffer(1, PendingSnapshotDequeue());
+			SetInterpolationBuffer(2, PendingSnapshotDequeue());
+			m_InterpolationStartTime = updateInfo.timestamp;
+		}
+	} else {
+		if (m_PendingPlayerSnapshotMesages.size() == 0) {
+			return;
+		}
+		float num = CalculateLerpParameter(updateInfo.timestamp);
+		int num2=((!(num >= 1.0f)) ? 1 : 2);
+		if ( num2 == 2 && m_PendingPlayerSnapshotMesages.size() < 2) {
+			return;
+		}
+		while (m_PendingPlayerSnapshotMesages.size() > 3 + num2) {
+			m_PendingPlayerSnapshotMesages.pop();
+		}
+		if (num2 == 1) {
+			SetInterpolationBuffer(0, m_InterpolationBuffer_contents[1]);
+			SetInterpolationBuffer(1, m_InterpolationBuffer_contents[2]);
+			SetInterpolationBuffer(2, PendingSnapshotDequeue());
+			if (num <= 0.5f) {
+				m_InterpolationStartTime = updateInfo.timestamp;
+			} else {
+				m_InterpolationStartTime += fixedDeltaTime;
+			}
+		} else {
+			SetInterpolationBuffer(0, m_InterpolationBuffer_contents[1]);
+			SetInterpolationBuffer(1, PendingSnapshotDequeue());
+			SetInterpolationBuffer(2, PendingSnapshotDequeue());
+			m_InterpolationStartTime = updateInfo.timestamp;
+		}
+	}
+}
+
+bool Original::DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results)
+{
+	log.Log(Logger::INFO, "Interpolation at %fs original ping %d", interpolationInfo.timestamp, interpolationInfo.ping);
+	if (m_InterpolationBuffer[0] == NULL || m_InterpolationBuffer[1] == NULL || m_InterpolationBuffer[2] == NULL) {
+		return false;
+	}
+	float num = CalculateLerpParameter(interpolationInfo.timestamp);
+	PlayerSnapshotMessage *playerSnapshotToClientMessage = NULL;
+	PlayerSnapshotMessage *playerSnapshotToClientMessage2 = NULL;
+	if (num <= 0.5f) {
+		playerSnapshotToClientMessage = m_InterpolationBuffer[0];
+		playerSnapshotToClientMessage2 = m_InterpolationBuffer[1];
+		num = clamp(num/0.5f, 0.0f, 1.0f);
+	} else {
+		playerSnapshotToClientMessage = m_InterpolationBuffer[1];
+		playerSnapshotToClientMessage2 = m_InterpolationBuffer[2];
+		num = clamp((num-0.5f)/0.5f, 0.0f, 1.0f);
+	}
+
+	for (size_t i=0; i<gameState.playerCnt; i++) {
+		const Player& cp=gameState.player[i];
+		PlayerSnapshot& p=results.player[results.playerCnt];
+		p.id=cp.id;
+		PlayerSnapshot* playerSnapshotFromInterpolationBuffer = GetPlayerSnapshotFromInterpolationBuffer(p.id, playerSnapshotToClientMessage);
+		PlayerSnapshot* playerSnapshotFromInterpolationBuffer2 = GetPlayerSnapshotFromInterpolationBuffer(p.id, playerSnapshotToClientMessage2);
+		if (playerSnapshotFromInterpolationBuffer != NULL && playerSnapshotFromInterpolationBuffer2 != NULL) {
+			if (LerpRemotePlayer(p, i, interpolationInfo, *playerSnapshotFromInterpolationBuffer, *playerSnapshotFromInterpolationBuffer2, num)) {
+				results.playerCnt++;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool Original::LerpRemotePlayer(PlayerSnapshot& p, size_t idx, const InterpolationCycle& interpolationInfo, const PlayerSnapshot&A, const PlayerSnapshot& B, float t)
+{
+	Player& gp=gameState.player[idx];
+
+	// we do not track respawn and death position, but we have captured the
+	// resulting decision
+	const LerpCycle *lc = interpolationInfo.FindLerp(p.id);
+	if (gp.waitForRespawn) {
+		if (lc) {
+			if (lc->waitForRespawn_after) {
+				return false;
+			}
+			gp.waitForRespawn = 0;
+
+		} else {
+			log.Log(Logger::WARN,"ignoring missing Lerp data for player");
+			gp.waitForRespawn = 0;
+		}
+	} 
+
+	lerp(A.state.pos,B.state.pos,p.state.pos,t);
+	slerp(A.state.rot, B.state.rot,p.state.rot,t);
+	p.state.timestamp = interpolationInfo.timestamp;
+
+	return true;	
+}
+
+float Original::CalculateLerpParameter(float timestamp)
+{
+	float num = timestamp - m_InterpolationStartTime;
+	if (num < 0.0f) {
+		num = 0.0f;
+	}
+	return clamp(num / (2.0f * fixedDeltaTime), 0.0f, 1.0f);
+}
+
+} // namespace Simulator;
+} // namespace OlmodPlayerDumpState 
