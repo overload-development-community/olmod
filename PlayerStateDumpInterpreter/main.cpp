@@ -1,5 +1,6 @@
 #include "interpreter.h"
 #include "simulator_original.h"
+#include "simulator_36rc2.h"
 
 #include <clocale>
 
@@ -9,17 +10,20 @@ int main(int argc, char **argv)
 
 	std::setlocale(LC_ALL,"C");
 	OlmodPlayerDumpState::ResultProcessor rp;
-	OlmodPlayerDumpState::Simulator::Original s1(rp);
+	OlmodPlayerDumpState::Simulator::Original sOVL(rp);
+	OlmodPlayerDumpState::Simulator::Olmod36RC2 sOlmod36RC2(rp);
 	OlmodPlayerDumpState::Interpreter interpreter(rp, dir);
 
-	s1.SetSuffix("test1");
+	sOVL.SetSuffix("vanilla");
 
 	interpreter.GetLogger().SetLogFile("interpreter.log",dir);
 	interpreter.GetLogger().SetLogLevel(OlmodPlayerDumpState::Logger::DEBUG);
 	interpreter.GetLogger().SetStdoutStderr(false);
-	interpreter.AddSimulator(s1);
+	interpreter.AddSimulator(sOVL);
+	interpreter.AddSimulator(sOlmod36RC2);
 
-	s1.SetLogging(OlmodPlayerDumpState::Logger::DEBUG,  dir);
+	sOVL.SetLogging(OlmodPlayerDumpState::Logger::DEBUG,  dir);
+	sOlmod36RC2.SetLogging(OlmodPlayerDumpState::Logger::DEBUG,  dir);
 	int exit_code = !interpreter.ProcessFile((argc > 1)?argv[1]:"playerstatedump0.olmd");
 	return exit_code;
 }

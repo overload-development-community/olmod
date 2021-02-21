@@ -109,7 +109,7 @@ void Original::DoBufferUpdate(const UpdateCycle& updateInfo)
 
 bool Original::DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results)
 {
-	log.Log(Logger::INFO, "Interpolation at %fs original ping %d", interpolationInfo.timestamp, interpolationInfo.ping);
+	SimulatorBase::DoInterpolation(interpolationInfo, results);
 	if (m_InterpolationBuffer[0] == NULL || m_InterpolationBuffer[1] == NULL || m_InterpolationBuffer[2] == NULL) {
 		return false;
 	}
