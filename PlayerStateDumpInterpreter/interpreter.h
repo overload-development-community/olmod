@@ -88,13 +88,22 @@ struct Player {
 	float firstSeen;
 	float lastSeen;
 	uint32_t waitForRespawn;
+	uint32_t waitForRespawnReset;
 	PlayerState origState;
 	PlayerState mostRecentState;
+	void *data;
 	
 	Player() {
+		Invalidate();
+	}
+
+	void Invalidate()
+	{
+		data=NULL;
 		id = (uint32_t)-1;
 		firstSeen = lastSeen = -1.0f;
 		waitForRespawn=0;
+		waitForRespawnReset=0;
 		origState.Invalidate();
 		mostRecentState.Invalidate();
 	}
@@ -102,9 +111,13 @@ struct Player {
 
 typedef std::map<uint32_t, Player> PlayerMap;
 
+class Logger;
+struct SimulatorGameState;
 struct GameState {
 	PlayerMap players;
+	uint32_t playersCycle;
 	float m_InterpolationStartTime;
+	int ping;
 
 	GameState();
 	Player& GetPlayer(uint32_t id);
@@ -113,7 +126,10 @@ struct GameState {
 struct SimulatorGameState {
 	Player player[MAX_PLAYERS];
 	size_t playerCnt;
+	uint32_t playersCycle;
 	float m_InterpolationStartTime;
+
+	SimulatorGameState();
 };
 
 struct InterpolationResults {
@@ -154,10 +170,15 @@ class Interpreter;
 class SimulatorBase {
 
 	protected:
+		const Interpreter* ip;
 		SimulatorGameState gameState;
 		Logger log;
 
 		friend class Interpreter;
+
+		void SyncGamestate(const GameState& gs);
+
+		virtual void NewPlayer(Player& p, size_t idx);
 
 		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg);
 		virtual void DoBufferUpdate(const UpdateCycle& updateInfo);
@@ -184,7 +205,6 @@ class Interpreter {
 		UpdateCycle update;
 		InterpolationCycle interpolation;
 		SimulatorSet simulators;
-
 
 		bool OpenFile(const char *filename);
 		void CloseFile();
@@ -217,6 +237,7 @@ class Interpreter {
 		bool ProcessFile(const char *filename);
 
 		Logger& GetLogger() {return log;};
+		const GameState& GetGameState() const {return gameState;}
 
 };	
 

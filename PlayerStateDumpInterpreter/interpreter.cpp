@@ -3,13 +3,16 @@
 namespace OlmodPlayerDumpState {
 
 GameState::GameState() :
-	m_InterpolationStartTime(-1.0f)
+	playersCycle(0),
+	m_InterpolationStartTime(-1.0f),
+	ping(0)
 {}
 
 Player& GameState::GetPlayer(uint32_t id)
 {
 	PlayerMap::iterator it = players.find(id);
 	if (it == players.end()) {
+		playersCycle++;
 		Player p;
 		p.id = id;
 		players[id] = p;
@@ -17,6 +20,11 @@ Player& GameState::GetPlayer(uint32_t id)
 	}
 	return (it->second);
 }
+
+SimulatorGameState::SimulatorGameState() :
+	playerCnt(0),
+	playersCycle(0)
+{}
 
 Logger::Logger() :
 	file(NULL),
@@ -100,8 +108,48 @@ void Logger::Log(LogLevel l, const char *fmt, ...)
 	}
 }
 
-SimulatorBase::SimulatorBase()
+SimulatorBase::SimulatorBase() :
+	ip(NULL)
 {}
+
+void SimulatorBase::SyncGamestate(const GameState& gs)
+{
+	if (gameState.playersCycle == gs.playersCycle && gameState.playerCnt == gs.players.size()) {
+		return;
+	}
+
+	log.Log(Logger::DEBUG, "syncing player count from %u to %u, cycle %u to %u", (unsigned)gameState.playerCnt, (unsigned)gs.players.size(), (unsigned)gameState.playersCycle, (unsigned)gs.playersCycle);
+
+	PlayerMap::const_iterator it;
+	for (it=gs.players.cbegin(); it != gs.players.cend(); it++) {
+		const Player& cp=it->second;
+		size_t i;
+		bool found = false;
+		for (i=0; i<gameState.playerCnt; i++) {
+			if (gameState.player[i].id == cp.id) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			if (gameState.playerCnt + 1 < MAX_PLAYERS) {
+				Player& x=gameState.player[gameState.playerCnt++];
+				x.Invalidate();
+				x.id = cp.id;
+				NewPlayer(x,gameState.playerCnt-1);
+			} else {
+				log.Log(Logger::WARN, "failed to add new player %u, reached limit", (unsigned)cp.id);
+			}
+		}
+	}
+
+	gameState.playersCycle = gs.playersCycle;
+}
+
+void SimulatorBase::NewPlayer(Player& p, size_t idx)
+{
+	log.Log(Logger::DEBUG, "new player %u", (unsigned)p.id);
+}
 
 void SimulatorBase::DoBufferEnqueue(const PlayerSnapshotMessage& msg)
 {
@@ -151,6 +199,7 @@ void Interpreter::AddSimulator(SimulatorBase& simulator)
 {
 	log.Log(Logger::DEBUG, "adding simulator");
 	simulators.push_back(&simulator);
+	simulator.ip=this;
 }
 
 void Interpreter::DropSimulators()
@@ -259,7 +308,9 @@ void Interpreter::SimulateBufferEnqueue()
 {
 	log.Log(Logger::INFO, "ENQUEUE: for %u players", (unsigned)currentSnapshots.snapshot.size());
 	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
-		(*it)->DoBufferEnqueue(currentSnapshots);
+		SimulatorBase *sim = (*it);
+		sim->SyncGamestate(gameState);
+		sim->DoBufferEnqueue(currentSnapshots);
 	}
 }
 
@@ -267,7 +318,9 @@ void Interpreter::SimulateBufferUpdate()
 {
 	log.Log(Logger::INFO,"UPDATE");
 	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
-		(*it)->DoBufferUpdate(update);
+		SimulatorBase *sim = (*it);
+		sim->SyncGamestate(gameState);
+		sim->DoBufferUpdate(update);
 	}
 }
 
@@ -275,11 +328,21 @@ void Interpreter::SimulateInterpolation()
 {
 	log.Log(Logger::INFO, "INTERPOLATE");
 	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
+		SimulatorBase *sim = (*it);
+		sim->SyncGamestate(gameState);
 		InterpolationResults results;
-		bool res= (*it)->DoInterpolation(interpolation, results);
-		if (res) {
+		results.playerCnt = 0;
+		bool res = sim->DoInterpolation(interpolation, results);
+		if (res && results.playerCnt) {
 			// take results and add them to the per-player log
 		}
+	}
+	size_t i;
+	for (i=0;i<interpolation.lerps.size();i++) {
+		const LerpCycle& l=interpolation.lerps[i];
+		Player& p=gameState.GetPlayer(l.A.id);
+		p.waitForRespawn = l.waitForRespawn_after;
+		p.waitForRespawnReset = 0;
 	}
 }
 
@@ -328,6 +391,7 @@ void Interpreter::ProcessInterpolateBegin()
 	interpolation.valid=true;
 	interpolation.timestamp = ReadFloat();
 	interpolation.ping = ReadInt();
+	gameState.ping = interpolation.ping;
 	log.Log(Logger::DEBUG, "got INTERPOLATE_BEGIN at %fs ping %d", interpolation.timestamp, interpolation.ping);
 	interpolation.lerps.clear();
 }
@@ -352,6 +416,15 @@ void Interpreter::ProcessLerpBegin()
 	c.t=ReadFloat();
 	log.Log(Logger::DEBUG, "got LERP_BEGIN for player %u waitForRespwan=%u t=%f",c.A.id,c.waitForRespawn_before,c.t);
 	interpolation.lerps.push_back(c);
+	Player &p=gameState.GetPlayer(c.A.id);
+	if (!p.waitForRespawn && c.waitForRespawn_before) {
+		// was enabled outside of the stuff we were inspecting...
+		log.Log(Logger::DEBUG,"player %u: waitForRespawn war reset to 1",(unsigned)p.id);
+		p.waitForRespawnReset = 1;
+	} else {
+		p.waitForRespawnReset = 0;
+	}
+	p.waitForRespawn=c.waitForRespawn_before;
 }
 
 void Interpreter::ProcessLerpEnd()
@@ -365,10 +438,6 @@ void Interpreter::ProcessLerpEnd()
 	c.waitForRespawn_after = waitForRespawn;
 	log.Log(Logger::DEBUG, "got LERP_END for player %u waitForRespwan=%u",c.A.id,c.waitForRespawn_after);
 	Player &p=gameState.GetPlayer(c.A.id);
-	if (!p.waitForRespawn && c.waitForRespawn_after) {
-		// was enabled outside of the stuff we were inspecting...
-		p.waitForRespawn = 1;
-	}
 
 }
 
