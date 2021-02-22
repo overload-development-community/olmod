@@ -56,7 +56,7 @@ namespace GameMod {
             if (MPObserver.Enabled) {
                 return 0f;
             }
-            float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
+            float time_ms = Math.Min(GameManager.m_local_player.m_avg_ping_ms,
                                       Menus.mms_weapon_lag_compensation_max);
             return (Menus.mms_weapon_lag_compensation_scale / 100f) * time_ms / 1000f;
 
@@ -67,7 +67,7 @@ namespace GameMod {
             if (MPObserver.Enabled) {
                 return 0f;
             }
-            float time_ms =  Math.Min(GameManager.m_local_player.m_avg_ping_ms,
+            float time_ms = Math.Min(GameManager.m_local_player.m_avg_ping_ms + Time.fixedDeltaTime, // fixedDeltaTime added here to make up for the frame that's lost in interpolation
                                       Menus.mms_ship_lag_compensation_max);
             return (Menus.mms_ship_lag_compensation_scale / 100f) * time_ms / 1000f;
 
@@ -226,7 +226,7 @@ namespace GameMod {
             }
 
             // Lookahead in frames.
-            float lookahead = 1f + (MPClientExtrapolation.GetShipExtrapolationTime() / Time.fixedDeltaTime);
+            float lookahead = MPClientExtrapolation.GetShipExtrapolationTime() / Time.fixedDeltaTime;
 
             // reduce oversteer by extrapolating less for rotation
             var rot_lookahead = lookahead * .5f;
