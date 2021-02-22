@@ -435,6 +435,7 @@ void SimulatorBase::UpdateName()
 	if (!nameSuffix.empty()) {
 		str << "_" << nameSuffix;
 	}
+	cfg.GetShortCfg(str,true);
 	fullName = str.str();
 }
 
@@ -468,6 +469,14 @@ void SimulatorBase::Finish()
 {
 	log.Log(Logger::INFO, "finish");
 	DumpInstrumentationPoints(instrp, INSTR_COUNT);
+}
+
+void SimulatorBase::Configure(const char *options)
+{
+	if (options) {
+		cfg.Parse(options);
+		UpdateName();
+	}
 }
 
 Interpreter::Interpreter(ResultProcessor& rp, const char *outputPath) :

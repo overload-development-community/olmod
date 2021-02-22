@@ -1,6 +1,7 @@
 #ifndef OLMD_INTERPRETER_H
 #define OLMD_INTERPRETER_H
 
+#include "config.h"
 #include "math_helper.h"
 
 #include <string>
@@ -256,6 +257,7 @@ class SimulatorBase {
 
 	protected:
 		ResultProcessor& resultProcessor;
+		Config cfg;
 
 		std::string fullName;
 		std::string nameSuffix;
@@ -292,6 +294,8 @@ class SimulatorBase {
 		Logger& GetLogger() {return log;}
 		bool SetLogging(Logger::LogLevel l=Logger::WARN, const char *dir=".", bool enableStd=false);
 		void SetSuffix(const char* suffix = NULL);
+
+		void Configure(const char *options);
 };
 
 typedef std::vector<SimulatorBase*> SimulatorSet;

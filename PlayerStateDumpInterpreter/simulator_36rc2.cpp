@@ -12,6 +12,10 @@ Olmod36RC2::Olmod36RC2(ResultProcessor& rp) :
 	mms_ship_lag_compensation_scale(50.0f),
 	ping(-1000)
 {
+	cfg.Add(ConfigParam(mms_ship_lag_compensation_max,"compensation_max", "max"));
+	cfg.Add(ConfigParam(mms_ship_lag_compensation_scale,"compensation_scale", "scale"));
+	cfg.Add(ConfigParam(ping,"ping"));
+
 	instrp[INSTR_UPDATE_BUFFERS_SKIPPED].name = "36RC2_BUFFER_UPDATE_SKIPPED";
 	instrp[INSTR_UPDATE_NO_BUFFER].name = "36RC2_BUFFER_UPDATE_NONE";
 	instrp[INSTR_UPDATE_1_BUFFER].name = "36RC2_BUFFER_UPDATE_1";
@@ -25,20 +29,6 @@ Olmod36RC2::~Olmod36RC2()
 const char *Olmod36RC2::GetBaseName() const
 {
 	return "olmod-0.3.6-rc2";
-}
-
-void Olmod36RC2::UpdateName()
-{
-	Original::UpdateName();
-
-	std::stringstream str;
-	str << fullName << "_" << "max" << mms_ship_lag_compensation_max << "_" << "sens" << mms_ship_lag_compensation_scale;
-	if (ping <= -1000) {
-		str << "_" << "realping";
-	} else {
-		str << "_ping" << ping;
-	}
-	fullName = str.str();
 }
 
 int Olmod36RC2::GetPing()

@@ -25,7 +25,6 @@ class Olmod36RC2 : public Original {
 		int ping; // set to <= -1000 to use the captured ping
 
 		virtual const char *GetBaseName() const;
-		virtual void UpdateName();
 
 		int GetPing();
 		float GetShipExtrapolationTime();
