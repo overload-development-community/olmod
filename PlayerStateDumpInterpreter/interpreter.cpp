@@ -125,7 +125,8 @@ void Logger::Log(LogLevel l, const char *fmt, ...)
 	}
 }
 
-ResultProcessorChannel::ResultProcessorChannel(uint32_t player, uint32_t object) :
+ResultProcessorChannel::ResultProcessorChannel(ResultProcessor& rp, uint32_t player, uint32_t object) :
+	resultProcessor(rp),
 	fStream(NULL),
 	log(NULL),
 	objectId(object),
@@ -204,12 +205,12 @@ void ResultProcessorChannel::StopStream()
 	}
 }
 
-void ResultProcessorChannel::StreamOut(const PlayerState& s)
+void ResultProcessorChannel::StreamOut(const PlayerState& s, size_t idx)
 {
 	float yawPitchRoll[3];
 
 	s.rot.ToEuler(yawPitchRoll);
-	fprintf(fStream, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n",
+	fprintf(fStream, "%f\t%f\t%f\t%f\t%f\t%f\t%f",
 			s.timestamp,
 			s.pos[0],
 			s.pos[1],
@@ -217,6 +218,15 @@ void ResultProcessorChannel::StreamOut(const PlayerState& s)
 			yawPitchRoll[0],
 			yawPitchRoll[1],
 			yawPitchRoll[2]);
+	if (resultProcessor.dumpDeltaPos && idx != (size_t)-1 && idx > 0) {
+		const PlayerState b=data[idx-1];
+		fprintf(fStream, "\t%f",s.timestamp-b.timestamp);
+		for (int k=0; k<3; k++) {
+			fprintf(fStream, "\t%f",s.pos[k]-b.pos[k]);
+			
+		}
+	}
+	fputc('\n',fStream);
 }
 
 void ResultProcessorChannel::Add(const PlayerState& s)
@@ -224,10 +234,10 @@ void ResultProcessorChannel::Add(const PlayerState& s)
 	if (log) {
 		log->Log(Logger::DEBUG, "rpc: adding data point at timestamp %fs", s.timestamp);
 	}
-	if (fStream) {
-		StreamOut(s);
-	}
 	data.push_back(s);
+	if (fStream) {
+		StreamOut(s, data.size()-1);
+	}
 }
 
 void ResultProcessorChannel::Add(const PlayerSnapshot& s)
@@ -240,8 +250,10 @@ void ResultProcessorChannel::Add(const PlayerSnapshot& s)
 	Add(s.state);
 }
 
-ResultProcessor::ResultProcessor()
+ResultProcessor::ResultProcessor() :
+	dumpDeltaPos(0)
 {
+	cfg.Add(ConfigParam(dumpDeltaPos,"dumpDeltaPos"));
 }
 
 ResultProcessor::~ResultProcessor()
@@ -254,9 +266,16 @@ ResultProcessor::~ResultProcessor()
 	channels.clear();
 }
 
+void ResultProcessor::Configure(const char *options)
+{
+	if (options) {
+		cfg.Parse(options);
+	}
+}
+
 ResultProcessorChannel* ResultProcessor::CreateChannel(channelID id)
 {
-	return new ResultProcessorChannel(id.first, id.second);
+	return new ResultProcessorChannel(*this, id.first, id.second);
 }
 
 void ResultProcessor::Clear()

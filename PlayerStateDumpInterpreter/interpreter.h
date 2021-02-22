@@ -189,6 +189,7 @@ class ResultProcessor;
 
 class ResultProcessorChannel {
 	protected:
+		ResultProcessor& resultProcessor;
 		std::FILE *fStream;
 		Logger* log;
 		std::vector<PlayerState> data;
@@ -196,15 +197,16 @@ class ResultProcessorChannel {
 		uint32_t objectId;
 		uint32_t playerId;
 		friend class ResultProcessor;
+		friend class Interpreter;
 
 		virtual void Clear();
 		virtual void Finish();
-		virtual void StreamOut(const PlayerState& s);
+		virtual void StreamOut(const PlayerState& s, size_t idx);
 
-	public:
-		ResultProcessorChannel(uint32_t player, uint32_t object);
+		ResultProcessorChannel(ResultProcessor& rp, uint32_t player, uint32_t object);
 		virtual ~ResultProcessorChannel();
-
+	
+	public:
 		virtual void Add(const PlayerState& s);
 		void Add(const PlayerSnapshot& s);
 
@@ -221,8 +223,12 @@ class ResultProcessor {
 		typedef std::pair<uint32_t,uint32_t> channelID;
 		typedef std::map<channelID,ResultProcessorChannel*> ChannelMap;
 		ChannelMap channels;
+		Config cfg;
+
+		int dumpDeltaPos;
 
 		friend class Interpreter;
+		friend class ResultProcessorChannel;
 
 		virtual ResultProcessorChannel* CreateChannel(channelID id);
 		virtual void Clear();
@@ -231,6 +237,7 @@ class ResultProcessor {
 		ResultProcessor();
 		virtual ~ResultProcessor();
 
+		void Configure(const char *options);
 		virtual ResultProcessorChannel* GetChannel(uint32_t playerId, uint32_t objectId, bool& isNew);
 };
 
