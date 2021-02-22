@@ -11,7 +11,8 @@ Original::Original(ResultProcessor& rp) :
 {
 	instrp[INSTR_UPDATE_BUFFERS_SKIPPED].name = "ORIGINAL_BUFFERS_SKIPPED";
 	instrp[INSTR_UPDATE_PATH_INIT_3].name = "ORIGINAL_BUFFER_INIT_3";
-	instrp[INSTR_UPDATE_PATH_TAKE_1].name = "ORIGINAL_BUFFER_UPDATE_TAKE_1";
+	instrp[INSTR_UPDATE_PATH_TAKE_1_1].name = "ORIGINAL_BUFFER_UPDATE_TAKE_1_NUM<=0.5";
+	instrp[INSTR_UPDATE_PATH_TAKE_1_2].name = "ORIGINAL_BUFFER_UPDATE_TAKE_1_NUM>0.5";
 	instrp[INSTR_UPDATE_PATH_TAKE_2].name = "ORIGINAL_BUFFER_UPDATE_TAKE_2";
 	instrp[INSTR_INTERPOLATE_FRAME_01].name = "ORIGINAL_INTERPOLATE_01";
 	instrp[INSTR_INTERPOLATE_FRAME_12].name = "ORIGINAL_INTERPOLATE_12";
@@ -104,10 +105,11 @@ void Original::DoBufferUpdate(const UpdateCycle& updateInfo)
 			SetInterpolationBuffer(2, PendingSnapshotDequeue());
 			if (num <= 0.5f) {
 				m_InterpolationStartTime = updateInfo.timestamp;
+				instrp[INSTR_UPDATE_PATH_TAKE_1_1].count++;
 			} else {
 				m_InterpolationStartTime += fixedDeltaTime;
+				instrp[INSTR_UPDATE_PATH_TAKE_1_2].count++;
 			}
-			instrp[INSTR_UPDATE_PATH_TAKE_1].count++;
 		} else {
 			SetInterpolationBuffer(0, m_InterpolationBuffer_contents[1]);
 			SetInterpolationBuffer(1, PendingSnapshotDequeue());
