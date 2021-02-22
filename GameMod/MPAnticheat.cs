@@ -19,7 +19,7 @@ namespace GameMod
                 return;
             }
 
-            if (!(__instance.c_player.IsPressed(CCInput.FIRE_WEAPON) && CanFire(__instance)))
+            if (!(__instance.c_player.JustPressed(CCInput.FIRE_WEAPON) && CanFire(__instance)))
             {
                 return;
             }
@@ -35,7 +35,7 @@ namespace GameMod
 
             if (__instance.m_refire_time > 0)
             {
-                __instance.m_refire_time = Mathf.Max(__instance.m_refire_time, 1f / 15f);
+                __instance.m_refire_time = Mathf.Max(__instance.m_refire_time, 1f / 20f);
             }
             return;
         }
