@@ -200,6 +200,12 @@ float Derhass1::CalculateLerpParameter(float timestamp)
 	return num / fixedDeltaTime;
 }
 
+void Derhass1::Start()
+{
+	Original::Start();
+	ClearInstrumentationPoints(instrp, INSTR_COUNT);
+}
+
 void Derhass1::Finish()
 {
 	Original::Finish();

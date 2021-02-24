@@ -393,6 +393,12 @@ bool Interpreter::ProcessFile(const char *filename)
 
 	process = true;
 	resultProcessor.Clear();
+
+	for (SimulatorSet::iterator it=simulators.begin(); it!=simulators.end(); it++) {
+		SimulatorBase *sim = (*it);
+		sim->Start();
+	}
+
 	// process the file until end or error is reached
 	while (process && ProcessCommand());
 

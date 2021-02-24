@@ -138,6 +138,12 @@ float Olmod36RC2::CalculateLerpParameter(float timestamp)
 	return num / fixedDeltaTime;
 }
 
+void Olmod36RC2::Start()
+{
+	Original::Start();
+	ClearInstrumentationPoints(instrp, INSTR_COUNT);
+}
+
 void Olmod36RC2::Finish()
 {
 	Original::Finish();

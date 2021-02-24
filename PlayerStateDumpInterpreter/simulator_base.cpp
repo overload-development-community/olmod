@@ -76,9 +76,6 @@ void SimulatorBase::UpdateWaitForRespawn(const GameState& gs)
 void SimulatorBase::NewPlayer(Player& p, size_t idx)
 {
 	log.Log(Logger::INFO, "new player %u, total players: %u", (unsigned)p.id,(unsigned)gameState.playerCnt);
-	if (idx != resultProcessors.size()) {
-		log.Log(Logger::ERROR, "mismatch in player to resultProcessors mapping!!!!");
-	}
 }
 
 void SimulatorBase::UpdateWaitForRespawn(uint32_t id, uint32_t doReset, size_t idx)
@@ -87,6 +84,12 @@ void SimulatorBase::UpdateWaitForRespawn(uint32_t id, uint32_t doReset, size_t i
 		log.Log(Logger::DEBUG, "player %u: waitForRespwan was reset to true in the original dump", (unsigned)id);
 		gameState.player[idx].waitForRespawn = 0;
 	}
+}
+
+void SimulatorBase::Start()
+{
+	log.Log(Logger::INFO, "start");
+	ClearInstrumentationPoints(instrp, INSTR_COUNT);
 }
 
 void SimulatorBase::DoBufferEnqueue(const PlayerSnapshotMessage& msg)
@@ -162,6 +165,13 @@ void SimulatorBase::SetSuffix(const char* suffix)
 		nameSuffix = std::string(suffix);
 	} else {
 		nameSuffix.clear();
+	}
+}
+
+void SimulatorBase::ClearInstrumentationPoints(InstrumentationPoint* insts, size_t count)
+{
+	for (size_t i=0; i<count; i++) {
+		insts[i].Clear();
 	}
 }
 

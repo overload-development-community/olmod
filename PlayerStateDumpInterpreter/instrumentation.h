@@ -14,6 +14,8 @@ struct InstrumentationPoint {
 
 	InstrumentationPoint();
 	void ToLog(Logger& log) const;
+
+	void Clear();
 };
 
 } // namespace OlmodPlayerDumpState

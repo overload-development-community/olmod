@@ -6,7 +6,6 @@ namespace Simulator {
 
 Original::Original(ResultProcessor& rp) :
 	SimulatorBase(rp),
-	m_InterpolationStartTime(0.0f),
 	fixedDeltaTime(1.0f/60.0f)
 {
 	instrp[INSTR_UPDATE_BUFFERS_SKIPPED].name = "ORIGINAL_BUFFERS_SKIPPED";
@@ -16,10 +15,6 @@ Original::Original(ResultProcessor& rp) :
 	instrp[INSTR_UPDATE_PATH_TAKE_2].name = "ORIGINAL_BUFFER_UPDATE_TAKE_2";
 	instrp[INSTR_INTERPOLATE_FRAME_01].name = "ORIGINAL_INTERPOLATE_01";
 	instrp[INSTR_INTERPOLATE_FRAME_12].name = "ORIGINAL_INTERPOLATE_12";
-
-	m_InterpolationBuffer[0] = NULL;
-	m_InterpolationBuffer[1] = NULL;
-	m_InterpolationBuffer[2] = NULL;
 }
 
 Original::~Original()
@@ -192,6 +187,17 @@ float Original::CalculateLerpParameter(float timestamp)
 		num = 0.0f;
 	}
 	return clamp(num / (2.0f * fixedDeltaTime), 0.0f, 1.0f);
+}
+
+void Original::Start()
+{
+	SimulatorBase::Start();
+	ClearInstrumentationPoints(instrp, INSTR_COUNT);
+
+	m_InterpolationBuffer[0] = NULL;
+	m_InterpolationBuffer[1] = NULL;
+	m_InterpolationBuffer[2] = NULL;
+	m_InterpolationStartTime = 0.0f;
 }
 
 void Original::Finish()

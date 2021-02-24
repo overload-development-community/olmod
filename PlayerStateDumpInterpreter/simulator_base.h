@@ -55,7 +55,6 @@ class SimulatorBase {
 
 		const Interpreter* ip;
 		SimulatorGameState gameState;
-		std::vector<ResultProcessorChannel*> resultProcessors;
 		Logger log;
 
 		friend class Interpreter;
@@ -66,12 +65,15 @@ class SimulatorBase {
 		virtual void NewPlayer(Player& p, size_t idx);
 		virtual void UpdateWaitForRespawn(uint32_t id, uint32_t doReset, size_t idx);
 
+		virtual void Start();
 		virtual void DoBufferEnqueue(const PlayerSnapshotMessage& msg);
 		virtual void DoBufferUpdate(const UpdateCycle& updateInfo);
 		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
 		virtual void ProcessResults(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
-		void DumpInstrumentationPoints(const InstrumentationPoint* insts, size_t count);
 		virtual void Finish();
+
+		void ClearInstrumentationPoints(InstrumentationPoint* insts, size_t count);
+		void DumpInstrumentationPoints(const InstrumentationPoint* insts, size_t count);
 
 		virtual void UpdateName();
 		virtual const char *GetName() const;

@@ -33,6 +33,8 @@ class Derhass1 : public Original {
 		virtual bool DoInterpolation(const InterpolationCycle& interpolationInfo, InterpolationResults& results);
 		bool LerpRemotePlayer(PlayerSnapshot& p, size_t idx, const InterpolationCycle& interpolationInfo, const PlayerSnapshot&A, const PlayerSnapshot& B, float t);
 		float CalculateLerpParameter(float timestamp);
+
+		virtual void Start();
 		virtual void Finish();
 
 	public:
