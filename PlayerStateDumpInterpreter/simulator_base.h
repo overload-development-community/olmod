@@ -16,7 +16,7 @@ namespace OlmodPlayerDumpState {
 struct GameState;
 class Interpreter;
 
-const int MAX_PLAYERS = 32;
+const size_t MAX_PLAYERS = 32;
 
 struct SimulatorGameState {
 	Player player[MAX_PLAYERS];

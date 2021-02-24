@@ -2,9 +2,26 @@
 #define OLMD_SIMULATOR_DERHASS1_H
 
 #include "simulator_original.h"
+#include "result_processor.h"
 
 namespace OlmodPlayerDumpState {
 namespace Simulator {
+
+struct PlayerExtraDH1 {
+	typedef enum {
+		AUX_PLAYER_LERP=0,
+
+		AUX_PLAYER_CHANNELS_COUNT
+	} AuxPlayerChannels;
+
+	ResultProcessorAuxChannel *rpcAux[AUX_PLAYER_CHANNELS_COUNT];
+
+	void Init();
+	void Clear();
+
+	PlayerExtraDH1();
+	~PlayerExtraDH1();
+};
 
 class Derhass1 : public Original {
 	private:
@@ -19,12 +36,24 @@ class Derhass1 : public Original {
 
 		InstrumentationPoint instrp[INSTR_COUNT];
 
+		typedef enum {
+			AUX_BUFFER_UPDATE=0,
+			AUX_INTERPOLATE,
+
+			AUX_CHANNELS_COUNT
+		} AuxChannels;
+
+		ResultProcessorAuxChannel* rpcAux[AUX_CHANNELS_COUNT];
+
+		PlayerExtraDH1 playerExtra[MAX_PLAYERS];
+
 	protected:
 		float mms_ship_lag_compensation_max;
 		float mms_ship_lag_compensation_scale;
 		int ping; // set to <= -1000 to use the captured ping
 
 		virtual const char *GetBaseName() const;
+		virtual void NewPlayer(Player& p, size_t idx);
 
 		int GetPing();
 		float GetShipExtrapolationTime();

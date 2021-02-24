@@ -79,6 +79,8 @@ class ResultProcessorAuxChannel : public ResultProcessorChannelBase {
 	public:
 		virtual void SetName(const char *n);
 		virtual void Add(float value);
+		virtual void Add(const float* values, size_t size);
+		virtual void Add(const PlayerState& s);
 		virtual void FlushCurrent();
 };
 

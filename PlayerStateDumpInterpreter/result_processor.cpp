@@ -200,6 +200,20 @@ void ResultProcessorAuxChannel::Add(float value)
 	currentData.push_back(value);
 }
 
+void ResultProcessorAuxChannel::Add(const float* values, size_t size)
+{
+	for (size_t i=0; i<size; i++) {
+		Add(values[i]);
+	}
+}
+
+void ResultProcessorAuxChannel::Add(const PlayerState& s)
+{
+	Add(s.timestamp);
+	Add(s.pos, 3);
+	Add(s.rot.v,4);
+}
+
 void ResultProcessorAuxChannel::FlushCurrent()
 {
 	if (currentData.size() > 0) {
