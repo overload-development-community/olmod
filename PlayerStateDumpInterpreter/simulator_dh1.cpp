@@ -1,4 +1,6 @@
 #include "simulator_dh1.h"
+
+#include "interpreter.h"
 #include "math_helper.h"
 
 #include <sstream>

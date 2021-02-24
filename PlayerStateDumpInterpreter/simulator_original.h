@@ -1,7 +1,8 @@
 #ifndef OLMD_SIMULATOR_ORIGINAL_H
 #define OLMD_SIMULATOR_ORIGINAL_H
 
-#include "interpreter.h"
+#include "simulator_base.h"
+#include "player_types.h"
 
 #include <queue>
 

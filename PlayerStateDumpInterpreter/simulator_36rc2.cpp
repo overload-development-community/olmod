@@ -1,4 +1,6 @@
 #include "simulator_36rc2.h"
+
+#include "interpreter.h"
 #include "math_helper.h"
 
 #include <sstream>
