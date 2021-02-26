@@ -251,6 +251,7 @@ namespace GameMod {
         static void Prefix(Player __instance)
         {
             __instance.m_snapshot_buffer.m_snapshots = new PlayerSnapshot[16];
+            MPNoPositionCompression.m_new_snapshot_buffer.m_snapshots = new NewPlayerSnapshot[16];
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)

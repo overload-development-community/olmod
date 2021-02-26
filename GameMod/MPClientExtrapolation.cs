@@ -162,6 +162,74 @@ namespace GameMod {
         }
     }
 
+    class MPClientShipReckoning{
+        // dead reckoning ship extrapolation for clients
+        public static float m_last_update_time;
+        public static float m_last_frame_time;
+        public static NewPlayerSnapshotToClientMessage m_last_update = new NewPlayerSnapshotToClientMessage();
+
+        static private MethodInfo _Client_GetPlayerFromNetId_Method = AccessTools.Method(typeof(Client), "GetPlayerFromNetId");
+
+        public static NewPlayerSnapshot GetPlayerSnapshot(Player p)
+        {
+            for (int i = 0; i < m_last_update.m_num_snapshots; i++)
+            {
+                NewPlayerSnapshot playerSnapshot = m_last_update.m_snapshots[i];
+                Player candidate = (Player)_Client_GetPlayerFromNetId_Method.Invoke(null, new object[] {playerSnapshot.m_net_id});
+
+                if (candidate == p)
+                {
+                    return playerSnapshot;
+                }
+            }
+            return null;
+        }
+
+        public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t){
+            player.c_player_ship.c_transform.localPosition = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos+snapshot.m_vel, t);
+            player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot*Quaternion.Euler(snapshot.m_vrot), t);
+            player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
+        }
+
+        public static void updatePlayerPositions(){
+            float now = NetworkMatch.m_match_elapsed_seconds;
+            float delta_t = MPClientShipReckoning.m_last_update_time - now;
+
+            foreach (Player player in Overload.NetworkManager.m_Players)
+            {
+                if (player != null && !player.isLocalPlayer && !player.m_spectator)
+                {
+                    extrapolatePlayer(player, GetPlayerSnapshot(player), delta_t);
+                }
+            }
+
+            MPClientShipReckoning.m_last_frame_time = now;
+        }
+
+
+    }
+
+    // called per frame
+    [HarmonyPatch(typeof(Client), "InterpolateRemotePlayers")]
+    class MPClientExtrapolation_ClientUpdate{
+        static bool Prefix(){
+            // This function is called once per frame from Client.Update()
+            MPClientShipReckoning.updatePlayerPositions();
+            return false;
+        }
+
+    }
+
+    // called per physics update
+    [HarmonyPatch(typeof(Client), "FixedUpdate")]
+    class MPClientExtrapolation_ClientFixedUpdate{
+        static bool Prefix(){
+            // Client.FixedUpdate() did nothing except call UpdateInterpolationBuffer,
+            // which we now ignore
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
     class MPClientExtrapolation_UpdateInterpolationBuffer {
 
@@ -194,7 +262,7 @@ namespace GameMod {
         }
     }
 
-    [HarmonyPatch(typeof(Client), "InterpolateRemotePlayers")]
+    /*[HarmonyPatch(typeof(Client), "InterpolateRemotePlayers")]
     class MPClientExtrapolation_InterpolateRemotePlayers {
         static private MethodInfo _Client_GetPlayerSnapshotFromInterpolationBuffer_Method = AccessTools.Method(typeof(Client), "GetPlayerSnapshotFromInterpolationBuffer");
 
@@ -262,5 +330,5 @@ namespace GameMod {
             float num = Mathf.Max(0f, Time.time - Client.m_InterpolationStartTime);
             return num / Time.fixedDeltaTime;
         }
-    }
+    }*/
 }
