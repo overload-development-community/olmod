@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Harmony;
 using Overload;
@@ -69,12 +70,12 @@ namespace GameMod {
                 writer.Write(m_snapshots[i].m_pos.y);
                 writer.Write(m_snapshots[i].m_pos.z);
                 writer.Write(m_snapshots[i].m_rot);
-                writer.Write(m_snapshots[i].m_vel.x);
-                writer.Write(m_snapshots[i].m_vel.y);
-                writer.Write(m_snapshots[i].m_vel.z);
-                writer.Write(m_snapshots[i].m_vrot.x);
-                writer.Write(m_snapshots[i].m_vrot.y);
-                writer.Write(m_snapshots[i].m_vrot.z);
+                writer.Write(HalfHelper.Compress(m_snapshots[i].m_vel.x));
+                writer.Write(HalfHelper.Compress(m_snapshots[i].m_vel.y));
+                writer.Write(HalfHelper.Compress(m_snapshots[i].m_vel.z));
+                writer.Write(HalfHelper.Compress(m_snapshots[i].m_vrot.x));
+                writer.Write(HalfHelper.Compress(m_snapshots[i].m_vrot.y));
+                writer.Write(HalfHelper.Compress(m_snapshots[i].m_vrot.z));
             }
         }
 
@@ -93,13 +94,13 @@ namespace GameMod {
                 pos.z = reader.ReadSingle();
                 Quaternion rot = reader.ReadQuaternion();
                 Vector3 vel = default(Vector3);
-                vel.x = reader.ReadSingle();
-                vel.y = reader.ReadSingle();
-                vel.z = reader.ReadSingle();
+                vel.x = HalfHelper.Decompress(reader.ReadUInt16());
+                vel.y = HalfHelper.Decompress(reader.ReadUInt16());
+                vel.z = HalfHelper.Decompress(reader.ReadUInt16());
                 Vector3 vrot = default(Vector3);
-                vrot.x = reader.ReadSingle();
-                vrot.y = reader.ReadSingle();
-                vrot.z = reader.ReadSingle();
+                vrot.x = HalfHelper.Decompress(reader.ReadUInt16());
+                vrot.y = HalfHelper.Decompress(reader.ReadUInt16());
+                vrot.z = HalfHelper.Decompress(reader.ReadUInt16());
                 m_snapshots[i] = new NewPlayerSnapshot(net_id, pos, rot,
                                                        vel, vrot);
             }
@@ -183,8 +184,8 @@ namespace GameMod {
                     playerSnapshot.m_net_id = player.netId;
                     playerSnapshot.m_pos = player.transform.position;
                     playerSnapshot.m_rot = player.transform.rotation;
-                    playerSnapshot.m_vel = new Vector3(); //player.c_player_ship.c_rigidbody.velocity;
-                    playerSnapshot.m_vrot = new Vector3(); // player.c_player_ship.c_rigidbody.angularVelocity;
+                    playerSnapshot.m_vel = player.c_player_ship.c_rigidbody.velocity;
+                    playerSnapshot.m_vrot = player.c_player_ship.c_rigidbody.angularVelocity;
                 }
             }
             if (m_snapshot_buffer.m_num_snapshots > 0)

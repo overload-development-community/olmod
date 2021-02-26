@@ -67,7 +67,7 @@ namespace GameMod {
             if (MPObserver.Enabled) {
                 return 0f;
             }
-            float time_ms = Math.Min(GameManager.m_local_player.m_avg_ping_ms + Time.fixedDeltaTime, // fixedDeltaTime added here to make up for the frame that's lost in interpolation
+            float time_ms = Math.Min(GameManager.m_local_player.m_avg_ping_ms,
                                       Menus.mms_ship_lag_compensation_max);
             return (Menus.mms_ship_lag_compensation_scale / 100f) * time_ms / 1000f;
 
@@ -193,7 +193,8 @@ namespace GameMod {
 
         public static void updatePlayerPositions(){
             float now = NetworkMatch.m_match_elapsed_seconds;
-            float delta_t = MPClientShipReckoning.m_last_update_time - now;
+            float delta_t = now - MPClientShipReckoning.m_last_update_time;
+            delta_t += MPClientExtrapolation.GetShipExtrapolationTime();
 
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
