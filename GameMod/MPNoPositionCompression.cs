@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection.Emit;
+using System.Linq;
 using Harmony;
 using Overload;
 using UnityEngine;
@@ -99,7 +100,8 @@ namespace GameMod {
         }
 
         public int m_num_snapshots;
-        public NewPlayerSnapshot[] m_snapshots = new NewPlayerSnapshot[16];
+        public NewPlayerSnapshot[] m_snapshots = Enumerable.Range(1, 16).Select(x => new NewPlayerSnapshot()).ToArray();
+        //public NewPlayerSnapshot[] m_snapshots = new NewPlayerSnapshot[16];
 
         /// <summary>
         /// Create a new player snapshot message from an old player snapshot message.
@@ -158,7 +160,6 @@ namespace GameMod {
     [HarmonyPatch(typeof(Server), "SendSnapshotsToPlayer")]
     public class MPNoPositionCompression_SendSnapshotsToPlayer{
 
-        public static NewPlayerSnapshot[] m_snapshots = new NewPlayerSnapshot[16];
         public static NewPlayerSnapshotToClientMessage m_snapshot_buffer = new NewPlayerSnapshotToClientMessage();
         public static bool Prefix(Player send_to_player){
             m_snapshot_buffer.m_num_snapshots = 0;
@@ -170,13 +171,13 @@ namespace GameMod {
                     playerSnapshot.m_net_id = player.netId;
                     playerSnapshot.m_pos = player.transform.position;
                     playerSnapshot.m_rot = player.transform.rotation;
-                    playerSnapshot.m_vel = player.c_player_ship.c_rigidbody.velocity;
-                    playerSnapshot.m_vrot = player.c_player_ship.c_rigidbody.angularVelocity;
+                    playerSnapshot.m_vel = new Vector3(); //player.c_player_ship.c_rigidbody.velocity;
+                    playerSnapshot.m_vrot = new Vector3(); // player.c_player_ship.c_rigidbody.angularVelocity;
                 }
             }
             if (m_snapshot_buffer.m_num_snapshots > 0)
             {
-                send_to_player.connectionToClient.SendByChannel(64, m_snapshot_buffer, 1);
+                send_to_player.connectionToClient.SendByChannel(MessageTypes.MsgNewPlayerSnapshotToClient, m_snapshot_buffer, 1);
             }
             return false;
         }
