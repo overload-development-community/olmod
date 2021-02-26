@@ -193,7 +193,7 @@ namespace GameMod {
 
         public static void updatePlayerPositions(){
             float now = NetworkMatch.m_match_elapsed_seconds;
-            float delta_t = MPClientShipReckoning.m_last_update_time - now;
+            float delta_t = now - MPClientShipReckoning.m_last_update_time;
 
             foreach (Player player in Overload.NetworkManager.m_Players)
             {

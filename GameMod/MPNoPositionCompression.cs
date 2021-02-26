@@ -183,8 +183,8 @@ namespace GameMod {
                     playerSnapshot.m_net_id = player.netId;
                     playerSnapshot.m_pos = player.transform.position;
                     playerSnapshot.m_rot = player.transform.rotation;
-                    playerSnapshot.m_vel = new Vector3(); //player.c_player_ship.c_rigidbody.velocity;
-                    playerSnapshot.m_vrot = new Vector3(); // player.c_player_ship.c_rigidbody.angularVelocity;
+                    playerSnapshot.m_vel = player.c_player_ship.c_rigidbody.velocity;
+                    playerSnapshot.m_vrot = player.c_player_ship.c_rigidbody.angularVelocity;
                 }
             }
             if (m_snapshot_buffer.m_num_snapshots > 0)
