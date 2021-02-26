@@ -199,7 +199,10 @@ namespace GameMod {
             {
                 if (player != null && !player.isLocalPlayer && !player.m_spectator)
                 {
-                    extrapolatePlayer(player, GetPlayerSnapshot(player), delta_t);
+                    NewPlayerSnapshot snapshot = GetPlayerSnapshot(player);
+                    if(snapshot != null){
+                        extrapolatePlayer(player, GetPlayerSnapshot(player), delta_t);
+                    }
                 }
             }
 
@@ -230,7 +233,7 @@ namespace GameMod {
         }
     }
 
-    [HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
+    /*[HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
     class MPClientExtrapolation_UpdateInterpolationBuffer {
 
         static bool Prefix(){
@@ -260,7 +263,7 @@ namespace GameMod {
                 return false;
             }
         }
-    }
+    }*/
 
     /*[HarmonyPatch(typeof(Client), "InterpolateRemotePlayers")]
     class MPClientExtrapolation_InterpolateRemotePlayers {

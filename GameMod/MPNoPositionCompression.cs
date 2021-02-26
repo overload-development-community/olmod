@@ -147,7 +147,8 @@ namespace GameMod {
                 return;
             }
 
-            Client.GetClient().RegisterHandler(MessageTypes.MsgNewPlayerSnapshotToClient, OnNewPlayerSnapshotToClient);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgNewPlayerSnapshotToClient,
+                                               OnNewPlayerSnapshotToClient);
         }
     }
 
