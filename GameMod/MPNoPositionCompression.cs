@@ -1,5 +1,3 @@
-﻿using System.Collections.Generic;
-using System.Reflection.Emit;
 using System.Linq;
 using Harmony;
 using Overload;
@@ -44,6 +42,14 @@ namespace GameMod {
         public Vector3 m_vel;
 
         public Vector3 m_vrot;
+
+        internal PlayerSnapshot ToOldSnapshot() {
+            return new PlayerSnapshot() {
+                m_net_id = this.m_net_id,
+                m_pos = this.m_pos,
+                m_rot = this.m_rot
+            };
+        }
     }
 
     /// <summary>
@@ -101,7 +107,13 @@ namespace GameMod {
 
         public int m_num_snapshots;
         public NewPlayerSnapshot[] m_snapshots = Enumerable.Range(1, 16).Select(x => new NewPlayerSnapshot()).ToArray();
-        //public NewPlayerSnapshot[] m_snapshots = new NewPlayerSnapshot[16];
+
+        internal PlayerSnapshotToClientMessage ToOldSnapshotMessage() {
+            return new PlayerSnapshotToClientMessage() {
+                m_num_snapshots = this.m_num_snapshots,
+                m_snapshots = this.m_snapshots.Select(x => x.ToOldSnapshot()).ToArray()
+            };
+        }
 
         /// <summary>
         /// Create a new player snapshot message from an old player snapshot message.
@@ -177,6 +189,11 @@ namespace GameMod {
             }
             if (m_snapshot_buffer.m_num_snapshots > 0)
             {
+                if (!MPNoPositionCompression.enabled || !MPTweaks.ClientHasTweak(send_to_player.connectionToClient.connectionId, "nocompress")) {
+                    send_to_player.connectionToClient.SendByChannel(64, m_snapshot_buffer.ToOldSnapshotMessage(), 1);
+                    return false;
+                }
+
                 send_to_player.connectionToClient.SendByChannel(MessageTypes.MsgNewPlayerSnapshotToClient, m_snapshot_buffer, 1);
             }
             return false;
