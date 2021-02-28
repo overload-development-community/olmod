@@ -203,6 +203,7 @@ namespace GameMod {
         }
 
         public static void updatePlayerPositions(){
+
             float now = NetworkMatch.m_match_elapsed_seconds;
             float delta_t = now - MPClientShipReckoning.m_last_update_time;
             delta_t += MPClientExtrapolation.GetShipExtrapolationTime();
@@ -251,6 +252,19 @@ namespace GameMod {
             return false;
         }
     }
+
+    // called when connecting to the server
+    [HarmonyPatch(typeof(Client), "Connect")]
+    class MPClientExtrapolation_Connect {
+        private static void Postfix()
+        {
+            if (Overload.NetworkManager.IsServer()) {
+                return;
+            }
+            MPClientShipReckoning.ResetForNewMatch();
+        }
+    }
+
 
     /*[HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
     class MPClientExtrapolation_UpdateInterpolationBuffer {
