@@ -69,7 +69,7 @@ namespace GameMod {
                 writer.Write(m_snapshots[i].m_pos.x);
                 writer.Write(m_snapshots[i].m_pos.y);
                 writer.Write(m_snapshots[i].m_pos.z);
-                writer.Write(m_snapshots[i].m_rot);
+                writer.Write(NetworkCompress.CompressQuaternion(m_snapshots[i].m_rot));
                 writer.Write(HalfHelper.Compress(m_snapshots[i].m_vel.x));
                 writer.Write(HalfHelper.Compress(m_snapshots[i].m_vel.y));
                 writer.Write(HalfHelper.Compress(m_snapshots[i].m_vel.z));
@@ -84,7 +84,7 @@ namespace GameMod {
         /// </summary>
         /// <param name="reader"></param>
         public override void Deserialize(NetworkReader reader) {
-            float timestamp = reader.ReadSingle();
+            m_server_timestamp = reader.ReadSingle();
             m_num_snapshots = (int)reader.ReadByte();
             for (int i = 0; i < m_num_snapshots; i++) {
                 NetworkInstanceId net_id = reader.ReadNetworkId();
@@ -92,7 +92,7 @@ namespace GameMod {
                 pos.x = reader.ReadSingle();
                 pos.y = reader.ReadSingle();
                 pos.z = reader.ReadSingle();
-                Quaternion rot = reader.ReadQuaternion();
+                Quaternion rot = NetworkCompress.DecompressQuaternion(reader.ReadUInt32());
                 Vector3 vel = default(Vector3);
                 vel.x = HalfHelper.Decompress(reader.ReadUInt16());
                 vel.y = HalfHelper.Decompress(reader.ReadUInt16());
@@ -106,6 +106,7 @@ namespace GameMod {
             }
         }
 
+        public float m_server_timestamp;
         public int m_num_snapshots;
         public NewPlayerSnapshot[] m_snapshots = Enumerable.Range(1, 16).Select(x => new NewPlayerSnapshot()).ToArray();
 
