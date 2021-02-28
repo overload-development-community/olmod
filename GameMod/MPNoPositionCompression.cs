@@ -153,8 +153,7 @@ namespace GameMod {
         public static void OnNewPlayerSnapshotToClient(NetworkMessage msg) {
             if (NetworkMatch.GetMatchState() == MatchState.PREGAME || NetworkMatch.InGameplay()) {
                 NewPlayerSnapshotToClientMessage item = msg.ReadMessage<NewPlayerSnapshotToClientMessage>();
-                MPClientShipReckoning.m_last_update = item;
-                MPClientShipReckoning.m_last_update_time = NetworkMatch.m_match_elapsed_seconds;
+                MPClientShipReckoning.AddNewPlayerSnapshot(item);
             }
         }
 

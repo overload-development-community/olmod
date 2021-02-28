@@ -229,6 +229,7 @@ namespace GameMod {
                 Menus.mms_ship_lag_compensation_max = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation_max);
                 Menus.mms_weapon_lag_compensation_scale = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
                 Menus.mms_ship_lag_compensation_scale = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
+                Menus.mms_ship_max_interpolate_frames = ModPrefs.GetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -271,6 +272,7 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation_max);
             ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
+            ModPrefs.SetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
             ModPrefs.Flush(filename + "mod");
         }
 
