@@ -106,7 +106,7 @@ namespace GameMod {
             }
         }
 
-        public float m_server_timestamp;
+        public float m_server_timestamp; // servers NetworkMatch.m_match_elapsed_seconds when packet sent, may change meaning in future
         public int m_num_snapshots;
         public NewPlayerSnapshot[] m_snapshots = Enumerable.Range(1, 16).Select(x => new NewPlayerSnapshot()).ToArray();
 

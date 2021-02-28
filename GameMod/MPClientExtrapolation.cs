@@ -170,6 +170,17 @@ namespace GameMod {
 
         static private MethodInfo _Client_GetPlayerFromNetId_Method = AccessTools.Method(typeof(Client), "GetPlayerFromNetId");
 
+        // Prepare for a new match
+        // resets all history data and metadata we keep
+        public static void ResetForNewMatch()
+        {
+
+            // TODO settle on timestamp source 
+            m_last_update_time = Time.time;
+            m_last_frame_time = Time.time;
+        }
+
+
         public static NewPlayerSnapshot GetPlayerSnapshot(Player p)
         {
             for (int i = 0; i < m_last_update.m_num_snapshots; i++)
@@ -218,6 +229,10 @@ namespace GameMod {
     class MPClientExtrapolation_ClientUpdate{
         static bool Prefix(){
             // This function is called once per frame from Client.Update()
+            if (Overload.NetworkManager.IsServer() || NetworkMatch.m_match_state != MatchState.PLAYING) {
+                // no need to move ships around
+                return false;
+            }
             MPClientShipReckoning.updatePlayerPositions();
             return false;
         }
@@ -228,6 +243,9 @@ namespace GameMod {
     [HarmonyPatch(typeof(Client), "FixedUpdate")]
     class MPClientExtrapolation_ClientFixedUpdate{
         static bool Prefix(){
+            if (Overload.NetworkManager.IsServer() || NetworkMatch.m_match_state != MatchState.PLAYING) {
+                return true;
+            }
             // Client.FixedUpdate() did nothing except call UpdateInterpolationBuffer,
             // which we now ignore
             return false;
