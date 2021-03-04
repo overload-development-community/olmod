@@ -229,6 +229,14 @@ namespace GameMod {
                 } else {
                     // next in sequence, as we expected
                     EnqueueToRing(msg);
+                    // this assumes the server sends 60Hz
+                    // during time dilation (timebombs!) this is not true,
+                    // it will actually send data packets _worth_ of 16.67ms real time, spread out
+                    // to longer intervals such as 24 ms.
+                    // However, this is not a problem, since the reference clock we sync to
+                    // is Time.time which has the timeScale already applied.
+                    // That means the 24ms tick will be seen as 16.67 in Time.time,
+                    // and everything cancles itself out nicely
                     m_last_update_time += Time.fixedDeltaTime;
                 }
                 // check if the time base is still plausible
@@ -323,10 +331,16 @@ namespace GameMod {
                     return;
                 }
 
-                delta_t = now + MPClientExtrapolation.GetShipExtrapolationTime() - m_last_update_time;
+                // NOTE: now and m_last_update_time indirectly have timeScale already applied, as they are based on Time.time
+                //       we need to adjust just the ping and the mms_ship_max_interpolate_frames offset...
+                //       Also note that the server still sends the unscaled velocities.
+                delta_t = now + Time.timeScale * MPClientExtrapolation.GetShipExtrapolationTime() - m_last_update_time;
                 // if we want interpolation, add this as a _negative) offset
                 // we use delta_t=0  as the base for from which we extrapolate into the future
-                delta_t -=  Menus.mms_ship_max_interpolate_frames * Time.fixedDeltaTime;
+                delta_t -=  Menus.mms_ship_max_interpolate_frames * Time.timeScale * Time.fixedDeltaTime;
+                // it might sound absurd, but after this point, the Time.fixedDeltaTime is correct
+                // and MUST NOT be scaled by timeScale. The data packets do contain 16.67ms of
+                // movement each, we already have taken the time dilation into account above...
                 // time difference in physics ticks
                 float delta_ticks = delta_t / Time.fixedDeltaTime;
                 // the number of frames we need to interpolate into
