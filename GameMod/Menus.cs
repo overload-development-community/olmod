@@ -9,6 +9,11 @@ namespace GameMod
 {
     public static class Menus
     {
+
+        //public static MenuState msServerBrowser = (MenuState)75;
+        public static MenuState msLagCompensation = (MenuState)76;
+        //public static UIElementType uiServerBrowser = (UIElementType)89;
+        public static UIElementType uiLagCompensation = (UIElementType)90;
         public static bool mms_ctf_boost { get; set; }
 
         public static string GetMMSCtfCarrierBoost()
@@ -39,11 +44,76 @@ namespace GameMod
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_classic_spawns));
         }
 
+        public static string GetMMSLagCompensationAdvanced()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_lag_compensation_advanced));
+        }
+
+        public static string GetMMSLagCompensation()
+        {
+            switch (mms_lag_compensation)
+            {
+                case 0:
+                default:
+                    return "OFF";
+                case 1:
+                    return "SHIPS ONLY";
+                case 2:
+                    return "WEAPONS ONLY";
+                case 3:
+                    return "ON";
+            }
+        }
+
+        public static string GetMMSLagCompensationStrength()
+        {
+            switch (mms_lag_compensation_strength)
+            {
+                case 0:
+                default:
+                    return "STRONG";
+                case 1:
+                    return "MEDIUM";
+                case 2:
+                    return "WEAK";
+            }
+        }
+
+        public static string GetMMSSynchronizeWeaponFire()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_synchronize_weapon_fire));
+        }
+
+        public static string GetMMSShipSmoothingStrength()
+        {
+            switch (mms_ship_max_interpolate_frames)
+            {
+                case 0:
+                default:
+                    return "OFF";
+                case 1:
+                    return "WEAK";
+                case 2:
+                    return "MEDIUM";
+                case 3:
+                    return "STRONG";
+            }
+        }
+
+        public static string GetMMSShipLagMaxInterpolateFrames()
+        {
+            return mms_ship_max_interpolate_frames.ToString();
+        }
+
         public static int mms_weapon_lag_compensation_max = 100;
         public static int mms_ship_lag_compensation_max = 100;
         public static int mms_weapon_lag_compensation_scale = 75;
         public static int mms_ship_lag_compensation_scale = 75;
         public static int mms_ship_max_interpolate_frames = 0;
+        public static bool mms_lag_compensation_advanced = false;
+        public static int mms_lag_compensation = 0;
+        public static int mms_lag_compensation_strength = 0;
+        public static bool mms_synchronize_weapon_fire = false;
     }
 
 
@@ -195,7 +265,7 @@ namespace GameMod
                 Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
                 MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
             }
-        }       
+        }
     }
 
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
@@ -232,8 +302,254 @@ namespace GameMod
     class Menus_UIElement_DrawMpOptions
     {
 
-        // Ugly hack, rewrite
-        private static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max)
+        static void DrawCompensation(UIElement uie, ref Vector2 position)
+        {
+            uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
+            position.y += 62f;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
+                {
+                    code.operand = 279f;
+                }
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
+                {
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawCompensation"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+
+                // Remove deprecated "Cross-Platform Play" option
+                // Skip block of code starting at first DrawMenuSeparator call through position.y += 62f
+                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "DrawMenuSeparator"))
+                {
+                    state = 1;
+                    yield return code;
+                    continue;
+                }
+
+                if (state == 1)
+                {
+                    if (code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(Vector2), "y"))
+                        state = 2;
+                    continue;
+                }
+
+                // Remove deprecated "Cross-Platform Chat" option
+                // Skip starting at the ldstr call (preserving ldarg_0 for next call) and ending at the next ldarg_0 for Auto-Respawn Timer
+                if (state == 2 && code.opcode == OpCodes.Ldstr && (string)code.operand == "CROSS-PLATFORM CHAT")
+                {
+                    state = 3;
+                }
+
+                if (state == 3)
+                {
+                    if (code.opcode == OpCodes.Ldarg_0)
+                        state = 4;
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(MenuManager), "MpOptionsUpdate")]
+    class Menus_MenuManager_MpOptionsUpdate
+    {
+        static void Postfix()
+        {
+            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
+            {
+                switch (UIManager.m_menu_selection)
+                {
+                    case 6:
+                        MenuManager.ChangeMenuState(Menus.msLagCompensation, false);
+                        UIManager.DestroyAll(false);
+                        MenuManager.PlaySelectSound(1f);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(MenuManager), "Update")]
+    class Menus_MenuManager_Update
+    {
+
+        private static void Postfix(ref float ___m_menu_state_timer)
+        {
+            if (MenuManager.m_menu_state == Menus.msLagCompensation)
+                LagCompensationUpdate(ref ___m_menu_state_timer);
+        }
+
+        private static void LagCompensationUpdate(ref float m_menu_state_timer)
+        {
+            UIManager.MouseSelectUpdate();
+            switch (MenuManager.m_menu_sub_state)
+            {
+                case MenuSubState.INIT:
+                    if (m_menu_state_timer > 0.25f)
+                    {
+                        UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, Menus.uiLagCompensation);
+                        MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                        m_menu_state_timer = 0f;
+                        MenuManager.SetDefaultSelection(0);
+                    }
+                    break;
+                case MenuSubState.ACTIVE:
+                    UIManager.ControllerMenu();
+                    Controls.m_disable_menu_letter_keys = false;
+                    int menu_micro_state = MenuManager.m_menu_micro_state;
+
+                    if (m_menu_state_timer > 0.25f)
+                    {
+                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()))
+                        {
+                            MenuManager.MaybeReverseOption();
+                            switch (UIManager.m_menu_selection)
+                            {
+                                case 1:
+                                    Menus.mms_lag_compensation = (Menus.mms_lag_compensation + 4 + UIManager.m_select_dir) % 4;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 2:
+                                    Menus.mms_lag_compensation_advanced = !Menus.mms_lag_compensation_advanced;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 3:
+                                    Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                    Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                    break;
+                                case 4:
+                                    Menus.mms_lag_compensation_strength = (Menus.mms_lag_compensation_strength + 4 + UIManager.m_select_dir) % 4;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 5:
+                                    Menus.mms_synchronize_weapon_fire = !Menus.mms_synchronize_weapon_fire;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 6:
+                                    Menus.mms_ship_max_interpolate_frames = (Menus.mms_ship_max_interpolate_frames + 4 + UIManager.m_select_dir) % 4;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 7:
+                                    Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                    break;
+                                case 8:
+                                    Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                    break;
+                                case 9:
+                                    Menus.mms_weapon_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
+                                    break;
+                                case 10:
+                                    Menus.mms_ship_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
+                                    break;
+                                case 11:
+                                    Menus.mms_ship_max_interpolate_frames = (Menus.mms_ship_max_interpolate_frames + 4 + UIManager.m_select_dir) % 4;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 100:
+                                    MenuManager.PlaySelectSound(1f);
+                                    m_menu_state_timer = 0f;
+                                    UIManager.DestroyAll(false);
+                                    MenuManager.m_menu_state = 0;
+                                    MenuManager.m_menu_micro_state = 0;
+                                    MenuManager.m_menu_sub_state = MenuSubState.BACK;
+                                    break;
+                            }
+                        }
+                    }
+                    break;
+                case MenuSubState.BACK:
+                    if (m_menu_state_timer > 0.25f)
+                    {
+                        MenuManager.ChangeMenuState(((Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null)).Pop(), true);
+                        AccessTools.Field(typeof(MenuManager), "m_went_back").SetValue(null, true);
+                    }
+                    break;
+                case MenuSubState.START:
+                    if (m_menu_state_timer > 0.25f)
+                    {
+
+                    }
+                    break;
+            }
+        }
+
+    }
+
+    [HarmonyPatch(typeof(UIElement), "Draw")]
+    class Menus_UIElement_Draw
+    {
+        static void Postfix(UIElement __instance)
+        {
+            if (__instance.m_type == Menus.uiLagCompensation && __instance.m_alpha > 0f)
+                DrawLagCompensationWindow(__instance);
+        }
+
+        static void DrawLagCompensationWindow(UIElement uie)
+        {
+            UIManager.ui_bg_dark = true;
+            uie.DrawMenuBG();
+            Vector2 position = uie.m_position;
+            position.y = UIManager.UI_TOP + 64f;
+            int menu_micro_state = MenuManager.m_menu_micro_state;
+
+            switch (menu_micro_state)
+            {
+                default:
+                    uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("LAG COMPENSATION SETTINGS"), 265f);
+                    position.y += 20f;
+                    uie.DrawMenuSeparator(position);
+                    position.y += 40f;
+                    uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
+                    position.y += 62f;
+                    uie.SelectAndDrawStringOptionItem(Loc.LS("USE ADVANCED SETTINGS"), position, 2, Menus.GetMMSLagCompensationAdvanced(), "SHOW ADVANCED SETTINGS TO FURTHER FINE TUNE YOUR LAG COMPENSATION", 1.5f, false);
+                    position.y += 62f;
+                    if (!Menus.mms_lag_compensation_advanced)
+                    {
+                        SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE"), position, 3, Menus.mms_ship_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. SET LOWER TO MAKE SHIPS WARP LESS");
+                        position.y += 62f;
+                        uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION STRENGTH"), position, 4, Menus.GetMMSLagCompensationStrength(), "SCALES THE STRENGTH OF LAG COMPENSATION RELATIVE TO YOUR PING");
+                        position.y += 62f;
+                        uie.SelectAndDrawStringOptionItem(Loc.LS("SYNCHRONIZE WEAPON FIRE"), position, 5, Menus.GetMMSSynchronizeWeaponFire(), "TURN ON TO ADJUST LAG COMPENSATION TO CAUSE SHIP WEAPON FIRE TO LOOK MORE NATURAL." + Environment.NewLine + "TURN OFF TO DESYNCHRONIZE SHIP WEAPON FIRE (ESPECIALLY ON HIGHER PING) BUT MAKE IT EASIER TO MORE ACCURATE HIT SHIPS AND DODGE INCOMING FIRE SIMULTANEOUSLY");
+                        position.y += 62f;
+                        uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP SMOOTHING STRENGTH"), position, 6, Menus.GetMMSShipSmoothingStrength(), "SMOOTHS THE JERKINESS OF SHIPS WHEN PLAYING ON HIGHER PING");
+                        position.y += 62f;
+                    }
+                    else
+                    {
+                        SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR WEAPONS"), position, 7, Menus.mms_weapon_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. SET LOWER TO MAKE WEAPONS xyz");
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR SHIPS"), position, 8, Menus.mms_ship_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. SET LOWER TO MAKE SHIPS WARP LESS");
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 9, Menus.mms_weapon_lag_compensation_scale, 100, "THE SCALE AT WHICH WEAPON LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 50% WILL MAKE YOUR DODGING CLOSELY MATCH THE SERVER");
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 10, Menus.mms_ship_lag_compensation_scale, 100, "THE SCALE AT WHICH SHIP LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR SHOTS HITTING SHIPS CLOSELY MATCH THE SERVER");
+                        position.y += 62f;
+                        uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP LAG MAX INTERPOLATE FRAMES"), position, 11, Menus.GetMMSShipLagMaxInterpolateFrames(), "THE NUMBER OF FRAMES SHIPS SHOULD BE INTERPOLATED THROUGH." + Environment.NewLine + "THE HIGHER THE VALUE, THE MORE SMOOTH THE SHIP MOVEMENT. THE LOWER THE VALUE, THE CLOSER THE SHIPS ARE TO THEIR REAL-TIME POSITION");
+                        position.y += 62f;
+                    }
+                    position.y = UIManager.UI_BOTTOM - 120f;
+                    uie.DrawMenuSeparator(position);
+                    position.y += 5f;
+                    DrawMenuToolTipMultiline(uie, position, 15f);
+                    position.y = UIManager.UI_BOTTOM - 30f;
+                    uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
+                    break;
+            }
+        }
+
+
+        // Tweak of original SelectAndDrawSliderItem to support non-100 max, tooltip
+        public static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max, string tool_tip)
         {
             float num = 750f;
             uie.TestMouseInRect(pos, num * 0.5f + 22f, 24f, selection, true);
@@ -245,6 +561,12 @@ namespace GameMod
             if (flag)
             {
                 MenuManager.option_dir = true;
+                if (tool_tip != string.Empty)
+                {
+                    UIElement.ToolTipActive = true;
+                    UIElement.ToolTipTitle = s;
+                    UIElement.ToolTipDescription = tool_tip;
+                }
             }
             float num2 = 17f;
             Color c;
@@ -292,66 +614,21 @@ namespace GameMod
             UIManager.DrawQuadUIInner(pos - Vector2.right * (132f - (132f * (amt / max))), 132f * (amt / max), 10f, c, uie.m_alpha, 11, 0.75f);
         }
 
-        static void DrawLagSliders(UIElement uie, ref Vector2 position)
+        public static void DrawMenuToolTipMultiline(UIElement uie, Vector2 pos, float offset = 15f)
         {
-            SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION MAX"), position, 6, Menus.mms_weapon_lag_compensation_max, 250);
-            position.y += 62f;
-            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION MAX"), position, 7, Menus.mms_ship_lag_compensation_max, 250);
-            position.y += 62f;
-            SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100);
-            position.y += 62f;
-            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100);
-            position.y += 62f;
-            SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG MAX INTERPOLATE FRAMES"), position, 10, Menus.mms_ship_max_interpolate_frames, 3);
-            position.y += 62f;
-        }
-
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
-            foreach (var code in codes)
+            if (!UIElement.ToolTipActive)
             {
-                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f) {
-                    code.operand = 279f;
-                }
-                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
-                {
-                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawLagSliders"));
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                }
-                yield return code;
+                return;
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuManager), "MpOptionsUpdate")]
-    class Menus_MenuManager_MpOptionsUpdate
-    {
-        static void Postfix()
-        {
-            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
+            string str = (!(UIElement.ToolTipTitle != string.Empty)) ? string.Empty : ("[" + UIElement.ToolTipTitle + "] - ");
+            pos.y += offset;
+            UIManager.DrawQuadUI(pos, 700f, 10f, UIManager.m_col_ub2, 0.7f * uie.m_alpha, 20);
+            string[] strs = UIElement.ToolTipDescription.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            for (int i = 0; i < strs.Length; i++)
             {
-                switch (UIManager.m_menu_selection)
-                {
-                    case 6:
-                        Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
-                        break;
-                    case 7:
-                        Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
-                        break;
-                    case 8:
-                        Menus.mms_weapon_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
-                        break;
-                    case 9:
-                        Menus.mms_ship_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
-                        break;
-                    case 10:
-                        Menus.mms_ship_max_interpolate_frames = (int)(UIElement.SliderPos * 3f + 0.5f);
-                        break;
-                    default:
-                        break;
-                }
-            }                
+                uie.DrawStringSmall((i == 0 ? str : "") + strs[i], pos - (Vector2.down * i * 20f), 0.5f, StringOffset.CENTER, UIManager.m_col_ub0, 1f, 1280f);
+            }
+            
         }
     }
 }
