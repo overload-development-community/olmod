@@ -225,11 +225,15 @@ namespace GameMod {
                 Menus.mms_scale_respawn_time = ModPrefs.GetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
                 if (Core.GameMod.HasInternetMatch())
                     MPInternet.MenuIPAddress = ModPrefs.GetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
-                Menus.mms_weapon_lag_compensation_max = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation_max);
+                Menus.mms_lag_compensation = ModPrefs.GetInt("MP_PM_LAG_COMPENSATION", Menus.mms_lag_compensation);
+                Menus.mms_lag_compensation_advanced = ModPrefs.GetBool("MP_PM_LAG_COMPENSATION_ADVANCED", Menus.mms_lag_compensation_advanced);
                 Menus.mms_ship_lag_compensation_max = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation_max);
-                Menus.mms_weapon_lag_compensation_scale = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
-                Menus.mms_ship_lag_compensation_scale = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
+                Menus.mms_weapon_lag_compensation_max = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation_max);
+                Menus.mms_lag_compensation_strength = ModPrefs.GetInt("MP_PM_LAG_COMPENSATION_STRENGTH", Menus.mms_lag_compensation_strength);
+                Menus.mms_synchronize_weapon_fire = ModPrefs.GetBool("MP_PM_SYNCHRONIZE_WEAPON_FIRE", Menus.mms_synchronize_weapon_fire);
                 Menus.mms_ship_max_interpolate_frames = ModPrefs.GetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
+                Menus.mms_ship_lag_compensation_scale = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
+                Menus.mms_weapon_lag_compensation_scale = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -268,11 +272,15 @@ namespace GameMod {
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.SetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             ModPrefs.SetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
-            ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation_max);
+            ModPrefs.SetInt("MP_PM_LAG_COMPENSATION", Menus.mms_lag_compensation);
+            ModPrefs.SetBool("MP_PM_LAG_COMPENSATION_ADVANCED", Menus.mms_lag_compensation_advanced);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation_max);
+            ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation_max);
+            ModPrefs.SetInt("MP_PM_LAG_COMPENSATION_STRENGTH", Menus.mms_lag_compensation_strength);
+            ModPrefs.SetBool("MP_PM_SYNCHRONIZE_WEAPON_FIRE", Menus.mms_synchronize_weapon_fire);
+            ModPrefs.SetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
             ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
-            ModPrefs.SetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
             ModPrefs.Flush(filename + "mod");
         }
 
