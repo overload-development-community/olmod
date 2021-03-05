@@ -335,9 +335,9 @@ namespace GameMod {
                 //       we need to adjust just the ping and the mms_ship_max_interpolate_frames offset...
                 //       Also note that the server still sends the unscaled velocities.
                 delta_t = now + Time.timeScale * MPClientExtrapolation.GetShipExtrapolationTime() - m_last_update_time;
-                // if we want interpolation, add this as a _negative) offset
+                // if we want interpolation, add this as a _negative_ offset
                 // we use delta_t=0  as the base for from which we extrapolate into the future
-                delta_t -=  Menus.mms_ship_max_interpolate_frames * Time.timeScale * Time.fixedDeltaTime;
+                delta_t -=  Menus.mms_lag_compensation_ship_added_lag * Time.timeScale;
                 // it might sound absurd, but after this point, the Time.fixedDeltaTime is correct
                 // and MUST NOT be scaled by timeScale. The data packets do contain 16.67ms of
                 // movement each, we already have taken the time dilation into account above...

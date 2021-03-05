@@ -230,8 +230,8 @@ namespace GameMod {
                 Menus.mms_ship_lag_compensation_max = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation_max);
                 Menus.mms_weapon_lag_compensation_max = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation_max);
                 Menus.mms_lag_compensation_strength = ModPrefs.GetInt("MP_PM_LAG_COMPENSATION_STRENGTH", Menus.mms_lag_compensation_strength);
-                Menus.mms_synchronize_weapon_fire = ModPrefs.GetBool("MP_PM_SYNCHRONIZE_WEAPON_FIRE", Menus.mms_synchronize_weapon_fire);
-                Menus.mms_ship_max_interpolate_frames = ModPrefs.GetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
+                Menus.mms_lag_compensation_use_interpolation = ModPrefs.GetInt("MP_PM_LAG_COMPENSATION_USE_INTERPOLATION", Menus.mms_lag_compensation_use_interpolation);
+                Menus.mms_lag_compensation_ship_added_lag = ModPrefs.GetInt("MP_PM_LAG_COMPENSATION_SHIP_ADDED_LAG", Menus.mms_lag_compensation_ship_added_lag);
                 Menus.mms_ship_lag_compensation_scale = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
                 Menus.mms_weapon_lag_compensation_scale = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             }
@@ -277,8 +277,8 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION", Menus.mms_ship_lag_compensation_max);
             ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION", Menus.mms_weapon_lag_compensation_max);
             ModPrefs.SetInt("MP_PM_LAG_COMPENSATION_STRENGTH", Menus.mms_lag_compensation_strength);
-            ModPrefs.SetBool("MP_PM_SYNCHRONIZE_WEAPON_FIRE", Menus.mms_synchronize_weapon_fire);
-            ModPrefs.SetInt("MP_PM_SHIP_MAX_INTERPOLATE_FRAMES", Menus.mms_ship_max_interpolate_frames);
+            ModPrefs.SetInt("MP_PM_LAG_COMPENSATION_USE_INTERPOLATION", Menus.mms_lag_compensation_use_interpolation);
+            ModPrefs.SetInt("MP_PM_LAG_COMPENSATION_SHIP_ADDED_LAG", Menus.mms_lag_compensation_ship_added_lag);
             ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
             ModPrefs.Flush(filename + "mod");
