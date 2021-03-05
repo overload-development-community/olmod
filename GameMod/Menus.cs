@@ -71,11 +71,11 @@ namespace GameMod
             {
                 case 0:
                 default:
-                    return "STRONG";
+                    return "WEAK";
                 case 1:
                     return "MEDIUM";
                 case 2:
-                    return "WEAK";
+                    return "STRONG";
             }
         }
 
@@ -103,7 +103,7 @@ namespace GameMod
             mms_ship_lag_compensation_scale = 100;
             mms_lag_compensation_ship_added_lag = 0;
             mms_lag_compensation_advanced = false;
-            mms_lag_compensation_strength = 3;
+            mms_lag_compensation_strength = 2;
             mms_lag_compensation_use_interpolation = 0;
         }
 
@@ -114,7 +114,7 @@ namespace GameMod
         public static int mms_lag_compensation_ship_added_lag = 0;
         public static bool mms_lag_compensation_advanced = false;
         public static int mms_lag_compensation = 3;
-        public static int mms_lag_compensation_strength = 3;
+        public static int mms_lag_compensation_strength = 2;
         public static int mms_lag_compensation_use_interpolation = 0;
     }
 
@@ -431,12 +431,12 @@ namespace GameMod
                                     break;
                                 case 3:
                                     Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
-                                    Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                    Menus.mms_weapon_lag_compensation_max = Menus.mms_ship_lag_compensation_max;
                                     break;
                                 case 4:
-                                    Menus.mms_lag_compensation_strength = (Menus.mms_lag_compensation_strength + 4 + UIManager.m_select_dir) % 4;
-                                    Menus.mms_weapon_lag_compensation_scale = (int)Math.Round(Menus.mms_lag_compensation_strength * 100f / 3f, 0);
-                                    Menus.mms_ship_lag_compensation_scale = (int)Math.Round(Menus.mms_lag_compensation_strength * 100f / 3f, 0);
+                                    Menus.mms_lag_compensation_strength = (Menus.mms_lag_compensation_strength + 3 + UIManager.m_select_dir) % 3;
+                                    Menus.mms_weapon_lag_compensation_scale = (int)Math.Round((Menus.mms_lag_compensation_strength + 1) * 100f / 3f, 0);
+                                    Menus.mms_ship_lag_compensation_scale = Menus.mms_weapon_lag_compensation_scale;
                                     MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                     break;
                                 case 5:
