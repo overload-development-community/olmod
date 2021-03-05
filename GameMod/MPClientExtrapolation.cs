@@ -245,7 +245,7 @@ namespace GameMod {
                 float frameSoftSyncLimit = 2.0f; ///hard-sync if we're off by more than that many physics ticks
                 if (delta < -frameSoftSyncLimit || delta > frameSoftSyncLimit) {
                     // hard resync
-                    Debug.LogFormat("hard resync by {0} frames", delta);
+                    // Debug.LogFormat("hard resync by {0} frames", delta);
                     m_last_update_time = Time.time;
                 } else {
                     // soft resync
@@ -398,11 +398,11 @@ namespace GameMod {
             //       as extrapolation...
             m_compensation_interpol_count += (interpolate_ticks > 0)?1:0;
             if (Time.time >= m_compensation_last + 5.0 && m_compensation_count > 0) {
-                Debug.LogFormat("ship lag compensation over last {0} frames: {1}ms / {2} physics ticks, {3} interpolation ({4}%)",
-                                m_compensation_count, 1000.0f* (m_compensation_sum/ m_compensation_count),
-                                (m_compensation_sum/m_compensation_count)/Time.fixedDeltaTime,
-                                m_compensation_interpol_count,
-                                100.0f*((float)m_compensation_interpol_count/(float)m_compensation_count));
+                //Debug.LogFormat("ship lag compensation over last {0} frames: {1}ms / {2} physics ticks, {3} interpolation ({4}%)",
+                //                m_compensation_count, 1000.0f* (m_compensation_sum/ m_compensation_count),
+                //                (m_compensation_sum/m_compensation_count)/Time.fixedDeltaTime,
+                //                m_compensation_interpol_count,
+                //                100.0f*((float)m_compensation_interpol_count/(float)m_compensation_count));
                 m_compensation_sum = 0.0f;
                 m_compensation_count = 0;
                 m_compensation_interpol_count = 0;
