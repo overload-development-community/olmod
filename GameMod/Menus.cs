@@ -109,8 +109,8 @@ namespace GameMod
 
         public static int mms_weapon_lag_compensation_max = 100;
         public static int mms_ship_lag_compensation_max = 100;
-        public static int mms_weapon_lag_compensation_scale = 75;
-        public static int mms_ship_lag_compensation_scale = 75;
+        public static int mms_weapon_lag_compensation_scale = 100;
+        public static int mms_ship_lag_compensation_scale = 100;
         public static int mms_lag_compensation_ship_added_lag = 0;
         public static bool mms_lag_compensation_advanced = false;
         public static int mms_lag_compensation = 0;
