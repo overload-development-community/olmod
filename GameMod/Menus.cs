@@ -95,7 +95,8 @@ namespace GameMod
             }
         }
 
-        public static void SetLagCompensationDefaults() {
+        public static void SetLagCompensationDefaults()
+        {
             mms_weapon_lag_compensation_max = 100;
             mms_ship_lag_compensation_max = 100;
             mms_weapon_lag_compensation_scale = 100;
@@ -411,7 +412,7 @@ namespace GameMod
 
                     if (m_menu_state_timer > 0.25f)
                     {
-                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()))
+                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir() || UIManager.SliderMouseDown()))
                         {
                             MenuManager.MaybeReverseOption();
                             switch (UIManager.m_menu_selection)
@@ -422,7 +423,8 @@ namespace GameMod
                                     break;
                                 case 2:
                                     Menus.mms_lag_compensation_advanced = !Menus.mms_lag_compensation_advanced;
-                                    if (!Menus.mms_lag_compensation_advanced) {
+                                    if (!Menus.mms_lag_compensation_advanced)
+                                    {
                                         Menus.SetLagCompensationDefaults();
                                     }
                                     MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
@@ -502,53 +504,46 @@ namespace GameMod
             uie.DrawMenuBG();
             Vector2 position = uie.m_position;
             position.y = UIManager.UI_TOP + 64f;
-            int menu_micro_state = MenuManager.m_menu_micro_state;
-
-            switch (menu_micro_state)
+            uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("LAG COMPENSATION SETTINGS"), 265f);
+            position.y += 20f;
+            uie.DrawMenuSeparator(position);
+            position.y += 40f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("USE ADVANCED SETTINGS"), position, 2, Menus.GetMMSLagCompensationAdvanced(), "SHOW ADVANCED SETTINGS TO FURTHER FINE TUNE YOUR LAG COMPENSATION", 1.5f, false);
+            position.y += 62f;
+            uie.DrawTextLineSmall("WARNING: ONCE ON, TURNING OFF ADVANCED SETTINGS", position);
+            position.y += 28f;
+            uie.DrawTextLineSmall("WILL RESET YOUR LAG COMPENSATION SETTINGS TO DEFAULT.", position);
+            position.y += 62f;
+            if (!Menus.mms_lag_compensation_advanced)
             {
-                default:
-                    uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("LAG COMPENSATION SETTINGS"), 265f);
-                    position.y += 20f;
-                    uie.DrawMenuSeparator(position);
-                    position.y += 40f;
-                    uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
-                    position.y += 62f;
-                    uie.SelectAndDrawStringOptionItem(Loc.LS("USE ADVANCED SETTINGS"), position, 2, Menus.GetMMSLagCompensationAdvanced(), "SHOW ADVANCED SETTINGS TO FURTHER FINE TUNE YOUR LAG COMPENSATION", 1.5f, false);
-                    position.y += 62f;
-                    uie.DrawTextLineSmall("WARNING: ONCE ON, TURNING OFF ADVANCED SETTINGS", position);
-                    position.y += 28f;
-                    uie.DrawTextLineSmall("WILL RESET YOUR LAG COMPENSATION SETTINGS TO DEFAULT.", position);
-                    position.y += 62f;
-                    if (!Menus.mms_lag_compensation_advanced)
-                    {
-                        SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE"), position, 3, Menus.mms_ship_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT");
-                        position.y += 62f;
-                        uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION STRENGTH"), position, 4, Menus.GetMMSLagCompensationStrength(), "SCALES THE STRENGTH OF LAG COMPENSATION RELATIVE TO YOUR PING");
-                        position.y += 62f;
-                        uie.SelectAndDrawStringOptionItem(Loc.LS("USE INTERPOLATION"), position, 5, Menus.GetMMSLagCompensationUseInterpolation(), "HOW STRONGLY TO INTERPOLATE SHIP POSITIONS AT THE COST OF ADDED LAG." + Environment.NewLine + "A STRONGER VALUE WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
-                        position.y += 62f;
-                    }
-                    else
-                    {
-                        SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR WEAPONS"), position, 6, Menus.mms_weapon_lag_compensation_max, 250, "LIMIT WEAPON LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR FROM THE FIRING SHIP WEAPONS WILL BE DRAWN, AT THE COST OF HAVING TO LEAD YOUR DODGES MORE");
-                        position.y += 62f;
-                        SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR SHIPS"), position, 7, Menus.mms_ship_lag_compensation_max, 250, "LIMIT SHIP LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR INTO THE FUTURE SHIP POSITIONS WILL BE GUESSED, AT THE COST OF HAVING TO LEAD YOUR SHOTS MORE");
-                        position.y += 62f;
-                        SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100, "THE SCALE AT WHICH WEAPON LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR DODGING CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR WEAPONS");
-                        position.y += 62f;
-                        SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100, "THE SCALE AT WHICH SHIP LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR SHOTS THAT HIT SHIPS CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR SHIPS");
-                        position.y += 62f;
-                        SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG ADDED"), position, 10, Menus.mms_lag_compensation_ship_added_lag, 50, "ADDS A SET AMOUNT OF LAG TO THE END OF THE SHIP LAG COMPENSATION CALCULATIONS. USEFUL WHEN SHIP LAG COMPENSATION IS TURNED OFF." + Environment.NewLine + "A HIGHER SETTING WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
-                        position.y += 62f;
-                    }
-                    position.y = UIManager.UI_BOTTOM - 120f;
-                    uie.DrawMenuSeparator(position);
-                    position.y += 5f;
-                    DrawMenuToolTipMultiline(uie, position, 15f);
-                    position.y = UIManager.UI_BOTTOM - 30f;
-                    uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
-                    break;
+                SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE"), position, 3, Menus.mms_ship_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT");
+                position.y += 62f;
+                uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION STRENGTH"), position, 4, Menus.GetMMSLagCompensationStrength(), "SCALES THE STRENGTH OF LAG COMPENSATION RELATIVE TO YOUR PING");
+                position.y += 62f;
+                uie.SelectAndDrawStringOptionItem(Loc.LS("USE INTERPOLATION"), position, 5, Menus.GetMMSLagCompensationUseInterpolation(), "HOW STRONGLY TO INTERPOLATE SHIP POSITIONS AT THE COST OF ADDED LAG." + Environment.NewLine + "A STRONGER VALUE WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
+                position.y += 62f;
             }
+            else
+            {
+                SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR WEAPONS"), position, 6, Menus.mms_weapon_lag_compensation_max, 250, "LIMIT WEAPON LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR FROM THE FIRING SHIP WEAPONS WILL BE DRAWN, AT THE COST OF HAVING TO LEAD YOUR DODGES MORE");
+                position.y += 62f;
+                SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR SHIPS"), position, 7, Menus.mms_ship_lag_compensation_max, 250, "LIMIT SHIP LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR INTO THE FUTURE SHIP POSITIONS WILL BE GUESSED, AT THE COST OF HAVING TO LEAD YOUR SHOTS MORE");
+                position.y += 62f;
+                SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100, "THE SCALE AT WHICH WEAPON LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR DODGING CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR WEAPONS");
+                position.y += 62f;
+                SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100, "THE SCALE AT WHICH SHIP LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR SHOTS THAT HIT SHIPS CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR SHIPS");
+                position.y += 62f;
+                SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG ADDED"), position, 10, Menus.mms_lag_compensation_ship_added_lag, 50, "ADDS A SET AMOUNT OF LAG TO THE END OF THE SHIP LAG COMPENSATION CALCULATIONS. USEFUL WHEN SHIP LAG COMPENSATION IS TURNED OFF." + Environment.NewLine + "A HIGHER SETTING WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
+                position.y += 62f;
+            }
+            position.y = UIManager.UI_BOTTOM - 120f;
+            uie.DrawMenuSeparator(position);
+            position.y += 5f;
+            DrawMenuToolTipMultiline(uie, position, 15f);
+            position.y = UIManager.UI_BOTTOM - 30f;
+            uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
         }
 
 
@@ -632,7 +627,7 @@ namespace GameMod
             {
                 uie.DrawStringSmall((i == 0 ? str : "") + strs[i], pos - (Vector2.down * i * 20f), 0.5f, StringOffset.CENTER, UIManager.m_col_ub0, 1f, 1280f);
             }
-            
+
         }
     }
 }
