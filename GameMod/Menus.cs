@@ -102,8 +102,8 @@ namespace GameMod
             mms_ship_lag_compensation_scale = 100;
             mms_lag_compensation_ship_added_lag = 0;
             mms_lag_compensation_advanced = false;
-            mms_lag_compensation = 0;
-            mms_lag_compensation_strength = 0;
+            mms_lag_compensation = 3;
+            mms_lag_compensation_strength = 3;
             mms_lag_compensation_use_interpolation = 0;
         }
 
@@ -113,8 +113,8 @@ namespace GameMod
         public static int mms_ship_lag_compensation_scale = 100;
         public static int mms_lag_compensation_ship_added_lag = 0;
         public static bool mms_lag_compensation_advanced = false;
-        public static int mms_lag_compensation = 0;
-        public static int mms_lag_compensation_strength = 0;
+        public static int mms_lag_compensation = 3;
+        public static int mms_lag_compensation_strength = 3;
         public static int mms_lag_compensation_use_interpolation = 0;
     }
 
@@ -434,6 +434,8 @@ namespace GameMod
                                     break;
                                 case 4:
                                     Menus.mms_lag_compensation_strength = (Menus.mms_lag_compensation_strength + 4 + UIManager.m_select_dir) % 4;
+                                    Menus.mms_weapon_lag_compensation_scale = (int)Math.Round(Menus.mms_lag_compensation_use_interpolation * 100f / 3f, 0);
+                                    Menus.mms_ship_lag_compensation_scale = (int)Math.Round(Menus.mms_lag_compensation_use_interpolation * 100f / 3f, 0);
                                     MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                     break;
                                 case 5:

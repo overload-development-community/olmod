@@ -53,7 +53,7 @@ namespace GameMod {
 
         // How far ahead to advance weapons, in seconds.
         public static float GetWeaponExtrapolationTime() {
-            if (MPObserver.Enabled) {
+            if (MPObserver.Enabled || Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1) {
                 return 0f;
             }
             float time_ms = Math.Min(GameManager.m_local_player.m_avg_ping_ms,
@@ -64,7 +64,7 @@ namespace GameMod {
 
         // How far ahead to advance ships, in seconds.
         public static float GetShipExtrapolationTime() {
-            if (MPObserver.Enabled) {
+            if (MPObserver.Enabled || Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2) {
                 return 0f;
             }
             float time_ms = Math.Min(GameManager.m_local_player.m_avg_ping_ms,
