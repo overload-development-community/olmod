@@ -102,7 +102,6 @@ namespace GameMod
             mms_ship_lag_compensation_scale = 100;
             mms_lag_compensation_ship_added_lag = 0;
             mms_lag_compensation_advanced = false;
-            mms_lag_compensation = 3;
             mms_lag_compensation_strength = 3;
             mms_lag_compensation_use_interpolation = 0;
         }
