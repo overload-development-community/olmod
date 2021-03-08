@@ -288,7 +288,7 @@ namespace GameMod {
             caps.Add("ModVersion", Core.GameMod.Version);
             caps.Add("Modded", Core.GameMod.Modded ? "1" : "0");
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
-            caps.Add("SupportsTweaks", "proj,sniper,jip,nocompress_0_3_5_rc3");
+            caps.Add("SupportsTweaks", "proj,sniper,jip,nocompress_0_3_6");
             caps.Add("ModPrivateData", "1");
             caps.Add("ClassicWeaponSpawns", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());

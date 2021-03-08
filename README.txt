@@ -1,4 +1,4 @@
-olmod 0.3.5 - Overload mod
+olmod 0.3.6 - Overload mod
 Community mods for Overload
 https://github.com/arbruijn/olmod
 
@@ -43,6 +43,8 @@ What does it do
 - Adds `frametime` non-cheat code
 
 - Adds a rearview option for all game modes, with an option to allow it in a multiplayer game
+
+- Allows MP with up to 16 players / 8 teams (server and all clients must run olmod)
 
 - Writes match log files on server (by luponix)
 
@@ -92,6 +94,8 @@ What does it do
 
 - Allows more simultaneous sounds for large MP matches
 
+- Adds server browser by Tobias
+
 - Replaces default networking model with a sniper packets style, resulting in more consistent network play.  Older clients can still play with the newer clients, but won't experience the new networking model.
 
 - Better synchronizes energy, ammo, weapon choice, missile counts, and devastator firing/triggering when using sniper packets.
@@ -109,6 +113,18 @@ What does it do
 - Adds an option to allow or disallow boosting when running the flag in CTF, by Tobias.
 
 - Adds an option to allow or disallow specific modifiers for games, by Tobias.
+
+- Adds lag compensation to make games feel more LAN-like at the expense of ships jumping around when ships change direction.  Highly customizable.  By Whollycow (ship lag compensation), roncli (weapon lag compensation), derhass (detailed analysis, code review, and improvements), and Tobias (menuing).
+
+- Adds automap to multiplayer using the quick save key, by Tobias.
+
+- Prevents quantization of ship positions on maps that stray too far from 0, 0, 0, by roncli & Whollycow
+
+- Adds numerical sliders to some controller options, by Tobias.
+
+- Fixes seizure-inducing flashing in VR, by roncli (thanks to Arne for finding the issue!).
+
+- Makes player scoreboard sorting in team anarchy make more sense, by Tobias.
 
 How does it work
 ----------------

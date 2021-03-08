@@ -1,3 +1,26 @@
+v0.3.6 - 2021-03-08
+
+Features:
+
+- New lag compensation mods.  In short, on default settings, you should be able to more clearly hit ships and more clearly dodge incoming fire at the expense of ships jumping around somewhat when they change trajectories.  Settings to fine tune your experience - or turn this off - are found in Options > Multiplayer Options.
+- Automap in multiplayer.  This uses the quick save key bind from single player as opposed to the existing automap key to avoid confusing with the automap key's purpose in multiplayer.
+- Additional autoselect options exist to determine what to do when you pick up a weapon higher than what you're holding but you are holding the fire button down.
+- Parts of the player snapshot have been uncompressed to fix ship position quantization in maps that don't stay near the origin.
+- Controller Axis Settings are now numerical sliders for more fine tuning.
+- You will now clearly see if you are **MODDED** on the main menu.
+
+Bug fixes:
+
+- Potentially seizure-inducing flashing in VR fixed.  (I'm not kidding, it really was THAT bad.)
+- Swapping to a higher primary won't eat your thunderbolt charge, you'll get to fire it first.
+- CTF flag pickup text should make more sense.
+- CTF Boost and Classic Spawn are now correctly implemented for match preset JSON files.
+- Team anarchy no longer uses the 3*K+A formula to sort players, it now sorts on kills, breaking ties with assists first, then least deaths.
+- Minor tweak to new primary spawns to help ensure extra weapons do not unexpectedly spawn.
+- Exceptions with creeper sync have been resolved.
+- Crusher/Lancer anti-cheat was relaxed somewhat to address issues from players that keep the button held down, then quick released and re-pressed the button, which would falsely trigger the anti-cheat code.
+- .sh files pulled from the repo on Windows and then ported to Linux will now have proper LF line endings.  You may need to remove and reset your .sh files for this to take effect.
+
 v0.3.5 - 2021-01-03
 
 Modding (using DLLs that start with Mod-) is now disabled by default.  To enable modding, you must pass the "-modded" command line switch to olmod.  You will know this works and your mod is enabled by seeing the word "**MODDED**" as part of your version number.  Works for servers as well, modded servers can be seen in the multiplayer lobby (the width of the text for the server version has been expanded for this purpose).
