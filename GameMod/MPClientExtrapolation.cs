@@ -240,7 +240,7 @@ namespace GameMod {
                     m_last_update_time = Time.time;
                 } else {
                     // next in sequence, as we expected
-                    EnqueueToRing(msg, true);
+                    EnqueueToRing(msg, wasOld);
                     // this assumes the server sends 60Hz
                     // during time dilation (timebombs!) this is not true,
                     // it will actually send data packets _worth_ of 16.67ms real time, spread out
