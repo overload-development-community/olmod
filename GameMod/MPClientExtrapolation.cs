@@ -179,8 +179,20 @@ namespace GameMod {
         private static int m_last_messages_ring_pos_last = 3;       // position of the last added element
         private static object m_last_messages_lock = new object();  // lock used to guard access to buffer contents AND m_last_update_time
 
-        private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg)
+        private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
         {
+            // For old snapshots, we will fill in the ship velocity if that information is available.
+            if (wasOld) {
+                var last_snapshots = m_last_messages_ring[m_last_messages_ring_pos_last];
+                foreach (var snapshot in msg.m_snapshots) {
+                    var last_snapshot = last_snapshots.m_snapshots.FirstOrDefault(m => m.m_net_id == snapshot.m_net_id);
+                    if (last_snapshot != null) {
+                        snapshot.m_vel = (snapshot.m_pos - last_snapshot.m_pos) / Time.fixedDeltaTime;
+                        snapshot.m_vrot = (Quaternion.Inverse(snapshot.m_rot) * Quaternion.SlerpUnclamped(last_snapshot.m_rot, snapshot.m_rot, 1f / Time.fixedDeltaTime)).eulerAngles;
+                    }
+                }
+            }
+
             m_last_messages_ring_pos_last = (m_last_messages_ring_pos_last + 1) & 3;
             m_last_messages_ring[m_last_messages_ring_pos_last] = msg;
             if (m_last_messages_ring_count < 4) {
@@ -219,16 +231,16 @@ namespace GameMod {
         //
         // It is safe to be called from an arbitrary thread, as accesses are
         // guareded by a lock.
-        public static void AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage msg)
+        public static void AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
         {
             lock (m_last_messages_lock) {
-                if  (m_last_messages_ring_count == 0) {
+                if (m_last_messages_ring_count == 0) {
                     // first packet
                     EnqueueToRing(msg);
                     m_last_update_time = Time.time;
                 } else {
                     // next in sequence, as we expected
-                    EnqueueToRing(msg);
+                    EnqueueToRing(msg, true);
                     // this assumes the server sends 60Hz
                     // during time dilation (timebombs!) this is not true,
                     // it will actually send data packets _worth_ of 16.67ms real time, spread out
@@ -240,7 +252,7 @@ namespace GameMod {
                     m_last_update_time += Time.fixedDeltaTime;
                 }
                 // check if the time base is still plausible
-                float delta = (Time.time - m_last_update_time)/ Time.fixedDeltaTime; // in ticks
+                float delta = (Time.time - m_last_update_time) / Time.fixedDeltaTime; // in ticks
                 // allow a sliding window to catch up for latency jitter
                 float frameSoftSyncLimit = 2.0f; ///hard-sync if we're off by more than that many physics ticks
                 if (delta < -frameSoftSyncLimit || delta > frameSoftSyncLimit) {

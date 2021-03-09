@@ -17,16 +17,13 @@ namespace GameMod {
         static public NewPlayerSnapshotToClientMessage m_new_snapshot_buffer = new NewPlayerSnapshotToClientMessage();
     }
 
-    public class NewPlayerSnapshot
-    {
-        public NewPlayerSnapshot()
-        {
+    public class NewPlayerSnapshot {
+        public NewPlayerSnapshot() {
         }
 
-        public NewPlayerSnapshot(NetworkInstanceId net_id, 
+        public NewPlayerSnapshot(NetworkInstanceId net_id,
                               Vector3 pos, Quaternion rot,
-                              Vector3 vel, Vector3 vrot)
-        {
+                              Vector3 vel, Vector3 vrot) {
             this.m_net_id = net_id;
             this.m_pos = pos;
             this.m_rot = rot;
@@ -49,6 +46,16 @@ namespace GameMod {
                 m_net_id = this.m_net_id,
                 m_pos = this.m_pos,
                 m_rot = this.m_rot
+            };
+        }
+
+        internal static NewPlayerSnapshot FromOldSnapshot(PlayerSnapshot s) {
+            return s == null ? new NewPlayerSnapshot() : new NewPlayerSnapshot {
+                m_net_id = s.m_net_id,
+                m_pos = s.m_pos,
+                m_rot = s.m_rot,
+                m_vel = new Vector3(),
+                m_vrot = new Vector3()
             };
         }
     }
@@ -164,6 +171,25 @@ namespace GameMod {
 
             Client.GetClient().RegisterHandler(MessageTypes.MsgNewPlayerSnapshotToClient,
                                                OnNewPlayerSnapshotToClient);
+        }
+    }
+
+    /// <summary>
+    /// Upgrade old snapshots to new ones.
+    /// </summary>
+    [HarmonyPatch(typeof(Client), "OnPlayerSnapshotToClient")]
+    public class MPNoPositionCompression_OnPlayerSnapshotToClient {
+        public static bool Prefix(NetworkMessage msg) {
+            if (NetworkMatch.GetMatchState() == MatchState.PREGAME || NetworkMatch.InGameplay()) {
+                PlayerSnapshotToClientMessage item = msg.ReadMessage<PlayerSnapshotToClientMessage>();
+                NewPlayerSnapshotToClientMessage newItem = new NewPlayerSnapshotToClientMessage {
+                    m_num_snapshots = item.m_num_snapshots,
+                    m_server_timestamp = 0, // Unused.
+                    m_snapshots = item.m_snapshots.Select(m => NewPlayerSnapshot.FromOldSnapshot(m)).ToArray()
+                };
+                MPClientShipReckoning.AddNewPlayerSnapshot(newItem, true);
+            }
+            return false;
         }
     }
 
