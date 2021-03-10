@@ -5,7 +5,7 @@ Bug fixes:
 - Fixed disconnected pilots leaving behind "ghost ships" that appeared to be eating shots. (Thanks, Tobias!)
 - Fixed a number of CTF flag duplication issues.
 - Fix to prevent powerups from being picked up by 2 players simultaneously.
-- Fixed minor bug with lag compensation implementation.
+- Fixed minor bug with lag compensation implementation. (Thanks, derhass!)
 
 v0.3.6 - 2021-03-08
 
