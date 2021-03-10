@@ -96,6 +96,7 @@ namespace GameMod {
                 }
 
                 if (item.c_go != null) {
+                    item.m_type = ItemType.NONE;
                     UnityEngine.Object.Destroy(item.c_go);
                 }
 
@@ -121,6 +122,7 @@ namespace GameMod {
                 if (destroyExisting) {
                     foreach (var item in GameObject.FindObjectsOfType<Item>()) {
                         if (item.m_type == ItemType.KEY_SECURITY && item.m_index == flag_id) {
+                            item.m_type = ItemType.NONE;
                             UnityEngine.Object.Destroy(item.gameObject);
                         }
                     }
@@ -140,7 +142,7 @@ namespace GameMod {
             return true;
         }
 
-        public static bool SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state, bool spawnFlagAtHome = false, GameObject go = null)
+        public static bool SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state, bool spawnFlagAtHome = false, Item item = null)
         {
             lock (CTF.FlagLock) {
                 if (CTF.FlagStates[flag_id] == state) {
@@ -153,8 +155,9 @@ namespace GameMod {
                     SpawnAtHome(flag_id);
                 }
 
-                if (go != null) {
-                    UnityEngine.Object.Destroy(go);
+                if (item != null) {
+                    item.m_type = ItemType.NONE;
+                    UnityEngine.Object.Destroy(item.c_go);
                 }
 
                 SendToClientOrAll(conn_id, MessageTypes.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
@@ -255,7 +258,7 @@ namespace GameMod {
             // this also sends to 'client 0' so it'll get processed on the server as well
             CTFEvent evt;
             if (ownFlag) {
-                if (!SendCTFFlagUpdate(-1, player.netId, flag, FlagState.HOME, true, flagItem.c_go)) {
+                if (!SendCTFFlagUpdate(-1, player.netId, flag, FlagState.HOME, true, flagItem)) {
                     return false;
                 }
 
@@ -655,23 +658,32 @@ namespace GameMod {
 
         static bool Prefix(Item __instance, Collider other)
         {
-            //Debug.Log("OnTriggerEnter " + __instance.m_type + " server =" + Overload.NetworkManager.IsServer() + " index=" + __instance.m_index);
-            if (__instance.m_type != ItemType.KEY_SECURITY || !CTF.IsActive)
+            if (__instance.m_type == ItemType.NONE) {
+                return false;
+            }
+
+            if (__instance.m_type != ItemType.KEY_SECURITY || !CTF.IsActive) {
                 return true;
+            }
+
             if (other.attachedRigidbody == null)
             {
                 return false;
             }
+
             PlayerShip component = other.attachedRigidbody.GetComponent<PlayerShip>();
+
             if (component == null)
             {
                 return false;
             }
+
             Player c_player = component.c_player;
             if (!(bool)_Item_ItemIsReachable_Method.Invoke(__instance, new object[] { other }) || (bool)component.m_dying)
             {
                 return false;
             }
+
             if (Overload.NetworkManager.IsServer() && !NetworkMatch.m_postgame && !c_player.c_player_ship.m_dying)
             {
                 if (!CTF.Pickup(c_player, __instance)) {
