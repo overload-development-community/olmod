@@ -821,4 +821,17 @@ namespace GameMod {
         }
     }
 
+    [HarmonyPatch(typeof(PlayerShip), "TargetCreateDisconnectFlash")]
+    class MPJoinInProgress_PlayerShip_TargetCreateDisconnectFlash
+    {
+        static void Postfix(PlayerShip __instance)
+        {
+            if (NetworkMatch.InGameplay())
+            {
+                __instance.gameObject.SetActive(false);
+                RUtility.DestroyGameObjectDelayed(__instance.gameObject, true, 0);
+            }
+        }
+    }
+
 }
