@@ -33,6 +33,8 @@ namespace GameMod {
         public static float ReturnTimeAmount = ReturnTimeAmountDefault;
         public static bool ShowReturnTimer = false;
         public static bool CarrierBoostEnabled = true;
+        public static object FlagLock = new object();
+        private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
 
         public static bool IsActive
         {
@@ -73,33 +75,95 @@ namespace GameMod {
                 NetworkServer.SendToClient(conn_id, msg_type, msg);
         }
 
-        public static void SendCTFPickup(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
+        public static bool SendCTFPickup(int conn_id, Player player, int flag_id, FlagState state, Item item = null)
         {
-            CTF.FlagStates[flag_id] = state;
-            if (CTF.PlayerHasFlag.ContainsKey(player_id))
-                return;
-            CTF.PlayerHasFlag.Add(player_id, flag_id);
+            var player_id = player.netId;
 
-            SendToClientOrAll(conn_id, MessageTypes.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            lock (CTF.FlagLock) {
+                if (CTF.FlagStates[flag_id] == FlagState.PICKEDUP) {
+                    return false;
+                }
+
+                // Recheck that the object is still there in case another player got the flag first.
+                if (!(bool)_Item_ItemIsReachable_Method.Invoke(item, new object[] { player.c_player_ship.c_mesh_collider })) {
+                    return false;
+                }
+
+                CTF.FlagStates[flag_id] = state;
+                
+                if (CTF.PlayerHasFlag.ContainsKey(player_id)) {
+                    return false;
+                }
+
+                if (item.c_go != null) {
+                    item.m_type = ItemType.NONE;
+                    UnityEngine.Object.Destroy(item.c_go);
+                }
+
+                CTF.PlayerHasFlag.Add(player_id, flag_id);
+                SendToClientOrAll(conn_id, MessageTypes.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            }
+
+            return true;
         }
 
-        public static void SendCTFLose(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
+        public static bool SendCTFLose(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state, bool spawnFlagAtHome = false, bool destroyExisting = false)
         {
-            if (CTF.PlayerHasFlag.ContainsKey(player_id))
-                CTF.PlayerHasFlag.Remove(player_id);
-            CTF.FlagStates[flag_id] = state;
+            lock (CTF.FlagLock) {
+                if (CTF.FlagStates[flag_id] != FlagState.PICKEDUP) {
+                    return false;
+                }
 
-            if (state == FlagState.LOST)
-                CTF.FlagReturnTime[flag_id] = Time.time + CTF.ReturnTimeAmount;
+                if (CTF.PlayerHasFlag.ContainsKey(player_id)) {
+                    CTF.PlayerHasFlag.Remove(player_id);
+                }
+                CTF.FlagStates[flag_id] = state;
 
-            SendToClientOrAll(conn_id, MessageTypes.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+                if (destroyExisting) {
+                    foreach (var item in GameObject.FindObjectsOfType<Item>()) {
+                        if (item.m_type == ItemType.KEY_SECURITY && item.m_index == flag_id) {
+                            item.m_type = ItemType.NONE;
+                            UnityEngine.Object.Destroy(item.gameObject);
+                        }
+                    }
+                }
+
+                if (spawnFlagAtHome) {
+                    SpawnAtHome(flag_id);
+                }
+
+                if (state == FlagState.LOST) {
+                    CTF.FlagReturnTime[flag_id] = Time.time + CTF.ReturnTimeAmount;
+                }
+
+                SendToClientOrAll(conn_id, MessageTypes.MsgCTFLose, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            }
+
+            return true;
         }
 
-        public static void SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state)
+        public static bool SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state, bool spawnFlagAtHome = false, Item item = null)
         {
-            CTF.FlagStates[flag_id] = state;
+            lock (CTF.FlagLock) {
+                if (CTF.FlagStates[flag_id] == state) {
+                    return false;
+                }
 
-            SendToClientOrAll(conn_id, MessageTypes.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+                CTF.FlagStates[flag_id] = state;
+
+                if (spawnFlagAtHome) {
+                    SpawnAtHome(flag_id);
+                }
+
+                if (item != null) {
+                    item.m_type = ItemType.NONE;
+                    UnityEngine.Object.Destroy(item.c_go);
+                }
+
+                SendToClientOrAll(conn_id, MessageTypes.MsgCTFFlagUpdate, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
+            }
+
+            return true;
         }
 
         public static void FindFlagSpawnPoints()
@@ -173,8 +237,10 @@ namespace GameMod {
         }
 
         // pickup of flag item
-        public static bool Pickup(Player player, int flag)
+        public static bool Pickup(Player player, Item flagItem)
         {
+            var flag = flagItem.m_index;
+
             if (flag < 0 || flag >= FlagObjs.Count)
                 return false;
             var ownFlag = MPTeams.AllTeams[flag] == player.m_mp_team;
@@ -186,15 +252,22 @@ namespace GameMod {
             }
             if (!ownFlag && (PlayerHasFlag.ContainsKey(player.netId) || PlayerHasFlag.ContainsValue(flag)))
                 return false;
+            
+            var currentState = FlagStates[flag];
 
             // this also sends to 'client 0' so it'll get processed on the server as well
             CTFEvent evt;
             if (ownFlag) {
-                SendCTFFlagUpdate(-1, player.netId, flag, FlagState.HOME);
-                SpawnAtHome(flag);
+                if (!SendCTFFlagUpdate(-1, player.netId, flag, FlagState.HOME, true, flagItem)) {
+                    return false;
+                }
+
                 evt = CTFEvent.RETURN;
             } else {
-                SendCTFPickup(-1, player.netId, flag, FlagState.PICKEDUP);
+                if (!SendCTFPickup(-1, player, flag, FlagState.PICKEDUP, flagItem)) {
+                    return false;
+                }
+
                 if (!CTF.CarrierBoostEnabled)
                 {
                     player.c_player_ship.m_boosting = false;
@@ -203,8 +276,8 @@ namespace GameMod {
                 evt = CTFEvent.PICKUP;
             }
 
-            var msg = evt == CTFEvent.RETURN ? "{0} RETURNS THE {2} FLAG!" : 
-                FlagStates[flag] == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
+            var msg = evt == CTFEvent.RETURN ? "{0} RETURNS THE {2} FLAG!" :
+                currentState == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
                 "{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!";
             CTF.NotifyAll(evt, string.Format(Loc.LS(msg), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
                 MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
@@ -289,18 +362,24 @@ namespace GameMod {
 
         public static void Score(Player player)
         {
-            if (NetworkMatch.m_postgame)
+            if (NetworkMatch.m_postgame) {
                 return;
-            if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[MPTeams.TeamNum(player.m_mp_team)] != FlagState.HOME)
+            }
+            if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[MPTeams.TeamNum(player.m_mp_team)] != FlagState.HOME) {
                 return;
+            }
             PlayerHasFlag.Remove(player.netId);
-            SendCTFLose(-1, player.netId, flag, FlagState.HOME);
+
+            if (!SendCTFLose(-1, player.netId, flag, FlagState.HOME, true)) {
+                return;
+            }
+
             if (!CTF.CarrierBoostEnabled)
             {
                 player.c_player_ship.m_boost_overheat_timer = 0;
                 player.c_player_ship.m_boost_heat = 0;
             }
-            SpawnAtHome(flag);
+
             NetworkMatch.AddPointForTeam(player.m_mp_team);
 
             NotifyAll(CTFEvent.SCORE, string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
@@ -310,28 +389,28 @@ namespace GameMod {
         public static IEnumerator CreateReturnTimer(int flag)
         {
             yield return new WaitForSeconds(CTF.ReturnTimeAmount);
-            if (!IsActiveServer || NetworkMatch.m_match_state != MatchState.PLAYING || CTF.FlagStates[flag] != FlagState.LOST)
+
+            if (!IsActiveServer || NetworkMatch.m_match_state != MatchState.PLAYING || CTF.FlagStates[flag] != FlagState.LOST) {
                 yield break;
-            SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME);
-            foreach (var item in GameObject.FindObjectsOfType<Item>())
-                if (item.m_type == ItemType.KEY_SECURITY && item.m_index == flag)
-                    UnityEngine.Object.Destroy(item.gameObject);
-            SpawnAtHome(flag);
+            }
+
+            if (!SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME, true, true)) {
+                yield break;
+            }
+
             NotifyAll(CTFEvent.RETURN, string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[flag])), null, flag);
             FlagReturnTimer[flag] = null;
         }
 
-        public static void Drop(Player player)
-        {
+        public static void Drop(Player player) {
             if (!PlayerHasFlag.TryGetValue(player.netId, out int flag))
                 return;
             SendCTFLose(-1, player.netId, flag, FlagState.LOST);
-            if (!CTF.CarrierBoostEnabled)
-            {
+            if (!CTF.CarrierBoostEnabled) {
                 player.c_player_ship.m_boost_overheat_timer = 0;
                 player.c_player_ship.m_boost_heat = 0;
             }
-            NotifyAll(CTFEvent.DROP, null, player, flag);
+            NotifyAll(CTFEvent.DROP, string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team), MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
             if (FlagReturnTimer[flag] != null)
                 GameManager.m_gm.StopCoroutine(FlagReturnTimer[flag]);
             GameManager.m_gm.StartCoroutine(FlagReturnTimer[flag] = CreateReturnTimer(flag));
@@ -342,8 +421,9 @@ namespace GameMod {
             if (!CTF.IsActiveServer)
                 return;
             int conn_id = player.connectionToClient.connectionId;
-            foreach (var x in CTF.PlayerHasFlag)
-                CTF.SendCTFPickup(conn_id, x.Key, x.Value, FlagState.PICKEDUP);
+            foreach (var x in CTF.PlayerHasFlag) {
+                CTF.SendCTFPickup(conn_id, FindPlayerForEffect(x.Key), x.Value, FlagState.PICKEDUP);
+            }
             for (int flag = 0; flag < TeamCount; flag++)
                 if (FlagStates[flag] == FlagState.LOST)
                     CTF.SendCTFFlagUpdate(conn_id, NetworkInstanceId.Invalid, flag, FlagStates[flag]);
@@ -578,29 +658,38 @@ namespace GameMod {
 
         static bool Prefix(Item __instance, Collider other)
         {
-            //Debug.Log("OnTriggerEnter " + __instance.m_type + " server =" + Overload.NetworkManager.IsServer() + " index=" + __instance.m_index);
-            if (__instance.m_type != ItemType.KEY_SECURITY || !CTF.IsActive)
+            if (__instance.m_type == ItemType.NONE) {
+                return false;
+            }
+
+            if (__instance.m_type != ItemType.KEY_SECURITY || !CTF.IsActive) {
                 return true;
+            }
+
             if (other.attachedRigidbody == null)
             {
                 return false;
             }
+
             PlayerShip component = other.attachedRigidbody.GetComponent<PlayerShip>();
+
             if (component == null)
             {
                 return false;
             }
+
             Player c_player = component.c_player;
             if (!(bool)_Item_ItemIsReachable_Method.Invoke(__instance, new object[] { other }) || (bool)component.m_dying)
             {
                 return false;
             }
+
             if (Overload.NetworkManager.IsServer() && !NetworkMatch.m_postgame && !c_player.c_player_ship.m_dying)
             {
-                if (!CTF.Pickup(c_player, __instance.m_index))
+                if (!CTF.Pickup(c_player, __instance)) {
                     return false;
+                }
                 c_player.CallRpcPlayItemPickupFX(__instance.m_type, __instance.m_super);
-                UnityEngine.Object.Destroy(__instance.c_go);
             }
             return false;
         }
