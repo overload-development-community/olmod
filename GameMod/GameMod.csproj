@@ -127,6 +127,7 @@
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPModifiers.cs" />
     <Compile Include="MPModPrivateData.cs" />
+    <Compile Include="MPNoDupes.cs" />
     <Compile Include="MPNoPositionCompression.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
