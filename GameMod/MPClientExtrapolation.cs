@@ -171,6 +171,9 @@ namespace GameMod {
         public static float m_compensation_sum;
         public static int m_compensation_count;
         public static int m_compensation_interpol_count;
+        public static int m_received_packets_count;
+        public static int m_missing_packets_count;
+        public static int m_ignored_packets_count;
         public static float m_compensation_last;
 
         // simple ring buffer, use size 4 which is a power of two, so the % 4 becomes simple & 3
@@ -226,8 +229,78 @@ namespace GameMod {
             m_compensation_sum = 0.0f;
             m_compensation_count = 0;
             m_compensation_interpol_count = 0;
+            m_received_packets_count = 0;
+            m_missing_packets_count= 0;
+            m_ignored_packets_count = 0;
             m_compensation_last = Time.time;
         }
+
+        // interpolate a single NewPlayerSnapshot (including the extra fields besides pos and rot)!
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static void InterpolatePlayerSnapshot(ref NewPlayerSnapshot C, NewPlayerSnapshot A, NewPlayerSnapshot B, float t)
+        {
+            C.m_pos = Vector3.LerpUnclamped(A.m_pos, B.m_pos, t);
+            C.m_rot = Quaternion.SlerpUnclamped(A.m_rot, B.m_rot, t);
+            C.m_vel = Vector3.LerpUnclamped(A.m_vel, B.m_vel, t);
+            Quaternion A_vrot = Quaternion.Euler(A.m_vrot);
+            Quaternion B_vrot = Quaternion.Euler(C.m_vrot);
+            Quaternion C_vrot = Quaternion.SlerpUnclamped(A_vrot,B_vrot, t);
+            C.m_vrot = C_vrot.eulerAngles;
+            C.m_net_id = A.m_net_id;
+        }
+
+        // extrapolate a single NewPlayerSnapshot (including the extra fields besides pos and rot)!
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static void ExtrapolatePlayerSnapshot(ref NewPlayerSnapshot C, NewPlayerSnapshot B, float t)
+        {
+            C.m_pos = Vector3.LerpUnclamped(B.m_pos, B.m_pos + B.m_vel, t);
+            C.m_rot = Quaternion.SlerpUnclamped(B.m_rot, B.m_rot * Quaternion.Euler(B.m_vrot), t);
+            // assume the rest stays the same
+            C.m_vel = B.m_vel;
+            C.m_vrot = B.m_vrot;
+            C.m_net_id = B.m_net_id;
+        }
+
+        // interpolate a whole NewPlayerSnapshotToClientMessage
+        // interpolate between A and B, t is the relative factor between both
+        // If a player is not in both messages, it will not be in the resulting messages
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static NewPlayerSnapshotToClientMessage InterpolatePlayerSnapshotMessage(NewPlayerSnapshotToClientMessage A, NewPlayerSnapshotToClientMessage B, float t)
+        {
+            NewPlayerSnapshotToClientMessage C = new NewPlayerSnapshotToClientMessage();
+            int i,j;
+
+            C.m_num_snapshots = 0;
+
+            for (i=0; i<A.m_num_snapshots; i++) {
+                for (j=0; j<B.m_num_snapshots; j++) {
+                    if (A.m_snapshots[i].m_net_id.Value == B.m_snapshots[j].m_net_id.Value) {
+                        InterpolatePlayerSnapshot(ref C.m_snapshots[C.m_num_snapshots++], A.m_snapshots[i], B.m_snapshots[j], t);
+                        continue;
+                    }
+                }
+            }
+
+            C.m_server_timestamp = (1.0f - t) * A.m_server_timestamp + t*B.m_server_timestamp;
+            return C;
+        }
+
+        // extrapolate a whole NewPlayerSnapshotToClientMessage
+        // extrapolate from B into t seconds into the future, t can be negative
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static NewPlayerSnapshotToClientMessage ExtrapolatePlayerSnapshotMessage(NewPlayerSnapshotToClientMessage B, float t)
+        {
+            NewPlayerSnapshotToClientMessage C = new NewPlayerSnapshotToClientMessage();
+            int i;
+
+            for (i=0; i<B.m_num_snapshots; i++) {
+                ExtrapolatePlayerSnapshot(ref C.m_snapshots[C.m_num_snapshots++], B.m_snapshots[i], t);
+            }
+
+            C.m_server_timestamp = B.m_server_timestamp + t;
+            return C;
+        }
+
 
         // add a AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage
         // this should be called as soon as possible after the message arrives
@@ -246,10 +319,81 @@ namespace GameMod {
                     m_last_update_time = Time.time;
                     m_unsynced_messages_count = 0;
                 } else {
-                    // next in sequence, as we expected
-                    EnqueueToRing(msg, wasOld);
-                    m_unsynced_messages_count++;
+                    int deltaFrames;
+                    if (wasOld) {
+                        // we do not have server timestamps,
+                        // just assume the packet is the next in sequence
+                        deltaFrames = 1;
+                    } else {
+                        // determine how many frames in the future the new packet is,
+                        // relative to the last one we received
+                        deltaFrames = (int)((msg.m_server_timestamp - m_last_message_server_time) / Time.fixedDeltaTime + 0.5f);
+                    }
+
+                    if (deltaFrames == 1) {
+                        // FAST PATH:
+                        // next in sequence, as we expected
+                        EnqueueToRing(msg, wasOld);
+                        m_unsynced_messages_count++;
+                    } else if (deltaFrames > 1) {
+                        // SLOW PATH: at least one packet is missing
+                        // we actually do the creation of missing packets here
+                        // once per received new snapshot, so that the per-frame
+                        // update code path can stay simple
+                        // Debug.LogFormat("detected {0} missing packets",  deltaFrames - 1);
+                        NewPlayerSnapshotToClientMessage lastMsg = m_last_messages_ring[m_last_messages_ring_pos_last];
+                        if (deltaFrames == 2) {
+                            // there is one missing snapshot
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.5f));
+                            EnqueueToRing(msg);
+                        } else if (deltaFrames == 3) {
+                            // there are two missing snapshots
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.3333f));
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.6667f));
+                            EnqueueToRing(msg);
+                        } else if (deltaFrames ==  4) {
+                            // there are three missing snapshots
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.25f));
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.5f));
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.75f));
+                            EnqueueToRing(msg);
+                        } else {
+                            // there are more than 3 missing snapshots,
+                            // just take the completely new data in
+                            EnqueueToRing(ExtrapolatePlayerSnapshotMessage(msg, -3.0f * Time.fixedDeltaTime));
+                            EnqueueToRing(ExtrapolatePlayerSnapshotMessage(msg, -2.0f * Time.fixedDeltaTime));
+                            EnqueueToRing(ExtrapolatePlayerSnapshotMessage(msg, -1.0f * Time.fixedDeltaTime));
+                            EnqueueToRing(msg);
+                        }
+                        m_unsynced_messages_count += deltaFrames;
+                        m_missing_packets_count += (deltaFrames - 1);
+                    } else if (deltaFrames < -180) {
+                        // WEIRD PATH: message from the past older than 3 seconds
+                        // this means something completely weird is going on on the network
+                        // or on the server, and we better completely re-sync with the server
+                        // Debug.LogFormat("detected message {0} frames from the past, FULL RESYNC!",  -deltaFrames);
+                        ClearRing();
+                        EnqueueToRing(msg, false);
+                        m_last_update_time = Time.time;
+                        m_unsynced_messages_count = 0;
+                    } else {
+                        // Debug.LogFormat("detected old / duplicated message {0} frames from the past",  -deltaFrames);
+                        // OLD / DUPLICATED messages: these are simply ignored
+                        // If it is a true duplicate, it is worthless, and if we got messages
+                        // out of order, we have synthesized the missing packet already with
+                        // the data we had, so this is not an exact duplicate, but it is
+                        // useless now anyway.
+                        //
+                        // With the "reliable" UDP connection unity offers, this path should
+                        // never be taken (and I never saw it happen), but this code
+                        // is written to deal with any input whatsoever as good as possible.
+                        // Note that we might also experiment with using a completely
+                        // unreliable connection in the future, and then, this code path
+                        //  becomes essential.
+                        m_ignored_packets_count++;
+                    }
                 }
+                m_received_packets_count++;
                 m_last_message_time = Time.time;
                 m_last_message_server_time = msg.m_server_timestamp;
             } // end lock
@@ -442,14 +586,18 @@ namespace GameMod {
             //       as extrapolation...
             m_compensation_interpol_count += (interpolate_ticks > 0)?1:0;
             if (Time.time >= m_compensation_last + 5.0 && m_compensation_count > 0) {
-                //Debug.LogFormat("ship lag compensation over last {0} frames: {1}ms / {2} physics ticks, {3} interpolation ({4}%)",
-                //                m_compensation_count, 1000.0f* (m_compensation_sum/ m_compensation_count),
-                //                (m_compensation_sum/m_compensation_count)/Time.fixedDeltaTime,
-                //                m_compensation_interpol_count,
-                //                100.0f*((float)m_compensation_interpol_count/(float)m_compensation_count));
+                // Debug.LogFormat("ship lag compensation over last {0} frames: {1}ms / {2} physics ticks, {3} interpolation ({4}%) packets: {5} received / {6} missing / {7} old ignored",
+                //                 m_compensation_count, 1000.0f* (m_compensation_sum/ m_compensation_count),
+                //                 (m_compensation_sum/m_compensation_count)/Time.fixedDeltaTime,
+                //                 m_compensation_interpol_count,
+                //                 100.0f*((float)m_compensation_interpol_count/(float)m_compensation_count),
+                //                 m_received_packets_count, m_missing_packets_count, m_ignored_packets_count);
                 m_compensation_sum = 0.0f;
                 m_compensation_count = 0;
                 m_compensation_interpol_count = 0;
+                m_received_packets_count = 0;
+                m_missing_packets_count = 0;
+                m_ignored_packets_count = 0;
                 m_compensation_last = Time.time;
             }
 

@@ -69,7 +69,7 @@ namespace GameMod {
         /// </summary>
         /// <param name="writer"></param>
         public override void Serialize(NetworkWriter writer) {
-            writer.Write(NetworkMatch.m_match_elapsed_seconds);
+            writer.Write(Time.fixedTime);
             writer.Write((byte)m_num_snapshots);
             for (int i = 0; i < m_num_snapshots; i++) {
                 writer.Write(m_snapshots[i].m_net_id);
