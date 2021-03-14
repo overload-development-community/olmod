@@ -15,6 +15,17 @@ namespace GameMod {
         /// </summary>
         static public bool enabled = true;
         static public NewPlayerSnapshotToClientMessage m_new_snapshot_buffer = new NewPlayerSnapshotToClientMessage();
+        public enum SnapshotVersion : uint {
+            VANILLA = 0,          // PlayerSnapshotToClientMessage from vanilla overload /  olmod <= 0.3.5
+            VELOCITY,             // NewPlayerSnapshotToClientMessage omlod >= 0.3.6, but no usable timestamps
+            VELOCITY_TIMESTAMP,   // NewPlayerSnapshotToClientMessage olmod >= 0.3.6 but with usable timestamps
+        }
+        // Which version of the NewPlayerSnapshotToClientMessages we process
+        // Set it to the default of a 0.3.6/0.3.7 server where we can't trust the
+        // message timestamps. This might be updated by MPTweaks with the
+        // "nocompress.reliable_timestamps" field if the server actually sends
+        // reliable timestamps.
+        static public SnapshotVersion NewSnapshotVersion = SnapshotVersion.VELOCITY;
     }
 
     public class NewPlayerSnapshot {
@@ -160,7 +171,7 @@ namespace GameMod {
         public static void OnNewPlayerSnapshotToClient(NetworkMessage msg) {
             if (NetworkMatch.GetMatchState() == MatchState.PREGAME || NetworkMatch.InGameplay()) {
                 NewPlayerSnapshotToClientMessage item = msg.ReadMessage<NewPlayerSnapshotToClientMessage>();
-                MPClientShipReckoning.AddNewPlayerSnapshot(item);
+                MPClientShipReckoning.AddNewPlayerSnapshot(item, MPNoPositionCompression.NewSnapshotVersion);
             }
         }
 
@@ -187,7 +198,7 @@ namespace GameMod {
                     m_server_timestamp = 0, // Unused.
                     m_snapshots = item.m_snapshots.Select(m => NewPlayerSnapshot.FromOldSnapshot(m)).ToArray()
                 };
-                MPClientShipReckoning.AddNewPlayerSnapshot(newItem, true);
+                MPClientShipReckoning.AddNewPlayerSnapshot(newItem, MPNoPositionCompression.SnapshotVersion.VANILLA);
             }
             return false;
         }

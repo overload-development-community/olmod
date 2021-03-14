@@ -88,6 +88,13 @@ namespace GameMod {
                 MPPickupCheck.PickupCheck = valBool;
                 return Boolean.TrueString;
             }
+            if (key == "nocompress.reliable_timestamps" && bool.TryParse(value, out bool valTimestamps))
+            {
+                //Debug.LogFormat("MPTweaks: server sends reliable timestamps: {0}",(valTimestamps)?1:0);
+                var oldValue = (MPNoPositionCompression.NewSnapshotVersion == MPNoPositionCompression.SnapshotVersion.VELOCITY_TIMESTAMP)?Boolean.TrueString:Boolean.FalseString;
+                MPNoPositionCompression.NewSnapshotVersion = (valTimestamps)?MPNoPositionCompression.SnapshotVersion.VELOCITY_TIMESTAMP:MPNoPositionCompression.SnapshotVersion.VELOCITY;
+                return oldValue;
+            }
             return null;
         }
 
@@ -173,6 +180,7 @@ namespace GameMod {
                 tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmountDefault.ToStringInvariantCulture());
             if (!MPCustomModeFile.PickupCheck)
                 tweaks.Add("item.pickupcheck", Boolean.FalseString);
+            tweaks.Add("nocompress.reliable_timestamps", Boolean.TrueString);
             if (tweaks.Any())
             {
                 Debug.LogFormat("MPTweaks: sending tweaks {0}", tweaks.Join());

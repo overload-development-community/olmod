@@ -185,10 +185,10 @@ namespace GameMod {
         private static int m_unsynced_messages_count = 0;           // number of new messages since the last time ResyncTime() was called
         private static object m_last_messages_lock = new object();  // lock used to guard access to buffer contents AND m_last_update_time
 
-        private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
+        private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg, bool estimateVelocities = false)
         {
             // For old snapshots, we will fill in the ship velocity if that information is available.
-            if (wasOld) {
+            if (estimateVelocities) {
                 var last_snapshots = m_last_messages_ring[m_last_messages_ring_pos_last];
                 foreach (var snapshot in msg.m_snapshots) {
                     var last_snapshot = last_snapshots.m_snapshots.FirstOrDefault(m => m.m_net_id == snapshot.m_net_id);
@@ -310,7 +310,7 @@ namespace GameMod {
         //
         // It is safe to be called from an arbitrary thread, as accesses are
         // guareded by a lock.
-        public static void AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
+        public static void AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, MPNoPositionCompression.SnapshotVersion version)
         {
             lock (m_last_messages_lock) {
                 if (m_last_messages_ring_count == 0) {
@@ -319,8 +319,9 @@ namespace GameMod {
                     m_last_update_time = Time.time;
                     m_unsynced_messages_count = 0;
                 } else {
+                    bool estimateVelocities = (version == MPNoPositionCompression.SnapshotVersion.VANILLA);
                     int deltaFrames;
-                    if (wasOld) {
+                    if (version != MPNoPositionCompression.SnapshotVersion.VELOCITY_TIMESTAMP) {
                         // we do not have server timestamps,
                         // just assume the packet is the next in sequence
                         deltaFrames = 1;
@@ -333,7 +334,7 @@ namespace GameMod {
                     if (deltaFrames == 1) {
                         // FAST PATH:
                         // next in sequence, as we expected
-                        EnqueueToRing(msg, wasOld);
+                        EnqueueToRing(msg, estimateVelocities);
                         m_unsynced_messages_count++;
                     } else if (deltaFrames > 1) {
                         // SLOW PATH: at least one packet is missing
