@@ -177,6 +177,9 @@ namespace GameMod {
         private static NewPlayerSnapshotToClientMessage[] m_last_messages_ring = new NewPlayerSnapshotToClientMessage[4];
         private static int m_last_messages_ring_count = 0;          // number of elements in the ring buffer
         private static int m_last_messages_ring_pos_last = 3;       // position of the last added element
+        private static float m_last_message_time = -1.0f;           // OUR time when we first saw the latest message
+        private static float m_last_message_server_time = -1.0f;    // the SERVER's timestamp of the latest message
+        private static int m_unsynced_messages_count = 0;           // number of new messages since the last time ResyncTime() was called
         private static object m_last_messages_lock = new object();  // lock used to guard access to buffer contents AND m_last_update_time
 
         private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
@@ -206,6 +209,9 @@ namespace GameMod {
         {
             m_last_messages_ring_pos_last = 3;
             m_last_messages_ring_count = 0;
+            m_last_message_time = -1.0f;
+            m_last_message_server_time = -1.0f;
+            m_unsynced_messages_count = 0;
         }
 
         // Prepare for a new match
@@ -238,33 +244,56 @@ namespace GameMod {
                     // first packet
                     EnqueueToRing(msg);
                     m_last_update_time = Time.time;
+                    m_unsynced_messages_count = 0;
                 } else {
                     // next in sequence, as we expected
                     EnqueueToRing(msg, wasOld);
-                    // this assumes the server sends 60Hz
-                    // during time dilation (timebombs!) this is not true,
-                    // it will actually send data packets _worth_ of 16.67ms real time, spread out
-                    // to longer intervals such as 24 ms.
-                    // However, this is not a problem, since the reference clock we sync to
-                    // is Time.time which has the timeScale already applied.
-                    // That means the 24ms tick will be seen as 16.67 in Time.time,
-                    // and everything cancles itself out nicely
-                    m_last_update_time += Time.fixedDeltaTime;
+                    m_unsynced_messages_count++;
                 }
-                // check if the time base is still plausible
-                float delta = (Time.time - m_last_update_time) / Time.fixedDeltaTime; // in ticks
-                // allow a sliding window to catch up for latency jitter
-                float frameSoftSyncLimit = 2.0f; ///hard-sync if we're off by more than that many physics ticks
-                if (delta < -frameSoftSyncLimit || delta > frameSoftSyncLimit) {
-                    // hard resync
-                    // Debug.LogFormat("hard resync by {0} frames", delta);
-                    m_last_update_time = Time.time;
-                } else {
-                    // soft resync
-                    float smoothing_factor = 0.1f;
-                    m_last_update_time += smoothing_factor * delta * Time.fixedDeltaTime;
-                }
+                m_last_message_time = Time.time;
+                m_last_message_server_time = msg.m_server_timestamp;
             } // end lock
+        }
+
+        // Re-Sync the m_last_update_time
+        // Each new message means the server's simulation time advanced by fixedDeltaTime,
+        // but we might get out of sync if no packets are received for a longer period
+        // of time.
+        //
+        // This should ONLY be called while the caller holds the m_last_messages_lock!
+        public static void ResyncTime()
+        {
+            if (m_unsynced_messages_count < 1) {
+                // no new messages to process, early out
+                return;
+            }
+            // advance our clock by the number of messages received since last time
+            // this function was called
+            //
+            // this assumes the server sends 60Hz
+            // during time dilation (timebombs!) this is not true,
+            // it will actually send data packets _worth_ of 16.67ms real time, spread out
+            // to longer intervals such as 24 ms.
+            // However, this is not a problem, since the reference clock we sync to
+            // is Time.time which has the timeScale already applied.
+            // That means the 24ms tick will be seen as 16.67 in Time.time,
+            // and everything cancles itself out nicely
+            m_last_update_time += m_unsynced_messages_count * Time.fixedDeltaTime;
+            m_unsynced_messages_count = 0;
+
+            // check if the time base is still plausible
+            float delta = (m_last_message_time - m_last_update_time) / Time.fixedDeltaTime; // in ticks
+            // allow a sliding window to catch up for latency jitter
+            float frameSoftSyncLimit = 2.0f; ///hard-sync if we're off by more than that many physics ticks
+            if (delta < -frameSoftSyncLimit || delta > frameSoftSyncLimit) {
+                // hard resync
+                // Debug.LogFormat("hard resync by {0} frames", delta);
+                m_last_update_time = Time.time;
+            } else {
+                // soft resync
+                float smoothing_factor = 0.1f;
+                m_last_update_time += smoothing_factor * delta * Time.fixedDeltaTime;
+            }
         }
 
         static private MethodInfo _Client_GetPlayerFromNetId_Method = AccessTools.Method(typeof(Client), "GetPlayerFromNetId");
@@ -342,6 +371,9 @@ namespace GameMod {
                     // we do not have any snapshot messages...
                     return;
                 }
+
+                // make sure m_last_update_time is up-to-date
+                ResyncTime();
 
                 // NOTE: now and m_last_update_time indirectly have timeScale already applied, as they are based on Time.time
                 //       we need to adjust just the ping and the mms_ship_max_interpolate_frames offset...
