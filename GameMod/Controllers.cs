@@ -2,6 +2,7 @@
 using Overload;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
@@ -271,8 +272,8 @@ namespace GameMod
                 int numAxes = int.Parse(sr.ReadLine());
                 for (int j = 0; j < numAxes; j++)
                 {
-                    Controllers.controllers[i].axes[j].deadzone = float.Parse(sr.ReadLine());
-                    Controllers.controllers[i].axes[j].sensitivity = float.Parse(sr.ReadLine());
+                    Controllers.controllers[i].axes[j].deadzone = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
+                    Controllers.controllers[i].axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
                     Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
                     Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
                 }
@@ -344,8 +345,8 @@ namespace GameMod
                     w.WriteLine(controller.m_axis_count);
                     for (int j = 0; j < controller.m_axis_count; j++)
                     {
-                        w.WriteLine(Controllers.controllers[i].axes[j].deadzone);
-                        w.WriteLine(Controllers.controllers[i].axes[j].sensitivity);
+                        w.WriteLine(Controllers.controllers[i].axes[j].deadzone.ToStringInvariantCulture());
+                        w.WriteLine(Controllers.controllers[i].axes[j].sensitivity.ToStringInvariantCulture());
                     }
                 }
             }
