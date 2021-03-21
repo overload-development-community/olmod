@@ -171,18 +171,24 @@ namespace GameMod {
         public static float m_compensation_sum;
         public static int m_compensation_count;
         public static int m_compensation_interpol_count;
+        public static int m_received_packets_count;
+        public static int m_missing_packets_count;
+        public static int m_ignored_packets_count;
         public static float m_compensation_last;
 
         // simple ring buffer, use size 4 which is a power of two, so the % 4 becomes simple & 3
         private static NewPlayerSnapshotToClientMessage[] m_last_messages_ring = new NewPlayerSnapshotToClientMessage[4];
         private static int m_last_messages_ring_count = 0;          // number of elements in the ring buffer
         private static int m_last_messages_ring_pos_last = 3;       // position of the last added element
+        private static float m_last_message_time = -1.0f;           // OUR time when we first saw the latest message
+        private static float m_last_message_server_time = -1.0f;    // the SERVER's timestamp of the latest message
+        private static int m_unsynced_messages_count = 0;           // number of new messages since the last time ResyncTime() was called
         private static object m_last_messages_lock = new object();  // lock used to guard access to buffer contents AND m_last_update_time
 
-        private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
+        private static void EnqueueToRing(NewPlayerSnapshotToClientMessage msg, bool estimateVelocities = false)
         {
             // For old snapshots, we will fill in the ship velocity if that information is available.
-            if (wasOld) {
+            if (estimateVelocities) {
                 var last_snapshots = m_last_messages_ring[m_last_messages_ring_pos_last];
                 foreach (var snapshot in msg.m_snapshots) {
                     var last_snapshot = last_snapshots.m_snapshots.FirstOrDefault(m => m.m_net_id == snapshot.m_net_id);
@@ -206,6 +212,9 @@ namespace GameMod {
         {
             m_last_messages_ring_pos_last = 3;
             m_last_messages_ring_count = 0;
+            m_last_message_time = -1.0f;
+            m_last_message_server_time = -1.0f;
+            m_unsynced_messages_count = 0;
         }
 
         // Prepare for a new match
@@ -220,8 +229,78 @@ namespace GameMod {
             m_compensation_sum = 0.0f;
             m_compensation_count = 0;
             m_compensation_interpol_count = 0;
+            m_received_packets_count = 0;
+            m_missing_packets_count= 0;
+            m_ignored_packets_count = 0;
             m_compensation_last = Time.time;
         }
+
+        // interpolate a single NewPlayerSnapshot (including the extra fields besides pos and rot)!
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static void InterpolatePlayerSnapshot(ref NewPlayerSnapshot C, NewPlayerSnapshot A, NewPlayerSnapshot B, float t)
+        {
+            C.m_pos = Vector3.LerpUnclamped(A.m_pos, B.m_pos, t);
+            C.m_rot = Quaternion.SlerpUnclamped(A.m_rot, B.m_rot, t);
+            C.m_vel = Vector3.LerpUnclamped(A.m_vel, B.m_vel, t);
+            Quaternion A_vrot = Quaternion.Euler(A.m_vrot);
+            Quaternion B_vrot = Quaternion.Euler(C.m_vrot);
+            Quaternion C_vrot = Quaternion.SlerpUnclamped(A_vrot,B_vrot, t);
+            C.m_vrot = C_vrot.eulerAngles;
+            C.m_net_id = A.m_net_id;
+        }
+
+        // extrapolate a single NewPlayerSnapshot (including the extra fields besides pos and rot)!
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static void ExtrapolatePlayerSnapshot(ref NewPlayerSnapshot C, NewPlayerSnapshot B, float t)
+        {
+            C.m_pos = Vector3.LerpUnclamped(B.m_pos, B.m_pos + B.m_vel, t);
+            C.m_rot = Quaternion.SlerpUnclamped(B.m_rot, B.m_rot * Quaternion.Euler(B.m_vrot), t);
+            // assume the rest stays the same
+            C.m_vel = B.m_vel;
+            C.m_vrot = B.m_vrot;
+            C.m_net_id = B.m_net_id;
+        }
+
+        // interpolate a whole NewPlayerSnapshotToClientMessage
+        // interpolate between A and B, t is the relative factor between both
+        // If a player is not in both messages, it will not be in the resulting messages
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static NewPlayerSnapshotToClientMessage InterpolatePlayerSnapshotMessage(NewPlayerSnapshotToClientMessage A, NewPlayerSnapshotToClientMessage B, float t)
+        {
+            NewPlayerSnapshotToClientMessage C = new NewPlayerSnapshotToClientMessage();
+            int i,j;
+
+            C.m_num_snapshots = 0;
+
+            for (i=0; i<A.m_num_snapshots; i++) {
+                for (j=0; j<B.m_num_snapshots; j++) {
+                    if (A.m_snapshots[i].m_net_id.Value == B.m_snapshots[j].m_net_id.Value) {
+                        InterpolatePlayerSnapshot(ref C.m_snapshots[C.m_num_snapshots++], A.m_snapshots[i], B.m_snapshots[j], t);
+                        continue;
+                    }
+                }
+            }
+
+            C.m_server_timestamp = (1.0f - t) * A.m_server_timestamp + t*B.m_server_timestamp;
+            return C;
+        }
+
+        // extrapolate a whole NewPlayerSnapshotToClientMessage
+        // extrapolate from B into t seconds into the future, t can be negative
+        // this is used for generating synthetic snapshot messages in case we detected missing packets
+        private static NewPlayerSnapshotToClientMessage ExtrapolatePlayerSnapshotMessage(NewPlayerSnapshotToClientMessage B, float t)
+        {
+            NewPlayerSnapshotToClientMessage C = new NewPlayerSnapshotToClientMessage();
+            int i;
+
+            for (i=0; i<B.m_num_snapshots; i++) {
+                ExtrapolatePlayerSnapshot(ref C.m_snapshots[C.m_num_snapshots++], B.m_snapshots[i], t);
+            }
+
+            C.m_server_timestamp = B.m_server_timestamp + t;
+            return C;
+        }
+
 
         // add a AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage
         // this should be called as soon as possible after the message arrives
@@ -231,40 +310,135 @@ namespace GameMod {
         //
         // It is safe to be called from an arbitrary thread, as accesses are
         // guareded by a lock.
-        public static void AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, bool wasOld = false)
+        public static void AddNewPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, MPNoPositionCompression.SnapshotVersion version)
         {
             lock (m_last_messages_lock) {
                 if (m_last_messages_ring_count == 0) {
                     // first packet
                     EnqueueToRing(msg);
                     m_last_update_time = Time.time;
+                    m_unsynced_messages_count = 0;
                 } else {
-                    // next in sequence, as we expected
-                    EnqueueToRing(msg, wasOld);
-                    // this assumes the server sends 60Hz
-                    // during time dilation (timebombs!) this is not true,
-                    // it will actually send data packets _worth_ of 16.67ms real time, spread out
-                    // to longer intervals such as 24 ms.
-                    // However, this is not a problem, since the reference clock we sync to
-                    // is Time.time which has the timeScale already applied.
-                    // That means the 24ms tick will be seen as 16.67 in Time.time,
-                    // and everything cancles itself out nicely
-                    m_last_update_time += Time.fixedDeltaTime;
+                    bool estimateVelocities = (version == MPNoPositionCompression.SnapshotVersion.VANILLA);
+                    int deltaFrames;
+                    if (version != MPNoPositionCompression.SnapshotVersion.VELOCITY_TIMESTAMP) {
+                        // we do not have server timestamps,
+                        // just assume the packet is the next in sequence
+                        deltaFrames = 1;
+                    } else {
+                        // determine how many frames in the future the new packet is,
+                        // relative to the last one we received
+                        deltaFrames = (int)((msg.m_server_timestamp - m_last_message_server_time) / Time.fixedDeltaTime + 0.5f);
+                    }
+
+                    if (deltaFrames == 1) {
+                        // FAST PATH:
+                        // next in sequence, as we expected
+                        EnqueueToRing(msg, estimateVelocities);
+                        m_unsynced_messages_count++;
+                    } else if (deltaFrames > 1) {
+                        // SLOW PATH: at least one packet is missing
+                        // we actually do the creation of missing packets here
+                        // once per received new snapshot, so that the per-frame
+                        // update code path can stay simple
+                        // Debug.LogFormat("detected {0} missing packets",  deltaFrames - 1);
+                        NewPlayerSnapshotToClientMessage lastMsg = m_last_messages_ring[m_last_messages_ring_pos_last];
+                        if (deltaFrames == 2) {
+                            // there is one missing snapshot
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.5f));
+                            EnqueueToRing(msg);
+                        } else if (deltaFrames == 3) {
+                            // there are two missing snapshots
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.3333f));
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.6667f));
+                            EnqueueToRing(msg);
+                        } else if (deltaFrames ==  4) {
+                            // there are three missing snapshots
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.25f));
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.5f));
+                            EnqueueToRing(InterpolatePlayerSnapshotMessage(lastMsg,msg,0.75f));
+                            EnqueueToRing(msg);
+                        } else {
+                            // there are more than 3 missing snapshots,
+                            // just take the completely new data in
+                            EnqueueToRing(ExtrapolatePlayerSnapshotMessage(msg, -3.0f * Time.fixedDeltaTime));
+                            EnqueueToRing(ExtrapolatePlayerSnapshotMessage(msg, -2.0f * Time.fixedDeltaTime));
+                            EnqueueToRing(ExtrapolatePlayerSnapshotMessage(msg, -1.0f * Time.fixedDeltaTime));
+                            EnqueueToRing(msg);
+                        }
+                        m_unsynced_messages_count += deltaFrames;
+                        m_missing_packets_count += (deltaFrames - 1);
+                    } else if (deltaFrames < -180) {
+                        // WEIRD PATH: message from the past older than 3 seconds
+                        // this means something completely weird is going on on the network
+                        // or on the server, and we better completely re-sync with the server
+                        // Debug.LogFormat("detected message {0} frames from the past, FULL RESYNC!",  -deltaFrames);
+                        ClearRing();
+                        EnqueueToRing(msg, false);
+                        m_last_update_time = Time.time;
+                        m_unsynced_messages_count = 0;
+                    } else {
+                        // Debug.LogFormat("detected old / duplicated message {0} frames from the past",  -deltaFrames);
+                        // OLD / DUPLICATED messages: these are simply ignored
+                        // If it is a true duplicate, it is worthless, and if we got messages
+                        // out of order, we have synthesized the missing packet already with
+                        // the data we had, so this is not an exact duplicate, but it is
+                        // useless now anyway.
+                        //
+                        // With the "reliable" UDP connection unity offers, this path should
+                        // never be taken (and I never saw it happen), but this code
+                        // is written to deal with any input whatsoever as good as possible.
+                        // Note that we might also experiment with using a completely
+                        // unreliable connection in the future, and then, this code path
+                        //  becomes essential.
+                        m_ignored_packets_count++;
+                    }
                 }
-                // check if the time base is still plausible
-                float delta = (Time.time - m_last_update_time) / Time.fixedDeltaTime; // in ticks
-                // allow a sliding window to catch up for latency jitter
-                float frameSoftSyncLimit = 2.0f; ///hard-sync if we're off by more than that many physics ticks
-                if (delta < -frameSoftSyncLimit || delta > frameSoftSyncLimit) {
-                    // hard resync
-                    // Debug.LogFormat("hard resync by {0} frames", delta);
-                    m_last_update_time = Time.time;
-                } else {
-                    // soft resync
-                    float smoothing_factor = 0.1f;
-                    m_last_update_time += smoothing_factor * delta * Time.fixedDeltaTime;
-                }
+                m_received_packets_count++;
+                m_last_message_time = Time.time;
+                m_last_message_server_time = msg.m_server_timestamp;
             } // end lock
+        }
+
+        // Re-Sync the m_last_update_time
+        // Each new message means the server's simulation time advanced by fixedDeltaTime,
+        // but we might get out of sync if no packets are received for a longer period
+        // of time.
+        //
+        // This should ONLY be called while the caller holds the m_last_messages_lock!
+        public static void ResyncTime()
+        {
+            if (m_unsynced_messages_count < 1) {
+                // no new messages to process, early out
+                return;
+            }
+            // advance our clock by the number of messages received since last time
+            // this function was called
+            //
+            // this assumes the server sends 60Hz
+            // during time dilation (timebombs!) this is not true,
+            // it will actually send data packets _worth_ of 16.67ms real time, spread out
+            // to longer intervals such as 24 ms.
+            // However, this is not a problem, since the reference clock we sync to
+            // is Time.time which has the timeScale already applied.
+            // That means the 24ms tick will be seen as 16.67 in Time.time,
+            // and everything cancles itself out nicely
+            m_last_update_time += m_unsynced_messages_count * Time.fixedDeltaTime;
+            m_unsynced_messages_count = 0;
+
+            // check if the time base is still plausible
+            float delta = (m_last_message_time - m_last_update_time) / Time.fixedDeltaTime; // in ticks
+            // allow a sliding window to catch up for latency jitter
+            float frameSoftSyncLimit = 2.0f; ///hard-sync if we're off by more than that many physics ticks
+            if (delta < -frameSoftSyncLimit || delta > frameSoftSyncLimit) {
+                // hard resync
+                // Debug.LogFormat("hard resync by {0} frames", delta);
+                m_last_update_time = Time.time;
+            } else {
+                // soft resync
+                float smoothing_factor = 0.1f;
+                m_last_update_time += smoothing_factor * delta * Time.fixedDeltaTime;
+            }
         }
 
         static private MethodInfo _Client_GetPlayerFromNetId_Method = AccessTools.Method(typeof(Client), "GetPlayerFromNetId");
@@ -343,6 +517,9 @@ namespace GameMod {
                     return;
                 }
 
+                // make sure m_last_update_time is up-to-date
+                ResyncTime();
+
                 // NOTE: now and m_last_update_time indirectly have timeScale already applied, as they are based on Time.time
                 //       we need to adjust just the ping and the mms_ship_max_interpolate_frames offset...
                 //       Also note that the server still sends the unscaled velocities.
@@ -410,14 +587,18 @@ namespace GameMod {
             //       as extrapolation...
             m_compensation_interpol_count += (interpolate_ticks > 0)?1:0;
             if (Time.time >= m_compensation_last + 5.0 && m_compensation_count > 0) {
-                //Debug.LogFormat("ship lag compensation over last {0} frames: {1}ms / {2} physics ticks, {3} interpolation ({4}%)",
-                //                m_compensation_count, 1000.0f* (m_compensation_sum/ m_compensation_count),
-                //                (m_compensation_sum/m_compensation_count)/Time.fixedDeltaTime,
-                //                m_compensation_interpol_count,
-                //                100.0f*((float)m_compensation_interpol_count/(float)m_compensation_count));
+                // Debug.LogFormat("ship lag compensation over last {0} frames: {1}ms / {2} physics ticks, {3} interpolation ({4}%) packets: {5} received / {6} missing / {7} old ignored",
+                //                 m_compensation_count, 1000.0f* (m_compensation_sum/ m_compensation_count),
+                //                 (m_compensation_sum/m_compensation_count)/Time.fixedDeltaTime,
+                //                 m_compensation_interpol_count,
+                //                 100.0f*((float)m_compensation_interpol_count/(float)m_compensation_count),
+                //                 m_received_packets_count, m_missing_packets_count, m_ignored_packets_count);
                 m_compensation_sum = 0.0f;
                 m_compensation_count = 0;
                 m_compensation_interpol_count = 0;
+                m_received_packets_count = 0;
+                m_missing_packets_count = 0;
+                m_ignored_packets_count = 0;
                 m_compensation_last = Time.time;
             }
 
