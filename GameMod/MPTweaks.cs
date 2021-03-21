@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection.Emit;
 using Harmony;
 using Overload;
 using UnityEngine;
@@ -348,6 +349,21 @@ namespace GameMod {
             }
             if (clientInfo.Capabilities.ContainsKey("ModPrivateData")) {
                 MPModPrivateDataTransfer.SendTo(connId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Doubles the time allotted to wait for a client to start the match.
+    /// </summary>
+    [HarmonyPatch(typeof(NetworkMatch), "CanLaunchCountdown")]
+    class MPTweaks_NetworkMatch_CanLaunchCountdown {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Ldc_R4) {
+                    code.operand = 60f;
+                }
+                yield return code;
             }
         }
     }
