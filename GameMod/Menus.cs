@@ -28,10 +28,16 @@ namespace GameMod
             set { _mms_scale_respawn_time = value; }
         }
         public static bool mms_classic_spawns { get; set; }
+        public static bool mms_allow_something { get; set; }
 
         public static string GetMMSRearViewPIP()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(RearView.MPMenuManagerEnabled));
+        }
+
+        public static string GetMMSAllowSomething()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_allow_something));
         }
 
         public static string GetMMSScaleRespawnTime()
@@ -142,6 +148,8 @@ namespace GameMod
             position.y = col_top - 250f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW REAR VIEW CAMERA"), position, 11, Menus.GetMMSRearViewPIP(), Loc.LS("CLIENTS CAN CHOOSE TO HAVE REAR VIEW"), 1f, false);
             position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SOMETHING"), position, 15, Menus.GetMMSAllowSomething(), Loc.LS("SUPER SECRET ALLOW SOMETHING"), 1f, false);
+            position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("SCALE RESPAWN TO TEAM SIZE"), position, 12, Menus.GetMMSScaleRespawnTime(), Loc.LS("AUTOMATICALLY SCALE RESPAWN TIME TO TEAM SIZE (e.g. 4 = 4 seconds)"), 1f, !(MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL));
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
@@ -243,29 +251,27 @@ namespace GameMod
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
                 (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
-                MenuManager.m_menu_micro_state == 3 &&
-                UIManager.m_menu_selection == 12)
+                MenuManager.m_menu_micro_state == 3)
             {
-                Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
-                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-            }
-
-            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
-                MenuManager.m_menu_micro_state == 3 &&
-                UIManager.m_menu_selection == 13)
-            {
-                Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
-                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-            }
-
-            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
-                MenuManager.m_menu_micro_state == 3 &&
-                UIManager.m_menu_selection == 14)
-            {
-                Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
-                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                switch (UIManager.m_menu_selection)
+                {
+                    case 12:
+                        Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 13:
+                        Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 14:
+                        Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 15:
+                        Menus.mms_allow_something = !Menus.mms_allow_something;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                }
             }
         }
     }

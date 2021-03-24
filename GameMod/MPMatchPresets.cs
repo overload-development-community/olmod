@@ -59,7 +59,8 @@ namespace GameMod
                 allowRearView = RearView.MPMenuManagerEnabled,
                 scaleRespawnTime = Menus.mms_scale_respawn_time,
                 ctfCarrierBoostEnabled = Menus.mms_ctf_boost,
-                classicSpawnsEnabled = Menus.mms_classic_spawns
+                classicSpawnsEnabled = Menus.mms_classic_spawns,
+                allowSomething = Menus.mms_allow_something
             });
 
             presets.Add(new MPMatchPreset
@@ -93,7 +94,8 @@ namespace GameMod
                 allowRearView = false,
                 scaleRespawnTime = false,
                 ctfCarrierBoostEnabled = false,
-                classicSpawnsEnabled = false
+                classicSpawnsEnabled = false,
+                allowSomething = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -131,6 +133,7 @@ namespace GameMod
             public bool scaleRespawnTime;
             public bool classicSpawnsEnabled;
             public bool ctfCarrierBoostEnabled;
+            public bool allowSomething;
 
             public void Apply()
             {
@@ -163,6 +166,7 @@ namespace GameMod
                 Menus.mms_scale_respawn_time = this.scaleRespawnTime;
                 Menus.mms_classic_spawns = this.classicSpawnsEnabled;
                 Menus.mms_ctf_boost = this.ctfCarrierBoostEnabled;
+                Menus.mms_allow_something = this.allowSomething;
             }
         }
 
