@@ -30,6 +30,7 @@ namespace GameMod
         }
         public static bool mms_classic_spawns { get; set; }
         public static bool mms_always_cloaked { get; set; }
+        public static bool mms_allow_smash { get; set; }
 
         public static string GetMMSRearViewPIP()
         {
@@ -39,6 +40,11 @@ namespace GameMod
         public static string GetMMSAlwaysCloaked()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_always_cloaked));
+        }
+
+        public static string GetMMSAllowSmash()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_allow_smash));
         }
 
         public static string GetMMSScaleRespawnTime()
@@ -160,6 +166,10 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 62f;
+            if (DateTime.Now > new DateTime(2021, 4, 2)) {
+                uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
+                position.y += 62f;
+            }
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -297,6 +307,10 @@ namespace GameMod
                             }
                             MenuManager.PlayCycleSound(1f, 1f);
                         }
+                        break;
+                    case 17:
+                        Menus.mms_allow_smash = !Menus.mms_allow_smash;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                 }
             }

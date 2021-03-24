@@ -86,6 +86,10 @@ namespace GameMod {
         }
         public static string CustomProjdata { get; set; }
 
+        public static bool AllowSmash {
+            get { return MPSmash.Enabled; }
+            set { MPSmash.Enabled = value; }
+        }
 
         public static JObject Serialize()
         {
@@ -104,6 +108,7 @@ namespace GameMod {
             jobject["classicspawnsenabled"] = ClassicSpawnsEnabled;
             jobject["ctfcarrierboostenabled"] = CtfCarrierBoostEnabled;
             jobject["alwayscloaked"] = AlwaysCloaked;
+            jobject["allowsmash"] = AllowSmash;
             jobject["customprojdata"] = CustomProjdata;
             return jobject;
         }
@@ -124,6 +129,7 @@ namespace GameMod {
             ClassicSpawnsEnabled = root["classicspawnsenabled"].GetBool(false);
             CtfCarrierBoostEnabled = root["ctfcarrierboostenabled"].GetBool(false);
             AlwaysCloaked = root["alwayscloaked"].GetBool(false);
+            AllowSmash = root["allowsmash"].GetBool(false);
             CustomProjdata = root["customprojdata"].GetString(string.Empty);
         }
 
@@ -412,6 +418,7 @@ namespace GameMod {
             MPModPrivateData.ClassicSpawnsEnabled = Menus.mms_classic_spawns;
             MPModPrivateData.CtfCarrierBoostEnabled = Menus.mms_ctf_boost;
             MPModPrivateData.AlwaysCloaked = Menus.mms_always_cloaked;
+            MPModPrivateData.AllowSmash = Menus.mms_allow_smash;
             if (Menus.mms_mp_projdata_fn != "STOCK")
             {
                 try
