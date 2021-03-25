@@ -665,6 +665,20 @@ namespace GameMod {
         }
     }
 
+    /// <summary>
+    /// Force a high input deficit on the server so it always catches up on inputs, even if this number gets out of sync with the number of inputs received.
+    /// </summary>
+    [HarmonyPatch(typeof(Server), "AccelerateInputs")]
+    class MPClientExtrapolation_AccelerateInputs {
+        static void Prefix() {
+            if (Overload.NetworkManager.IsServer()) {
+                foreach (Player player in Overload.NetworkManager.m_Players) {
+                    player.m_input_deficit = 60;
+                }
+            }
+        }
+    }
+
     /*[HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
     class MPClientExtrapolation_UpdateInterpolationBuffer {
 
