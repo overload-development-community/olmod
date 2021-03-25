@@ -2,6 +2,7 @@
 using Overload;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection.Emit;
 using UnityEngine;
 
@@ -122,6 +123,7 @@ namespace GameMod
         public static int mms_lag_compensation = 3;
         public static int mms_lag_compensation_strength = 2;
         public static int mms_lag_compensation_use_interpolation = 0;
+        public static string mms_mp_projdata_fn = "STOCK";
     }
 
 
@@ -155,6 +157,8 @@ namespace GameMod
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 62f;
         }
 
@@ -270,6 +274,29 @@ namespace GameMod
                     case 15:
                         Menus.mms_always_cloaked = !Menus.mms_always_cloaked;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 16:
+                        if (UIManager.PushedSelect(100))
+                        {
+                            var files = new string[] { "STOCK" }.AddRangeToArray(Directory.GetFiles(Config.OLModDir, "projdata-*.txt"));
+                            for (int i = 0; i < files.Length; i++)
+                            {
+                                uConsole.Log(files[i] + ": " + files.Length.ToString());
+                                if (Menus.mms_mp_projdata_fn == files[i])
+                                {
+                                    if (i + 1 < files.Length)
+                                    {
+                                        Menus.mms_mp_projdata_fn = files[i + 1];
+                                    }
+                                    else
+                                    {
+                                        Menus.mms_mp_projdata_fn = files[0];
+                                    }
+                                    break;
+                                }
+                            }
+                            MenuManager.PlayCycleSound(1f, 1f);
+                        }
                         break;
                 }
             }
