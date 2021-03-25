@@ -7,7 +7,40 @@ using Harmony;
 using Overload;
 using UnityEngine;
 
-namespace GameMod {
+namespace GameMod
+{
+
+    public static class PresetData
+    {
+        public static bool MPEnabled
+        {
+            get
+            {
+                return !String.IsNullOrEmpty(MPModPrivateData.CustomProjdata);
+            }
+        }
+
+        public static void UpdateLobbyStatus()
+        {
+            if (MPEnabled)
+            {
+                MenuManager.AddMpStatus("USING CUSTOM PROJDATA FOR THIS MATCH", 1f, 21);
+            }
+            else
+            {
+                // Clear status 21 so it doesn't incorrectly persist between lobbies
+                var idx = Array.IndexOf(MenuManager.m_mp_status_id, 21);
+                if (idx >= 0)
+                {
+                    MenuManager.m_mp_status_details[idx] = String.Empty;
+                    MenuManager.m_mp_status_flash[idx] = 0f;
+                    MenuManager.m_mp_status_id[idx] = -1;
+                }
+            }
+        }
+
+    }
+
     static class DataReader
     {
         public static string GetData(TextAsset ta, string filename)
@@ -24,10 +57,46 @@ namespace GameMod {
         }
         public static string GetProjData(TextAsset ta)
         {
-            return GetData(ta, "projdata.txt");
+            if (PresetData.MPEnabled)
+            {
+                return MPModPrivateData.CustomProjdata;
+            }
+            else
+            {
+                // Look for "robotdata.txt" in SP/CM zip files and use if possible
+                if (!GameplayManager.IsMultiplayer && GameplayManager.LevelIsLoaded && GameplayManager.Level.IsAddOn)
+                {
+                    string text3 = null;
+                    string filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "projdata");
+                    byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[]
+                    {
+                        ".txt"
+                    });
+                    if (array != null)
+                    {
+                        return System.Text.Encoding.UTF8.GetString(array);
+                    }
+                }
+                return GetData(ta, "projdata.txt");
+            }
+
         }
         public static string GetRobotData(TextAsset ta)
         {
+            // Look for "robotdata.txt" in SP/CM zip files and use if possible
+            if (!GameplayManager.IsMultiplayer && GameplayManager.LevelIsLoaded && GameplayManager.Level.IsAddOn)
+            {
+                string text3 = null;
+                string filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "robotdata");
+                byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[]
+                {
+                        ".txt"
+                });
+                if (array != null)
+                {
+                    return System.Text.Encoding.UTF8.GetString(array);
+                }
+            }
             return GetData(ta, "robotdata.txt");
         }
     }
@@ -57,6 +126,79 @@ namespace GameMod {
                     yield return new CodeInstruction(OpCodes.Call, dataReader_GetRobotData_Method);
                 else
                     yield return code;
+        }
+    }
+
+    // Add annoying custom projdata HUD message when playing MP
+    [HarmonyPatch(typeof(UIElement), "DrawHUD")]
+    class Preset_UIElement_DrawHUD
+    {
+        static void Postfix(UIElement __instance)
+        {
+            if (PresetData.MPEnabled)
+            {
+                Vector2 vector = default(Vector2);
+                vector.x = UIManager.UI_LEFT + 110;
+                vector.y = UIManager.UI_TOP + 120f;
+                __instance.DrawStringSmall("Using custom projdata", vector, 0.5f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
+            }
+        }
+    }
+
+    // Update lobby status display
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class PresetData_MenuManager_MpMatchSetup
+    {
+        static void Postfix()
+        {
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE)
+            {
+                if (MenuManager.m_menu_micro_state != 2)
+                {
+                    PresetData.UpdateLobbyStatus();
+                }
+            }
+        }
+    }
+
+    // Update lobby status display
+    [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
+    class MPModifiers_NetworkMatch_OnAcceptedToLobby
+    {
+        static void Postfix()
+        {
+            PresetData.UpdateLobbyStatus();
+        }
+    }
+
+    // Update lobby status display
+    [HarmonyPatch(typeof(UIElement), "DrawMpPreMatchMenu")]
+    class MPModifiers_UIElement_DrawMpPreMatchMenu
+    {
+        static void Prefix()
+        {
+            PresetData.UpdateLobbyStatus();
+        }
+    }
+
+    // Heavy-handed, re-init robot/projdatas on scene loaded
+    [HarmonyPatch(typeof(GameplayManager), "OnSceneLoaded")]
+    class PresetData_GameplayManager_OnSceneLoaded
+    {
+        static void LoadCustomPresets()
+        {
+            RobotManager.Initialize();
+            ProjectileManager.ReadProjPresetData(ProjectileManager.proj_prefabs);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(GameplayManager), "StartLevel"))
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(PresetData_GameplayManager_OnSceneLoaded), "LoadCustomPresets"));
+                yield return code;
+            }
         }
     }
 }
