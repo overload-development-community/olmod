@@ -80,7 +80,11 @@ namespace GameMod {
             get { return CTF.CarrierBoostEnabled; }
             set { CTF.CarrierBoostEnabled = value; }
         }
-        public static bool AllowSomething { get; set; }
+        public static bool AlwaysCloaked {
+            get { return MPAlwaysCloaked.Enabled; }
+            set { MPAlwaysCloaked.Enabled = value; }
+        }
+
 
         public static JObject Serialize()
         {
@@ -98,7 +102,7 @@ namespace GameMod {
             jobject["modifierfiltermask"] = ModifierFilterMask;
             jobject["classicspawnsenabled"] = ClassicSpawnsEnabled;
             jobject["ctfcarrierboostenabled"] = CtfCarrierBoostEnabled;
-            jobject["allowsomething"] = AllowSomething;
+            jobject["alwayscloaked"] = AlwaysCloaked;
             return jobject;
         }
 
@@ -117,7 +121,7 @@ namespace GameMod {
             ModifierFilterMask = root["modifierfiltermask"].GetInt(255);
             ClassicSpawnsEnabled = root["classicspawnsenabled"].GetBool(false);
             CtfCarrierBoostEnabled = root["ctfcarrierboostenabled"].GetBool(false);
-            AllowSomething = root["allowsomething"].GetBool(false);
+            AlwaysCloaked = root["alwayscloaked"].GetBool(false);
         }
 
         public static string GetModeString(MatchMode mode)
@@ -404,7 +408,7 @@ namespace GameMod {
             MPModPrivateData.ModifierFilterMask = RUtility.BoolArrayToBitmask(MPModifiers.mms_modifier_filter);
             MPModPrivateData.ClassicSpawnsEnabled = Menus.mms_classic_spawns;
             MPModPrivateData.CtfCarrierBoostEnabled = Menus.mms_ctf_boost;
-            MPModPrivateData.AllowSomething = Menus.mms_allow_something;
+            MPModPrivateData.AlwaysCloaked = Menus.mms_always_cloaked;
 
             var mpd = (PrivateMatchDataMessage)AccessTools.Field(typeof(NetworkMatch), "m_private_data").GetValue(null);
             MPModPrivateData.HasPassword = mpd.m_password.Contains('_');

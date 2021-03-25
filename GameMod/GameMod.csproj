@@ -111,6 +111,7 @@
     <Compile Include="MatchModeRace.cs" />
     <Compile Include="MessageTypes.cs" />
     <Compile Include="MoreAudio.cs" />
+    <Compile Include="MPAlwaysCloaked.cs" />
     <Compile Include="MPAnticheat.cs" />
     <Compile Include="MPAutomap.cs" />
     <Compile Include="MPAutoSelection.cs" />
