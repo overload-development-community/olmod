@@ -1,4 +1,4 @@
-olmod 0.3.7 - Overload mod
+olmod 0.3.8 - Overload mod
 Community mods for Overload
 https://github.com/arbruijn/olmod
 
@@ -39,6 +39,8 @@ What does it do
   robot settings. You can extract the stock data from the game with the
   included tool `olgetdata`. The txt files must be in the same directory as
   olmod.exe. You can run olgetdata on linux with `mono olgetdata.exe`.
+  They can either go in the olmod directory, or map makers can add them to
+  their map .zip files.
 
 - Adds `frametime` non-cheat code
 
@@ -125,6 +127,16 @@ What does it do
 - Fixes seizure-inducing flashing in VR, by roncli (thanks to Arne for finding the issue!).
 
 - Makes player scoreboard sorting in team anarchy make more sense, by Tobias.
+
+- Allows games where all ships can always be cloaked, by roncli.
+
+- Allows projdata.txt files to be loaded by the player starting a multiplayer game.  You can have custom weapon balance for a game.  Check under advanced settings when creating a game.  By Tobias.
+
+- Doubles the allotted time to enter a map at the beginning of a multiplayer match in an attempt to allow players with slower computers to start at the same time as everyone else, by roncli.
+
+- Removes issue with servers failing to catch up on player inputs in some circumstances, by roncli.
+
+- TODO: Last feature
 
 How does it work
 ----------------

@@ -1,3 +1,20 @@
+v0.3.8 - 2020-03-26
+
+Features:
+
+- New "Always Cloaked" option for multiplayer games.
+- projdata.txt files - files that can be used to tweak the balance of the game - can now be loaded for multiplayer games.  Put any file starting with "projdata-" and ending with ".txt" in the same directory as olmod, and when you start a multiplayer game you can load that projdata into your game without other players needing the projdata file themselves.
+- For single player and challenge mode, map authors can now put projdata.txt files and robotdata.txt files - files that can be used to tweak the balance of the robots - inside their level .zip files, and they will be honored.
+- The preset for public anarchy games will now have the default setting for picture-in-picture rear view to be on.  You can still turn this setting off in advanced settings.
+- TODO: Last feature
+
+Bug fixes:
+
+- Internationalization fix for controller users who don't use decimal points to represent floating point numbers.
+- Double the allotted time for a player to enter a map at the beginning of the match from 30s to 60s (should help slow-loading maps on slow computers with synchronized starting)
+- Further improvements to lag compensation on bad connections. (Thanks, derhass!)
+- Server-side input accelleration is no longer held back when a variable gets desynced.  You'll no longer see ships flying a full second behind where they're firing from.
+
 v0.3.7 - 2021-03-10
 
 Bug fixes:
