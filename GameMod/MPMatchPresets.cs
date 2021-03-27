@@ -92,7 +92,7 @@ namespace GameMod
                 lapLimit = 0,
                 sniperPackets = true,
                 noCompression = true,
-                allowRearView = false,
+                allowRearView = true,
                 scaleRespawnTime = false,
                 ctfCarrierBoostEnabled = false,
                 classicSpawnsEnabled = false,
