@@ -171,6 +171,7 @@
     <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
+    <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VSync.cs" />
   </ItemGroup>
   <ItemGroup>
