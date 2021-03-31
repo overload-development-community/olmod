@@ -25,6 +25,7 @@ namespace GameMod
         {
             private static int Postfix(int result)
             {
+                // Adjust highest score so kill goals work as expected in no-assist games
                 return MPModPrivateData.AssistScoring ? result : (result / 3);
             }
         }
