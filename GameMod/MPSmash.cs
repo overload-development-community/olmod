@@ -58,17 +58,15 @@ namespace GameMod {
             switch (collision.collider.gameObject.layer) {
                 case 9:
                     var opponent = collision.collider.GetComponent<PlayerShip>();
-                    if (opponent != null) {
-                        if (__instance.m_charge_timer > 0f && __instance.c_rigidbody.velocity.magnitude > 2f && __instance.m_boosting) {
-                            var di = new DamageInfo {
-                                damage = (float)_PlayerShip_CalculateChargeAttackDamage_Method.Invoke(__instance, null),
-                                owner = __instance.gameObject,
-                                pos = __instance.transform.position,
-                                type = DamageType.PLAYER_CHARGE,
-                                weapon = ProjPrefab.none
-                            };
-                            opponent.ApplyDamage(di);
-                        }
+                    if (opponent != null && __instance.m_charge_timer > 0f && __instance.c_rigidbody.velocity.magnitude > 2f && __instance.m_boosting) {
+                        var di = new DamageInfo {
+                            damage = (float)_PlayerShip_CalculateChargeAttackDamage_Method.Invoke(__instance, null),
+                            owner = __instance.gameObject,
+                            pos = __instance.transform.position,
+                            type = DamageType.PLAYER_CHARGE,
+                            weapon = ProjPrefab.none
+                        };
+                        opponent.ApplyDamage(di);
 
                         __instance.CallRpcDoChargeAttackFinish();
                         __instance.m_charge_timer = 0f;
