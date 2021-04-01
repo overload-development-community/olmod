@@ -130,6 +130,8 @@ namespace GameMod
         public static int mms_lag_compensation_strength = 2;
         public static int mms_lag_compensation_use_interpolation = 0;
         public static string mms_mp_projdata_fn = "STOCK";
+        public static int mms_damageeffect_alpha_mult = 30;
+        public static int mms_damageeffect_drunk_blur_mult = 10;
     }
 
 
@@ -350,9 +352,12 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawMpOptions")]
     class Menus_UIElement_DrawMpOptions
     {
-
-        static void DrawCompensation(UIElement uie, ref Vector2 position)
+        static void DrawMoreOptions(UIElement uie, ref Vector2 position)
         {
+            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 8, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
+            position.y += 62f;
+            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
+            position.y += 62f;
             uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
             position.y += 62f;
         }
@@ -369,7 +374,7 @@ namespace GameMod
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
                 {
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawCompensation"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawMoreOptions"));
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
 
@@ -420,6 +425,16 @@ namespace GameMod
                         MenuManager.ChangeMenuState(Menus.msLagCompensation, false);
                         UIManager.DestroyAll(false);
                         MenuManager.PlaySelectSound(1f);
+                        break;
+                    case 8:
+                        Menus.mms_damageeffect_drunk_blur_mult = (int)(UIElement.SliderPos * 100f);
+                        if (Input.GetMouseButtonDown(0))
+                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
+                        break;
+                    case 9:
+                        Menus.mms_damageeffect_alpha_mult = (int)(UIElement.SliderPos * 100f);
+                        if (Input.GetMouseButtonDown(0))
+                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
                         break;
                     default:
                         break;
