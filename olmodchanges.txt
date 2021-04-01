@@ -1,6 +1,7 @@
 v0.3.9 - 2020-03-31
 
 - Fix for runaway debugging in logs.
+- 2% to 8% improvement in FPS from collision mesh not being rendered. (Thanks, derhass!)
 
 v0.3.8 - 2020-03-26
 
