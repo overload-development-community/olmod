@@ -1,4 +1,4 @@
-## olmod 0.3.8 - Overload mod
+## olmod 0.3.9 - Overload mod
 
 **Community mods for Overload**
 
@@ -136,7 +136,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Removes issue with servers failing to catch up on player inputs in some circumstances, by roncli.
 
-- TODO: Last feature
+- Smashmouth Overload!
 
 #### How to build
 

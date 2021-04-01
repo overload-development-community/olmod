@@ -1,4 +1,4 @@
-olmod 0.3.8 - Overload mod
+olmod 0.3.9 - Overload mod
 Community mods for Overload
 https://github.com/arbruijn/olmod
 
@@ -136,7 +136,7 @@ What does it do
 
 - Removes issue with servers failing to catch up on player inputs in some circumstances, by roncli.
 
-- TODO: Last feature
+- Smashmouth Overload!
 
 How does it work
 ----------------

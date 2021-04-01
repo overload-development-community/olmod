@@ -1,3 +1,7 @@
+v0.3.9 - 2020-03-31
+
+- Fix for runaway debugging in logs.
+
 v0.3.8 - 2020-03-26
 
 Features:
@@ -6,7 +10,7 @@ Features:
 - projdata.txt files - files that can be used to tweak the balance of the game - can now be loaded for multiplayer games.  Put any file starting with "projdata-" and ending with ".txt" in the same directory as olmod, and when you start a multiplayer game you can load that projdata into your game without other players needing the projdata file themselves.
 - For single player and challenge mode, map authors can now put projdata.txt files and robotdata.txt files - files that can be used to tweak the balance of the robots - inside their level .zip files, and they will be honored.
 - The preset for public anarchy games will now have the default setting for picture-in-picture rear view to be on.  You can still turn this setting off in advanced settings.
-- TODO: Last feature
+- Smashmouth Overload!
 
 Bug fixes:
 
