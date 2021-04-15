@@ -119,6 +119,7 @@
     <Compile Include="MPCeiling.cs" />
     <Compile Include="MPClassic.cs" />
     <Compile Include="MPClientExtrapolation.cs" />
+    <Compile Include="MPCloak.cs" />
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCreeperSync.cs" />
     <Compile Include="MPCustomModeFile.cs" />
