@@ -122,6 +122,7 @@
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCreeperSync.cs" />
     <Compile Include="MPCustomModeFile.cs" />
+    <Compile Include="MPDamageEffects.cs" />
     <Compile Include="MPFixGhostProjectiles.cs" />
     <Compile Include="MPHUDMessage.cs" />
     <Compile Include="MPLongPwd.cs" />
