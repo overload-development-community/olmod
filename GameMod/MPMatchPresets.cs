@@ -34,7 +34,7 @@ namespace GameMod
                 matchMode = MenuManager.mms_mode,
                 maxPlayers = MenuManager.mms_max_players,
                 friendlyFire = MenuManager.mms_friendly_fire,
-                timeLimit = MenuManager.mms_time_limit,
+                timeLimit = Menus.mms_match_time_limit,
                 scoreLimit = MenuManager.mms_score_limit,
                 respawnTime = MenuManager.mms_respawn_time,
                 respawnInvuln = MenuManager.mms_respawn_invuln,
@@ -70,7 +70,7 @@ namespace GameMod
                 matchMode = MatchMode.ANARCHY,
                 maxPlayers = 16,
                 friendlyFire = 0,
-                timeLimit = MatchTimeLimit.MIN_15,
+                timeLimit = 15 * 60,
                 scoreLimit = 0,
                 respawnTime = 2,
                 respawnInvuln = 2,
@@ -109,7 +109,7 @@ namespace GameMod
             public MatchMode matchMode;
             public int maxPlayers;
             public int friendlyFire;
-            public MatchTimeLimit timeLimit;
+            public int timeLimit;
             public int scoreLimit;
             public int respawnTime;
             public int respawnInvuln;
@@ -143,7 +143,7 @@ namespace GameMod
                 MenuManager.mms_mode = this.matchMode;
                 MenuManager.mms_max_players = this.maxPlayers;
                 MenuManager.mms_friendly_fire = this.friendlyFire;
-                MenuManager.mms_time_limit = this.timeLimit;
+                Menus.mms_match_time_limit = this.timeLimit;
                 MenuManager.mms_score_limit = this.scoreLimit;
                 MenuManager.mms_respawn_time = this.respawnTime;
                 MenuManager.mms_respawn_invuln = this.respawnInvuln;

@@ -91,6 +91,12 @@ namespace GameMod {
             set { MPSmash.Enabled = value; }
         }
 
+        public static int MatchTimeLimit
+        {
+            get { return MPMatchTimeLimits.MatchTimeLimit; }
+            set { MPMatchTimeLimits.MatchTimeLimit = value; }
+        }
+
         public static JObject Serialize()
         {
             JObject jobject = new JObject();
@@ -110,6 +116,7 @@ namespace GameMod {
             jobject["alwayscloaked"] = AlwaysCloaked;
             jobject["allowsmash"] = AllowSmash;
             jobject["customprojdata"] = CustomProjdata;
+            jobject["matchtimelimit"] = MatchTimeLimit;
             return jobject;
         }
 
@@ -131,6 +138,8 @@ namespace GameMod {
             AlwaysCloaked = root["alwayscloaked"].GetBool(false);
             AllowSmash = root["allowsmash"].GetBool(false);
             CustomProjdata = root["customprojdata"].GetString(string.Empty);
+            MatchTimeLimit = root["matchtimelimit"].GetInt(600);
+            NetworkMatch.m_match_time_limit_seconds = MatchTimeLimit;
         }
 
         public static string GetModeString(MatchMode mode)
@@ -419,6 +428,7 @@ namespace GameMod {
             MPModPrivateData.CtfCarrierBoostEnabled = Menus.mms_ctf_boost;
             MPModPrivateData.AlwaysCloaked = Menus.mms_always_cloaked;
             MPModPrivateData.AllowSmash = Menus.mms_allow_smash;
+            MPModPrivateData.MatchTimeLimit = Menus.mms_match_time_limit == 0 ? int.MaxValue : Menus.mms_match_time_limit;
             if (Menus.mms_mp_projdata_fn != "STOCK")
             {
                 try
