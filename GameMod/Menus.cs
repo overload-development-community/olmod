@@ -681,4 +681,22 @@ namespace GameMod
 
         }
     }
+
+    /// <summary>
+    /// Shadow Settings tooltip does not indicate to user that game restart is required
+    /// https://github.com/overload-development-community/olmod/issues/108
+    /// </summary>
+    [HarmonyPatch(typeof(UIElement), "DrawGraphicsMenu")]
+    class Menus_UIElement_DrawGraphicsMenu
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "SHADOW RESOLUTION AND SHADOW DRAW DISTANCE")
+                    code.operand += " (GAME RESTART REQUIRED)";
+                yield return code;
+            }
+        }
+    }
 }
