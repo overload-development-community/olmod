@@ -138,8 +138,11 @@ namespace GameMod {
             AlwaysCloaked = root["alwayscloaked"].GetBool(false);
             AllowSmash = root["allowsmash"].GetBool(false);
             CustomProjdata = root["customprojdata"].GetString(string.Empty);
-            MatchTimeLimit = root["matchtimelimit"].GetInt(600);
-            NetworkMatch.m_match_time_limit_seconds = MatchTimeLimit;
+            MatchTimeLimit = root["matchtimelimit"].GetInt(-1);
+
+            // If client sent new match time limit, apply otherwise ignore (e.g. old olmod client)
+            if (MatchTimeLimit >= 0)
+                NetworkMatch.m_match_time_limit_seconds = MatchTimeLimit;
         }
 
         public static string GetModeString(MatchMode mode)

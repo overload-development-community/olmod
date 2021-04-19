@@ -19,7 +19,7 @@ namespace GameMod
             }
             else
             {
-                __result = (Menus.mms_match_time_limit / 60).ToString() + " MINUTES";
+                __result = (Menus.mms_match_time_limit / 60).ToString() + " MINUTE" + ((Menus.mms_match_time_limit > 60) ? "S" : "");
             }
             return false;
         }
