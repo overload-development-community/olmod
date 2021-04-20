@@ -132,6 +132,7 @@ namespace GameMod
         public static string mms_mp_projdata_fn = "STOCK";
         public static int mms_damageeffect_alpha_mult = 30;
         public static int mms_damageeffect_drunk_blur_mult = 10;
+        public static int mms_match_time_limit = 60;
     }
 
 
@@ -212,7 +213,7 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "AdjustAdvancedPositionCenterColumn"));
                 }
-
+                
                 yield return code;
             }
         }
@@ -259,10 +260,44 @@ namespace GameMod
         }
     }
 
-    // Process Scale Respawn option
+    
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class Menus_MenuManager_MpMatchSetup
     {
+        // Handle match time limit
+        static void ProcessMatchTimeLimit()
+        {
+            Menus.mms_match_time_limit = ((Menus.mms_match_time_limit/60 + 21 + UIManager.m_select_dir) % 21) * 60;
+            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            List<Label> labels = new List<Label>();
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_time_limit"))
+                {
+                    state = 1;
+                    labels = code.labels;
+                }
+
+                if (state == 1 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "PlayCycleSound"))
+                {
+                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessMatchTimeLimit");
+                    code.labels = labels;
+                    state = 2;
+                }
+
+                if (state == 1)
+                    continue;
+
+                yield return code;
+            }
+        }
+
+        // Process Scale Respawn option
         static void Postfix()
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
