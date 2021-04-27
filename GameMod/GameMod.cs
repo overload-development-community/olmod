@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.VersionHandling;
 using Harmony;
 using Overload;
 using UnityEngine;
@@ -11,6 +12,7 @@ using UnityEngine;
 namespace GameMod.Core {
     public class GameMod
     {
+        static readonly OlmodVersion OlmodVersion = new OlmodVersion();
         public static string Version = "olmod 0.3.9";
         private static Version GameVersion;
         public static bool Modded = false;
