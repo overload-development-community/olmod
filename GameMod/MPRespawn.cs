@@ -35,6 +35,9 @@ namespace GameMod {
                     var playerSegnum = GetSegmentNumber(playerPositions[j]);
 
                     var distance = Pathfinding.FindConnectedDistance(segnum, playerSegnum, out int _);
+                    if (distance == 0f || distance >= 9999f) {
+                        distance = RUtility.FindVec3Distance(position - playerPositions[j]);
+                    }
 
                     if (distance > max) {
                         max = distance;

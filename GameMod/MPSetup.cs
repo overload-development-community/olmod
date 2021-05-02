@@ -180,7 +180,7 @@ namespace GameMod {
             m_prefs_hashtable.Add(key, defaultValue);
             return defaultValue;
         }
-
+        
         public static void SetInt(string key, int value)
         {
             m_prefs_hashtable[key] = value;
@@ -234,6 +234,9 @@ namespace GameMod {
                 Menus.mms_lag_compensation_ship_added_lag = ModPrefs.GetInt("MP_PM_LAG_COMPENSATION_SHIP_ADDED_LAG", Menus.mms_lag_compensation_ship_added_lag);
                 Menus.mms_ship_lag_compensation_scale = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
                 Menus.mms_weapon_lag_compensation_scale = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
+                Menus.mms_damageeffect_alpha_mult = ModPrefs.GetInt("MP_PM_DAMAGEEFFECT_ALPHA_MULT", Menus.mms_damageeffect_alpha_mult);
+                Menus.mms_damageeffect_drunk_blur_mult = ModPrefs.GetInt("MP_PM_DAMAGEEFFECT_DRUNK_BLUR_MULT", Menus.mms_damageeffect_drunk_blur_mult);
+                Menus.mms_match_time_limit = ModPrefs.GetInt("MP_PM_MATCH_TIME_LIMIT", Menus.mms_match_time_limit);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -281,6 +284,9 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_LAG_COMPENSATION_SHIP_ADDED_LAG", Menus.mms_lag_compensation_ship_added_lag);
             ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
+            ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_ALPHA_MULT", Menus.mms_damageeffect_alpha_mult);
+            ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_DRUNK_BLUR_MULT", Menus.mms_damageeffect_drunk_blur_mult);
+            ModPrefs.SetInt("MP_PM_MATCH_TIME_LIMIT", Menus.mms_match_time_limit);
             ModPrefs.Flush(filename + "mod");
         }
 

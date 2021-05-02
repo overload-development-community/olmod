@@ -130,6 +130,9 @@ namespace GameMod
         public static int mms_lag_compensation_strength = 2;
         public static int mms_lag_compensation_use_interpolation = 0;
         public static string mms_mp_projdata_fn = "STOCK";
+        public static int mms_damageeffect_alpha_mult = 30;
+        public static int mms_damageeffect_drunk_blur_mult = 10;
+        public static int mms_match_time_limit = 60;
     }
 
 
@@ -210,7 +213,7 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "AdjustAdvancedPositionCenterColumn"));
                 }
-
+                
                 yield return code;
             }
         }
@@ -257,10 +260,44 @@ namespace GameMod
         }
     }
 
-    // Process Scale Respawn option
+    
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class Menus_MenuManager_MpMatchSetup
     {
+        // Handle match time limit
+        static void ProcessMatchTimeLimit()
+        {
+            Menus.mms_match_time_limit = ((Menus.mms_match_time_limit/60 + 21 + UIManager.m_select_dir) % 21) * 60;
+            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            List<Label> labels = new List<Label>();
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_time_limit"))
+                {
+                    state = 1;
+                    labels = code.labels;
+                }
+
+                if (state == 1 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "PlayCycleSound"))
+                {
+                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessMatchTimeLimit");
+                    code.labels = labels;
+                    state = 2;
+                }
+
+                if (state == 1)
+                    continue;
+
+                yield return code;
+            }
+        }
+
+        // Process Scale Respawn option
         static void Postfix()
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
@@ -350,9 +387,12 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawMpOptions")]
     class Menus_UIElement_DrawMpOptions
     {
-
-        static void DrawCompensation(UIElement uie, ref Vector2 position)
+        static void DrawMoreOptions(UIElement uie, ref Vector2 position)
         {
+            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 8, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
+            position.y += 62f;
+            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
+            position.y += 62f;
             uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
             position.y += 62f;
         }
@@ -369,7 +409,7 @@ namespace GameMod
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
                 {
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawCompensation"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawMoreOptions"));
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
 
@@ -420,6 +460,16 @@ namespace GameMod
                         MenuManager.ChangeMenuState(Menus.msLagCompensation, false);
                         UIManager.DestroyAll(false);
                         MenuManager.PlaySelectSound(1f);
+                        break;
+                    case 8:
+                        Menus.mms_damageeffect_drunk_blur_mult = (int)(UIElement.SliderPos * 100f);
+                        if (Input.GetMouseButtonDown(0))
+                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
+                        break;
+                    case 9:
+                        Menus.mms_damageeffect_alpha_mult = (int)(UIElement.SliderPos * 100f);
+                        if (Input.GetMouseButtonDown(0))
+                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
                         break;
                     default:
                         break;
@@ -679,6 +729,24 @@ namespace GameMod
                 uie.DrawStringSmall((i == 0 ? str : "") + strs[i], pos - (Vector2.down * i * 20f), 0.5f, StringOffset.CENTER, UIManager.m_col_ub0, 1f, 1280f);
             }
 
+        }
+    }
+
+    /// <summary>
+    /// Shadow Settings tooltip does not indicate to user that game restart is required
+    /// https://github.com/overload-development-community/olmod/issues/108
+    /// </summary>
+    [HarmonyPatch(typeof(UIElement), "DrawGraphicsMenu")]
+    class Menus_UIElement_DrawGraphicsMenu
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "SHADOW RESOLUTION AND SHADOW DRAW DISTANCE")
+                    code.operand += " (GAME RESTART REQUIRED)";
+                yield return code;
+            }
         }
     }
 }

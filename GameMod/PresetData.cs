@@ -64,7 +64,7 @@ namespace GameMod
             else
             {
                 // Look for "robotdata.txt" in SP/CM zip files and use if possible
-                if (!GameplayManager.IsMultiplayer && GameplayManager.LevelIsLoaded && GameplayManager.Level.IsAddOn)
+                if (!GameplayManager.IsMultiplayer && GameplayManager.Level.IsAddOn)
                 {
                     string text3 = null;
                     string filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "projdata");
@@ -84,7 +84,7 @@ namespace GameMod
         public static string GetRobotData(TextAsset ta)
         {
             // Look for "robotdata.txt" in SP/CM zip files and use if possible
-            if (!GameplayManager.IsMultiplayer && GameplayManager.LevelIsLoaded && GameplayManager.Level.IsAddOn)
+            if (!GameplayManager.IsMultiplayer && GameplayManager.Level.IsAddOn)
             {
                 string text3 = null;
                 string filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "robotdata");
@@ -187,8 +187,8 @@ namespace GameMod
     {
         static void LoadCustomPresets()
         {
-            RobotManager.Initialize();
             ProjectileManager.ReadProjPresetData(ProjectileManager.proj_prefabs);
+            RobotManager.ReadPresetData(RobotManager.m_enemy_prefab);
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
