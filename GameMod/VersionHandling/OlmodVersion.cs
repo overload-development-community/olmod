@@ -67,7 +67,6 @@ namespace GameMod.VersionHandling
 
                 // store the latest known versions so we can alert players on the main menu screen if the running version is outdated
                 LatestKnownVersion = new Version(versionMatch.Value);
-                uConsole.Log($"Retrieved latest olmod version number: {LatestKnownVersion}");
             }
         }
 

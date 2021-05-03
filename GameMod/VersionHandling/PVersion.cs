@@ -16,7 +16,8 @@ namespace GameMod.VersionHandling
             Core.GameMod.OlmodVersion.TryRefreshLatestKnownVersion();
         }
     }
-    
+
+    // Display olmod related information on main menu
     [HarmonyPatch(typeof(UIElement), "DrawMainMenu")]
     class PVersionDisplay
     {
@@ -49,6 +50,7 @@ namespace GameMod.VersionHandling
         }
 
 
+        // Draw olmod modified label and olmod update button, if applicable
         static void Postfix(UIElement __instance)
         {
 
@@ -56,7 +58,7 @@ namespace GameMod.VersionHandling
             __instance.DrawStringSmall("UNOFFICIAL MODIFIED VERSION", pos,
                 0.35f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
             
-            // notify the player that a newer olmod verision is available
+            // notify the player when a newer olmod verision is available
             var olmodVersion = Core.GameMod.OlmodVersion;
             if (olmodVersion.RunningVersion < olmodVersion.LatestKnownVersion)
             {
@@ -66,15 +68,24 @@ namespace GameMod.VersionHandling
 
                 __instance.SelectAndDrawHalfItem($"GET OLMOD {olmodVersion.LatestKnownVersion}", new Vector2(UIManager.UI_RIGHT - 140f, 279f), 12, false);
             }
-
-
-            /* Application.OpenURL("https://discord.gg/WgG2CnS");
-            MenuManager.PlayCycleSound(1f, 1f);
-            break;*/
-
         }
-
     }
 
+    // On select, get latest olmod version from main menu
+    [HarmonyPatch(typeof(MenuManager), "MainMenuUpdate")]
+    class PHandleOlmodUpdateSelect
+    {
+        private static void Postfix()
+        {
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE && !NetworkManager.IsHeadless() && UIManager.PushedSelect(-1))
+            {
+                if (UIManager.m_menu_selection == 12)
+                {
+                    Application.OpenURL("https://github.com/overload-development-community/olmod/releases");
+                    MenuManager.PlayCycleSound(1f, 1f);
+                }
+            }
+        }
+    }
 
 }
