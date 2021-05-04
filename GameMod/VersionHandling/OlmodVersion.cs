@@ -17,11 +17,29 @@ namespace GameMod.VersionHandling
 
         public bool Modded { get; set; }
 
-        public string FullVersionString => $"olmod {RunningVersion}{(Modded ? " **MODDED**" : "")}";
+        private string _fullVersionString;
+
+        public string FullVersionString
+        { 
+            get 
+            {
+                if (_fullVersionString == null)
+                {
+                    // do not include revision unless explicitly set to non-zero in the assembly version
+                    string maybeRevision = RunningVersion.Revision > 0 ? $".{RunningVersion.Revision}" : "";
+                    _fullVersionString = $"olmod  {RunningVersion.ToString(3)}{maybeRevision} {(Modded ? "**MODDED**" : "")}";
+                }
+                return _fullVersionString;
+            }
+        }
+
+        public const string NewVersionReleasesUrl = "https://github.com/overload-development-community/olmod/releases";
+               
+        private const string NewVersionCheckUrl = "https://raw.githubusercontent.com/overload-development-community/olmod/master/README.md";
 
         public OlmodVersion()
         {
-            LatestKnownVersion = RunningVersion = typeof(OlmodVersion).Assembly.GetName().Version;
+            RunningVersion = LatestKnownVersion = typeof(OlmodVersion).Assembly.GetName().Version;
         }
         
         public void TryRefreshLatestKnownVersion() 
@@ -29,14 +47,13 @@ namespace GameMod.VersionHandling
             
             if (GameManager.m_gm != null)
             {
-                GameManager.m_gm.StartCoroutine(versionRequest());
+                GameManager.m_gm.StartCoroutine(VersionRequest());
             }
         }
 
-        IEnumerator versionRequest() 
+        IEnumerator VersionRequest() 
         {
-            string url = "https://raw.githubusercontent.com/overload-development-community/olmod-stable-binaries/master/bin/README.txt";
-            UnityWebRequest request = UnityWebRequest.Get(url);
+            UnityWebRequest request = UnityWebRequest.Get(NewVersionCheckUrl);
             request.timeout = 10;
             yield return request.SendWebRequest();
 
@@ -67,10 +84,10 @@ namespace GameMod.VersionHandling
 
                 // store the latest known versions so we can alert players on the main menu screen if the running version is outdated
                 LatestKnownVersion = new Version(versionMatch.Value);
+
+                LatestKnownVersion = new Version(LatestKnownVersion.Major, LatestKnownVersion.Minor+1, 0);
             }
         }
-
-
 
     }
 }

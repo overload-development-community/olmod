@@ -178,7 +178,7 @@
     <Compile Include="Shaders.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
-    <Compile Include="VersionHandling\PVersion.cs" />
+    <Compile Include="VersionHandling\PatchVersionInfo.cs" />
     <Compile Include="VSync.cs" />
   </ItemGroup>
   <ItemGroup>

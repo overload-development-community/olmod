@@ -81,7 +81,7 @@ namespace GameMod.VersionHandling
             {
                 if (UIManager.m_menu_selection == 12)
                 {
-                    Application.OpenURL("https://github.com/overload-development-community/olmod/releases");
+                    Application.OpenURL(OlmodVersion.NewVersionReleasesUrl);
                     MenuManager.PlayCycleSound(1f, 1f);
                 }
             }
