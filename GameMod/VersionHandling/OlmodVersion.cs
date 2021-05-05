@@ -1,11 +1,14 @@
-﻿using Overload;
+﻿using Newtonsoft.Json;
+using Overload;
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
 using Version = System.Version;
+using System.Linq;
 
 namespace GameMod.VersionHandling
 {
@@ -34,8 +37,8 @@ namespace GameMod.VersionHandling
         }
 
         public const string NewVersionReleasesUrl = "https://github.com/overload-development-community/olmod/releases";
-               
-        private const string NewVersionCheckUrl = "https://raw.githubusercontent.com/overload-development-community/olmod/master/README.md";
+
+        private const string NewVersionCheckUrl = "https://api.github.com/repos/overload-development-community/olmod/releases";
 
         public OlmodVersion()
         {
@@ -64,27 +67,34 @@ namespace GameMod.VersionHandling
             }
             else
             {
-                // version is on first line by convention
-                string firstLine;
-                using (var reader = new StringReader(request.downloadHandler.text))
+                GitHubRelease latestRelease;
+                try
                 {
-                    firstLine = reader.ReadLine();
+                    List<GitHubRelease> releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(request.downloadHandler.text);
+                    if ((latestRelease = releases?.FirstOrDefault()) == null)
+                    {
+                        yield break;
+                    }
                 }
-
-                if (String.IsNullOrEmpty(firstLine))
+                catch (Exception e)
                 {
+                    Debug.Log($"Unable to parse github releases response: {e}");
                     yield break;
                 }
-
-                Match versionMatch = Regex.Match(firstLine, @"\d+\.\d+\.\d+(\.\d+)?");
-                if (!versionMatch.Success)
+                                
+                Match versionMatch1 = Regex.Match(latestRelease.tag_name, @"\d+\.\d+\.\d+(\.\d+)?");
+                if (versionMatch1.Success)
                 {
-                    yield break;
+                    // store the latest known versions so we can alert players on the main menu screen if the running version is outdated
+                    LatestKnownVersion = new Version(versionMatch1.Value);
                 }
-
-                // store the latest known versions so we can alert players on the main menu screen if the running version is outdated
-                LatestKnownVersion = new Version(versionMatch.Value);
             }
+        }
+
+
+        private class GitHubRelease 
+        {
+            public string tag_name;
         }
 
     }
