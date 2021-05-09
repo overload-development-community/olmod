@@ -70,13 +70,6 @@ namespace GameMod {
         public static string ApplySetting(string key, string value)
         {
             string[] keyParts = key.Split('.');
-            if (keyParts[0] == "proj" && Enum.IsDefined(typeof(ProjPrefab), keyParts[1]))
-            {
-                var obj = ProjectileManager.proj_info[(int)Enum.Parse(typeof(ProjPrefab), keyParts[1])];
-                var oldValue = typeof(Projectile).GetField(keyParts[2]).GetValue(obj).ToString();
-                RUtility.ReadField(obj, keyParts[2], value);
-                return oldValue;
-            }
             if (key == "ctf.returntimer" && float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float valFloat))
             {
                 var oldValue = CTF.ReturnTimeAmount.ToStringInvariantCulture();
@@ -171,12 +164,7 @@ namespace GameMod {
             Debug.Log("MPTweaksLoadScene");
             RobotManager.ReadMultiplayerModeFile();
             Debug.Log("MPTweaks loaded mode file");
-            bool nobodySupportsProj = !NetworkMatch.m_players.Keys.Any(connId => MPTweaks.ClientHasTweak(connId, "proj"));
             var tweaks = new Dictionary<string, string>() { };
-            if (nobodySupportsProj) // use stock hunters for all stock client match
-                Debug.LogFormat("MPTweaks: not tweaking hunter: unsupported by all clients");
-            else
-                tweaks.Add("proj.missile_hunter.m_init_speed_min", "17.5");
             if (NetworkMatch.GetMode() == CTF.MatchModeCTF)
                 tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmountDefault.ToStringInvariantCulture());
             if (!MPCustomModeFile.PickupCheck)
@@ -297,7 +285,7 @@ namespace GameMod {
             caps.Add("ModVersion", Core.GameMod.OlmodVersion.FullVersionString);
             caps.Add("Modded", Core.GameMod.Modded ? "1" : "0");
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
-            caps.Add("SupportsTweaks", "proj,sniper,jip,nocompress_0_3_6");
+            caps.Add("SupportsTweaks", "sniper,jip,nocompress_0_3_6");
             caps.Add("ModPrivateData", "1");
             caps.Add("ClassicWeaponSpawns", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
