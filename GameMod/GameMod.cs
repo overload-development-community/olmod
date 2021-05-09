@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.VersionHandling;
 using Harmony;
 using Overload;
 using UnityEngine;
@@ -11,7 +12,7 @@ using UnityEngine;
 namespace GameMod.Core {
     public class GameMod
     {
-        public static string Version = "olmod 0.3.9";
+        public static OlmodVersion OlmodVersion = new OlmodVersion();
         private static Version GameVersion;
         public static bool Modded = false;
         public static bool VREnabled = false;
@@ -29,7 +30,7 @@ namespace GameMod.Core {
             VREnabled = FindArg("-vrmode");
 
             GameVersion = typeof(GameManager).Assembly.GetName().Version;
-            Debug.Log("Initializing " + Version + ", game " + GameVersion);
+            Debug.Log("Initializing " + OlmodVersion.FullVersionString + ", game " + GameVersion);
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             Config.Init();
             MPInternet.CheckInternetServer();
@@ -43,7 +44,7 @@ namespace GameMod.Core {
             {
                 Debug.Log(ex.ToString());
             }
-            Debug.Log("Done initializing " + Version);
+            Debug.Log("Done initializing " + OlmodVersion.FullVersionString);
 
             if (Modded && Config.OLModDir != null && Config.OLModDir != "")
             {
@@ -76,7 +77,7 @@ namespace GameMod.Core {
 
             if (Modded)
             {
-                Version = $"{Version} **MODDED**"; // Only display modded tag if you're playing modded.
+                OlmodVersion.Modded = true; // Only display modded tag if you're playing modded.
             }
         }
 
@@ -99,45 +100,6 @@ namespace GameMod.Core {
         public static bool HasInternetMatch()
         {
             return GameVersion.CompareTo(new Version(1, 0, 1885)) >= 0;
-        }
-
-        // add modified indicator to main menu
-        [HarmonyPatch(typeof(UIElement), "DrawMainMenu")]
-        class VersionPatch
-        {
-            static string GetVersion(string stockVersion)
-            {
-                return $"{stockVersion} {Version.ToUpperInvariant()}";
-            }
-
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-            {
-                var _string_Format_Method = AccessTools.Method(typeof(String), "Format", new Type[] { typeof(string), typeof(object), typeof(object), typeof(object) });
-                var _versionPatch_GetVersion_Method = AccessTools.Method(typeof(VersionPatch), "GetVersion");
-
-                int state = 0;
-
-                foreach (var code in codes)
-                {
-                    // this.DrawStringSmall(string.Format(Loc.LS("VERSION {0}.{1} BUILD {2}"), GameManager.Version.Major, GameManager.Version.Minor, GameManager.Version.Build), position, 0.5f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
-                    if (state == 0 && code.opcode == OpCodes.Call && code.operand == _string_Format_Method)
-                    {
-                        state = 1;
-                        yield return code;
-                        yield return new CodeInstruction(OpCodes.Call, _versionPatch_GetVersion_Method);
-                        continue;
-                    }
-
-                    yield return code;
-                }
-            }
-
-            static void Postfix(UIElement __instance)
-            {
-                Vector2 pos = new Vector2(UIManager.UI_RIGHT - 10f, -155f - 60f + 50f + 40f);
-                __instance.DrawStringSmall("UNOFFICIAL MODIFIED VERSION", pos,
-                    0.35f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
-            }
         }
 
     }
@@ -169,7 +131,7 @@ namespace GameMod.Core {
     {
         private static bool Prefix(ref string __result)
         {
-            __result = GameMod.Version.ToUpperInvariant();
+            __result = GameMod.OlmodVersion.FullVersionString.ToUpperInvariant();
             return false;
         }
     }
