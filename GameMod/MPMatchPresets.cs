@@ -201,6 +201,29 @@ namespace GameMod
                     List<MPMatchPreset> _presets = JsonConvert.DeserializeObject<List<MPMatchPreset>>(www.downloadHandler.text);
                     foreach (var preset in _presets)
                     {
+                        // Convert old timeLimit enums to new timeLimit ints.
+                        if (preset.timeLimit < 60) {
+                            switch (preset.timeLimit) {
+                                case ((int)MatchTimeLimit.MIN_3):
+                                    preset.timeLimit = 3 * 60;
+                                    break;
+                                case ((int)MatchTimeLimit.MIN_5):
+                                    preset.timeLimit = 5 * 60;
+                                    break;
+                                case ((int)MatchTimeLimit.MIN_7):
+                                    preset.timeLimit = 7 * 60;
+                                    break;
+                                case ((int)MatchTimeLimit.MIN_10):
+                                    preset.timeLimit = 10 * 60;
+                                    break;
+                                case ((int)MatchTimeLimit.MIN_15):
+                                    preset.timeLimit = 15 * 60;
+                                    break;
+                                case ((int)MatchTimeLimit.MIN_20):
+                                    preset.timeLimit = 20 * 60;
+                                    break;
+                            }
+                        }
                         presets.Add(preset);
                     }
                 }
