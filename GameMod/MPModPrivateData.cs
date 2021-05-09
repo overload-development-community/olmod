@@ -1573,7 +1573,7 @@ END_ENTRY
             MPModPrivateData.AllowSmash = Menus.mms_allow_smash;
             MPModPrivateData.MatchTimeLimit = Menus.mms_match_time_limit == 0 ? int.MaxValue : Menus.mms_match_time_limit;
             if (Menus.mms_mp_projdata_fn == "STOCK") {
-                MPModPrivateData.CustomProjdata = MPModPrivateData.DEFAULT_PROJ_DATA;
+                MPModPrivateData.CustomProjdata = string.Empty;
             } else {
             try
                 {

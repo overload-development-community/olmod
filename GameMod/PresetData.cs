@@ -12,7 +12,7 @@ namespace GameMod
 
     public static class PresetData
     {
-        public static bool MPEnabled
+        public static bool ProjDataExists
         {
             get
             {
@@ -22,7 +22,7 @@ namespace GameMod
 
         public static void UpdateLobbyStatus()
         {
-            if (MPEnabled)
+            if (ProjDataExists)
             {
                 MenuManager.AddMpStatus("USING CUSTOM PROJDATA FOR THIS MATCH", 1f, 21);
             }
@@ -57,9 +57,13 @@ namespace GameMod
         }
         public static string GetProjData(TextAsset ta)
         {
-            if (PresetData.MPEnabled)
+            if (PresetData.ProjDataExists)
             {
                 return MPModPrivateData.CustomProjdata;
+            }
+            else if (GameplayManager.IsMultiplayer)
+            {
+                return MPModPrivateData.DEFAULT_PROJ_DATA;
             }
             else
             {
@@ -135,7 +139,7 @@ namespace GameMod
     {
         static void Postfix(UIElement __instance)
         {
-            if (PresetData.MPEnabled)
+            if (PresetData.ProjDataExists)
             {
                 Vector2 vector = default(Vector2);
                 vector.x = UIManager.UI_LEFT + 110;
