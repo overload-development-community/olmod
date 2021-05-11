@@ -631,7 +631,7 @@ namespace GameMod {
     public static class MPObserverDamage
     {
         public static Dictionary<Player, List<MPObserverDamageLog>> playerDamages = new Dictionary<Player, List<MPObserverDamageLog>>();
-        public static void AddDamage(Player player, float dmg, float timer)
+        public static void AddDamage(Player player, float dmg, float timer = 2f)
         {
             if (!MPObserverDamage.playerDamages.ContainsKey(player))
             {
@@ -686,7 +686,7 @@ namespace GameMod {
             UIManager.DrawQuadUIInner(offset, health, h, c1, 1f, 11, 1f);
             if (MPObserverDamage.playerDamages.ContainsKey(player) && MPObserverDamage.playerDamages[player].Sum(x => x.dmg) > 0f)
             {
-                float dmg = System.Math.Min(health, MPObserverDamage.playerDamages[player].Sum(x => x.dmg) / 100 * w);
+                float dmg = System.Math.Max(0, System.Math.Min(100f - health, MPObserverDamage.playerDamages[player].Sum(x => x.dmg) / 100 * w));
                 Color c2 = Color.Lerp(HSBColor.ConvertToColor(0f, 1f, 0.90f), HSBColor.ConvertToColor(0f, 0.9f, 1f), UnityEngine.Random.value * UIElement.FLICKER);
                 offset.x -= health + dmg;
                 UIManager.DrawQuadUIInner(offset, dmg, h, c2, 1f, 11, 1f);
@@ -704,7 +704,7 @@ namespace GameMod {
                 return;
 
             __instance.m_damage_flash_slow = 0f;
-            MPObserverDamage.AddDamage(__instance.c_player, damage_scaled, 2f);
+            MPObserverDamage.AddDamage(__instance.c_player, damage_scaled);
         }
     }
 
