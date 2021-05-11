@@ -1,3 +1,28 @@
+v0.4.0 - 2021-05-10
+
+Features: 
+
+- Change default balance settings for multiplayer games only: (Thanks to zero for coordinating, and all the pilots who tested this!)
+  - Driller direct damage -24.18% (Translates to about -17% driller damage overall)
+  - Crusher damage -20%
+  - Flak direct damage -20% (Translates to about -16% flak damage overall)
+  - Cyclone damage -5%
+  - Reflex damage +15%
+  - Hunter direct damage -47.5% (Translates to about -21% hunter damage overall)
+  - Hunter homing strength -10%
+  - Hunter speed -12.5% (this is not a recent change, but it's listed to make clear that it's still slower than vanilla Overload)
+- Reduced shader cloak is now at 30% opacity to improve it and bring it closer to normal shader cloak. (Thanks, Tobias!)
+- New settings to change damage blur and damage color intensity. (Thanks, Tobias!)
+- Improved respawn algorithm for anarchy and team anarchy, it no longer disapproves of respawn points more than 80 units away, and now considers walls if the map isn't using inverted cubes.
+- Multiplayer match time limit is now configurable from 0 to 20 minutes in one minute increments. (Thanks, Tobias!)
+- Observer mode health bars and damage indicators for pilots. (Thanks, Tobias!)
+- Notification on main screen when there is a new version of olmod available. (Thanks, marlowe!)
+
+Bug fixes:
+
+- robotdata.txt is now properly read in custom map .zip files. (Thanks, Tobias!)
+- Windows will no longer crash on client/server LAN support activation when more than 2 DNS servers are configured. (Thanks, Arne!)
+
 v0.3.9 - 2020-03-31
 
 - Fix for runaway debugging in logs.
