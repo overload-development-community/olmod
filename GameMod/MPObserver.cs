@@ -619,4 +619,94 @@ namespace GameMod {
             }
         }
     }
+
+    // Support for display health bars above players
+
+    public class MPObserverDamageLog
+    {
+        public float dmg;
+        public float timer;
+    }
+
+    public static class MPObserverDamage
+    {
+        public static Dictionary<Player, List<MPObserverDamageLog>> playerDamages = new Dictionary<Player, List<MPObserverDamageLog>>();
+        public static void AddDamage(Player player, float dmg, float timer)
+        {
+            if (!MPObserverDamage.playerDamages.ContainsKey(player))
+            {
+                MPObserverDamage.playerDamages.Add(player, new List<MPObserverDamageLog> { new MPObserverDamageLog { dmg = dmg, timer = timer } });
+            }
+            else
+            {
+                MPObserverDamage.playerDamages[player].Add(new MPObserverDamageLog { dmg = dmg, timer = timer });
+            }
+        }
+    }
+
+    // Process damage log dropoffs
+    [HarmonyPatch(typeof(PlayerShip), "Update")]
+    class MPObserver_PlayerShip_Update
+    {
+        static void Postfix(PlayerShip __instance)
+        {
+            if (!MPObserver.Enabled)
+                return;
+
+            if (MPObserverDamage.playerDamages.ContainsKey(__instance.c_player))
+            {
+                foreach (var dmg in MPObserverDamage.playerDamages[__instance.c_player])
+                {
+                    dmg.timer -= RUtility.FRAMETIME_UI;
+                }
+
+                MPObserverDamage.playerDamages[__instance.c_player].RemoveAll(x => x.timer < 0f);
+            }
+        }
+    }
+
+    // Display health bar above players
+    [HarmonyPatch(typeof(UIManager), "DrawMpPlayerName")]
+    class MPObserver_UIManager_DrawMpPlayerName
+    {
+        static void Postfix(Player player, Vector2 offset)
+        {
+            if (!MPObserver.Enabled)
+                return;
+
+            offset.y -= 3f;
+            Color c1 = Color.Lerp(HSBColor.ConvertToColor(0.4f, 0.85f, 0.1f), HSBColor.ConvertToColor(0.4f, 0.8f, 0.15f), UnityEngine.Random.value * UIElement.FLICKER);
+            Color c3 = Color.Lerp(player.m_mp_data.color, UIManager.m_col_white2, player.c_player_ship.m_damage_flash_fast);
+            float w = 3.5f;
+            float h = 1f;
+            UIManager.DrawStringAlignCenter(player.m_hitpoints.ToString("n1"), offset + Vector2.up * -3f, 0.8f, c3);
+            UIManager.DrawQuadBarHorizontal(offset, w+0.25f, h+0.25f, 0f, HSBColor.ConvertToColor(0.4f, 0.1f, 0.1f), 7);
+            float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
+            offset.x = w - health;
+            UIManager.DrawQuadUIInner(offset, health, h, c1, 1f, 11, 1f);
+            if (MPObserverDamage.playerDamages.ContainsKey(player) && MPObserverDamage.playerDamages[player].Sum(x => x.dmg) > 0f)
+            {
+                float dmg = System.Math.Min(health, MPObserverDamage.playerDamages[player].Sum(x => x.dmg) / 100 * w);
+                Color c2 = Color.Lerp(HSBColor.ConvertToColor(0f, 1f, 0.90f), HSBColor.ConvertToColor(0f, 0.9f, 1f), UnityEngine.Random.value * UIElement.FLICKER);
+                offset.x -= health + dmg;
+                UIManager.DrawQuadUIInner(offset, dmg, h, c2, 1f, 11, 1f);
+            }
+        }
+    }
+
+    // Add Observer damage record
+    [HarmonyPatch(typeof(PlayerShip), "RpcApplyDamage")]
+    class MPObserver_PlayerShip_RpcApplyDamage
+    {
+        static void Postfix(PlayerShip __instance, float hitpoints, float damage, float damage_scaled, float damage_min)
+        {
+            if (!MPObserver.Enabled)
+                return;
+
+            __instance.m_damage_flash_slow = 0f;
+            MPObserverDamage.AddDamage(__instance.c_player, damage_scaled, 2f);
+        }
+    }
+
+
 }
