@@ -13,7 +13,7 @@ namespace GameMod.VersionHandling
     {
         static void Postfix()
         {
-            Core.GameMod.OlmodVersion.TryRefreshLatestKnownVersion();
+            OlmodVersion.TryRefreshLatestKnownVersion();
         }
     }
 
@@ -23,7 +23,7 @@ namespace GameMod.VersionHandling
     {
         static string GetVersion(string stockVersion)
         {
-            return $"{stockVersion} {Core.GameMod.OlmodVersion.FullVersionString.ToUpperInvariant()}";
+            return $"{stockVersion} {OlmodVersion.FullVersionString.ToUpperInvariant()}";
         }
 
         // append olmod version to the regular version display on the main menu
@@ -59,14 +59,13 @@ namespace GameMod.VersionHandling
                 0.35f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
             
             // notify the player when a newer olmod verision is available
-            var olmodVersion = Core.GameMod.OlmodVersion;
-            if (olmodVersion.RunningVersion < olmodVersion.LatestKnownVersion)
+            if (OlmodVersion.RunningVersion < OlmodVersion.LatestKnownVersion)
             {
                 pos = new Vector2(UIManager.UI_RIGHT - 10f, -155f - 60f + 50f + 60f);
                 __instance.DrawStringSmall("OLMOD UPDATE AVAILABLE", pos,
                     0.35f, StringOffset.RIGHT, UIManager.m_col_ui1, 0.5f, -1f);
 
-                __instance.SelectAndDrawHalfItem($"GET OLMOD {olmodVersion.LatestKnownVersion}", new Vector2(UIManager.UI_RIGHT - 140f, 279f), 12, false);
+                __instance.SelectAndDrawHalfItem($"GET OLMOD {OlmodVersion.LatestKnownVersion}", new Vector2(UIManager.UI_RIGHT - 140f, 279f), 12, false);
             }
         }
     }

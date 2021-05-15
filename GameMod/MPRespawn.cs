@@ -8,6 +8,7 @@ using UnityEngine;
 namespace GameMod {
     [HarmonyPatch(typeof(NetworkSpawnPoints), "PickGoodRespawnPointForTeam")]
     class MPRespawn_PickGoodRespawnPointForTeam {
+        private static Dictionary<int, DateTime> lastRespawn = new Dictionary<int, DateTime>();
         private static FieldInfo _NetworkSpawnPoints_m_player_pos_Field = typeof(NetworkSpawnPoints).GetField("m_player_pos", BindingFlags.NonPublic | BindingFlags.Static);
         private static FieldInfo _NetworkSpawnPoints_m_player_team_Field = typeof(NetworkSpawnPoints).GetField("m_player_team", BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -57,6 +58,7 @@ namespace GameMod {
             }
 
             __result = Math.Max(result, 0);
+            lastRespawn[__result] = DateTime.Now;
 
             return false;
         }
@@ -101,12 +103,17 @@ namespace GameMod {
                     num += dist / 4;
                 } else {
                     float num5 = (RUtility.FindVec3Distance(position - playerPositions[i]) + dist) / 2;
-                    if (num5 > 25f) {
-                        num -= (num5 - 25f) * 2f * num2;
-                    } else if (num5 < 5f) {
-                        num -= (5f - num5) * 100f;
+                    if (num5 > 50f) {
+                        num -= (num5 - 50f) * 2f * num2;
+                    } else if (num5 < 10f) {
+                        num -= (10f - num5) * 100f;
                     }
                 }
+            }
+
+            // Avoid respawning two ships on the same respawn point within a short amount of time.
+            if (lastRespawn.ContainsKey(idx) && lastRespawn[idx] > DateTime.Now.AddSeconds(-2)) {
+                num -= 1000f * (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
             }
 
             return num;

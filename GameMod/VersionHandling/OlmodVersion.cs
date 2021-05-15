@@ -3,7 +3,6 @@ using Overload;
 using System;
 using System.Collections.Generic;
 using System.Collections;
-using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -13,21 +12,23 @@ using System.Linq;
 namespace GameMod.VersionHandling
 {
 
-    public class OlmodVersion
+    public static class OlmodVersion
     {
-        public Version LatestKnownVersion { get; set; }
-        public Version RunningVersion { get; set; }
+        public static Version LatestKnownVersion { get; set; }
+        public static Version RunningVersion { get; set; }
 
-        public bool Modded { get; set; }
+        public static bool Modded { get; set; }
 
-        private string _fullVersionString;
+        private static string _fullVersionString;
 
-        public string FullVersionString
+        public static string FullVersionString
         { 
-            get 
+            get
             {
                 if (_fullVersionString == null)
                 {
+                    Setup();
+
                     // do not include revision unless explicitly set to non-zero in the assembly version
                     string maybeRevision = RunningVersion.Revision > 0 ? $".{RunningVersion.Revision}" : "";
                     _fullVersionString = $"olmod  {RunningVersion.ToString(3)}{maybeRevision} {(Modded ? "**MODDED**" : "")}";
@@ -40,13 +41,16 @@ namespace GameMod.VersionHandling
 
         private const string NewVersionCheckUrl = "https://api.github.com/repos/overload-development-community/olmod/releases";
 
-        public OlmodVersion()
+        public static void Setup()
         {
             RunningVersion = LatestKnownVersion = typeof(OlmodVersion).Assembly.GetName().Version;
         }
         
-        public void TryRefreshLatestKnownVersion() 
+        public static void TryRefreshLatestKnownVersion() 
         {
+            if (_fullVersionString == null) {
+                Setup();
+            }
             
             if (GameManager.m_gm != null)
             {
@@ -54,7 +58,7 @@ namespace GameMod.VersionHandling
             }
         }
 
-        IEnumerator VersionRequest() 
+        static IEnumerator VersionRequest() 
         {
             UnityWebRequest request = UnityWebRequest.Get(NewVersionCheckUrl);
             request.timeout = 10;
@@ -90,7 +94,6 @@ namespace GameMod.VersionHandling
                 }
             }
         }
-
 
         private class GitHubRelease 
         {

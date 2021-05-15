@@ -12,7 +12,6 @@ using UnityEngine;
 namespace GameMod.Core {
     public class GameMod
     {
-        public static OlmodVersion OlmodVersion = new OlmodVersion();
         private static Version GameVersion;
         public static bool Modded = false;
         public static bool VREnabled = false;
@@ -131,7 +130,7 @@ namespace GameMod.Core {
     {
         private static bool Prefix(ref string __result)
         {
-            __result = GameMod.OlmodVersion.FullVersionString.ToUpperInvariant();
+            __result = OlmodVersion.FullVersionString.ToUpperInvariant();
             return false;
         }
     }

@@ -1,5 +1,5 @@
 <Project>
     <PropertyGroup>
-        <OverloadDir>..\..\..\Program Files (x86)\Steam\steamapps\common\Overload</OverloadDir>
+        <OverloadDir>E:\Steam\steamapps\common\Overload</OverloadDir>
     </PropertyGroup>
 </Project>
