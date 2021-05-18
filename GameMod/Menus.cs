@@ -171,7 +171,15 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
             position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
+            // We're out of space, and assists don't matter in CTF anyway...
+            if (MenuManager.mms_mode == ExtMatchMode.CTF)
+            {
+                uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
+            }
+            else
+            {
+                uie.SelectAndDrawStringOptionItem(Loc.LS("ASSISTS"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("AWARD POINTS FOR ASSISTING WITH KILLS"), 1f, false);
+            }
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 62f;
@@ -179,8 +187,6 @@ namespace GameMod
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
                 position.y += 62f;
             }
-            uie.SelectAndDrawStringOptionItem(Loc.LS("ASSIST SCORING"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("INCLUDE ASSISTS IN PLAYER SCORE"), 1f, false);
-            position.y += 62f;
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
