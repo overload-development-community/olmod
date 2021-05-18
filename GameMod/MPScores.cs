@@ -1,6 +1,7 @@
 ﻿using Harmony;
 using Overload;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 
 namespace GameMod
@@ -53,7 +54,6 @@ namespace GameMod
         [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
         class MPScores_UIElement_DrawHUDScoreInfo_AssistSwitch
         {
-            
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
             {
                 return AssistSwitchTranspiler(codes);
@@ -93,6 +93,52 @@ namespace GameMod
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
             {
                 return AssistSwitchTranspiler(codes);
+            }
+        }
+
+        [HarmonyPatch(typeof(UIElement), "DrawScoresForTeam")]
+        class MPScores_UIElement_DrawScoresForTeam_AssistSwitch
+        {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            {
+                int stage = 0;
+                var jumpLabel = new Label();
+                foreach (var code in codes)
+                {
+                    if (stage == 0 && code.opcode == OpCodes.Ldarg_S && (byte)code.operand == 4)
+                    {
+                        stage = 1;
+                    }
+                    else if (stage == 1 && code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawDigitsVariable")
+                    {
+                        yield return code;
+                        // Now inject a branch before the assist column draw
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPScores), "ShouldSuppressAssistScoring"));
+                        yield return new CodeInstruction(OpCodes.Brtrue, jumpLabel);
+                        stage = 2;
+                        continue;
+                    }
+                    else if (stage == 2 && code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "DrawDigitsVariable")
+                    {
+                        stage = 3;
+                    }
+                    else if (stage == 3)
+                    {
+                        code.labels.Add(jumpLabel);
+                        stage = 4;
+                    }
+
+                    yield return code;
+                }
+            }
+
+            public void Example()
+            {
+                if (!ShouldSuppressAssistScoring())
+                {
+                    UIElement element = new UIElement();
+                    element.DrawDigitsVariable(new UnityEngine.Vector2(), 1, 0.65f, StringOffset.CENTER, new UnityEngine.Color(), 0.5f);
+                }
             }
         }
     }
