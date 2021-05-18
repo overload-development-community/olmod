@@ -131,15 +131,6 @@ namespace GameMod
                     yield return code;
                 }
             }
-
-            public void Example()
-            {
-                if (!ShouldSuppressAssistScoring())
-                {
-                    UIElement element = new UIElement();
-                    element.DrawDigitsVariable(new UnityEngine.Vector2(), 1, 0.65f, StringOffset.CENTER, new UnityEngine.Color(), 0.5f);
-                }
-            }
         }
     }
 }
