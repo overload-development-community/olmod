@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Timers;
 using Harmony;
 using Overload;
@@ -19,7 +21,6 @@ namespace GameMod
                 uConsole.RegisterCommand("toggleprimaryorder", "toggles all Weapon Selection logic related to primary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdTogglePrimary));
                 uConsole.RegisterCommand("togglesecondaryorder", "toggles all Weapon Selection logic related to secondary weapons", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleSecondary));
                 uConsole.RegisterCommand("toggle_hud", "Toggles some HUD elements", new uConsole.DebugCommand(CommandsAndInitialisationPatch.CmdToggleHud));
-
                 Initialise();
             }
 
@@ -785,7 +786,7 @@ namespace GameMod
             {
                 if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
                 {
-                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
+                    if (__instance == GameManager.m_local_player)
                     {
                         int new_weapon = getWeaponPriority(wt);
                         int current_weapon = getWeaponPriority(GameManager.m_local_player.m_weapon_type);
@@ -818,7 +819,7 @@ namespace GameMod
             {
                 if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
                 {
-                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
+                    if (__instance == GameManager.m_local_player)
                     {
                         maybeSwapPrimary();
                         if (swap_failed)
@@ -846,7 +847,7 @@ namespace GameMod
             {
                 if (MenuManager.opt_primary_autoswitch == 0 && primarySwapFlag)
                 {
-                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
+                    if ( __instance == GameManager.m_local_player)
                     {
 
                         maybeSwapPrimary();
@@ -878,7 +879,7 @@ namespace GameMod
 
                 if (MPAutoSelection.secondarySwapFlag)
                 {
-                    if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && __instance == GameManager.m_local_player)
+                    if ( __instance == GameManager.m_local_player)
                     {
                         if (!__instance.CanFireMissileAmmo(MissileType.NUM))
                         {
@@ -894,14 +895,13 @@ namespace GameMod
 
 
         static float ThunderboltSwapDelay = 0.025f;
-        
+        static int delay = 0;
         // checks wether there was a swap that didnt get completed due to the player firing
         [HarmonyPatch(typeof(GameManager), "Update")]
         internal class ProcessDelayedSwap
         {
             public static void Postfix()
             {
-
                 if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay())
                 {
                     if (!dontAutoselectAfterFiring && !Controls.IsPressed(CCInput.FIRE_WEAPON) && !waitingSwapWeaponType.Equals(""))
@@ -923,7 +923,12 @@ namespace GameMod
                         waitingSwapWeaponType = "";
                     }
                 }
-
+                if (sp_next_missileType != MissileType.NUM && delay == 0) // do this properly once you wake up again
+                {
+                    swapToMissile((int)sp_next_missileType);
+                    sp_next_missileType = MissileType.NUM;
+                }
+                else if (delay > 0) delay--;
             }
         }
 
@@ -936,7 +941,7 @@ namespace GameMod
         {
             Timer timer;
 
-            public DelayedSwitchTimer() { }
+            public DelayedSwitchTimer() {}
 
             public void Awake()
             {
@@ -964,8 +969,46 @@ namespace GameMod
             }
         }
 
+        [HarmonyPatch(typeof(MenuManager), "LoadPreferences")]
+        class MPAutoSelection_MenuManager_LoadPreferences
+        {
+            public static void Postfix()
+            {
+                MenuManager.opt_primary_autoswitch = 0;
+            }
+        }
 
+        private static MissileType sp_next_missileType = MissileType.NUM;
 
+        [HarmonyPatch(typeof(Player), "AddMissileAmmo")]
+        class MPAutoSelection_Player_AddMissileAmmo
+        {
+            public static void Postfix(int amt, MissileType mt, Player __instance)
+            {
+                if ((GameplayManager.IsChallengeMode || GameplayManager.IsMission) && !GameplayManager.IsMultiplayerActive && MPAutoSelection.secondarySwapFlag && __instance == GameManager.m_local_player)
+                {
+                    uConsole.Log(mt.ToString() + ", amt:" + amt);
+                    int new_missile = MPAutoSelection.getMissilePriority(mt);
+                    int current_missile = MPAutoSelection.getMissilePriority(GameManager.m_local_player.m_missile_type);
+                    MissileType old_missile = GameManager.m_local_player.m_missile_type;
+                    if (new_missile < current_missile && !MPAutoSelection.SecondaryNeverSelect[new_missile])
+                    {
+
+                        sp_next_missileType = mt;
+                        delay = 1;
+                    }
+
+                    if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR && old_missile != MissileType.DEVASTATOR)
+                    {
+                        if (MPAutoSelection.zorc)
+                        {
+                            SFXCueManager.PlayCue2D(SFXCue.enemy_boss1_alert, 1f, 0f, 0f, false);
+                            GameplayManager.AlertPopup(Loc.LS("DEVASTATOR SELECTED"), string.Empty, 5f);
+                        }
+                    }
+                }
+            }
+        }
 
         /////////////////////////////////////////////////////////////////////////////////////
         //              VARIABLES (Switchlogic)                  
@@ -1042,15 +1085,6 @@ namespace GameMod
                     }
                 }
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuManager), "LoadPreferences")]
-    class MPAutoSelection_MenuManager_LoadPreferences
-    {
-        public static void Postfix()
-        {
-            MenuManager.opt_primary_autoswitch = 0;
         }
     }
 }
