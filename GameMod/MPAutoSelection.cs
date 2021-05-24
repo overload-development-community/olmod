@@ -28,21 +28,21 @@ namespace GameMod
             {
                 miasmic = !miasmic;
                 uConsole.Log("Toggled HUD! current state : " + miasmic);
-                MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
+                MPAutoSelectionUI.MPAutoSelectUI_UIElement_Draw.saveToFile();
             }
 
             private static void CmdTogglePrimary()
             {
                 primarySwapFlag = !primarySwapFlag;
                 uConsole.Log("[AS] Primary weapon swapping: " + primarySwapFlag);
-                MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
+                MPAutoSelectionUI.MPAutoSelectUI_UIElement_Draw.saveToFile();
             }
 
             private static void CmdToggleSecondary()
             {
                 secondarySwapFlag = !secondarySwapFlag;
                 uConsole.Log("[AS] Secondary weapon swapping: " + secondarySwapFlag);
-                MPAutoSelectionUI.DrawMpAutoselectOrderingScreen.saveToFile();
+                MPAutoSelectionUI.MPAutoSelectUI_UIElement_Draw.saveToFile();
             }
         }
 
