@@ -1044,4 +1044,13 @@ namespace GameMod
             }
         }
     }
+
+    [HarmonyPatch(typeof(MenuManager), "LoadPreferences")]
+    class MPAutoSelection_MenuManager_LoadPreferences
+    {
+        public static void Postfix()
+        {
+            MenuManager.opt_primary_autoswitch = 0;
+        }
+    }
 }

@@ -28,12 +28,16 @@ namespace GameMod
 
                     if (state == 0 && codes[i].opcode == OpCodes.Ldstr && (string)codes[i].operand == "CONTROL OPTIONS - ADVANCED")
                     {
+                        // remove the 'PRIMARY AUTOSELECT' option
+                        codes.RemoveRange(i + 17, 11);
+
+                        // add the autoselect menu button
                         var newCodes = new[] {
                             new CodeInstruction(OpCodes.Ldarg_0),
                             new CodeInstruction(OpCodes.Ldloca, 0),
                             new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPAutoSelectionUI_UIElement_DrawControlsMenu), "DrawAutoselectMenuOption"))
                         };
-                        codes.InsertRange(i + 16, newCodes);
+                        codes.InsertRange(i + 17, newCodes);
                         state++;
                     }
                     // make some space
