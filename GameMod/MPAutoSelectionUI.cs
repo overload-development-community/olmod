@@ -205,7 +205,7 @@ namespace GameMod
                                                 MenuManager.opt_primary_autoswitch = 0;
                                                 SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             }
-                                            MPAutoSelectUI_UIElement_Draw.saveToFile();
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
                                     case 2102:
@@ -221,7 +221,7 @@ namespace GameMod
                                                 MPAutoSelection.secondarySwapFlag = true;
                                                 SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             }
-                                            MPAutoSelectUI_UIElement_Draw.saveToFile();
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
                                     case 2103:
@@ -238,7 +238,7 @@ namespace GameMod
                                                 MenuManager.opt_primary_autoswitch = 0;
                                                 SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             }
-                                            MPAutoSelectUI_UIElement_Draw.saveToFile();
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
                                     case 2104:
@@ -254,7 +254,7 @@ namespace GameMod
                                                 MPAutoSelection.zorc = true;
                                                 SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             }
-                                            MPAutoSelectUI_UIElement_Draw.saveToFile();
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
                                     case 2105:
@@ -270,7 +270,7 @@ namespace GameMod
                                                 MPAutoSelection.dontAutoselectAfterFiring = true;
                                                 SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             }
-                                            MPAutoSelectUI_UIElement_Draw.saveToFile();
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
                                     case 2106:
@@ -286,7 +286,7 @@ namespace GameMod
                                                 MPAutoSelection.swapWhileFiring = true;
                                                 SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
                                             }
-                                            MPAutoSelectUI_UIElement_Draw.saveToFile();
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
                                 }
@@ -301,7 +301,6 @@ namespace GameMod
                     case MenuSubState.BACK:
                         if (m_menu_state_timer > 0.25f)
                         {
-                            MPAutoSelectUI_UIElement_Draw.isInitialised = false;
                             MenuManager.ChangeMenuState(((Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null)).Pop(), true);
                             AccessTools.Field(typeof(MenuManager), "m_went_back").SetValue(null, true);
                         }
@@ -328,7 +327,7 @@ namespace GameMod
                 {
                     SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                 }
-                MPAutoSelectUI_UIElement_Draw.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
 
             private static void doNeverSelectStuffForSecondary(int i)
@@ -342,7 +341,7 @@ namespace GameMod
                 {
                     SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                 }
-                MPAutoSelectUI_UIElement_Draw.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
 
             private static void doSelectedStuffForPrimary(int i)
@@ -400,11 +399,6 @@ namespace GameMod
             {
                 if (__instance.m_type == Menus.uiAutoSelect)
                 {
-                    if (isInitialised == false)
-                    {
-                        Initialise();
-                        isInitialised = true;
-                    }
                     DrawAutoSelectWindow(__instance);
                 }   
             }
@@ -464,7 +458,7 @@ namespace GameMod
                     position.x -= 150f;
                     uie.SelectAndDrawItem(!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-", position, 2000 + i, false, 0.022f, 1f);
                     position.x += 150f;
-                    uie.SelectAndDrawHalfItem(Primary[i], position, 1720 + i, false);
+                    uie.SelectAndDrawHalfItem(MPAutoSelection.PrimaryPriorityArray[i], position, 1720 + i, false);
                     position.y += 50f;
 
 
@@ -481,7 +475,7 @@ namespace GameMod
                     position2.x += 150f;
                     uie.SelectAndDrawItem((!MPAutoSelection.SecondaryNeverSelect[i] ? "+" : "-"), position2, 2010 + i, false, 0.022f, 1f);
                     position2.x -= 150f;
-                    uie.SelectAndDrawHalfItem(Secondary[i], position2, 1728 + i, false);
+                    uie.SelectAndDrawHalfItem(MPAutoSelection.SecondaryPriorityArray[i], position2, 1728 + i, false);
                     position2.y += 50f;
                 }
 
@@ -527,26 +521,7 @@ namespace GameMod
             }
 
 
-            public static void Initialise()
-            {
-                Primary[0] = MPAutoSelection.PrimaryPriorityArray[0];
-                Primary[1] = MPAutoSelection.PrimaryPriorityArray[1];
-                Primary[2] = MPAutoSelection.PrimaryPriorityArray[2];
-                Primary[3] = MPAutoSelection.PrimaryPriorityArray[3];
-                Primary[4] = MPAutoSelection.PrimaryPriorityArray[4];
-                Primary[5] = MPAutoSelection.PrimaryPriorityArray[5];
-                Primary[6] = MPAutoSelection.PrimaryPriorityArray[6];
-                Primary[7] = MPAutoSelection.PrimaryPriorityArray[7];
-
-                Secondary[0] = MPAutoSelection.SecondaryPriorityArray[0];
-                Secondary[1] = MPAutoSelection.SecondaryPriorityArray[1];
-                Secondary[2] = MPAutoSelection.SecondaryPriorityArray[2];
-                Secondary[3] = MPAutoSelection.SecondaryPriorityArray[3];
-                Secondary[4] = MPAutoSelection.SecondaryPriorityArray[4];
-                Secondary[5] = MPAutoSelection.SecondaryPriorityArray[5];
-                Secondary[6] = MPAutoSelection.SecondaryPriorityArray[6];
-                Secondary[7] = MPAutoSelection.SecondaryPriorityArray[7];
-            }
+            
 
             public static int returnPrimarySelected()
             {
@@ -590,16 +565,16 @@ namespace GameMod
                         break;
                     }
                 }
-                string temp = Primary[selection[0]];
-                Primary[selection[0]] = Primary[selection[1]];
-                Primary[selection[1]] = temp;
+                string temp = MPAutoSelection.PrimaryPriorityArray[selection[0]];
+                MPAutoSelection.PrimaryPriorityArray[selection[0]] = MPAutoSelection.PrimaryPriorityArray[selection[1]];
+                MPAutoSelection.PrimaryPriorityArray[selection[1]] = temp;
 
                 isPrimarySelected[selection[0]] = false;
                 isPrimarySelected[selection[1]] = false;
                 MPAutoSelection.PrimaryNeverSelect[selection[0]] = false;
                 MPAutoSelection.PrimaryNeverSelect[selection[1]] = false;
 
-                saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
                 MPAutoSelection.Initialise();
             }
 
@@ -619,63 +594,19 @@ namespace GameMod
                         break;
                     }
                 }
-                string temp = Secondary[selection[0]];
-                Secondary[selection[0]] = Secondary[selection[1]];
-                Secondary[selection[1]] = temp;
+                string temp = MPAutoSelection.SecondaryPriorityArray[selection[0]];
+                MPAutoSelection.SecondaryPriorityArray[selection[0]] = MPAutoSelection.SecondaryPriorityArray[selection[1]];
+                MPAutoSelection.SecondaryPriorityArray[selection[1]] = temp;
 
                 isSecondarySelected[selection[0]] = false;
                 isSecondarySelected[selection[1]] = false;
                 MPAutoSelection.SecondaryNeverSelect[selection[0]] = false;
                 MPAutoSelection.SecondaryNeverSelect[selection[1]] = false;
 
-                saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
                 MPAutoSelection.Initialise();
             }
 
-            public static void saveToFile()
-            {
-                using (StreamWriter sw = File.CreateText(MPAutoSelection.textFile))
-                {
-                    sw.WriteLine(Primary[0]);
-                    sw.WriteLine(Primary[1]);
-                    sw.WriteLine(Primary[2]);
-                    sw.WriteLine(Primary[3]);
-                    sw.WriteLine(Primary[4]);
-                    sw.WriteLine(Primary[5]);
-                    sw.WriteLine(Primary[6]);
-                    sw.WriteLine(Primary[7]);
-                    sw.WriteLine(Secondary[0]);
-                    sw.WriteLine(Secondary[1]);
-                    sw.WriteLine(Secondary[2]);
-                    sw.WriteLine(Secondary[3]);
-                    sw.WriteLine(Secondary[4]);
-                    sw.WriteLine(Secondary[5]);
-                    sw.WriteLine(Secondary[6]);
-                    sw.WriteLine(Secondary[7]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[0]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[1]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[2]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[3]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[4]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[5]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[6]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[7]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[0]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[1]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[2]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[3]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[4]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[5]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[6]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[7]);
-                    sw.WriteLine(MPAutoSelection.primarySwapFlag);
-                    sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                    sw.WriteLine(MPAutoSelection.swapWhileFiring);
-                    sw.WriteLine(MPAutoSelection.dontAutoselectAfterFiring);
-                    sw.WriteLine(MPAutoSelection.zorc);
-                    sw.WriteLine(MPAutoSelection.miasmic);
-                }
-            }
 
             public static string selectionToDescription(int n)
             {
@@ -711,28 +642,6 @@ namespace GameMod
                 }
             }
 
-            public static bool isInitialised = false;
-
-            public static string[] Primary = {
-                MPAutoSelection.PrimaryPriorityArray[0],
-                MPAutoSelection.PrimaryPriorityArray[1],
-                MPAutoSelection.PrimaryPriorityArray[2],
-                MPAutoSelection.PrimaryPriorityArray[3],
-                MPAutoSelection.PrimaryPriorityArray[4],
-                MPAutoSelection.PrimaryPriorityArray[5],
-                MPAutoSelection.PrimaryPriorityArray[6],
-                MPAutoSelection.PrimaryPriorityArray[7],
-            };
-            public static string[] Secondary = {
-                MPAutoSelection.SecondaryPriorityArray[0],
-                MPAutoSelection.SecondaryPriorityArray[1],
-                MPAutoSelection.SecondaryPriorityArray[2],
-                MPAutoSelection.SecondaryPriorityArray[3],
-                MPAutoSelection.SecondaryPriorityArray[4],
-                MPAutoSelection.SecondaryPriorityArray[5],
-                MPAutoSelection.SecondaryPriorityArray[6],
-                MPAutoSelection.SecondaryPriorityArray[7]
-            };
             public static bool[] isPrimarySelected = new bool[8];
             public static bool[] isSecondarySelected = new bool[8];
 

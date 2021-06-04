@@ -29,21 +29,21 @@ namespace GameMod
             {
                 miasmic = !miasmic;
                 uConsole.Log("Toggled HUD! current state : " + miasmic);
-                MPAutoSelectionUI.MPAutoSelectUI_UIElement_Draw.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
 
             private static void CmdTogglePrimary()
             {
                 primarySwapFlag = !primarySwapFlag;
                 uConsole.Log("[AS] Primary weapon swapping: " + primarySwapFlag);
-                MPAutoSelectionUI.MPAutoSelectUI_UIElement_Draw.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
 
             private static void CmdToggleSecondary()
             {
                 secondarySwapFlag = !secondarySwapFlag;
                 uConsole.Log("[AS] Secondary weapon swapping: " + secondarySwapFlag);
-                MPAutoSelectionUI.MPAutoSelectUI_UIElement_Draw.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
         }
 
@@ -116,190 +116,8 @@ namespace GameMod
         public static void Initialise()
         {
             MenuManager.opt_primary_autoswitch = 0;
-            if (File.Exists(textFile))
-            {
-                readContent();
-            }
-            else
-            {
-
-                Debug.Log("-AUTOSELECT- [ERROR] File does not exist. Creating default priority list");
-                createDefaultPriorityFile();
-                readContent();
-            }
             isInitialised = true;
         }
-
-        private static void createDefaultPriorityFile()
-        {
-            using (StreamWriter sw = File.CreateText(textFile))
-            {
-                sw.WriteLine("THUNDERBOLT");
-                sw.WriteLine("CYCLONE");
-                sw.WriteLine("DRILLER");
-                sw.WriteLine("IMPULSE");
-                sw.WriteLine("FLAK");
-                sw.WriteLine("CRUSHER");
-                sw.WriteLine("LANCER");
-                sw.WriteLine("REFLEX");
-                sw.WriteLine("DEVASTATOR");
-                sw.WriteLine("NOVA");
-                sw.WriteLine("TIMEBOMB");
-                sw.WriteLine("HUNTER");
-                sw.WriteLine("VORTEX");
-                sw.WriteLine("FALCON");
-                sw.WriteLine("MISSILE_POD");
-                sw.WriteLine("CREEPER");
-                sw.WriteLine(PrimaryNeverSelect[0]);
-                sw.WriteLine(PrimaryNeverSelect[1]);
-                sw.WriteLine(PrimaryNeverSelect[2]);
-                sw.WriteLine(PrimaryNeverSelect[3]);
-                sw.WriteLine(PrimaryNeverSelect[4]);
-                sw.WriteLine(PrimaryNeverSelect[5]);
-                sw.WriteLine(PrimaryNeverSelect[6]);
-                sw.WriteLine(PrimaryNeverSelect[7]);
-                sw.WriteLine(SecondaryNeverSelect[0]);
-                sw.WriteLine(SecondaryNeverSelect[1]);
-                sw.WriteLine(SecondaryNeverSelect[2]);
-                sw.WriteLine(SecondaryNeverSelect[3]);
-                sw.WriteLine(SecondaryNeverSelect[4]);
-                sw.WriteLine(SecondaryNeverSelect[5]);
-                sw.WriteLine(SecondaryNeverSelect[6]);
-                sw.WriteLine(SecondaryNeverSelect[7]);
-                sw.WriteLine(primarySwapFlag);
-                sw.WriteLine(secondarySwapFlag);
-                sw.WriteLine(swapWhileFiring);
-                sw.WriteLine(dontAutoselectAfterFiring);
-                sw.WriteLine(zorc);
-                sw.WriteLine(miasmic);
-            }
-        }
-
-        private static bool stringToBool(string b)
-        {
-            if (b == "True")
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private static void readContent()
-        {
-            using (StreamReader file = new StreamReader(textFile))
-            {
-                int counter = 0;
-                string ln;
-
-
-
-                while ((ln = file.ReadLine()) != null)
-                {
-                    /// Contains the priorities of the primary weapons
-                    if (counter < 8)
-                    {
-                        if (ln == "THUNDERBOLT" | ln == "IMPULSE" | ln == "CYCLONE" | ln == "DRILLER" | ln == "LANCER" | ln == "REFLEX" | ln == "FLAK" | ln == "CRUSHER")
-                        {
-                            PrimaryPriorityArray[counter] = ln;
-                        }
-                        else
-                        {
-                            Debug.Log("-AUTOORDER- [ERROR](1) unexpected line content -> (content: " + ln + " )");
-                            return;
-                        }
-
-                    }
-
-                    /// Contains the priorities of the secondary weapons
-                    else if (counter < 16)
-                    {
-                        if (ln == "DEVASTATOR" | ln == "TIMEBOMB" | ln == "VORTEX" | ln == "NOVA" | ln == "HUNTER" | ln == "FALCON" | ln == "CREEPER" | ln == "MISSILE_POD")
-                        {
-                            SecondaryPriorityArray[counter - 8] = ln;
-                        }
-                        else
-                        {
-                            Debug.Log("-AUTOORDER- [ERROR](2) unexpected line content -> (content: " + ln + " )");
-                            return;
-                        }
-                    }
-
-                    /// Contains true/false whether primary priorities are neverselected
-                    else if (counter < 24)
-                    {
-                        if (ln == "True" || ln == "False")
-                        {
-                            PrimaryNeverSelect[counter - 16] = stringToBool(ln);
-                        }
-                        else
-                        {
-                            for (int i = 0; i < 8; i++)
-                            {
-                                PrimaryNeverSelect[i] = false;
-                            }
-                        }
-                    }
-                    /// Contains true/false whether secondary priorities are neverselected
-                    else if (counter < 32)
-                    {
-                        if (ln == "True" || ln == "False")
-                        {
-                            SecondaryNeverSelect[counter - 24] = stringToBool(ln);
-                        }
-                        else
-                        {
-                            for (int i = 0; i < 8; i++)
-                            {
-                                SecondaryNeverSelect[i] = false;
-                            }
-                        }
-                    }
-                    else if (counter == 32)
-                    {
-                        if (ln == "True" || ln == "False") { primarySwapFlag = stringToBool(ln); }
-                    }
-                    else if (counter == 33)
-                    {
-                        if (ln == "True" || ln == "False") { secondarySwapFlag = stringToBool(ln); }
-                    }
-                    else if (counter == 34)
-                    {
-                        if (ln == "True" || ln == "False") { swapWhileFiring = stringToBool(ln); }
-                    }
-                    else if (counter == 35)
-                    {
-                        if (ln == "True" || ln == "False") { dontAutoselectAfterFiring = stringToBool(ln); }
-                    }
-                    else if (counter == 36)
-                    {
-                        if (ln == "True" || ln == "False") { zorc = stringToBool(ln); }
-                    }
-                    else if (counter == 37)
-                    {
-                        if (ln == "True" || ln == "False") { miasmic = stringToBool(ln); }
-                    }
-
-                    else
-                    {
-                        Debug.Log("-AUTOORDER- [ERROR](3) unexpected line content -> (content: " + ln + " : " + counter + " )");
-
-                        return;
-                    }
-                    counter++;
-                }
-                file.Close();
-
-            }
-        }
-
-
-
-
-
-
 
 
 
