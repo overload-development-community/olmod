@@ -104,6 +104,7 @@
     <Compile Include="CTF.cs" />
     <Compile Include="CustomLevelResources.cs" />
     <Compile Include="DisableTimeCheat.cs" />
+    <Compile Include="ExtendedConfig.cs" />
     <Compile Include="FastLoad.cs" />
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
