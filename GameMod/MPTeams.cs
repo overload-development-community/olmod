@@ -940,5 +940,67 @@ namespace GameMod {
         }
     }
 
+    // Damage glow in team color
+    [HarmonyPatch(typeof(PlayerShip), "Start")]
+    class MPTeams_PlayerShip_Start
+    {
+        static void Postfix(PlayerShip __instance, List<Material> ___m_materials)
+        {
+            if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+            {
+                var teamcolor = UIManager.ChooseMpColor(__instance.c_player.m_mp_team);
+
+                foreach (var mat in ___m_materials)
+                {
+                    // Main damage color
+                    if (mat.shader != null)
+                        mat.SetVector("_color_burn", teamcolor);
+
+                    // Light color (e.g. TB overcharge)
+                    __instance.c_lights[4].color = teamcolor;
+
+                }
+            }
+        }
+    }
+
+    // Edge color effect needs changed for Team matches, otherwise leave as global m_damage_material (red).  This is primarily noticeable as fully charged TB glow
+    [HarmonyPatch(typeof(PlayerShip), "Update")]
+    class MPTeams_PlayerShip_Update
+    {
+        static Material LoadDamageMaterial(PlayerShip player_ship)
+        {
+            if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+            {
+                Material m = new Material(UIManager.gm.m_damage_material);
+                var teamcolor = UIManager.ChooseMpColor(player_ship.c_player.m_mp_team);
+                m.SetColor("_EdgeColor", teamcolor);
+                return m;
+            }
+            else
+            {
+                return UIManager.gm.m_damage_material;
+            }
+        }
+
+
+        // UIManager.gm.m_damage_material is a global client field for heavy incurred damage/TB overcharge, patch to call our LoadDamageMaterial() instead
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(GameManager), "m_damage_material"))
+                {
+                    yield return new CodeInstruction(OpCodes.Pop); // Remove previous ldsfld    class Overload.GameManager Overload.UIManager::gm, cheap enough to keep transpiler simpler
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_PlayerShip_Update), "LoadDamageMaterial"));
+                    continue;
+                }
+
+                yield return code;
+            }
+        }
+    }
+    
     // still missing: chat colors...
 }
