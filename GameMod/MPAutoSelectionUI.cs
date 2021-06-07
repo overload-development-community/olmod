@@ -16,7 +16,7 @@ namespace GameMod
             private static void DrawAutoselectMenuOption(UIElement uie, ref Vector2 position)
             {
                 uie.SelectAndDrawItem(Loc.LS("CONFIGURE AUTOSELECT"), position, 121, false, 1f, 0.75f);
-                position.y += 55f;
+                //position.y += 55f;
             }
 
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -40,6 +40,7 @@ namespace GameMod
                         codes.InsertRange(i + 17, newCodes);
                         state++;
                     }
+
                     // make some space
                     if (state > 0 && state < 10 && codes[i].opcode == OpCodes.Ldc_R4 && (float)codes[i].operand == 62f)
                     {
