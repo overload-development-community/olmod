@@ -3,7 +3,6 @@ using Overload;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace GameMod
@@ -25,11 +24,11 @@ namespace GameMod
         [HarmonyPatch(typeof(PilotManager), "Select", new Type[] { typeof(string) })]
         internal class ExtendedConfig_PilotManager_Select
         {
-            public static void Postfix( string name )
+            public static void Postfix(string name)
             {
                 SetDefaultConfig();
                 string filepath = Path.Combine(Application.persistentDataPath, name + file_extension);
-                if ( File.Exists(filepath) )
+                if (File.Exists(filepath))
                 {
                     ReadConfigData(filepath);
                 }
@@ -39,7 +38,7 @@ namespace GameMod
 
         // reads all lines and passes them to their respective functions to process them 
         // unknown sections get stored in ExtendedConfig.unknown_lines to reattach them to the end when saving
-        private static void ReadConfigData( string filepath )
+        private static void ReadConfigData(string filepath)
         {
             using (StreamReader sr = new StreamReader(filepath))
             {
@@ -51,9 +50,9 @@ namespace GameMod
                 while ((line = sr.ReadLine()) != null)
                 {
 
-                    if( line.StartsWith("[SECTION:"))
+                    if (line.StartsWith("[SECTION:"))
                     {
-                        if( known_sections.Contains(line) )
+                        if (known_sections.Contains(line))
                         {
                             current_section_id = line;
                         }
@@ -63,7 +62,7 @@ namespace GameMod
                             unknown_sections.Add(line);
                         }
                     }
-                    else if( line.Equals("[/END]") )
+                    else if (line.Equals("[/END]"))
                     {
                         if (!current_section_id.Equals("unknown"))
                         {
@@ -90,7 +89,7 @@ namespace GameMod
                 }
             }
         }
-
+        /*
         [HarmonyPatch(typeof(PilotManager), "SavePreferences")]
         internal class ExtendedConfig_PilotManager_SavePreferences
         {
@@ -98,8 +97,8 @@ namespace GameMod
             {
                 SaveActivePilot();
             }
-        }
-        
+        }*/
+
         [HarmonyPatch(typeof(Controls), "SaveControlData")]
         internal class ExtendedConfig_Controls_SaveControlData
         {
@@ -117,7 +116,7 @@ namespace GameMod
                 SaveActivePilot();
             }
 
-            public static void Postfix(string name, bool copy_prefs = false, bool copy_config = false)
+            public static void Postfix(string name, bool copy_prefs, bool copy_config)
             {
                 if (!copy_prefs && !copy_config)
                 {
@@ -149,17 +148,21 @@ namespace GameMod
 
         private static List<string> known_sections = new List<string> {
             "[SECTION: AUTOSELECT]",
+            "[SECTION: JOYSTICKCURVE]",
 
         };
-        
+
 
         private static void PassSectionToFunction(List<string> section, string section_name)
         {
-            if (section_name.Equals("[SECTION: AUTOSELECT]"))
+            if (section_name.Equals(known_sections[0]))
             {
                 Section_AutoSelect.Load(section);
             }
-
+            if (section_name.Equals(known_sections[1]))
+            {
+                Section_JoystickCurve.Load(section);
+            }
 
 
         }
@@ -173,6 +176,9 @@ namespace GameMod
                 Section_AutoSelect.Save(w);
                 w.WriteLine("[/END]");
 
+                w.WriteLine("[SECTION: JOYSTICKCURVE]");
+                Section_JoystickCurve.Save(w);
+                w.WriteLine("[/END]");
 
 
 
@@ -186,6 +192,7 @@ namespace GameMod
         private static void SetDefaultConfig()
         {
             Section_AutoSelect.Set();
+            Section_JoystickCurve.SetDefault();
 
         }
 
@@ -201,21 +208,26 @@ namespace GameMod
         ///                           SECTION SPECIFIC FUNCTIONS:                             ///
         /////////////////////////////////////////////////////////////////////////////////////////
 
+        public static string RemoveWhitespace(string str)
+        {
+            return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
+
         internal class Section_AutoSelect
         {
             public static Dictionary<string, string> settings;
 
-            public static void Load(List<string> settings)
+            public static void Load(List<string> section)
             {
-                Section_AutoSelect.settings = new Dictionary<string, string>();
+                settings = new Dictionary<string, string>();
                 string l;
-                foreach (string line in settings)
+                foreach (string line in section)
                 {
                     l = RemoveWhitespace(line);
                     string[] res = l.Split(':');
                     if (res.Length == 2)
                     {
-                        Section_AutoSelect.settings.Add(res[0], res[1]);
+                        settings.Add(res[0], res[1]);
                     }
                     else
                     {
@@ -244,7 +256,7 @@ namespace GameMod
             // sets the values of the AutoSelect dictionary
             //  mirror = false   sets the default values
             //  mirror = true    sets the current MPAutoSelection values
-            public static void Set( bool mirror = false )
+            public static void Set(bool mirror = false)
             {
                 settings = new Dictionary<string, string>();
                 settings.Add("p_priority_0", mirror ? MPAutoSelection.PrimaryPriorityArray[0] : "THUNDERBOLT");
@@ -286,7 +298,6 @@ namespace GameMod
                 settings.Add("swap_while_firing", mirror ? MPAutoSelection.swapWhileFiring.ToString() : "false");
                 settings.Add("dont_autoselect_after_firing", mirror ? MPAutoSelection.dontAutoselectAfterFiring.ToString() : "false");
             }
-
 
             public static void ApplySettings()
             {
@@ -331,17 +342,153 @@ namespace GameMod
                     MPAutoSelection.swapWhileFiring = Convert.ToBoolean(settings["swap_while_firing"]);
                     MPAutoSelection.dontAutoselectAfterFiring = Convert.ToBoolean(settings["dont_autoselect_after_firing"]);
                 }
-                catch( Exception ex )
+                catch (Exception ex)
                 {
-                    Debug.Log("Error while parsing AutoSelect settings. missing entry "+ex+"\nSetting Default values");
+                    Debug.Log("Error while parsing AutoSelect settings. missing entry " + ex + "\nSetting Default values");
                     Set();
                     ApplySettings();
                 }
             }
 
-            public static string RemoveWhitespace(string str)
+        }
+
+
+        internal class Section_JoystickCurve
+        {
+            public static List<Controller> controllers = new List<Controller>();
+
+            public class Controller
             {
-                return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+                public string name = "";
+                public List<Axis> axes = new List<Axis>();
+
+                public class Axis
+                {
+                    public Vector2[] curve_points = new Vector2[4];
+                    public float[] curve_lookup = new float[200];
+                }
+            }
+
+            public static void Load(List<string> section)
+            {
+                for( int i = 0; i < section.Count; i++ )
+                {
+                    if(!string.IsNullOrEmpty(section[i]))
+                    {
+                        section[i] = RemoveWhitespace(section[i]);
+                    }
+                }
+
+                try
+                {
+                    SetDefault();
+                    int index = -1;
+                    int.TryParse(section[++index], out int val);
+                    int numControllers = val;
+                    for (int i = 0; i < numControllers; i++)
+                    {
+                        string controllerName = section[++index];
+                        int.TryParse(section[++index], out int val2);
+                        int numAxes = val2;
+                        for (int j = 0; j < numAxes; j++)
+                        {
+                            float value = 0f;
+                            controllers[i].axes[j].curve_points = DefaultCurvePoints();
+                            controllers[i].axes[j].curve_points[0].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
+                            controllers[i].axes[j].curve_points[1].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            controllers[i].axes[j].curve_points[1].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            controllers[i].axes[j].curve_points[2].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            controllers[i].axes[j].curve_points[2].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            controllers[i].axes[j].curve_points[3].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
+
+                            controllers[i].axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(controllers[i].axes[j].curve_points);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Default Values.");
+                    SetDefault();
+                }
+            }
+
+            public static void Save(StreamWriter w)
+            {
+                w.WriteLine(controllers.Count);
+                for (int i = 0; i < controllers.Count; i++)
+                {
+                    w.WriteLine("   " + controllers[i].name);
+                    w.WriteLine("   " + controllers[i].axes.Count);
+                    for (int j = 0; j < controllers[i].axes.Count; j++)
+                    {
+                        w.WriteLine("      " + controllers[i].axes[j].curve_points[0].y);
+                        w.WriteLine("      " + controllers[i].axes[j].curve_points[1].x);
+                        w.WriteLine("      " + controllers[i].axes[j].curve_points[1].y);
+                        w.WriteLine("      " + controllers[i].axes[j].curve_points[2].x);
+                        w.WriteLine("      " + controllers[i].axes[j].curve_points[2].y);
+                        w.WriteLine("      " + controllers[i].axes[j].curve_points[3].y);
+                    }
+
+                }
+            }
+
+            public static void SetDefault()
+            {
+                controllers.Clear();
+                for (int i = 0; i < Controls.m_controllers.Count; i++)
+                {
+                    controllers.Add(new Controller
+                    {
+                        name = Controls.m_controllers[i].name,
+                        axes = new List<Controller.Axis>()
+                    });
+                    for (int j = 0; j < Controls.m_controllers[i].m_axis_count; j++)
+                    {
+                        controllers[i].axes.Add(new Controller.Axis()
+                        {
+                            curve_points = DefaultCurvePoints()
+                        });
+                    }
+                }
+            }
+
+            public static Vector2[] DefaultCurvePoints()
+            {
+                return new Vector2[] { Vector2.zero, new Vector2(0.25f, 0.25f), new Vector2(0.75f, 0.75f), Vector2.one };
+            }
+
+            public static float[] GenerateCurveLookupTable(Vector2[] points)
+            {
+                if( points.Length != 4 || points[0] == null || points[1] == null || points[2] == null || points[3] == null)
+                {
+                    Debug.Log("ExtendedConfig.GenerateCurveLookupTable: invalid argument");
+                    points = DefaultCurvePoints();
+                }
+
+
+                // generate initial curve
+                Vector2[] curve = new Vector2[200];
+                float t;
+                for (int i = 0; i < 200; i++)
+                {
+                    t = 1f / 200f * i;
+                    curve[i] = new Vector2(
+                       JoystickCurveEditor.CubicBezierAxisForT(t, points[0].x, points[1].x, points[2].x, points[3].x),
+                       JoystickCurveEditor.CubicBezierAxisForT(t, points[0].y, points[1].y, points[2].y, points[3].y)
+                       );
+                }
+
+                // normalize the initial curve for slightly faster lookup and constant distribution
+                float[] normalized = new float[200];
+                for (int i = 0; i < 200; i++)
+                {
+                    float x = i * 0.005f;
+                    int k = 1;
+                    while (curve[k].x <= x && k < 199) k++;
+
+                    normalized[i] = curve[k - 1].y + (x - curve[k - 1].x) / (curve[k].x - curve[k - 1].x) * (curve[k].y - curve[k - 1].y);
+                }
+                return normalized;
             }
         }
 
