@@ -12,7 +12,7 @@ namespace GameMod
 {
     class MPAutoSelection
     {
-
+        
         [HarmonyPatch(typeof(GameManager), "Start")]
         internal class CommandsAndInitialisationPatch
         {

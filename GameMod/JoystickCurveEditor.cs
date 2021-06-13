@@ -62,7 +62,7 @@ namespace GameMod
         }
         */
 
-
+        
 
         // Adds an "EDIT CURVE" Button under "Options/Control Options/Joystick/Axis" 
         [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
@@ -499,6 +499,10 @@ namespace GameMod
         {
             static bool Prefix(ref float __result, Controller __instance, int controller_num, int control_num)
             {
+                if( string.IsNullOrEmpty(PilotManager.ActivePilot) )
+                {
+                    return true;
+                }
 
                 float axis_value = __instance.m_joystick.GetAxis(control_num);
                 bool neg = false;
@@ -508,21 +512,33 @@ namespace GameMod
                     neg = true;
                 }
                 float result = axis_value;
-                ExtendedConfig.Section_JoystickCurve.Controller.Axis a = ExtendedConfig.Section_JoystickCurve.controllers[controller_num].axes[control_num];
-                if (axis_value > Controllers.controllers[controller_num].axes[control_num].deadzone / 200f)
-                {
-                    int i = (int)(axis_value / 0.005f);
-                    
-                    if (i == 0){
-                        result = axis_value / 0.005f * a.curve_lookup[0];
-                    }
-                    else if (i == 200){
-                        result = a.curve_lookup[199] + ((axis_value - 0.995f) / 0.005f * (1f - a.curve_lookup[199]));
-                    }
-                    else{
-                        result = a.curve_lookup[i - 1] + ((axis_value - (i - 1) * 0.005f) / 0.005f * (a.curve_lookup[i] - a.curve_lookup[i - 1]));
-                    }
 
+                try
+                {
+                    ExtendedConfig.Section_JoystickCurve.Controller.Axis a = ExtendedConfig.Section_JoystickCurve.controllers[controller_num].axes[control_num];
+                    if (axis_value > Controllers.controllers[controller_num].axes[control_num].deadzone / 200f)
+                    {
+                        int i = (int)(axis_value / 0.005f);
+
+                        if (i == 0)
+                        {
+                            result = axis_value / 0.005f * a.curve_lookup[0];
+                        }
+                        else if (i == 200)
+                        {
+                            result = a.curve_lookup[199] + ((axis_value - 0.995f) / 0.005f * (1f - a.curve_lookup[199]));
+                        }
+                        else
+                        {
+                            result = a.curve_lookup[i - 1] + ((axis_value - (i - 1) * 0.005f) / 0.005f * (a.curve_lookup[i] - a.curve_lookup[i - 1]));
+                        }
+                    }
+                }
+                catch( Exception ex )
+                {
+                    Debug.Log(" JoystickCurveEditor_OverloadController_GetAxis: Incorrect Device information: Resetting");
+                    ExtendedConfig.Section_JoystickCurve.SetDefault();
+                    return true;
                 }
 
                 if (axis_value > 0.5f)
@@ -558,12 +574,12 @@ namespace GameMod
                         last_adjusted_input = result
                     };
                 }*/
-
+        
                 return false;
 
             }
         }
-
+        
 
     }
 }

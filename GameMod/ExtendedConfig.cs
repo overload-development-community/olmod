@@ -16,6 +16,7 @@ namespace GameMod
     /// </summary>
     class ExtendedConfig
     {
+        
         private const string file_extension = ".extendedconfig";
         private static List<string> unknown_sections;
 
@@ -24,13 +25,16 @@ namespace GameMod
         [HarmonyPatch(typeof(PilotManager), "Select", new Type[] { typeof(string) })]
         internal class ExtendedConfig_PilotManager_Select
         {
-            public static void Postfix(string name)
+            public static void Prefix(string name)
             {
                 SetDefaultConfig();
-                string filepath = Path.Combine(Application.persistentDataPath, name + file_extension);
-                if (File.Exists(filepath))
+                if (!string.IsNullOrEmpty(name))
                 {
-                    ReadConfigData(filepath);
+                    string filepath = Path.Combine(Application.persistentDataPath, name + file_extension);
+                    if (File.Exists(filepath))
+                    {
+                        ReadConfigData(filepath);
+                    }
                 }
                 ApplyConfigData();
             }
@@ -89,15 +93,7 @@ namespace GameMod
                 }
             }
         }
-        /*
-        [HarmonyPatch(typeof(PilotManager), "SavePreferences")]
-        internal class ExtendedConfig_PilotManager_SavePreferences
-        {
-            public static void Postfix()
-            {
-                SaveActivePilot();
-            }
-        }*/
+
 
         [HarmonyPatch(typeof(Controls), "SaveControlData")]
         internal class ExtendedConfig_Controls_SaveControlData
@@ -113,6 +109,10 @@ namespace GameMod
         {
             public static void Prefix()
             {
+                if( string.IsNullOrEmpty(PilotManager.ActivePilot) )
+                {
+                    SetDefaultConfig();
+                }
                 SaveActivePilot();
             }
 
@@ -169,27 +169,41 @@ namespace GameMod
 
         public static void SaveActivePilot()
         {
-            string filepath = Path.Combine(Application.persistentDataPath, PilotManager.ActivePilot + file_extension);
-            using (StreamWriter w = File.CreateText(filepath))
+            if (!PilotManager.Exists(PilotManager.ActivePilot))
             {
-                w.WriteLine("[SECTION: AUTOSELECT]");
-                Section_AutoSelect.Save(w);
-                w.WriteLine("[/END]");
+                return;
+            }
+            try
+            {
+                string filepath = Path.Combine(Application.persistentDataPath, PilotManager.ActivePilot + file_extension);
 
-                w.WriteLine("[SECTION: JOYSTICKCURVE]");
-                Section_JoystickCurve.Save(w);
-                w.WriteLine("[/END]");
-
-
-
-                foreach (string line in unknown_sections)
+                using (StreamWriter w = File.CreateText(filepath))
                 {
-                    w.WriteLine(line);
+                    w.WriteLine("[SECTION: AUTOSELECT]");
+                    Section_AutoSelect.Save(w);
+                    w.WriteLine("[/END]");
+
+                    w.WriteLine("[SECTION: JOYSTICKCURVE]");
+                    Section_JoystickCurve.Save(w);
+                    w.WriteLine("[/END]");
+
+
+                    if (unknown_sections != null)
+                    {
+                        foreach (string line in unknown_sections)
+                        {
+                            w.WriteLine(line);
+                        }
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Error in ExtendedConfig.SaveActivePilot(): " + ex);
             }
         }
 
-        private static void SetDefaultConfig()
+        public static void SetDefaultConfig()
         {
             Section_AutoSelect.Set();
             Section_JoystickCurve.SetDefault();
@@ -371,9 +385,9 @@ namespace GameMod
 
             public static void Load(List<string> section)
             {
-                for( int i = 0; i < section.Count; i++ )
+                for (int i = 0; i < section.Count; i++)
                 {
-                    if(!string.IsNullOrEmpty(section[i]))
+                    if (!string.IsNullOrEmpty(section[i]))
                     {
                         section[i] = RemoveWhitespace(section[i]);
                     }
@@ -414,21 +428,28 @@ namespace GameMod
 
             public static void Save(StreamWriter w)
             {
-                w.WriteLine(controllers.Count);
-                for (int i = 0; i < controllers.Count; i++)
+                try
                 {
-                    w.WriteLine("   " + controllers[i].name);
-                    w.WriteLine("   " + controllers[i].axes.Count);
-                    for (int j = 0; j < controllers[i].axes.Count; j++)
+                    w.WriteLine(controllers.Count);
+                    for (int i = 0; i < controllers.Count; i++)
                     {
-                        w.WriteLine("      " + controllers[i].axes[j].curve_points[0].y);
-                        w.WriteLine("      " + controllers[i].axes[j].curve_points[1].x);
-                        w.WriteLine("      " + controllers[i].axes[j].curve_points[1].y);
-                        w.WriteLine("      " + controllers[i].axes[j].curve_points[2].x);
-                        w.WriteLine("      " + controllers[i].axes[j].curve_points[2].y);
-                        w.WriteLine("      " + controllers[i].axes[j].curve_points[3].y);
-                    }
+                        w.WriteLine("   " + controllers[i].name);
+                        w.WriteLine("   " + controllers[i].axes.Count);
+                        for (int j = 0; j < controllers[i].axes.Count; j++)
+                        {
+                            w.WriteLine("      " + controllers[i].axes[j].curve_points[0].y);
+                            w.WriteLine("      " + controllers[i].axes[j].curve_points[1].x);
+                            w.WriteLine("      " + controllers[i].axes[j].curve_points[1].y);
+                            w.WriteLine("      " + controllers[i].axes[j].curve_points[2].x);
+                            w.WriteLine("      " + controllers[i].axes[j].curve_points[2].y);
+                            w.WriteLine("      " + controllers[i].axes[j].curve_points[3].y);
+                        }
 
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Save(): \n" + ex);
                 }
             }
 
@@ -459,7 +480,7 @@ namespace GameMod
 
             public static float[] GenerateCurveLookupTable(Vector2[] points)
             {
-                if( points.Length != 4 || points[0] == null || points[1] == null || points[2] == null || points[3] == null)
+                if (points.Length != 4 || points[0] == null || points[1] == null || points[2] == null || points[3] == null)
                 {
                     Debug.Log("ExtendedConfig.GenerateCurveLookupTable: invalid argument");
                     points = DefaultCurvePoints();
@@ -493,7 +514,7 @@ namespace GameMod
         }
 
 
-
+        
     }
 }
 
