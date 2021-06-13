@@ -27,6 +27,12 @@ namespace GameMod
         {
             public static void Prefix(string name)
             {
+                if( Network.isServer )
+                {
+                    Debug.Log("ExtendedConfig_PilotManager_Select called on the server");
+                    return;
+                }
+
                 SetDefaultConfig();
                 if (!string.IsNullOrEmpty(name))
                 {
@@ -100,6 +106,11 @@ namespace GameMod
         {
             public static void Postfix()
             {
+                if (Network.isServer)
+                {
+                    Debug.Log("ExtendedConfig_Controls_SaveControlData called on the server");
+                    return;
+                }
                 SaveActivePilot();
             }
         }
@@ -109,7 +120,12 @@ namespace GameMod
         {
             public static void Prefix()
             {
-                if( string.IsNullOrEmpty(PilotManager.ActivePilot) )
+                if (Network.isServer)
+                {
+                    Debug.Log("ExtendedConfig_PilotManager_Create called on the server");
+                    return;
+                }
+                if ( string.IsNullOrEmpty(PilotManager.ActivePilot) )
                 {
                     SetDefaultConfig();
                 }
@@ -118,6 +134,11 @@ namespace GameMod
 
             public static void Postfix(string name, bool copy_prefs, bool copy_config)
             {
+                if (Network.isServer)
+                {
+                    Debug.Log(" called on the server");
+                    return;
+                }
                 if (!copy_prefs && !copy_config)
                 {
                     SetDefaultConfig();
@@ -132,6 +153,11 @@ namespace GameMod
         {
             static void Postfix(string filename)
             {
+                if (Network.isServer)
+                {
+                    Debug.Log("ExtendedConfig_Platform_DeleteUserData called on the server");
+                    return;
+                }
                 if (filename.EndsWith(".xprefs"))
                 {
                     Platform.DeleteUserData(filename.Replace(".xprefs", file_extension));
@@ -380,6 +406,17 @@ namespace GameMod
                 {
                     public Vector2[] curve_points = new Vector2[4];
                     public float[] curve_lookup = new float[200];
+
+                    public Vector2[] CloneCurvePoints()
+                    {
+                        return new Vector2[] { 
+                            new Vector2(curve_points[0].x,curve_points[0].y), 
+                            new Vector2(curve_points[1].x,curve_points[1].y), 
+                            new Vector2(curve_points[2].x,curve_points[2].y), 
+                            new Vector2(curve_points[3].x,curve_points[3].y)
+                        };
+
+                    }
                 }
             }
 
@@ -423,6 +460,7 @@ namespace GameMod
                 {
                     Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Default Values.");
                     SetDefault();
+
                 }
             }
 

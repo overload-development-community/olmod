@@ -172,17 +172,17 @@ namespace GameMod
                                 Controller controller2 = Controls.m_controllers[MenuManager.m_calibration_current_controller];
                                 switch (UIManager.m_menu_selection)
                                 {
-                                    case 233:     // set linear button
-                                        MenuManager.PlaySelectSound(1f);
-                                        if (MenuManager.m_calibration_current_controller < Controllers.controllers.Count && MenuManager.m_calibration_current_axis < Controllers.controllers[MenuManager.m_calibration_current_controller].axes.Count)
-                                        {
+                                   case 233:     // set linear button
+                                       MenuManager.PlaySelectSound(1f);
+                                       if (MenuManager.m_calibration_current_controller < Controllers.controllers.Count && MenuManager.m_calibration_current_axis < Controllers.controllers[MenuManager.m_calibration_current_controller].axes.Count)
+                                       {
                                             Vector2 start = ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[0];
                                             Vector2 end = ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[3];
                                             ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[1] = new Vector2(0.25f, start.y + 0.25f * (end.y - start.y));
                                             ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[2] = new Vector2(0.75f, start.y + 0.75f * (end.y - start.y));
                                         }
-                                        break;
-                                    case 234:     // reset curve button
+                                         break;
+                                   case 234:     // reset curve button
                                         MenuManager.PlaySelectSound(1f);
                                         if (MenuManager.m_calibration_current_controller < Controllers.controllers.Count && MenuManager.m_calibration_current_axis < Controllers.controllers[MenuManager.m_calibration_current_controller].axes.Count)
                                         {
@@ -190,6 +190,25 @@ namespace GameMod
                                             ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[1] = new Vector2(0.25f, 0.25f);
                                             ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[2] = new Vector2(0.75f, 0.75f);
                                             ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points[3] = new Vector2(1f, 1f);
+                                        }
+                                         break;
+                                    case 235: // apply to all axis
+                                        MenuManager.PlaySelectSound(1f);
+                                        if (MenuManager.m_calibration_current_controller < Controllers.controllers.Count && MenuManager.m_calibration_current_axis < Controllers.controllers[MenuManager.m_calibration_current_controller].axes.Count)
+                                        {
+                                            ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points);
+                                            for( int i = 0; i < Controllers.controllers[MenuManager.m_calibration_current_controller].axes.Count; i++)
+                                            {
+                                                if( ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes.Count > i )
+                                                {
+                                                    ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[i].curve_points =  ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].CloneCurvePoints();
+                                                    ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[i].curve_lookup =  ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(ExtendedConfig.Section_JoystickCurve.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].curve_points);
+                                                }
+                                                else
+                                                {
+                                                    Debug.Log("Error while pressing JoystickCurveEditor->[Apply to all Axis] Button: Axis mismatch between Overload.Controls and ExtendedConfig.Section_JoystickCurve");
+                                                }
+                                            }
                                         }
                                         break;
                                     case 100:
@@ -345,10 +364,12 @@ namespace GameMod
                     DrawResponseCurve(initial_pos, xrange, yrange);
 
                     pos.x += 960f;
-                    pos.y += 386f;
+                    pos.y += 334f;
                     uie.SelectAndDrawItem(Loc.LS("RESET CURVE"), pos, 234, false, 0.47f, 0.6f);
                     pos.y += 52f;
                     uie.SelectAndDrawItem(Loc.LS("SET TO LINEAR"), pos, 233, false, 0.47f, 0.6f);
+                    pos.y += 52f;
+                    uie.SelectAndDrawItem(Loc.LS("APPLY TO ALL AXIS"), pos, 235, false, 0.47f, 0.6f);
                 }
 
                 position.y = UIManager.UI_BOTTOM - 120f;
@@ -536,7 +557,7 @@ namespace GameMod
                 }
                 catch( Exception ex )
                 {
-                    Debug.Log(" JoystickCurveEditor_OverloadController_GetAxis: Incorrect Device information: Resetting");
+                    Debug.Log(" JoystickCurveEditor_OverloadController_GetAxis: Incorrect Device information: "+ex);
                     ExtendedConfig.Section_JoystickCurve.SetDefault();
                     return true;
                 }
