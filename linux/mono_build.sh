@@ -48,7 +48,8 @@ mcs \
     -target:library \
     -sdk:2 \
     -out:GameMod.dll \
-    ../GameMod/*.cs
+    ../GameMod/*.cs \
+    ../GameMod/*/*.cs
 
 if [ $? -ne 0 ]; then
     exit 1
