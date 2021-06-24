@@ -369,7 +369,7 @@ namespace GameMod
                     pos.y += 52f;
                     uie.SelectAndDrawItem(Loc.LS("SET TO LINEAR"), pos, 233, false, 0.47f, 0.6f);
                     pos.y += 52f;
-                    uie.SelectAndDrawItem(Loc.LS("APPLY TO ALL AXIS"), pos, 235, false, 0.47f, 0.6f);
+                    uie.SelectAndDrawItem(Loc.LS("APPLY TO ALL AXES"), pos, 235, false, 0.47f, 0.6f);
                 }
 
                 position.y = UIManager.UI_BOTTOM - 120f;
