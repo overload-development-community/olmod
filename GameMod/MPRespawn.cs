@@ -12,7 +12,17 @@ namespace GameMod {
         private static FieldInfo _NetworkSpawnPoints_m_player_pos_Field = typeof(NetworkSpawnPoints).GetField("m_player_pos", BindingFlags.NonPublic | BindingFlags.Static);
         private static FieldInfo _NetworkSpawnPoints_m_player_team_Field = typeof(NetworkSpawnPoints).GetField("m_player_team", BindingFlags.NonPublic | BindingFlags.Static);
 
+        private static List<Quaternion> m_player_rot = new List<Quaternion>();
+
         public static bool Prefix(MpTeam team, List<int> candidates, ref int __result) {
+            m_player_rot.Clear();
+
+            for (int i = 0; i < NetworkManager.m_Players.Count; i++) {
+                if ((float)NetworkManager.m_Players[i].m_hitpoints > 0f && !NetworkManager.m_Players[i].m_spectator) {
+                    m_player_rot.Add(NetworkManager.m_Players[i].c_player_ship.c_transform.rotation);
+                }
+            }
+
             var mode = NetworkMatch.GetMode();
 
             if (mode != MatchMode.ANARCHY && mode != MatchMode.TEAM_ANARCHY) {
@@ -111,9 +121,20 @@ namespace GameMod {
                 }
             }
 
+            // Scale spawn point by least line of sight.
+            var spawnPoint = GameManager.m_level_data.m_player_spawn_points[idx];
+
+            for (int i = 0; i < count; i++) {
+                var maxAngle = Math.Max(90f - distances[idx][i], 10f);
+                if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
+                    num *= (Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), maxAngle) / maxAngle);
+                    num *= (Math.Min(Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward), maxAngle) / maxAngle);
+                }
+            }
+
             // Avoid respawning two ships on the same respawn point within a short amount of time.
             if (lastRespawn.ContainsKey(idx) && lastRespawn[idx] > DateTime.Now.AddSeconds(-2)) {
-                num -= 1000f * (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
+                num -= 100f * (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
             }
 
             return num;
