@@ -35,6 +35,7 @@ namespace GameMod
         public static bool mms_classic_spawns { get; set; }
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
+        public static bool mms_assist_scoring { get; set; } = true;
 
         public static string GetMMSRearViewPIP()
         {
@@ -64,6 +65,11 @@ namespace GameMod
         public static string GetMMSLagCompensationAdvanced()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_lag_compensation_advanced));
+        }
+
+        public static string GetMMSAssistScoring()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_assist_scoring));
         }
 
         public static string GetMMSLagCompensation()
@@ -169,7 +175,15 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
             position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
+            // We're out of space, and assists don't matter in CTF anyway...
+            if (MenuManager.mms_mode == ExtMatchMode.CTF)
+            {
+                uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
+            }
+            else
+            {
+                uie.SelectAndDrawStringOptionItem(Loc.LS("ASSISTS"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("AWARD POINTS FOR ASSISTING WITH KILLS"), 1f, false);
+            }
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 62f;
@@ -351,6 +365,11 @@ namespace GameMod
                         break;
                     case 17:
                         Menus.mms_allow_smash = !Menus.mms_allow_smash;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+
+                    case 18:
+                        Menus.mms_assist_scoring = !Menus.mms_assist_scoring;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                 }
