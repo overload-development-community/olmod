@@ -13,8 +13,12 @@ namespace GameMod
 
         //public static MenuState msServerBrowser = (MenuState)75;
         public static MenuState msLagCompensation = (MenuState)76;
+        public static MenuState msAutoSelect = (MenuState)77;
+        public static MenuState msAxisCurveEditor = (MenuState)78;
         //public static UIElementType uiServerBrowser = (UIElementType)89;
         public static UIElementType uiLagCompensation = (UIElementType)90;
+        public static UIElementType uiAutoSelect = (UIElementType)91;
+        public static UIElementType uiAxisCurveEditor = (UIElementType)92;
         public static bool mms_ctf_boost { get; set; }
 
         public static string GetMMSCtfCarrierBoost()

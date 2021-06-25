@@ -1,284 +1,317 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Reflection.Emit;
 using Harmony;
 using Overload;
 using UnityEngine;
 
-namespace GameMod {
+namespace GameMod
+{
     class MPAutoSelectionUI
     {
-        // Menu manager
-        [HarmonyPatch(typeof(MenuManager), "MpCustomizeUpdate")]
-        class MpCustomizeMenuLogic
+        // Adds the 'CONFIGURE AUTOSELECT' Option as the Entrypoint for the Autoselect menu under 'Options/Control Options/'
+        [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
+        internal class MPAutoSelectionUI_UIElement_DrawControlsMenu
         {
-            static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
+            private static void DrawAutoselectMenuOption(UIElement uie, ref Vector2 position)
             {
-                var uiManager_m_menu_selection_Field = AccessTools.Field(typeof(UIManager), "m_menu_selection");
+                uie.SelectAndDrawItem(Loc.LS("CONFIGURE AUTOSELECT"), position, 121, false, 1f, 0.75f);
+                //position.y += 55f;
+            }
 
-                var twoCount = 0;
-                var threeCount = 0;
-                foreach (var code in codes)
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                int state = 0;
+                for (int i = 0; i < codes.Count; i++)
                 {
-                    // Allow all 4 menu options to be scrolled through.
-                    if (code.opcode == OpCodes.Ldc_I4_2)
+
+                    if (state == 0 && codes[i].opcode == OpCodes.Ldstr && (string)codes[i].operand == "CONTROL OPTIONS - ADVANCED")
                     {
-                        twoCount++;
-                        if (twoCount == 1)
-                        {
-                            code.opcode = OpCodes.Ldc_I4_3;
-                        }
-                    }
-                    else if (code.opcode == OpCodes.Ldc_I4_3)
-                    {
-                        threeCount++;
-                        if (threeCount == 2 || threeCount == 3)
-                        {
-                            code.opcode = OpCodes.Ldc_I4_4;
-                        }
+                        // remove the 'PRIMARY AUTOSELECT' option
+                        codes.RemoveRange(i + 17, 11);
+
+                        // add the autoselect menu button
+                        var newCodes = new[] {
+                            new CodeInstruction(OpCodes.Ldarg_0),
+                            new CodeInstruction(OpCodes.Ldloca, 0),
+                            new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPAutoSelectionUI_UIElement_DrawControlsMenu), "DrawAutoselectMenuOption"))
+                        };
+                        codes.InsertRange(i + 17, newCodes);
+                        state++;
                     }
 
-                    // Prevent profile corruption when selecting autoselect options.  Adds a "case 203" to several switch statements in the function.
-                    if (code.opcode == OpCodes.Ldsfld && code.operand == uiManager_m_menu_selection_Field)
+                    // make some space
+                    if (state > 0 && state < 10 && codes[i].opcode == OpCodes.Ldc_R4 && (float)codes[i].operand == 62f)
                     {
-                        if (code.labels.Count == 3)
-                        {
-                            Label l = ilGen.DefineLabel();
-                            code.labels.Add(l);
-                        }
+                        codes[i].operand = 55f;
                     }
-                    yield return code;
+
+                    if (state < 10 && codes[i].opcode == OpCodes.Ldstr && (string)codes[i].operand == "INVERT SLIDE MODIFIER Y")
+                    {
+                        state = 10;
+                    }
                 }
+                return codes;
+            }
+        }
+
+
+        // Changes the menu state if the "CONFIGURE AUTOSELECT" Button gets pressed
+        [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
+        class MPAutoSelectionUI_MenuManager_ControlsOptionsUpdate
+        {
+            static void Postfix()
+            {
+                if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
+                {
+                    switch (UIManager.m_menu_selection)
+                    {
+                        case 121:
+                            MenuManager.ChangeMenuState(Menus.msAutoSelect, false);
+                            UIManager.DestroyAll(false);
+                            MenuManager.PlaySelectSound(1f);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
+        // Handles the menu logic of the added buttons
+        [HarmonyPatch(typeof(MenuManager), "Update")]
+        class MPAutoSelectionUI_MenuManager_Update
+        {
+
+            private static void Postfix(ref float ___m_menu_state_timer)
+            {
+                if (MenuManager.m_menu_state == Menus.msAutoSelect)
+                    AutoSelectUpdate(ref ___m_menu_state_timer);
             }
 
             public static int selected;
             public static int selected2;
-            public static int loadout1LastTick;
-            public static int loadout2LastTick;
-
-            public static void Postfix()
+            private static void AutoSelectUpdate(ref float m_menu_state_timer)
             {
-                selected = DrawMpAutoselectOrderingScreen.returnPrimarySelected();
-                selected2 = DrawMpAutoselectOrderingScreen.returnSecondarySelected();
+                selected = MPAutoSelectUI_UIElement_Draw.returnPrimarySelected();
+                selected2 = MPAutoSelectUI_UIElement_Draw.returnSecondarySelected();
+                UIManager.MouseSelectUpdate();
                 switch (MenuManager.m_menu_sub_state)
                 {
+                    case MenuSubState.INIT:
+                        if (m_menu_state_timer > 0.25f)
+                        {
+                            UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, Menus.uiAutoSelect);
+                            MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                            m_menu_state_timer = 0f;
+                            MenuManager.SetDefaultSelection(0);
+                        }
+                        break;
+
                     case MenuSubState.ACTIVE:
-                        if (MenuManager.m_menu_micro_state == 3)
+                        UIManager.ControllerMenu();
+                        Controls.m_disable_menu_letter_keys = false;
+
+                        if (m_menu_state_timer > 0.25f)
                         {
-                            switch (UIManager.m_menu_selection)
+                            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir() || UIManager.SliderMouseDown()))
                             {
-                                case 200:
-                                case 201:
-                                case 202:
-                                case 203:
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
-                                        MenuManager.UIPulse(1f);
-                                        GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
-                                    }
-                                    break;
+                                MenuManager.MaybeReverseOption();
+                                switch (UIManager.m_menu_selection)
+                                {
 
-                                // Triggers Swap Logic for the Primary Weapon Buttons
-                                case 1720:
-                                case 1721:
-                                case 1722:
-                                case 1723:
-                                case 1724:
-                                case 1725:
-                                case 1726:
-                                case 1727: // int nwhen (MenuManager.m_menu_micro_state > 1719 && MenuManager.m_menu_micro_state <= 1727):
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(UIManager.m_menu_selection - 1720);
-                                    break;
-
-
-                                // Triggers Swap Logic for the Secondary Weapon Buttons
-                                case 1728:
-                                case 1729:
-                                case 1730:
-                                case 1731:
-                                case 1732:
-                                case 1733:
-                                case 1734:
-                                case 1735:
-                                    if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(UIManager.m_menu_selection - 1728);
-                                    break;
-
-                                // Triggers Neverselect Logic for the Primary Buttons
-                                case 2000:
-                                case 2001:
-                                case 2002:
-                                case 2003:
-                                case 2004:
-                                case 2005:
-                                case 2006:
-                                case 2007:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(UIManager.m_menu_selection - 2000);
-                                    break;
-
-                                // Triggers Neverselect Logic for the Secondary Buttons
-                                case 2010:
-                                case 2011:
-                                case 2012:
-                                case 2013:
-                                case 2014:
-                                case 2015:
-                                case 2016:
-                                case 2017:
-                                    if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(UIManager.m_menu_selection - 2010);
-                                    break;
-
-                                case 2100:
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag)
-                                        {
-                                            MPAutoSelection.primarySwapFlag = false;
-                                            MPAutoSelection.secondarySwapFlag = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.primarySwapFlag = true;
-                                            MPAutoSelection.secondarySwapFlag = true;
-                                            MenuManager.opt_primary_autoswitch = 0;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
-                                case 2102:
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.secondarySwapFlag)
-                                        {
-                                            MPAutoSelection.secondarySwapFlag = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.secondarySwapFlag = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
-                                case 2103:
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.primarySwapFlag)
-                                        {
-                                            MPAutoSelection.primarySwapFlag = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.primarySwapFlag = true;
-                                            MenuManager.opt_primary_autoswitch = 0;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
-                                case 2104: //
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.zorc)
-                                        {
-                                            MPAutoSelection.zorc = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.zorc = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
-                                case 2105: //
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.dontAutoselectAfterFiring)
-                                        {
-                                            MPAutoSelection.dontAutoselectAfterFiring = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.dontAutoselectAfterFiring = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
-                                case 2106: //
-                                    if (UIManager.PushedSelect(100))
-                                    {
-                                        if (MPAutoSelection.swapWhileFiring)
-                                        {
-                                            MPAutoSelection.swapWhileFiring = false;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
-                                        }
-                                        else
-                                        {
-                                            MPAutoSelection.swapWhileFiring = true;
-                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
-                                        }
-                                        DrawMpAutoselectOrderingScreen.saveToFile();
-                                    }
-                                    break;
-
-
-
-                                default:
-                                    if (UIManager.PushedSelect(100) && UIManager.m_menu_selection == 100)
-                                    {
-                                        uConsole.Log("Definitly 203 " + Player.Mp_loadout1 + " : " + Player.Mp_loadout2);
-                                        UIManager.DestroyAll(false);
+                                    case 100:
                                         MenuManager.PlaySelectSound(1f);
-                                        if (MPAutoSelection.isCurrentlyInLobby)
+                                        m_menu_state_timer = 0f;
+                                        UIManager.DestroyAll(false);
+                                        MenuManager.m_menu_state = 0;
+                                        MenuManager.m_menu_micro_state = 0;
+                                        MenuManager.m_menu_sub_state = MenuSubState.BACK;
+                                        break;
+                                    case 200:
+                                    case 201:
+                                    case 202:
+                                    case 203:
+                                        if (UIManager.PushedSelect(100))
                                         {
-                                            MenuManager.ChangeMenuState(MenuState.MP_PRE_MATCH_MENU, false);
-
+                                            MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
+                                            MenuManager.UIPulse(1f);
+                                            GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                                         }
-                                        else
+                                        break;
+
+                                    // Triggers Swap Logic for the Primary Weapon Buttons
+                                    case 1720:
+                                    case 1721:
+                                    case 1722:
+                                    case 1723:
+                                    case 1724:
+                                    case 1725:
+                                    case 1726:
+                                    case 1727: // int nwhen (MenuManager.m_menu_micro_state > 1719 && MenuManager.m_menu_micro_state <= 1727):
+                                        if (UIManager.PushedSelect(100)) doSelectedStuffForPrimary(UIManager.m_menu_selection - 1720);
+                                        break;
+
+
+                                    // Triggers Swap Logic for the Secondary Weapon Buttons
+                                    case 1728:
+                                    case 1729:
+                                    case 1730:
+                                    case 1731:
+                                    case 1732:
+                                    case 1733:
+                                    case 1734:
+                                    case 1735:
+                                        if (UIManager.PushedSelect(100)) doSelectedStuffForSecondary(UIManager.m_menu_selection - 1728);
+                                        break;
+
+                                    // Triggers Neverselect Logic for the Primary Buttons
+                                    case 2000:
+                                    case 2001:
+                                    case 2002:
+                                    case 2003:
+                                    case 2004:
+                                    case 2005:
+                                    case 2006:
+                                    case 2007:
+                                        if (UIManager.PushedSelect(100)) doNeverSelectStuffForPrimary(UIManager.m_menu_selection - 2000);
+                                        break;
+
+                                    // Triggers Neverselect Logic for the Secondary Buttons
+                                    case 2010:
+                                    case 2011:
+                                    case 2012:
+                                    case 2013:
+                                    case 2014:
+                                    case 2015:
+                                    case 2016:
+                                    case 2017:
+                                        if (UIManager.PushedSelect(100)) doNeverSelectStuffForSecondary(UIManager.m_menu_selection - 2010);
+                                        break;
+
+                                    case 2100:
+                                        if (UIManager.PushedSelect(100))
                                         {
-                                            MenuManager.ChangeMenuState(MenuState.MP_MENU, false);
+                                            if (MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag)
+                                            {
+                                                MPAutoSelection.primarySwapFlag = false;
+                                                MPAutoSelection.secondarySwapFlag = false;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            }
+                                            else
+                                            {
+                                                MPAutoSelection.primarySwapFlag = true;
+                                                MPAutoSelection.secondarySwapFlag = true;
+                                                MenuManager.opt_primary_autoswitch = 0;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                            }
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
-                                        DrawMpAutoselectOrderingScreen.isInitialised = false;
-
-                                    }
-                                    break;
-
+                                        break;
+                                    case 2102:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            if (MPAutoSelection.secondarySwapFlag)
+                                            {
+                                                MPAutoSelection.secondarySwapFlag = false;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            }
+                                            else
+                                            {
+                                                MPAutoSelection.secondarySwapFlag = true;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                            }
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
+                                        }
+                                        break;
+                                    case 2103:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            if (MPAutoSelection.primarySwapFlag)
+                                            {
+                                                MPAutoSelection.primarySwapFlag = false;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            }
+                                            else
+                                            {
+                                                MPAutoSelection.primarySwapFlag = true;
+                                                MenuManager.opt_primary_autoswitch = 0;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                            }
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
+                                        }
+                                        break;
+                                    case 2104:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            if (MPAutoSelection.zorc)
+                                            {
+                                                MPAutoSelection.zorc = false;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            }
+                                            else
+                                            {
+                                                MPAutoSelection.zorc = true;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                            }
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
+                                        }
+                                        break;
+                                    case 2105:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            if (MPAutoSelection.dontAutoselectAfterFiring)
+                                            {
+                                                MPAutoSelection.dontAutoselectAfterFiring = false;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            }
+                                            else
+                                            {
+                                                MPAutoSelection.dontAutoselectAfterFiring = true;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                            }
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
+                                        }
+                                        break;
+                                    case 2106:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            if (MPAutoSelection.swapWhileFiring)
+                                            {
+                                                MPAutoSelection.swapWhileFiring = false;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            }
+                                            else
+                                            {
+                                                MPAutoSelection.swapWhileFiring = true;
+                                                SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_picker, 0.8f, 0f, 0f, false);
+                                            }
+                                            ExtendedConfig.Section_AutoSelect.Set(true);
+                                        }
+                                        break;
+                                }
                             }
+
+
+
+
                         }
-                        else
+                        break;
+
+                    case MenuSubState.BACK:
+                        if (m_menu_state_timer > 0.25f)
                         {
-                            //uConsole.Log("NOT 203 "+Player.Mp_loadout1 + " : " + Player.Mp_loadout2);
-                            if (Player.Mp_loadout1 == 203 || Player.Mp_loadout2 == 203)
-                            {
-                                Player.Mp_loadout1 = loadout1LastTick;
-                                Player.Mp_loadout2 = loadout2LastTick;
-                            }
-                            else
-                            {
-                                loadout1LastTick = Player.Mp_loadout1;
-                                loadout2LastTick = Player.Mp_loadout2;
-                            }
-                            if (UIManager.PushedSelect(100) && UIManager.m_menu_selection == 203)
-                            {
-                                //MenuManager.SetDefaultSelection(-1);
-                                MenuManager.m_menu_micro_state = 3;
-                                MenuManager.UIPulse(1f);
-                                GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
-                            }
+                            MenuManager.ChangeMenuState(((Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null)).Pop(), true);
+                            AccessTools.Field(typeof(MenuManager), "m_went_back").SetValue(null, true);
+                        }
+                        break;
+
+                    case MenuSubState.START:
+                        if (m_menu_state_timer > 0.25f)
+                        {
 
                         }
-
-
-
                         break;
                 }
             }
@@ -295,7 +328,7 @@ namespace GameMod {
                 {
                     SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                 }
-                DrawMpAutoselectOrderingScreen.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
 
             private static void doNeverSelectStuffForSecondary(int i)
@@ -309,141 +342,187 @@ namespace GameMod {
                 {
                     SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
                 }
-                DrawMpAutoselectOrderingScreen.saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
             }
 
             private static void doSelectedStuffForPrimary(int i)
             {
                 if (selected < 1)
                 {
-                    DrawMpAutoselectOrderingScreen.isPrimarySelected[i] = true;
+                    MPAutoSelectUI_UIElement_Draw.isPrimarySelected[i] = true;
                     GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                 }
                 else
                 {
-                    if (DrawMpAutoselectOrderingScreen.isPrimarySelected[i])
+                    if (MPAutoSelectUI_UIElement_Draw.isPrimarySelected[i])
                     {
-                        DrawMpAutoselectOrderingScreen.isPrimarySelected[i] = false;
+                        MPAutoSelectUI_UIElement_Draw.isPrimarySelected[i] = false;
                         GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                     }
                     else
                     {
-                        DrawMpAutoselectOrderingScreen.isPrimarySelected[i] = true;
-                        DrawMpAutoselectOrderingScreen.SwapSelectedPrimary();
+                        MPAutoSelectUI_UIElement_Draw.isPrimarySelected[i] = true;
+                        MPAutoSelectUI_UIElement_Draw.SwapSelectedPrimary();
                         SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                     }
                 }
             }
-
 
             private static void doSelectedStuffForSecondary(int i)
             {
                 if (selected2 < 1)
                 {
-                    DrawMpAutoselectOrderingScreen.isSecondarySelected[i] = true;
+                    MPAutoSelectUI_UIElement_Draw.isSecondarySelected[i] = true;
                     GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                 }
                 else
                 {
-                    if (DrawMpAutoselectOrderingScreen.isSecondarySelected[i])
+                    if (MPAutoSelectUI_UIElement_Draw.isSecondarySelected[i])
                     {
-                        DrawMpAutoselectOrderingScreen.isSecondarySelected[i] = false;
+                        MPAutoSelectUI_UIElement_Draw.isSecondarySelected[i] = false;
                         GameManager.m_audio.PlayCue2D(364, 0.4f, 0.07f, 0f, false);
                     }
                     else
                     {
-                        DrawMpAutoselectOrderingScreen.isSecondarySelected[i] = true;
-                        DrawMpAutoselectOrderingScreen.SwapSelectedSecondary();
+                        MPAutoSelectUI_UIElement_Draw.isSecondarySelected[i] = true;
+                        MPAutoSelectUI_UIElement_Draw.SwapSelectedSecondary();
                         SFXCueManager.PlayCue2D(SFXCue.guidebot_objective_found, 0.8f, 0f, 0f, false);
                     }
                 }
             }
+
         }
 
-        // Adds the Auto order entry in the customize menu
-        [HarmonyPatch(typeof(UIElement), "DrawMpTabs")]
-        internal class AddFourthTab
+        [HarmonyPatch(typeof(UIElement), "Draw")]
+        public class MPAutoSelectUI_UIElement_Draw
         {
-            public static bool Prefix(Vector2 pos, int tab_selected, UIElement __instance)
+            static void Postfix(UIElement __instance)
             {
-                float w = 378f; // 511
-                __instance.DrawWideBox(pos, w, 22f, UIManager.m_col_ub2, __instance.m_alpha, 7);
-                string[] array = new string[]
+                if (__instance.m_type == Menus.uiAutoSelect)
                 {
-                __instance.GetMpTabName(0),
-                __instance.GetMpTabName(1),
-                __instance.GetMpTabName(2),
-                "AUTOSELECT"
-                };
-
-                for (int i = 0; i < array.Length; i++)
-                {
-                    pos.x = (((float)i - 1f) * 198f) - 99f;//265 -132
-                    __instance.TestMouseInRect(pos, 84f, 16f, 200 + i, false); // original value = 112
-                    if (UIManager.m_menu_selection == 200 + i)
-                    {
-                        __instance.DrawWideBox(pos, 84f, 19f, UIManager.m_col_ui4, __instance.m_alpha, 7);
-                    }
-                    if (i == tab_selected)
-                    {
-                        __instance.DrawWideBox(pos, 84f, 16f, UIManager.m_col_ui4, __instance.m_alpha, 12);
-                        __instance.DrawStringSmall(array[i], pos, 0.6f, StringOffset.CENTER, UIManager.m_col_ub3, 1f, -1f);
-                    }
-                    else
-                    {
-                        __instance.DrawWideBox(pos, 84f, 16f, UIManager.m_col_ui0, __instance.m_alpha, 8);
-                        __instance.DrawStringSmall(array[i], pos, 0.6f, StringOffset.CENTER, UIManager.m_col_ui1, 1f, -1f);
-                    }
-                }
-                return false;
+                    DrawAutoSelectWindow(__instance);
+                }   
             }
-        }
 
-        [HarmonyPatch(typeof(UIElement), "DrawMpCustomize")]
-        internal class DrawMpAutoselectOrderingScreen
-        {
             static string[] PrimaryPriorityArray = new string[8];
             static string[] SecondaryPriorityArray = new string[8];
 
-            static void Postfix(UIElement __instance)
+            static void DrawAutoSelectWindow(UIElement uie)
             {
-                //Initialise();
-                if (isInitialised == false)
+                UIManager.X_SCALE = 0.2f;
+                UIManager.ui_bg_dark = true;
+                uie.DrawMenuBG();
+
+                Vector2 position = uie.m_position;
+                position.y = UIManager.UI_TOP + 64f;
+                uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 40f), Loc.LS("AUTOSELECT"), 265f);
+                position.y += 100f;
+                uie.DrawMenuSeparator(position);
+                position.y -= 40f;
+
+
+
+
+                position.y += 82;
+                Vector2 position2 = position;
+                position.x -= 160f;
+                position2.x += 160f;
+
+                UIColorPrimaries = MPAutoSelection.primarySwapFlag ? UIManager.m_col_ui4 : UIManager.m_col_ui0;
+                UIColorSecondaries = MPAutoSelection.secondarySwapFlag ? UIManager.m_col_ui4 : UIManager.m_col_ub0;
+
+                Vector2 left = position;
+                Vector2 right = position;
+                left.x += 81;
+                right.x += 234;
+
+                //Draw the neverselect Buttons
+                for (int i = 0; i < 8; i++)
                 {
-                    Initialise();
-                    isInitialised = true; //should be set to false when leaving the MpCustomize Menu
+                    int primaryindex = getWeaponIconIndex(MPAutoSelection.PrimaryPriorityArray[i]);
+                    int secondaryindex = getWeaponIconIndex(MPAutoSelection.SecondaryPriorityArray[i]);
+                    UIManager.DrawSpriteUI(left, 0.2f, 0.2f, UIColorPrimaries, uie.m_alpha, 26 + primaryindex);
+                    UIManager.DrawSpriteUI(right, 0.2f, 0.2f, UIColorSecondaries, uie.m_alpha, 104 + secondaryindex);
+
+                    left.y += 50f;
+                    right.y += 50f;
+                    if (MPAutoSelectUI_UIElement_Draw.isPrimarySelected[i])
+                    {
+                        uie.DrawWideBox(position, 100f, 28f, Color.blue, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.blue, 12);
+                    }
+                    else if (MPAutoSelection.PrimaryNeverSelect[i])
+                    {
+                        uie.DrawWideBox(position, 100f, 28f, Color.red, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.red, 12);
+                    }
+                    position.x -= 150f;
+                    uie.SelectAndDrawItem(!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-", position, 2000 + i, false, 0.022f, 1f);
+                    position.x += 150f;
+                    uie.SelectAndDrawHalfItem(MPAutoSelection.PrimaryPriorityArray[i], position, 1720 + i, false);
+                    position.y += 50f;
+
+
+                    if (MPAutoSelectUI_UIElement_Draw.isSecondarySelected[i])
+                    {
+                        uie.DrawWideBox(position2, 100f, 28f, Color.blue, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.blue, 12);
+                    }
+                    else if (MPAutoSelection.SecondaryNeverSelect[i])
+                    {
+                        uie.DrawWideBox(position2, 100f, 28f, Color.red, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.red, 12);
+                    }
+                    position2.x += 150f;
+                    uie.SelectAndDrawItem((!MPAutoSelection.SecondaryNeverSelect[i] ? "+" : "-"), position2, 2010 + i, false, 0.022f, 1f);
+                    position2.x -= 150f;
+                    uie.SelectAndDrawHalfItem(MPAutoSelection.SecondaryPriorityArray[i], position2, 1728 + i, false);
+                    position2.y += 50f;
                 }
 
-                int menu_micro_state = MenuManager.m_menu_micro_state;
-                if (menu_micro_state == 3)
-                {
-                    // Draw the Autoselect Ordering menu
-                    DrawPriorityList(__instance);
-                }
+
+
+                position = left;
+                position.x = 540f;
+                position.y -= 400f;
+                uie.SelectAndDrawItem("Status: " + ((MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag) ? "ACTIVE" : "INACTIVE"), position, 2100, false, 0.3f, 0.45f);
+                position.y += 50f;
+                position.x += 5f;
+                uie.SelectAndDrawItem("Weapon Logic: " + (MPAutoSelection.primarySwapFlag ? "ON" : "OFF"), position, 2103, false, 0.27f, 0.4f);
+                position.y += 50f;
+                uie.SelectAndDrawItem("Missile Logic: " + (MPAutoSelection.secondarySwapFlag ? "ON" : "OFF"), position, 2102, false, 0.27f, 0.4f);
+
+
+                position.x -= 5f;
+                position.y += 147;
+                uie.SelectAndDrawItem("DONT SWAP WHILE FIRING: " + (!MPAutoSelection.swapWhileFiring ? "ON" : "OFF"), position, 2106, false, 0.3f, 0.40f);
+                position.y += 50f;
+                uie.SelectAndDrawItem("RETRY SWAP AFTER FIRING: " + (!MPAutoSelection.dontAutoselectAfterFiring ? "ON" : "OFF"), position, 2105, false, 0.3f, 0.40f);
+                position.y += 50f;
+                uie.SelectAndDrawItem("ALERT: " + (MPAutoSelection.zorc ? "ON" : "OFF"), position, 2104, false, 0.3f, 0.45f);
+
+
+
+                // Button description 
+                position2.x -= 160f;
+                position2.y -= 8f;
+                
+                position2.y -= 8f;
+                string k = selectionToDescription(UIManager.m_menu_selection);
+                MPAutoSelection.last_valid_description = k;
+                position.x = 0f;
+                uie.DrawLabelSmall(position + Vector2.up * 40f, k, 500f); //position2
+                position.y += 12f;
+                uie.DrawMenuSeparator(position + Vector2.up * 40f);
+
+
+                position.x = 0f;
+                position.y = UIManager.UI_BOTTOM - 30f;
+                uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
             }
 
-            public static void Initialise()
-            {
-                Primary[0] = MPAutoSelection.PrimaryPriorityArray[0];
-                Primary[1] = MPAutoSelection.PrimaryPriorityArray[1];
-                Primary[2] = MPAutoSelection.PrimaryPriorityArray[2];
-                Primary[3] = MPAutoSelection.PrimaryPriorityArray[3];
-                Primary[4] = MPAutoSelection.PrimaryPriorityArray[4];
-                Primary[5] = MPAutoSelection.PrimaryPriorityArray[5];
-                Primary[6] = MPAutoSelection.PrimaryPriorityArray[6];
-                Primary[7] = MPAutoSelection.PrimaryPriorityArray[7];
 
-                Secondary[0] = MPAutoSelection.SecondaryPriorityArray[0];
-                Secondary[1] = MPAutoSelection.SecondaryPriorityArray[1];
-                Secondary[2] = MPAutoSelection.SecondaryPriorityArray[2];
-                Secondary[3] = MPAutoSelection.SecondaryPriorityArray[3];
-                Secondary[4] = MPAutoSelection.SecondaryPriorityArray[4];
-                Secondary[5] = MPAutoSelection.SecondaryPriorityArray[5];
-                Secondary[6] = MPAutoSelection.SecondaryPriorityArray[6];
-                Secondary[7] = MPAutoSelection.SecondaryPriorityArray[7];
-            }
-
-
+            
 
             public static int returnPrimarySelected()
             {
@@ -487,16 +566,16 @@ namespace GameMod {
                         break;
                     }
                 }
-                string temp = Primary[selection[0]];
-                Primary[selection[0]] = Primary[selection[1]];
-                Primary[selection[1]] = temp;
+                string temp = MPAutoSelection.PrimaryPriorityArray[selection[0]];
+                MPAutoSelection.PrimaryPriorityArray[selection[0]] = MPAutoSelection.PrimaryPriorityArray[selection[1]];
+                MPAutoSelection.PrimaryPriorityArray[selection[1]] = temp;
 
                 isPrimarySelected[selection[0]] = false;
                 isPrimarySelected[selection[1]] = false;
                 MPAutoSelection.PrimaryNeverSelect[selection[0]] = false;
                 MPAutoSelection.PrimaryNeverSelect[selection[1]] = false;
 
-                saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
                 MPAutoSelection.Initialise();
             }
 
@@ -516,67 +595,23 @@ namespace GameMod {
                         break;
                     }
                 }
-                string temp = Secondary[selection[0]];
-                Secondary[selection[0]] = Secondary[selection[1]];
-                Secondary[selection[1]] = temp;
+                string temp = MPAutoSelection.SecondaryPriorityArray[selection[0]];
+                MPAutoSelection.SecondaryPriorityArray[selection[0]] = MPAutoSelection.SecondaryPriorityArray[selection[1]];
+                MPAutoSelection.SecondaryPriorityArray[selection[1]] = temp;
 
                 isSecondarySelected[selection[0]] = false;
                 isSecondarySelected[selection[1]] = false;
                 MPAutoSelection.SecondaryNeverSelect[selection[0]] = false;
                 MPAutoSelection.SecondaryNeverSelect[selection[1]] = false;
 
-                saveToFile();
+                ExtendedConfig.Section_AutoSelect.Set(true);
                 MPAutoSelection.Initialise();
             }
 
-            public static void saveToFile()
-            {
-                using (StreamWriter sw = File.CreateText(MPAutoSelection.textFile))
-                {
-                    sw.WriteLine(Primary[0]);
-                    sw.WriteLine(Primary[1]);
-                    sw.WriteLine(Primary[2]);
-                    sw.WriteLine(Primary[3]);
-                    sw.WriteLine(Primary[4]);
-                    sw.WriteLine(Primary[5]);
-                    sw.WriteLine(Primary[6]);
-                    sw.WriteLine(Primary[7]);
-                    sw.WriteLine(Secondary[0]);
-                    sw.WriteLine(Secondary[1]);
-                    sw.WriteLine(Secondary[2]);
-                    sw.WriteLine(Secondary[3]);
-                    sw.WriteLine(Secondary[4]);
-                    sw.WriteLine(Secondary[5]);
-                    sw.WriteLine(Secondary[6]);
-                    sw.WriteLine(Secondary[7]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[0]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[1]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[2]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[3]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[4]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[5]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[6]);
-                    sw.WriteLine(MPAutoSelection.PrimaryNeverSelect[7]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[0]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[1]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[2]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[3]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[4]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[5]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[6]);
-                    sw.WriteLine(MPAutoSelection.SecondaryNeverSelect[7]);
-                    sw.WriteLine(MPAutoSelection.primarySwapFlag);
-                    sw.WriteLine(MPAutoSelection.secondarySwapFlag);
-                    sw.WriteLine(MPAutoSelection.swapWhileFiring);
-                    sw.WriteLine(MPAutoSelection.dontAutoselectAfterFiring);
-                    sw.WriteLine(MPAutoSelection.zorc);
-                    sw.WriteLine(MPAutoSelection.miasmic);
-                }
-            }
 
             public static string selectionToDescription(int n)
             {
-                if (n == 2100) return "TOGGLES WETHER THE WHOLE FMOD SHOULD BE ACTIVE";
+                if (n == 2100) return "TOGGLES WETHER THE WHOLE MOD SHOULD BE ACTIVE";
                 if (n == 2101) return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
                 if (n <= 2017 && n >= 2000) return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
                 if (n <= 1735 && n >= 1720) return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
@@ -608,130 +643,13 @@ namespace GameMod {
                 }
             }
 
-            private static MethodInfo _UIElement_DrawWrappedText_Method = typeof(UIElement).GetMethod("DrawWrappedText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            public static void DrawPriorityList(UIElement uie)
-            {
-                UIManager.X_SCALE = 0.2f;
-                UIManager.ui_bg_dark = true;
-                uie.DrawMenuBG();
-
-                Vector2 position = Vector2.up * (UIManager.UI_TOP + 70f);
-                position.y += 164f;
-                Vector2 position2 = position;
-                position.x -= 160f;
-                position2.x += 160f;
-
-                UIColorPrimaries = MPAutoSelection.primarySwapFlag ? UIManager.m_col_ui4 : UIManager.m_col_ui0;
-                UIColorSecondaries = MPAutoSelection.secondarySwapFlag ? UIManager.m_col_ui4 : UIManager.m_col_ub0;
-
-                Vector2 left = position;
-                Vector2 right = position;
-                left.x += 75;
-                right.x += 240;
-
-                //Draw the neverselect Buttons
-                for (int i = 0; i < 8; i++)
-                {
-                    int primaryindex = getWeaponIconIndex(MPAutoSelection.PrimaryPriorityArray[i]);
-                    int secondaryindex = getWeaponIconIndex(MPAutoSelection.SecondaryPriorityArray[i]);
-                    UIManager.DrawSpriteUI(left, 0.15f, 0.15f, UIColorPrimaries, uie.m_alpha, 26 + primaryindex);
-                    UIManager.DrawSpriteUI(right, 0.15f, 0.15f, UIColorSecondaries, uie.m_alpha, 104 + secondaryindex);
-
-                    left.y += 50;
-                    right.y += 50;
-                    if (DrawMpAutoselectOrderingScreen.isPrimarySelected[i])
-                    {
-                        uie.DrawWideBox(position, 100f, 28f, Color.blue, 0.2f, 7);
-                        UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.blue, 12);
-                    }
-                    else if (MPAutoSelection.PrimaryNeverSelect[i])
-                    {
-                        uie.DrawWideBox(position, 100f, 28f, Color.red, 0.2f, 7);
-                        UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.red, 12);
-                    }
-                    position.x -= 150f;
-                    uie.SelectAndDrawItem(!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-", position, 2000 + i, false, 0.022f, 1f);
-                    position.x += 150f;
-                    uie.SelectAndDrawHalfItem(Primary[i], position, 1720 + i, false);
-                    position.y += 50;
-
-
-                    if (DrawMpAutoselectOrderingScreen.isSecondarySelected[i])
-                    {
-                        uie.DrawWideBox(position2, 100f, 28f, Color.blue, 0.2f, 7);
-                        UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.blue, 12);
-                    }
-                    else if (MPAutoSelection.SecondaryNeverSelect[i])
-                    {
-                        uie.DrawWideBox(position2, 100f, 28f, Color.red, 0.2f, 7);
-                        UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.red, 12);
-                    }
-                    position2.x += 150f;
-                    uie.SelectAndDrawItem((!MPAutoSelection.SecondaryNeverSelect[i] ? "+" : "-"), position2, 2010 + i, false, 0.022f, 1f);
-                    position2.x -= 150f;
-                    uie.SelectAndDrawHalfItem(Secondary[i], position2, 1728 + i, false);
-                    position2.y += 50;
-                }
-
-
-                // other Buttons
-                position = Vector2.up * (UIManager.UI_TOP + 70f);
-                position.y += 164f;
-                position.x += 540f;
-                uie.SelectAndDrawItem("Status: " + ((MPAutoSelection.primarySwapFlag || MPAutoSelection.secondarySwapFlag) ? "ACTIVE" : "INACTIVE"), position, 2100, false, 0.3f, 0.45f);
-                position.y += 52f;
-                position.x += 5f;
-                uie.SelectAndDrawItem("Weapon Logic: " + (MPAutoSelection.primarySwapFlag ? "ON" : "OFF"), position, 2103, false, 0.27f, 0.4f);
-                position.y += 50f;
-                uie.SelectAndDrawItem("Missile Logic: " + (MPAutoSelection.secondarySwapFlag ? "ON" : "OFF"), position, 2102, false, 0.27f, 0.4f);
-
-
-                position.x -= 5f;
-                position.y += 147;
-                uie.SelectAndDrawItem("DONT SWAP WHILE FIRING: " + (!MPAutoSelection.swapWhileFiring ? "ON" : "OFF"), position, 2106, false, 0.3f, 0.40f);
-                position.y += 50;
-                uie.SelectAndDrawItem("RETRY SWAP AFTER FIRING: " + (!MPAutoSelection.dontAutoselectAfterFiring ? "ON" : "OFF"), position, 2105, false, 0.3f, 0.40f);
-                position.y += 50;
-                uie.SelectAndDrawItem("ALERT: " + (MPAutoSelection.zorc ? "ON" : "OFF"), position, 2104, false, 0.3f, 0.45f);
-
-
-
-                // Button description 
-                position2.x -= 160f;
-                position2.y -= 14f;
-                string k = selectionToDescription(UIManager.m_menu_selection);
-                MPAutoSelection.last_valid_description = k;
-                uie.DrawLabelSmall(position2, k, 500f);
-
-                _UIElement_DrawWrappedText_Method.Invoke(uie, new object[] { "To enable autoselect, set the option at \"Options\", \"Control Options\", \"Advanced Options\", \"Primary Auto-Select\" to \"Never\".", new Vector2(UIManager.UI_LEFT + 35f, UIManager.UI_TOP + 234f), 0.4f, 15f, 220f, StringOffset.LEFT, float.MaxValue, 0f, 0f });
-            }
-            public static bool isInitialised = false;
-
-            public static string[] Primary = {
-                MPAutoSelection.PrimaryPriorityArray[0],
-                MPAutoSelection.PrimaryPriorityArray[1],
-                MPAutoSelection.PrimaryPriorityArray[2],
-                MPAutoSelection.PrimaryPriorityArray[3],
-                MPAutoSelection.PrimaryPriorityArray[4],
-                MPAutoSelection.PrimaryPriorityArray[5],
-                MPAutoSelection.PrimaryPriorityArray[6],
-                MPAutoSelection.PrimaryPriorityArray[7],
-            };
-            public static string[] Secondary = {
-                MPAutoSelection.SecondaryPriorityArray[0],
-                MPAutoSelection.SecondaryPriorityArray[1],
-                MPAutoSelection.SecondaryPriorityArray[2],
-                MPAutoSelection.SecondaryPriorityArray[3],
-                MPAutoSelection.SecondaryPriorityArray[4],
-                MPAutoSelection.SecondaryPriorityArray[5],
-                MPAutoSelection.SecondaryPriorityArray[6],
-                MPAutoSelection.SecondaryPriorityArray[7]
-            };
             public static bool[] isPrimarySelected = new bool[8];
             public static bool[] isSecondarySelected = new bool[8];
 
             private static Color UIColorPrimaries;
             private static Color UIColorSecondaries;
         }
+        
+       
     }
 }

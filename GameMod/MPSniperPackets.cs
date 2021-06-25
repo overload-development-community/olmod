@@ -515,7 +515,7 @@ namespace GameMod
                             player.UpdateCurrentMissileName();
                         }
                     }
-
+                    
                     if (oldAmt == 0 && MPAutoSelection.secondarySwapFlag)
                     {
                         if (GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && player.isLocalPlayer)
@@ -541,7 +541,7 @@ namespace GameMod
                             }
                         }
                     }
-
+                    
                     break;
             }
 
