@@ -99,10 +99,10 @@ namespace GameMod {
             float num2 = 3f / (2f + count);
 
             for (int i = 0; i < count; i++) {
-                var dist = distances[idx][i];
+                var dist = Math.Abs(distances[idx][i]);
 
                 if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
-                    float num3 = (RUtility.FindVec3Distance(position - playerPositions[i]) + dist) / 2;
+                    float num3 = (Math.Abs(RUtility.FindVec3Distance(position - playerPositions[i])) + dist) / 2f;
                     if (num3 < 40f) {
                         float num4 = (40f - num3) * (40f - num3) * 0.2f;
                         num -= num4 * num2;
@@ -112,11 +112,11 @@ namespace GameMod {
                     }
                     num += dist / 4;
                 } else {
-                    float num5 = (RUtility.FindVec3Distance(position - playerPositions[i]) + dist) / 2;
+                    float num5 = (Math.Abs(RUtility.FindVec3Distance(position - playerPositions[i])) + dist) / 2f;
                     if (num5 > 50f) {
-                        num -= (num5 - 50f) * 2f * num2;
+                        num -= (num5 - 50f) * num2;
                     } else if (num5 < 10f) {
-                        num -= (10f - num5) * 100f;
+                        num -= (10f - num5) * 1000f;
                     }
                 }
             }
