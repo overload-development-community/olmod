@@ -239,6 +239,26 @@ namespace GameMod {
             }
             return max_score;
         }
+
+        public static void SetPlayerGlow(PlayerShip ship, MpTeam team) {
+            if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode())) {
+                var teamcolor = UIManager.ChooseMpColor(team);
+
+                foreach (var mat in ship.m_materials) {
+                    // Main damage color
+                    if (mat.shader != null)
+                    {
+                        if ((Color)mat.GetVector("_color_burn") == teamcolor) {
+                            return;
+                        }
+                        mat.SetVector("_color_burn", teamcolor);
+                    }
+
+                    // Light color (e.g. TB overcharge)
+                    ship.c_lights[4].color = teamcolor;
+                }
+            }
+        }
     }
 
     [HarmonyPatch(typeof(UIElement), "MaybeDrawPlayerList")]
@@ -940,30 +960,6 @@ namespace GameMod {
         }
     }
 
-    // Damage glow in team color
-    [HarmonyPatch(typeof(PlayerShip), "Start")]
-    class MPTeams_PlayerShip_Start
-    {
-        static void Postfix(PlayerShip __instance, List<Material> ___m_materials)
-        {
-            if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
-            {
-                var teamcolor = UIManager.ChooseMpColor(__instance.c_player.m_mp_team);
-
-                foreach (var mat in ___m_materials)
-                {
-                    // Main damage color
-                    if (mat.shader != null)
-                        mat.SetVector("_color_burn", teamcolor);
-
-                    // Light color (e.g. TB overcharge)
-                    __instance.c_lights[4].color = teamcolor;
-
-                }
-            }
-        }
-    }
-
     // Edge color effect needs changed for Team matches, otherwise leave as global m_damage_material (red).  This is primarily noticeable as fully charged TB glow
     [HarmonyPatch(typeof(PlayerShip), "Update")]
     class MPTeams_PlayerShip_Update
@@ -983,6 +979,10 @@ namespace GameMod {
             }
         }
 
+        // Damage glow in team color
+        static void Postfix(PlayerShip __instance) {
+            MPTeams.SetPlayerGlow(__instance, __instance.c_player.m_mp_team);
+        }
 
         // UIManager.gm.m_damage_material is a global client field for heavy incurred damage/TB overcharge, patch to call our LoadDamageMaterial() instead
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
