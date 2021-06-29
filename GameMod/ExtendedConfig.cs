@@ -115,6 +115,20 @@ namespace GameMod
             }
         }
 
+        [HarmonyPatch(typeof(PilotManager), "SavePreferences")]
+        internal class ExtendedConfig_PilotManager_SavePreferences
+        {
+            public static void Postfix()
+            {
+                if (Network.isServer)
+                {
+                    Debug.Log("ExtendedConfig_Controls_SavePreferences called on the server");
+                    return;
+                }
+                SaveActivePilot();
+            }
+        }
+
         [HarmonyPatch(typeof(PilotManager), "Create")]
         internal class ExtendedConfig_PilotManager_Create
         {
@@ -165,7 +179,17 @@ namespace GameMod
             }
         }
 
-
+        [HarmonyPatch(typeof(Controls), "OnControllerConnected")]
+        internal class ExtendedConfig_Controls_OnControllerConnected
+        {
+            static void Prefix()
+            {
+                if (!Network.isServer)
+                {
+                    PilotManager.Select(PilotManager.ActivePilot);
+                }
+            }
+        }
 
 
         /////////////////////////////////////////////////////////////////////////////////////////
@@ -441,6 +465,13 @@ namespace GameMod
                         string controllerName = section[++index];
                         int.TryParse(section[++index], out int val2);
                         int numAxes = val2;
+                        if( i >= controllers.Count )
+                        {
+                            Controller c = new Controller();
+                            c.name = controllerName;
+                            for (int g = 0; g < numAxes; g++) c.axes.Add(new Controller.Axis());
+                            controllers.Add(c);
+                        }
                         for (int j = 0; j < numAxes; j++)
                         {
                             float value = 0f;
@@ -547,6 +578,9 @@ namespace GameMod
 
                     normalized[i] = curve[k - 1].y + (x - curve[k - 1].x) / (curve[k].x - curve[k - 1].x) * (curve[k].y - curve[k - 1].y);
                 }
+                //string debug = "";
+                //foreach (float f in normalized) debug += "," + f.ToString();
+                //Debug.Log("NORMALIZED AXIS: \n" + debug);
                 return normalized;
             }
         }
