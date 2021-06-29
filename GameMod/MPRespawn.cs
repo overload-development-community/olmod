@@ -46,7 +46,7 @@ namespace GameMod {
                     var playerSegnum = GetSegmentNumber(playerPositions[j]);
 
                     var distance = Pathfinding.FindConnectedDistance(segnum, playerSegnum, out int _);
-                    if (distance == 0f || distance >= 9999f) {
+                    if (distance <= 0f || distance >= 9999f) {
                         distance = RUtility.FindVec3Distance(position - playerPositions[j]);
                     }
 
@@ -125,7 +125,7 @@ namespace GameMod {
             var spawnPoint = GameManager.m_level_data.m_player_spawn_points[idx];
 
             for (int i = 0; i < count; i++) {
-                var maxAngle = Math.Max(180f - distances[idx][i], 20f);
+                var maxAngle = Math.Max(180f - Math.Abs(RUtility.FindVec3Distance(position - playerPositions[i])), 20f);
                 if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
                     num *= (Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), maxAngle) / maxAngle);
                     num *= (Math.Min(Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward), maxAngle) / maxAngle);
