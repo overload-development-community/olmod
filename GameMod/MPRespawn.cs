@@ -125,7 +125,7 @@ namespace GameMod {
             var spawnPoint = GameManager.m_level_data.m_player_spawn_points[idx];
 
             for (int i = 0; i < count; i++) {
-                var maxAngle = Math.Max(90f - distances[idx][i], 10f);
+                var maxAngle = Math.Max(180f - distances[idx][i], 20f);
                 if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
                     num *= (Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), maxAngle) / maxAngle);
                     num *= (Math.Min(Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward), maxAngle) / maxAngle);
