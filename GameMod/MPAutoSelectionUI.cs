@@ -290,6 +290,14 @@ namespace GameMod
                                             ExtendedConfig.Section_AutoSelect.Set(true);
                                         }
                                         break;
+                                    case 2107:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            SFXCueManager.PlayCue2D(SFXCue.hud_weapon_cycle_close, 0.8f, 0f, 0f, false);
+                                            ExtendedConfig.Section_AutoSelect.Set();
+                                            ExtendedConfig.Section_AutoSelect.ApplySettings();
+                                        }
+                                        break;
                                 }
                             }
 
@@ -494,12 +502,14 @@ namespace GameMod
 
 
                 position.x -= 5f;
-                position.y += 147;
+                position.y += 74f;
                 uie.SelectAndDrawItem("DONT SWAP WHILE FIRING: " + (!MPAutoSelection.swapWhileFiring ? "ON" : "OFF"), position, 2106, false, 0.3f, 0.40f);
                 position.y += 50f;
                 uie.SelectAndDrawItem("RETRY SWAP AFTER FIRING: " + (!MPAutoSelection.dontAutoselectAfterFiring ? "ON" : "OFF"), position, 2105, false, 0.3f, 0.40f);
                 position.y += 50f;
                 uie.SelectAndDrawItem("ALERT: " + (MPAutoSelection.zorc ? "ON" : "OFF"), position, 2104, false, 0.3f, 0.45f);
+                position.y += 73f;
+                uie.SelectAndDrawItem("RESET TO DEFAULTS", position, 2107, false, 0.3f, 0.45f);
 
 
 
@@ -620,8 +630,8 @@ namespace GameMod
                 if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
                 if (n == 2105) return "DELAY SWAPS TILL THE PLAYER IS NOT FIRING ANYMORE";
                 if (n == 2106) return "SWAP EVEN IF THE PLAYER IS CURRENTLY FIRING";
-                else
-                {
+                if (n == 2107) return "RESETS AUTOSELECT SETTINGS TO DEFAULTS FOR THIS PILOT";
+                else {
                     return MPAutoSelection.last_valid_description;
                 }
             }
