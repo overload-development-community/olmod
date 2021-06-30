@@ -859,8 +859,6 @@ namespace GameMod
         public static bool miasmic = false;             // dont draw certain hud elements
         public static bool swapWhileFiring = false;     // toggles wether weapon swaps are allowed to happen while the player is firing                                   
         public static bool dontAutoselectAfterFiring = false; // sets wether it should not if the original swap couldnt happen due to the player firing
-
-        public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
     }
 
     /// <summary>

@@ -20,6 +20,8 @@ namespace GameMod
         private const string file_extension = ".extendedconfig";
         private static List<string> unknown_sections;
 
+        // Legacy autoselect file.
+        public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
 
         // On Game Loading or when selecting a different PILOT read or generate PILOT.extendedconfig
         [HarmonyPatch(typeof(PilotManager), "Select", new Type[] { typeof(string) })]
@@ -34,14 +36,68 @@ namespace GameMod
                 }
 
                 SetDefaultConfig();
+
+                var loaded = false;
+
                 if (!string.IsNullOrEmpty(name))
                 {
                     string filepath = Path.Combine(Application.persistentDataPath, name + file_extension);
                     if (File.Exists(filepath))
                     {
                         ReadConfigData(filepath);
+                        loaded = true;
                     }
                 }
+
+                if (!loaded) {
+                    // Attempt to use autoselect from pre 0.4.1.
+                    if (File.Exists(textFile)) {
+                        Debug.Log("Extended config does not exist for pilot, attempting to load pre-0.4.1 autoselect.");
+                        using (StreamReader sr = File.OpenText(textFile)) {
+                            MPAutoSelection.PrimaryPriorityArray[0] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[1] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[2] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[3] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[4] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[5] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[6] = sr.ReadLine();
+                            MPAutoSelection.PrimaryPriorityArray[7] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[0] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[1] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[2] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[3] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[4] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[5] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[6] = sr.ReadLine();
+                            MPAutoSelection.SecondaryPriorityArray[7] = sr.ReadLine();
+                            MPAutoSelection.PrimaryNeverSelect[0] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[1] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[2] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[3] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[4] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[5] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[6] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.PrimaryNeverSelect[7] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[0] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[1] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[2] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[3] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[4] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[5] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[6] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.SecondaryNeverSelect[7] = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.primarySwapFlag = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.secondarySwapFlag = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.swapWhileFiring = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.dontAutoselectAfterFiring = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.zorc = sr.ReadLine().ToLower() == "true";
+                            MPAutoSelection.miasmic = sr.ReadLine().ToLower() == "true";
+                        }
+
+                        Section_AutoSelect.Set(true);
+                    }
+                }
+
                 ApplyConfigData();
             }
         }
