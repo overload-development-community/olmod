@@ -592,7 +592,8 @@ namespace GameMod
                     {
                         controllers[i].axes.Add(new Controller.Axis()
                         {
-                            curve_points = DefaultCurvePoints()
+                            curve_points = DefaultCurvePoints(),
+                            curve_lookup = GenerateCurveLookupTable(DefaultCurvePoints())
                         });
                     }
                 }
