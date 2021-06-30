@@ -1,3 +1,18 @@
+v0.4.1 - 2021-06-30
+
+- In team anarchy, players now glow with their team color when taking damage. (Thanks, Tobias!)
+- Improvement to respawn algorithm, now the server will try to respawn you in such a way that makes it so that you are out of line of sight of opponents and opponents are out of line of sight of you.  Not perfect, especially on smaller maps.
+- New joystick curve editor. (Thanks, luponix!)
+- Autoselect improvements.
+  - Autoselect is now an option under Controls -> Advanced Controls instead of a multiplayer option. (Thanks, luponix!)
+  - Each pilot now has their own autoselect configuration. (Thanks, luponix!)
+  - All pilots, existing and new, will import their autoselect configuration from the current pre-0.4.1 autoselect configuration until you delete the file AutoSelect-Config.txt from your Overload data directory.
+  - You can now reset autoselect options to their default.
+- Custom doors now work on the automap. (Thanks, Arne!)
+- New advanced multiplayer game setting to turn off anarchy assist scoring (ie: only kills count).  (Thanks, Sirius!)
+- Now sends full version string to the tracker.
+- Minor fix to the Linux build that was broken in 0.4.0. (Thanks, Arne!)
+
 v0.4.0 - 2021-05-10
 
 Features: 

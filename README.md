@@ -1,4 +1,4 @@
-## olmod 0.4.0 - Overload mod
+## olmod 0.4.1 - Overload mod
 
 **Community mods for Overload**
 
@@ -97,7 +97,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Improves the primary spawning algorithm.
 
-- Adds weapon and missile autoselect for multiplayer games, by luponix.
+- Adds weapon and missile autoselect, by luponix.
 
 - Adds a multiplayer game option to scale respawn time by team size, by Tobias.
 
@@ -142,6 +142,12 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - Main menu notification for when there is a new version of olmod, by marlowe.
 
 - Observer mode health bars and damage indicators for pilots, by Tobias.
+
+- In team anarchy, players now glow their team's color when taking damage, by Tobias.
+
+- A joystick curve editor, by luponix.
+
+- In anarcy, a multiplayer game option to turn off assist scoring, by Sirius.
 
 #### How to build
 
