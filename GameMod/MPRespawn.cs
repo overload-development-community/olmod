@@ -32,7 +32,7 @@ namespace GameMod {
             float num = float.MinValue;
             int result = -1;
 
-            var distances = new List<List<float>>();
+            var distances = new Dictionary<int, List<float>>();
 
             var playerPositions = (List<Vector3>)_NetworkSpawnPoints_m_player_pos_Field.GetValue(null);
 
@@ -56,7 +56,7 @@ namespace GameMod {
 
                     dist.Add(distance);
                 }
-                distances.Add(dist);
+                distances.Add(candidates[i], dist);
             }
 
             for (int i = 0; i < candidates.Count; i++) {
@@ -88,7 +88,7 @@ namespace GameMod {
             return best;
         }
 
-        public static float GetRespawnPointScore(MpTeam team, int idx, List<List<float>> distances, float max) {
+        public static float GetRespawnPointScore(MpTeam team, int idx, Dictionary<int, List<float>> distances, float max) {
             var playerPositions = (List<Vector3>)_NetworkSpawnPoints_m_player_pos_Field.GetValue(null);
             var playerTeams = (List<MpTeam>)_NetworkSpawnPoints_m_player_team_Field.GetValue(null);
 
