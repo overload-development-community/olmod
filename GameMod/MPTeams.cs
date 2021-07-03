@@ -76,7 +76,7 @@ namespace GameMod
         {
             var c = MenuManager.mpc_decal_color;
             var cIdx = colorIdx[TeamNum(team)];
-            if (team < MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
+            if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
             {
                 bool my_team = team == GameManager.m_local_player.m_mp_team;
                 cIdx = my_team ? Menus.mms_team_color_self : Menus.mms_team_color_enemy;
@@ -98,7 +98,7 @@ namespace GameMod
 
         public static int TeamColorIdx(MpTeam team)
         {
-            if (team < MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
+            if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
             {
                 bool my_team = team == GameManager.m_local_player.m_mp_team;
                 return my_team ? Menus.mms_team_color_self : Menus.mms_team_color_enemy;
@@ -118,7 +118,8 @@ namespace GameMod
         {
             float sat = cIdx == 8 ? 0.01f : cIdx == 4 && mod == 5 ? 0.6f : 0.95f - mod * 0.05f;
             float bright = mod == 5 ? 0.95f : 0.5f + mod * 0.1f;
-            return HSBColor.ConvertToColor(colors[cIdx], sat, bright);
+            Color c = HSBColor.ConvertToColor(colors[cIdx], sat, bright);
+            return c;
         }
 
         public static void DrawTeamHeader(UIElement uie, Vector2 pos, MpTeam team, float w = 255f)
@@ -815,7 +816,7 @@ namespace GameMod
     {
         static bool Prefix(MpTeam team, ref Color __result)
         {
-            if (team < MpTeam.NUM_TEAMS)
+            if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS)
             {
                 if (Menus.mms_team_color_default)
                     return true;
