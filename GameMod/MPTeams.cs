@@ -1,13 +1,14 @@
-﻿using System;
+﻿using Harmony;
+using Overload;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Harmony;
-using Overload;
 using UnityEngine;
 
-namespace GameMod {
+namespace GameMod
+{
     static class MPTeams
     {
         public static int NetworkMatchTeamCount;
@@ -74,7 +75,22 @@ namespace GameMod {
         public static string TeamName(MpTeam team)
         {
             var c = MenuManager.mpc_decal_color;
-            MenuManager.mpc_decal_color = colorIdx[TeamNum(team)];
+            var cIdx = colorIdx[TeamNum(team)];
+            if (team < MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
+            {
+                bool my_team = team == GameManager.m_local_player.m_mp_team;
+                cIdx = my_team ? Menus.mms_team_color_self : Menus.mms_team_color_enemy;
+            }
+            MenuManager.mpc_decal_color = cIdx;
+            var ret = MenuManager.GetMpDecalColor();
+            MenuManager.mpc_decal_color = c;
+            return ret;
+        }
+
+        public static string ColorName(int index)
+        {
+            var c = MenuManager.mpc_decal_color;
+            MenuManager.mpc_decal_color = index;
             var ret = MenuManager.GetMpDecalColor();
             MenuManager.mpc_decal_color = c;
             return ret;
@@ -82,18 +98,30 @@ namespace GameMod {
 
         public static int TeamColorIdx(MpTeam team)
         {
-            return colorIdx[TeamNum(team)];
+            if (team < MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
+            {
+                bool my_team = team == GameManager.m_local_player.m_mp_team;
+                return my_team ? Menus.mms_team_color_self : Menus.mms_team_color_enemy;
+            }
+            else
+            {
+                return colorIdx[TeamNum(team)];
+            }
         }
 
         public static Color TeamColor(MpTeam team, int mod)
         {
-            int cIdx = colorIdx[TeamNum(team)];
+            return TeamColorByIndex(TeamColorIdx(team), mod);
+        }
+
+        public static Color TeamColorByIndex(int cIdx, int mod)
+        {
             float sat = cIdx == 8 ? 0.01f : cIdx == 4 && mod == 5 ? 0.6f : 0.95f - mod * 0.05f;
             float bright = mod == 5 ? 0.95f : 0.5f + mod * 0.1f;
             return HSBColor.ConvertToColor(colors[cIdx], sat, bright);
         }
 
-        static void DrawTeamHeader(UIElement uie, Vector2 pos, MpTeam team, float w = 255f)
+        public static void DrawTeamHeader(UIElement uie, Vector2 pos, MpTeam team, float w = 255f)
         {
             Color c = TeamColor(team, 1);
             Color c2 = TeamColor(team, 4);
@@ -427,8 +455,6 @@ namespace GameMod {
     {
         static bool Prefix(MpTeam team, ref string __result)
         {
-            if (team < MpTeam.NUM_TEAMS)
-                return true;
             __result = MPTeams.TeamName(team) + " TEAM";
             return false;
         }
@@ -790,8 +816,26 @@ namespace GameMod {
         static bool Prefix(MpTeam team, ref Color __result)
         {
             if (team < MpTeam.NUM_TEAMS)
-                return true;
-            __result = MPTeams.TeamColor(team, 2);
+            {
+                if (Menus.mms_team_color_default)
+                    return true;
+
+                bool my_team = team == GameManager.m_local_player.m_mp_team;
+                if (my_team)
+                {
+                    __result = MPTeams.TeamColorByIndex(Menus.mms_team_color_self, 2);
+                }
+                else
+                {
+                    __result = MPTeams.TeamColorByIndex(Menus.mms_team_color_enemy, 0);
+                }
+
+            }
+            else
+            {
+                __result = MPTeams.TeamColor(team, 2);
+            }
+
             return false;
         }
     }
@@ -799,15 +843,6 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class MPTeamsMenuDraw
     {
-        static void Postfix(UIElement __instance)
-        {
-            if (MenuManager.m_menu_micro_state != 2 || !NetworkMatch.IsTeamMode(MenuManager.mms_mode))
-                return;
-            Vector2 position = Vector2.zero;
-            position.y = -279f + 62f * 6;
-            __instance.SelectAndDrawStringOptionItem("TEAM COUNT", position, 8, MPTeams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f,
-                MenuManager.mms_mode == MatchMode.ANARCHY || !MenuManager.m_mp_lan_match);
-        }
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> cs)
         {
             var vector2_y_Field = AccessTools.Field(typeof(Vector2), "y");
@@ -840,40 +875,6 @@ namespace GameMod {
         }
 
     }
-  
-    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-    class MPTeamsMenuHandle
-    {
-        static void HandleTeamCount()
-        {
-            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                MenuManager.m_menu_micro_state == 2 &&
-                UIManager.m_menu_selection == 8)
-            {
-                MPTeams.MenuManagerTeamCount = MPTeams.Min +
-                    (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
-                    (MPTeams.Max - MPTeams.Min + 1);
-                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-            }
-        }
-
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
-            var mpTeamsMenuHandle_HandleTeamCount_Method = AccessTools.Method(typeof(MPTeamsMenuHandle), "HandleTeamCount");
-
-            foreach (var code in codes)
-            {
-                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
-                {
-                    yield return code;
-                    yield return new CodeInstruction(OpCodes.Call, mpTeamsMenuHandle_HandleTeamCount_Method);
-                    continue;
-                }
-
-                yield return code;
-            }
-        }
-    }
 
     [HarmonyPatch(typeof(PlayerShip), "UpdateShipColors")]
     class MPTeamsShipColors
@@ -882,6 +883,7 @@ namespace GameMod {
         {
             if (team == MpTeam.ANARCHY)
                 return;
+
             glow_color = decal_color = MPTeams.TeamColorIdx(team);
             team = MpTeam.ANARCHY; // prevent original team color assignment
         }
@@ -1001,6 +1003,36 @@ namespace GameMod {
             }
         }
     }
-    
+
+    [HarmonyPatch(typeof(UIElement), "DrawTeamHeader")]
+    class MPTeams_UIElement_DrawTeamHeader
+    {
+        static bool Prefix(UIElement __instance, Vector2 pos, MpTeam team, float w)
+        {
+            MPTeams.DrawTeamHeader(__instance, pos, team, w);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawTeamScore")]
+    class MPTeams_UIElement_DrawTeamScore
+    {
+        static bool Prefix(UIElement __instance, Vector2 pos, MpTeam team, int score, float w, bool my_team)
+        {
+            MPTeams.DrawTeamScore(__instance, pos, team, score, w, my_team);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawTeamScoreSmall")]
+    class MPTeams_UIElement_DrawTeamScoreSmall
+    {
+        static bool Prefix(UIElement __instance, Vector2 pos, MpTeam team, int score, float w, bool my_team)
+        {
+            MPTeams.DrawTeamScoreSmall(__instance, pos, team, score, w, my_team);
+            return false;
+        }
+    }
+
     // still missing: chat colors...
 }
