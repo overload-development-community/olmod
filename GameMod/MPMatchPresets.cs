@@ -139,7 +139,7 @@ namespace GameMod
             public bool ctfCarrierBoostEnabled;
             public bool alwaysCloaked;
             public bool allowSmash;
-            public bool assistScoring;
+            public bool assistScoring = true;
 
             public void Apply()
             {

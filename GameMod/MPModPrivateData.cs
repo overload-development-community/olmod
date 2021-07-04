@@ -1234,7 +1234,7 @@ END_ENTRY
             get { return MPMatchTimeLimits.MatchTimeLimit; }
             set { MPMatchTimeLimits.MatchTimeLimit = value; }
         }
-        public static bool AssistScoring { get; set; }
+        public static bool AssistScoring { get; set; } = true;
 
         public static JObject Serialize()
         {
