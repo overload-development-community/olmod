@@ -127,8 +127,15 @@ namespace GameMod
             Color c = TeamColor(team, 1);
             Color c2 = TeamColor(team, 4);
             c.a = uie.m_alpha;
+            string teamName = NetworkMatch.GetTeamName(team);
+            if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
+            {
+                c = c2 = UIManager.m_col_ui0;
+                teamName = $"{Loc.LS("TEAM")} {(int)team+1}";
+            }
+            
             UIManager.DrawQuadBarHorizontal(pos, 13f, 13f, w * 2f, c, 7);
-            uie.DrawStringSmall(NetworkMatch.GetTeamName(team), pos, 0.6f, StringOffset.CENTER, c2, 1f, -1f);
+            uie.DrawStringSmall(teamName, pos, 0.6f, StringOffset.CENTER, c2, 1f, -1f);
         }
 
         public static void DrawLobby(UIElement uie, Vector2 pos)
@@ -272,7 +279,6 @@ namespace GameMod
         public static void SetPlayerGlow(PlayerShip ship, MpTeam team) {
             if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode())) {
                 var teamcolor = UIManager.ChooseMpColor(team);
-
                 foreach (var mat in ship.m_materials) {
                     // Main damage color
                     if (mat.shader != null)
@@ -1031,6 +1037,21 @@ namespace GameMod
         static bool Prefix(UIElement __instance, Vector2 pos, MpTeam team, int score, float w, bool my_team)
         {
             MPTeams.DrawTeamScoreSmall(__instance, pos, team, score, w, my_team);
+            return false;
+        }
+    }
+
+    // Rim color is Team0/Team1/Anarchy dependent
+    [HarmonyPatch(typeof(PlayerShip), "UpdateRimColor")]
+    class MPTeams_PlayerShip_UpdateRimColor
+    {
+        static bool Prefix(PlayerShip __instance, bool mp)
+        {
+            Color c = UIManager.ChooseMpColor(__instance.c_player.m_mp_team);
+            __instance.m_mp_rim_color.r = c.r * 0.25f;
+            __instance.m_mp_rim_color.g = c.g * 0.25f;
+            __instance.m_mp_rim_color.b = c.b * 0.25f;
+            __instance.m_update_mp_color = true;
             return false;
         }
     }

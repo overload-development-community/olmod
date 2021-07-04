@@ -189,6 +189,8 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALWAYS CLOAKED"), position, 15, Menus.GetMMSAlwaysCloaked(), Loc.LS("SHIPS ARE ALWAYS CLOAKED"), 1f, false);
             position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SCALE RESPAWN TO TEAM SIZE"), position, 12, Menus.GetMMSScaleRespawnTime(), Loc.LS("AUTOMATICALLY SCALE RESPAWN TIME TO TEAM SIZE (e.g. 4 = 4 seconds)"), 1f, !(MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL));
+            position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
             position.y += 62f;
             // We're out of space, and assists don't matter in CTF anyway...
@@ -203,7 +205,8 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 62f;
-            if (DateTime.Now > new DateTime(2021, 4, 2)) {
+            if (DateTime.Now > new DateTime(2021, 4, 2))
+            {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
                 position.y += 62f;
             }
@@ -213,12 +216,6 @@ namespace GameMod
         {
             position.x -= 300f;
             position.y = col_bot;
-        }
-
-        private static void DrawTeamSettings(UIElement uie, ref Vector2 position)
-        {
-            uie.SelectAndDrawItem("TEAM SETTINGS", position, 19, false, 1f, 0.75f);
-            position.y += 62f;
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
@@ -252,44 +249,9 @@ namespace GameMod
                     // Revert to center column
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "AdjustAdvancedPositionCenterColumn"));
-                    // Add Team Settings
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "DrawTeamSettings"));
                 }
-                
+
                 yield return code;
-            }
-        }
-
-        private static void Postfix(UIElement __instance)
-        {
-            switch (MenuManager.m_menu_micro_state)
-            {
-                case 10:
-                    Player local_player = GameManager.m_local_player;
-                    Vector2 position = __instance.m_position;
-                    __instance.DrawLabelSmall(Vector2.up * (UIManager.UI_TOP + 70f), Loc.LS("TEAM SETTINGS"), 250f, 24f, 1f);
-                    position.y -= 280f;
-
-                    __instance.DrawMenuSeparator(position);
-                    position.y += 40f;
-
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("FRIENDLY FIRE"), position, 3, MenuManager.GetMMSFriendlyFire(), string.Empty, 1.5f, MenuManager.mms_mode == MatchMode.ANARCHY);
-                    position.y += 62f;
-                    
-                    __instance.SelectAndDrawStringOptionItem("TEAM COUNT", position, 8, MPTeams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f,
-                        MenuManager.mms_mode == MatchMode.ANARCHY || !MenuManager.m_mp_lan_match);
-                    position.y += 62f;
-
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SCALE RESPAWN TO TEAM SIZE"), position, 12, Menus.GetMMSScaleRespawnTime(), Loc.LS("AUTOMATICALLY SCALE RESPAWN TIME TO TEAM SIZE (e.g. 4 = 4 seconds)"), 1.5f, !(MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL));
-                    position.y += 62f;
-
-                    position.x = -310f;
-                    position.y = -90f;
-                    break;
-                default:
-                    break;
             }
         }
     }
@@ -335,14 +297,14 @@ namespace GameMod
         }
     }
 
-    
+
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class Menus_MenuManager_MpMatchSetup
     {
         // Handle match time limit
         static void ProcessMatchTimeLimit()
         {
-            Menus.mms_match_time_limit = ((Menus.mms_match_time_limit/60 + 21 + UIManager.m_select_dir) % 21) * 60;
+            Menus.mms_match_time_limit = ((Menus.mms_match_time_limit / 60 + 21 + UIManager.m_select_dir) % 21) * 60;
             MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
         }
 
@@ -373,95 +335,67 @@ namespace GameMod
         }
 
         // Process Scale Respawn option
-        static void Postfix(UIElement __instance)
+        static void Postfix()
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()))
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3)
             {
-                if (MenuManager.m_menu_micro_state == 3)
+                switch (UIManager.m_menu_selection)
                 {
-                    switch (UIManager.m_menu_selection)
-                    {
-                        case 13:
-                            Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 14:
-                            Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 15:
-                            Menus.mms_always_cloaked = !Menus.mms_always_cloaked;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 16:
-                            if (UIManager.PushedSelect(100))
+                    case 12:
+                        Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 13:
+                        Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 14:
+                        Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 15:
+                        Menus.mms_always_cloaked = !Menus.mms_always_cloaked;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 16:
+                        if (UIManager.PushedSelect(100))
+                        {
+                            var files = new string[] { "STOCK" }.AddRangeToArray(Directory.GetFiles(Config.OLModDir, "projdata-*.txt"));
+                            for (int i = 0; i < files.Length; i++)
                             {
-                                var files = new string[] { "STOCK" }.AddRangeToArray(Directory.GetFiles(Config.OLModDir, "projdata-*.txt"));
-                                for (int i = 0; i < files.Length; i++)
+                                uConsole.Log(files[i] + ": " + files.Length.ToString());
+                                if (Menus.mms_mp_projdata_fn == files[i])
                                 {
-                                    uConsole.Log(files[i] + ": " + files.Length.ToString());
-                                    if (Menus.mms_mp_projdata_fn == files[i])
+                                    if (i + 1 < files.Length)
                                     {
-                                        if (i + 1 < files.Length)
-                                        {
-                                            Menus.mms_mp_projdata_fn = files[i + 1];
-                                        }
-                                        else
-                                        {
-                                            Menus.mms_mp_projdata_fn = files[0];
-                                        }
-                                        break;
+                                        Menus.mms_mp_projdata_fn = files[i + 1];
                                     }
+                                    else
+                                    {
+                                        Menus.mms_mp_projdata_fn = files[0];
+                                    }
+                                    break;
                                 }
-                                MenuManager.PlayCycleSound(1f, 1f);
                             }
-                            break;
-                        case 17:
-                            Menus.mms_allow_smash = !Menus.mms_allow_smash;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
+                            MenuManager.PlayCycleSound(1f, 1f);
+                        }
+                        break;
+                    case 17:
+                        Menus.mms_allow_smash = !Menus.mms_allow_smash;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
 
-                        case 18:
-                            Menus.mms_assist_scoring = !Menus.mms_assist_scoring;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 19:
-                            MenuManager.m_menu_micro_state = 10;
-                            MenuManager.UIPulse(2f);
-                            MenuManager.PlaySelectSound(1f);
-                            break;
-                    }
+                    case 18:
+                        Menus.mms_assist_scoring = !Menus.mms_assist_scoring;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
                 }
-                else if (MenuManager.m_menu_micro_state == 10)
-                {
-                    // Team Settings window
-                    switch (UIManager.m_menu_selection)
-                    {
-                        case 8:
-                            MPTeams.MenuManagerTeamCount = MPTeams.Min +
-                                (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
-                                (MPTeams.Max - MPTeams.Min + 1);
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 12:
-                            Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 100:
-                            MenuManager.m_menu_micro_state = 3;
-                            MenuManager.UIPulse(2f);
-                            MenuManager.PlaySelectSound(1f);
-                            return;
-                        default:
-                            return;
-                    }
-                }
-                
             }
         }
     }
-    
+
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class Menus_UIElement_DrawMpMatchSetup_ScaleRespawnTime
     {
@@ -501,7 +435,7 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
             position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 10, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 10, Menus.GetMMSTeamColorDefault(), Loc.LS("DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM"), 1.5f, false);
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 11, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
             position.y += 62f;
@@ -566,24 +500,26 @@ namespace GameMod
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            int state = 0;
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "UnReverseOption"))
+                //    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
+                if (state == 0 && code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 100)
                 {
-                    // A simple Postfix breaks the left arrow functionality, have to transpile before UnReverseOption
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpOptionsUpdate), "Update2")) { labels = code.labels };
+                    state = 1;
+                    // A simple Postfix breaks the left arrow functionality, have to transpile after MaybeReverseOption
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpOptionsUpdate), "Update")) { labels = code.labels };
                     code.labels = null;
-                    yield return code;
-                    continue;
                 }
                 yield return code;
             }
         }
 
-        static void Update2()
+        static void Update()
         {
             if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
             {
+                MenuManager.MaybeReverseOption();
                 switch (UIManager.m_menu_selection)
                 {
                     case 6:
@@ -604,37 +540,40 @@ namespace GameMod
                     case 10:
                         Menus.mms_team_color_default = !Menus.mms_team_color_default;
                         MenuManager.PlaySelectSound(1f);
+                        ProcessColorSelections();
                         break;
                     case 11:
-                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 8 + UIManager.m_select_dir) % 8;
+                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                         if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
-                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 8 + UIManager.m_select_dir) % 8;
-                        if (GameplayManager.IsMultiplayerActive)
-                        {
-                            foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
-                            {
-                                ps.UpdateShipColors(ps.c_player.m_mp_team, 0, 0, 0);
-                            }
-                        }
-                        UIManager.InitMpNames();
+                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                        MenuManager.PlaySelectSound(1f);
+                        ProcessColorSelections();
                         break;
                     case 12:
-                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 8 + UIManager.m_select_dir) % 8;
+                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
                         if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
-                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 8 + UIManager.m_select_dir) % 8;
-                        if (GameplayManager.IsMultiplayerActive)
-                        {
-                            foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
-                            {
-                                ps.UpdateShipColors(ps.c_player.m_mp_team, 0, 0, 0);
-                            }
-                        }
-                        UIManager.InitMpNames();
+                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                        MenuManager.PlaySelectSound(1f);
+                        ProcessColorSelections();
                         break;
                     default:
                         break;
                 }
+                MenuManager.UnReverseOption();
             }
+        }
+
+        static void ProcessColorSelections()
+        {
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
+                {
+                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
+                    ps.UpdateRimColor(true);
+                }
+            }
+            UIManager.InitMpNames();
         }
     }
 
@@ -805,7 +744,8 @@ namespace GameMod
 
 
         // Tweak of original SelectAndDrawSliderItem to support non-100 max, tooltip
-        public static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max, string tool_tip, bool fade = false) {
+        public static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max, string tool_tip, bool fade = false)
+        {
             float num = 750f;
             int quad_index = UIManager.m_quad_index;
             if (!fade)
