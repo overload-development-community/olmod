@@ -484,11 +484,16 @@ namespace GameMod {
             vector.x = UIManager.UI_RIGHT - 270f;
             vector.y = UIManager.UI_BOTTOM - 70f - 22f * 4;
 
+            if (MPModPrivateData.AssistScoring) {
+                vector.y += 22f;
+            }
             uie.DrawStringSmall("NOW OBSERVING:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
             vector.y += 22f;
             uie.DrawStringSmall("KILLS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
-            vector.y += 22f;
-            uie.DrawStringSmall("ASSISTS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+            if (MPModPrivateData.AssistScoring) {
+                vector.y += 22f;
+                uie.DrawStringSmall("ASSISTS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
+            }
             vector.y += 22f;
             uie.DrawStringSmall("DEATHS:", vector, 0.35f, StringOffset.LEFT, UIManager.m_col_hi3, uie.m_alpha, -1f);
 
