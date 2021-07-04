@@ -435,7 +435,7 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
             position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 10, Menus.GetMMSTeamColorDefault(), Loc.LS("DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM"), 1.5f, false);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 10, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 11, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
             position.y += 62f;
@@ -500,16 +500,15 @@ namespace GameMod
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            int state = 0;
             foreach (var code in codes)
             {
-                //    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
-                if (state == 0 && code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 100)
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "UnReverseOption"))
                 {
-                    state = 1;
-                    // A simple Postfix breaks the left arrow functionality, have to transpile after MaybeReverseOption
+                    // A simple Postfix breaks the left arrow functionality, have to transpile before UnReverseOption
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpOptionsUpdate), "Update")) { labels = code.labels };
                     code.labels = null;
+                    yield return code;
+                    continue;
                 }
                 yield return code;
             }
@@ -519,7 +518,6 @@ namespace GameMod
         {
             if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
             {
-                MenuManager.MaybeReverseOption();
                 switch (UIManager.m_menu_selection)
                 {
                     case 6:
@@ -543,23 +541,22 @@ namespace GameMod
                         ProcessColorSelections();
                         break;
                     case 11:
-                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 8 + UIManager.m_select_dir) % 8;
                         if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
-                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 8 + UIManager.m_select_dir) % 8;
                         MenuManager.PlaySelectSound(1f);
                         ProcessColorSelections();
                         break;
                     case 12:
-                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 8 + UIManager.m_select_dir) % 8;
                         if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
-                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 8 + UIManager.m_select_dir) % 8;
                         MenuManager.PlaySelectSound(1f);
                         ProcessColorSelections();
                         break;
                     default:
                         break;
                 }
-                MenuManager.UnReverseOption();
             }
         }
 
