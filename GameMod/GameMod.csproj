@@ -47,9 +47,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(OverloadDir)\Overload_Data\Managed\DotNetZip.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(OverloadDir)\Overload_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Overload\Overload_Data\Managed\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>$(OverloadDir)\Overload_Data\Managed\Rewired_Core.dll</HintPath>

@@ -237,6 +237,9 @@ namespace GameMod {
                 Menus.mms_damageeffect_alpha_mult = ModPrefs.GetInt("MP_PM_DAMAGEEFFECT_ALPHA_MULT", Menus.mms_damageeffect_alpha_mult);
                 Menus.mms_damageeffect_drunk_blur_mult = ModPrefs.GetInt("MP_PM_DAMAGEEFFECT_DRUNK_BLUR_MULT", Menus.mms_damageeffect_drunk_blur_mult);
                 Menus.mms_match_time_limit = ModPrefs.GetInt("MP_PM_MATCH_TIME_LIMIT", Menus.mms_match_time_limit);
+                Menus.mms_team_color_default = ModPrefs.GetBool("MP_PM_TEAM_COLOR_DEFAULT", Menus.mms_team_color_default);
+                Menus.mms_team_color_self = ModPrefs.GetInt("MP_PM_TEAM_COLOR_SELF", Menus.mms_team_color_self);
+                Menus.mms_team_color_enemy = ModPrefs.GetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -287,6 +290,9 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_ALPHA_MULT", Menus.mms_damageeffect_alpha_mult);
             ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_DRUNK_BLUR_MULT", Menus.mms_damageeffect_drunk_blur_mult);
             ModPrefs.SetInt("MP_PM_MATCH_TIME_LIMIT", Menus.mms_match_time_limit);
+            ModPrefs.SetBool("MP_PM_TEAM_COLOR_DEFAULT", Menus.mms_team_color_default);
+            ModPrefs.SetInt("MP_PM_TEAM_COLOR_SELF", Menus.mms_team_color_self);
+            ModPrefs.SetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
             ModPrefs.Flush(filename + "mod");
         }
 

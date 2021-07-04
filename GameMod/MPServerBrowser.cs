@@ -1000,16 +1000,7 @@ namespace GameMod {
                     yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
-
-                // Re-Add Friendly Fire above Powerup Settings
-                if (state == 3 && code.opcode == OpCodes.Ldstr && (string)code.operand == "POWERUP SETTINGS")
-                {
-                    state = 4;
-                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMatchSetup_DrawFriendlyFire_Method);
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                }
-
+                
                 // Move Advanced Match section up slightly
                 if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155)
                     code.operand = 250f;
