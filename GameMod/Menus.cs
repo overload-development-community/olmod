@@ -36,6 +36,9 @@ namespace GameMod
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
         public static bool mms_assist_scoring { get; set; } = true;
+        public static bool mms_team_color_default { get; set; } = true;
+        public static int mms_team_color_self = 5;
+        public static int mms_team_color_enemy = 6;
 
         public static string GetMMSRearViewPIP()
         {
@@ -118,6 +121,21 @@ namespace GameMod
             }
         }
 
+        public static string GetMMSTeamColorDefault()
+        {
+            return mms_team_color_default ? Loc.LS("DEFAULT") : Loc.LS("CUSTOM");
+        }
+
+        public static string GetMMSTeamColorSelf()
+        {
+            return MPTeams.ColorName(mms_team_color_self);
+        }
+
+        public static string GetMMSTeamColorEnemy()
+        {
+            return MPTeams.ColorName(mms_team_color_enemy);
+        }
+
         public static void SetLagCompensationDefaults()
         {
             mms_weapon_lag_compensation_max = 100;
@@ -187,7 +205,8 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 62f;
-            if (DateTime.Now > new DateTime(2021, 4, 2)) {
+            if (DateTime.Now > new DateTime(2021, 4, 2))
+            {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
                 position.y += 62f;
             }
@@ -231,7 +250,7 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "AdjustAdvancedPositionCenterColumn"));
                 }
-                
+
                 yield return code;
             }
         }
@@ -278,14 +297,14 @@ namespace GameMod
         }
     }
 
-    
+
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class Menus_MenuManager_MpMatchSetup
     {
         // Handle match time limit
         static void ProcessMatchTimeLimit()
         {
-            Menus.mms_match_time_limit = ((Menus.mms_match_time_limit/60 + 21 + UIManager.m_select_dir) % 21) * 60;
+            Menus.mms_match_time_limit = ((Menus.mms_match_time_limit / 60 + 21 + UIManager.m_select_dir) % 21) * 60;
             MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
         }
 
@@ -416,6 +435,12 @@ namespace GameMod
             position.y += 62f;
             uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
             position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 10, Menus.GetMMSTeamColorDefault(), Loc.LS("DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM"), 1.5f, false);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 11, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 12, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
+            position.y += 62f;
             uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
             position.y += 62f;
         }
@@ -427,7 +452,7 @@ namespace GameMod
             {
                 if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
                 {
-                    code.operand = 279f;
+                    code.operand = 300f;
                 }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
                 {
@@ -473,10 +498,28 @@ namespace GameMod
     [HarmonyPatch(typeof(MenuManager), "MpOptionsUpdate")]
     class Menus_MenuManager_MpOptionsUpdate
     {
-        static void Postfix()
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                //    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
+                if (state == 0 && code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 100)
+                {
+                    state = 1;
+                    // A simple Postfix breaks the left arrow functionality, have to transpile after MaybeReverseOption
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpOptionsUpdate), "Update")) { labels = code.labels };
+                    code.labels = null;
+                }
+                yield return code;
+            }
+        }
+
+        static void Update()
         {
             if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
             {
+                MenuManager.MaybeReverseOption();
                 switch (UIManager.m_menu_selection)
                 {
                     case 6:
@@ -494,10 +537,43 @@ namespace GameMod
                         if (Input.GetMouseButtonDown(0))
                             MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
                         break;
+                    case 10:
+                        Menus.mms_team_color_default = !Menus.mms_team_color_default;
+                        MenuManager.PlaySelectSound(1f);
+                        ProcessColorSelections();
+                        break;
+                    case 11:
+                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                        if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
+                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                        MenuManager.PlaySelectSound(1f);
+                        ProcessColorSelections();
+                        break;
+                    case 12:
+                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                        if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
+                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                        MenuManager.PlaySelectSound(1f);
+                        ProcessColorSelections();
+                        break;
                     default:
                         break;
                 }
+                MenuManager.UnReverseOption();
             }
+        }
+
+        static void ProcessColorSelections()
+        {
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
+                {
+                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
+                    ps.UpdateRimColor(true);
+                }
+            }
+            UIManager.InitMpNames();
         }
     }
 
@@ -668,7 +744,8 @@ namespace GameMod
 
 
         // Tweak of original SelectAndDrawSliderItem to support non-100 max, tooltip
-        public static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max, string tool_tip, bool fade = false) {
+        public static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max, string tool_tip, bool fade = false)
+        {
             float num = 750f;
             int quad_index = UIManager.m_quad_index;
             if (!fade)
