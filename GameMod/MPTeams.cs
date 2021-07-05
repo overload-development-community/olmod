@@ -1056,5 +1056,39 @@ namespace GameMod
         }
     }
 
+    // Colors shown on kill feed - still lacks >2 team support
+    [HarmonyPatch(typeof(UIElement), "GetMessageColor")]
+    class MPTeams_UIElement_GetMessageColor
+    {
+        static bool Prefix(MpMessageColor mpmc, float flash, ref Color __result)
+        {
+            switch (mpmc)
+            {
+                
+                case MpMessageColor.LOCAL:
+                    __result = Color.Lerp(UIManager.m_col_hi2, UIManager.m_col_hi7, flash);
+                    break;
+                default:
+                    __result = Color.Lerp(UIManager.m_col_ui0, UIManager.m_col_ui3, flash);
+                    break;
+                case MpMessageColor.TEAM0:
+                case MpMessageColor.TEAM1:
+                    Color c1 = UIManager.m_col_mpa1;
+                    Color c2 = UIManager.m_col_mpa4;
+                    if (!Menus.mms_team_color_default)
+                    {
+                        c1 = MPTeams.TeamColor((MpTeam)(int)mpmc-2, 0);
+                        c2 = MPTeams.TeamColor((MpTeam)(int)mpmc-2, 2);
+                    }
+                    __result = Color.Lerp(c1, c2, flash);
+                    break;
+            }
+
+            Debug.Log(__result.ToString());
+
+            return false;
+        }
+    }
+
     // still missing: chat colors...
 }
