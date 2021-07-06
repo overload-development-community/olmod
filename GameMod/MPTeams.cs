@@ -22,6 +22,17 @@ namespace GameMod
             MpTeam.NUM_TEAMS + 4, MpTeam.NUM_TEAMS + 5 };
         public static readonly MpTeam MPTEAM_NUM = MpTeam.NUM_TEAMS + 6;
         private static readonly int[] teamIndexList = { 0, 1, -1, 2, 3, 4, 5, 6, 7 };
+        private static readonly int[] teamMessageColorIndexList = { 2, 3, 5, 6, 7, 8, 9, 10 };
+        
+        public static int TeamMessageColor(MpTeam team)
+        {
+            return teamMessageColorIndexList[(int)team > 2 ? (int)team-1 : (int)team];
+        }
+
+        public static MpTeam GetMpTeamFromMessageColor(int messageColorIndex)
+        {
+            return AllTeams[Array.IndexOf(teamMessageColorIndexList, messageColorIndex)];
+        }
 
         public static int TeamNum(MpTeam team)
         {
@@ -1064,29 +1075,48 @@ namespace GameMod
         {
             switch (mpmc)
             {
-                
                 case MpMessageColor.LOCAL:
                     __result = Color.Lerp(UIManager.m_col_hi2, UIManager.m_col_hi7, flash);
                     break;
-                default:
+                case MpMessageColor.ANARCHY:
+                case MpMessageColor.NONE:
                     __result = Color.Lerp(UIManager.m_col_ui0, UIManager.m_col_ui3, flash);
                     break;
-                case MpMessageColor.TEAM0:
-                case MpMessageColor.TEAM1:
-                    Color c1 = UIManager.m_col_mpa1;
-                    Color c2 = UIManager.m_col_mpa4;
-                    if (!Menus.mms_team_color_default)
-                    {
-                        c1 = MPTeams.TeamColor((MpTeam)(int)mpmc-2, 0);
-                        c2 = MPTeams.TeamColor((MpTeam)(int)mpmc-2, 2);
-                    }
+                default:
+                    Color c1 = MPTeams.TeamColor(MPTeams.GetMpTeamFromMessageColor((int)mpmc), 0);
+                    Color c2 = MPTeams.TeamColor(MPTeams.GetMpTeamFromMessageColor((int)mpmc), 0);
                     __result = Color.Lerp(c1, c2, flash);
                     break;
             }
 
-            Debug.Log(__result.ToString());
-
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(NetworkMessageManager), "AddKillMessage")]
+    class MPTeams_NetworkMessageManager_AddKillMessage
+    {
+        static int GetMessageColorIndex(MpTeam team)
+        {
+            return MPTeams.TeamMessageColor(team);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_3)
+                {
+                    state++;
+                    code.opcode = OpCodes.Ldarg_S;
+                    code.operand = state == 1 ? 5 : 2;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_NetworkMessageManager_AddKillMessage), "GetMessageColorIndex"));
+                    continue;          
+                }
+                yield return code;
+            }
         }
     }
 
