@@ -350,8 +350,6 @@ namespace GameMod
         // Handle additional options, Team Settings menu etc
         static void ProcessAdditional()
         {
-            //UIManager.MouseSelectUpdate();
-            //MenuManager.MaybeReverseOption();
             if (MenuManager.m_menu_micro_state == 3)
             {
                 switch (UIManager.m_menu_selection)
@@ -401,7 +399,6 @@ namespace GameMod
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                     case 19:
-                        Debug.Log("Pressed Team Settings");
                         MenuManager.m_menu_micro_state = 10;
                         MenuManager.UIPulse(2f);
                         MenuManager.PlaySelectSound(1f);
@@ -411,13 +408,10 @@ namespace GameMod
             else if (MenuManager.m_menu_micro_state == 10)
             {
                 // Team Settings window
-                Debug.Log("m_select_dir: " + UIManager.m_select_dir.ToString());
                 switch (UIManager.m_menu_selection)
                 {
                     case 3:
-                        Debug.Log("mms_friendly_fire before: " + MenuManager.mms_friendly_fire.ToString());
                         MenuManager.mms_friendly_fire = 1 - MenuManager.mms_friendly_fire;
-                        Debug.Log("mms_friendly_fire after: " + MenuManager.mms_friendly_fire.ToString());
                         MenuManager.PlayCycleSound(1f, 1f);
                         break;
                     case 8:
@@ -439,7 +433,6 @@ namespace GameMod
                         return;
                 }
             }
-            //MenuManager.UnReverseOption();
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
