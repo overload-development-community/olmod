@@ -24,9 +24,10 @@ namespace GameMod
         private static readonly int[] teamIndexList = { 0, 1, -1, 2, 3, 4, 5, 6, 7 };
         private static readonly int[] teamMessageColorIndexList = { 2, 3, 5, 6, 7, 8, 9, 10 };
         
+        // This processes when team != TEAM0
         public static int TeamMessageColor(MpTeam team)
         {
-            return teamMessageColorIndexList[(int)team > 2 ? (int)team-1 : (int)team];
+            return teamMessageColorIndexList[(int)team > 1 ? (int)team-1 : (int)team];
         }
 
         public static MpTeam GetMpTeamFromMessageColor(int messageColorIndex)
@@ -1096,6 +1097,7 @@ namespace GameMod
         }
     }
 
+    // Client handle kill feed in custom colors
     [HarmonyPatch(typeof(NetworkMessageManager), "AddKillMessage")]
     class MPTeams_NetworkMessageManager_AddKillMessage
     {
@@ -1123,5 +1125,82 @@ namespace GameMod
         }
     }
 
-    // still missing: chat colors...
+    // Client handle Full Chat message in custom colors
+    [HarmonyPatch(typeof(NetworkMessageManager), "AddFullChatMessage")]
+    class MPTeams_NetworkMessageManager_AddFullChatMessage
+    {
+        static int GetMessageColorIndex(MpTeam team)
+        {
+            return MPTeams.TeamMessageColor(team);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_3)
+                {
+                    code.opcode = OpCodes.Ldarg_2;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_NetworkMessageManager_AddFullChatMessage), "GetMessageColorIndex"));
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
+    // Client handle Quick Chat in custom colors
+    [HarmonyPatch(typeof(NetworkMessageManager), "AddQuickChatMessage")]
+    class MPTeams_NetworkMessageManager_AddQuickChatMessage
+    {
+        static int GetMessageColorIndex(MpTeam team)
+        {
+            return MPTeams.TeamMessageColor(team);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_3)
+                {
+                    code.opcode = OpCodes.Ldarg_2;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_NetworkMessageManager_AddQuickChatMessage), "GetMessageColorIndex"));
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawQuickChatMP")]
+    class MPTeams_UIElement_DrawQuickChatMP
+    {
+        static Color GetTeamColor(MpMessageColor mpmc)
+        {
+            if (mpmc == MpMessageColor.ANARCHY)
+                return UIManager.m_col_ui3;
+            
+            return MPTeams.TeamColor(MPTeams.GetMpTeamFromMessageColor((int)mpmc), 0);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldsfld && (code.operand == AccessTools.Field(typeof(UIManager), "m_col_ui3") || code.operand == AccessTools.Field(typeof(UIManager), "m_col_mpa3") || code.operand == AccessTools.Field(typeof(UIManager), "m_col_mpb3")))
+                {
+                    code.opcode = OpCodes.Ldloc_3;
+                    code.operand = null;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_UIElement_DrawQuickChatMP), "GetTeamColor"));
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
 }
