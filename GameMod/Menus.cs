@@ -347,38 +347,13 @@ namespace GameMod
             MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
         }
 
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
-            int state = 0;
-            List<Label> labels = new List<Label>();
-            foreach (var code in codes)
-            {
-                if (state == 0 && code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_time_limit"))
-                {
-                    state = 1;
-                    labels = code.labels;
-                }
-
-                if (state == 1 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "PlayCycleSound"))
-                {
-                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessMatchTimeLimit");
-                    code.labels = labels;
-                    state = 2;
-                }
-
-                if (state == 1)
-                    continue;
-
-                yield return code;
-            }
-        }
-
-        // Process Scale Respawn option
-        static void Postfix(UIElement __instance)
+        // Handle additional options, Team Settings menu etc
+        static void ProcessAdditional()
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()))
+                (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir())))
             {
+                MenuManager.MaybeReverseOption();
                 if (MenuManager.m_menu_micro_state == 3)
                 {
                     switch (UIManager.m_menu_selection)
@@ -458,7 +433,46 @@ namespace GameMod
                             return;
                     }
                 }
+                MenuManager.UnReverseOption();
+            }
+        }
 
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            List<Label> labels = new List<Label>();
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_time_limit"))
+                {
+                    state = 1;
+                    labels = code.labels;
+                }
+
+                if (state == 1 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "PlayCycleSound"))
+                {
+                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessMatchTimeLimit");
+                    code.labels = labels;
+                    state = 2;
+                }
+
+                if (state == 1)
+                    continue;
+
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIManager), "MouseSelectUpdate"))
+                {
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessAdditional")) { labels = code.labels };
+                }
+                //if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
+                //{
+                //    // Steal label point from MaybeReverseOption to insert directly before
+                //    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessAdditional")) { labels = code.labels };
+                //    code.labels = null;
+                //    yield return code;
+                //    continue;
+                //}
+
+                yield return code;
             }
         }
     }
