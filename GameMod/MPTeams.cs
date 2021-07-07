@@ -833,6 +833,9 @@ namespace GameMod
     {
         static bool Prefix(MpTeam team, ref Color __result)
         {
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+                return true;
+
             if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS)
             {
                 if (Menus.mms_team_color_default)
