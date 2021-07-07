@@ -350,90 +350,88 @@ namespace GameMod
         // Handle additional options, Team Settings menu etc
         static void ProcessAdditional()
         {
-            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir())))
+            if (MenuManager.m_menu_micro_state == 3)
             {
-                MenuManager.MaybeReverseOption();
-                if (MenuManager.m_menu_micro_state == 3)
+                switch (UIManager.m_menu_selection)
                 {
-                    switch (UIManager.m_menu_selection)
-                    {
-                        case 13:
-                            Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 14:
-                            Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 15:
-                            Menus.mms_always_cloaked = !Menus.mms_always_cloaked;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 16:
-                            if (UIManager.PushedSelect(100))
+                    case 13:
+                        Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 14:
+                        Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 15:
+                        Menus.mms_always_cloaked = !Menus.mms_always_cloaked;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 16:
+                        if (UIManager.PushedSelect(100))
+                        {
+                            var files = new string[] { "STOCK" }.AddRangeToArray(Directory.GetFiles(Config.OLModDir, "projdata-*.txt"));
+                            for (int i = 0; i < files.Length; i++)
                             {
-                                var files = new string[] { "STOCK" }.AddRangeToArray(Directory.GetFiles(Config.OLModDir, "projdata-*.txt"));
-                                for (int i = 0; i < files.Length; i++)
+                                uConsole.Log(files[i] + ": " + files.Length.ToString());
+                                if (Menus.mms_mp_projdata_fn == files[i])
                                 {
-                                    uConsole.Log(files[i] + ": " + files.Length.ToString());
-                                    if (Menus.mms_mp_projdata_fn == files[i])
+                                    if (i + 1 < files.Length)
                                     {
-                                        if (i + 1 < files.Length)
-                                        {
-                                            Menus.mms_mp_projdata_fn = files[i + 1];
-                                        }
-                                        else
-                                        {
-                                            Menus.mms_mp_projdata_fn = files[0];
-                                        }
-                                        break;
+                                        Menus.mms_mp_projdata_fn = files[i + 1];
                                     }
+                                    else
+                                    {
+                                        Menus.mms_mp_projdata_fn = files[0];
+                                    }
+                                    break;
                                 }
-                                MenuManager.PlayCycleSound(1f, 1f);
                             }
-                            break;
-                        case 17:
-                            Menus.mms_allow_smash = !Menus.mms_allow_smash;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
+                            MenuManager.PlayCycleSound(1f, 1f);
+                        }
+                        break;
+                    case 17:
+                        Menus.mms_allow_smash = !Menus.mms_allow_smash;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
 
-                        case 18:
-                            Menus.mms_assist_scoring = !Menus.mms_assist_scoring;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 19:
-                            MenuManager.m_menu_micro_state = 10;
-                            MenuManager.UIPulse(2f);
-                            MenuManager.PlaySelectSound(1f);
-                            break;
-                    }
+                    case 18:
+                        Menus.mms_assist_scoring = !Menus.mms_assist_scoring;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 19:
+                        MenuManager.m_menu_micro_state = 10;
+                        MenuManager.UIPulse(2f);
+                        MenuManager.PlaySelectSound(1f);
+                        break;
                 }
-                else if (MenuManager.m_menu_micro_state == 10)
+            }
+            else if (MenuManager.m_menu_micro_state == 10)
+            {
+                // Team Settings window
+                switch (UIManager.m_menu_selection)
                 {
-                    // Team Settings window
-                    switch (UIManager.m_menu_selection)
-                    {
-                        case 8:
-                            MPTeams.MenuManagerTeamCount = MPTeams.Min +
-                                (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
-                                (MPTeams.Max - MPTeams.Min + 1);
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 12:
-                            Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
-                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                            break;
-                        case 100:
-                            MenuManager.m_menu_micro_state = 3;
-                            MenuManager.UIPulse(2f);
-                            MenuManager.PlaySelectSound(1f);
-                            return;
-                        default:
-                            return;
-                    }
+                    case 3:
+                        MenuManager.mms_friendly_fire = 1 - MenuManager.mms_friendly_fire;
+                        MenuManager.PlayCycleSound(1f, 1f);
+                        break;
+                    case 8:
+                        MPTeams.MenuManagerTeamCount = MPTeams.Min +
+                            (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
+                            (MPTeams.Max - MPTeams.Min + 1);
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 12:
+                        Menus.mms_scale_respawn_time = !Menus.mms_scale_respawn_time;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 100:
+                        MenuManager.m_menu_micro_state = 3;
+                        MenuManager.UIPulse(2f);
+                        MenuManager.PlaySelectSound(1f);
+                        return;
+                    default:
+                        return;
                 }
-                MenuManager.UnReverseOption();
             }
         }
 
@@ -459,18 +457,20 @@ namespace GameMod
                 if (state == 1)
                     continue;
 
-                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIManager), "MouseSelectUpdate"))
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
                 {
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessAdditional")) { labels = code.labels };
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessAdditional"));
+                    continue;
                 }
-                //if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
-                //{
-                //    // Steal label point from MaybeReverseOption to insert directly before
-                //    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpMatchSetup), "ProcessAdditional")) { labels = code.labels };
-                //    code.labels = null;
-                //    yield return code;
-                //    continue;
-                //}
+
+                // Remove processing of mms_friendly_fire, moved to ProcessAdditional()
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(MenuManager), "mms_friendly_fire"))
+                {
+                    yield return new CodeInstruction(OpCodes.Pop);
+                    continue;
+                }
+
 
                 yield return code;
             }
