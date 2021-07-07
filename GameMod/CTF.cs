@@ -336,6 +336,28 @@ namespace GameMod {
             SpawnAt(flag, playerShip.c_transform_position + a * 0.05f, a + playerShip.c_rigidbody.velocity * UnityEngine.Random.Range(1f, 2f));
         }
 
+        public static void UpdateFlagColor(GameObject flag, int teamIdx)
+        {
+            Color c1 = CTF.FlagColor(teamIdx);
+            var lightColor = MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], 5);
+            foreach (var rend in flag.GetComponentsInChildren<MeshRenderer>())
+            {
+                rend.sharedMaterial.SetColor("_Color", c1);
+                rend.sharedMaterial.SetColor("_EmissionColor", c1);
+            }
+            var light = flag.GetChildByName("_light").GetComponent<Light>();
+            light.color = lightColor;
+            light.intensity = 2f;
+            light.range = 4f;
+            light.bounceIntensity = 0f;
+
+            var keyA2 = flag.GetChildByName("keyA2(Clone)");
+            keyA2.GetChildByName("inner_ring001").GetComponent<HighlighterConstant>().color = c1;
+            var partRend = keyA2.GetChildByName("outer_ring_004").GetChildByName("_particle1").GetComponent<ParticleSystemRenderer>();
+            partRend.sharedMaterial.SetColor("_CoreColor", c1);
+            partRend.sharedMaterial.SetColor("_TintColor", c1);
+        }
+
         private static void LogEvent(CTFEvent evt, Player player, MpTeam flag)
         {
             switch (evt)
@@ -438,6 +460,16 @@ namespace GameMod {
             if (playerObj == null)
                 return null;
             return playerObj.GetComponent<Player>();
+        }
+
+        public static void UpdateShipEffects(Player player)
+        {
+            if (!CTF.PlayerHasFlag.ContainsKey(player.netId))
+                return;
+
+            CTFCarrierGlow.ResetMats();
+            PlayerDisableRing(player);
+            PlayerEnableRing(player, CTF.PlayerHasFlag[player.netId]);
         }
 
         public static void PlayerEnableRing(Player player, int flag_id)
@@ -545,6 +577,7 @@ namespace GameMod {
 
             var netId = gameObject.GetComponent<NetworkIdentity>();
             _NetworkIdentity_m_AssetId_Field.SetValue(netId, asset_id);
+            CTF.UpdateFlagColor(gameObject, int.Parse(asset_id.ToString().Substring(asset_id.ToString().Length-1)));
             //Debug.Log("post spawn assetid " + gameObject.GetComponent<NetworkIdentity>().assetId);
 
             return gameObject;
@@ -868,8 +901,49 @@ namespace GameMod {
         private static void OnCTFNotify(NetworkMessage rawMsg)
         {
             var msg = rawMsg.ReadMessage<CTFNotifyMessage>();
-            if (msg.m_message != null)
-                GameplayManager.AddHUDMessage(msg.m_message, -1, true);
+            var message = msg.m_message;
+            if (message != null)
+            {
+                // Clients using custom colors need to construct their own HUD notifications instead of accepting Blue/Orange from server
+                if (!Menus.mms_team_color_default)
+                {
+                    var player = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == msg.m_player_id);
+                    switch (msg.m_event)
+                    {
+                        case CTFEvent.SCORE:
+                            message = string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
+                                MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            break;
+                        case CTFEvent.RETURN:
+                            if (msg.m_player_id == null || msg.m_player_id == default(NetworkInstanceId))
+                            {
+                                message = string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]));
+                            }
+                            else
+                            {
+                                message = string.Format(Loc.LS("{0} RETURNS THE {1} FLAG!"), player.m_mp_name, MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]));
+                            }
+                            break;
+                        case CTFEvent.PICKUP:
+                            var currentState = CTF.FlagStates[msg.m_flag_id];
+                            if (currentState == FlagState.HOME)
+                            {
+                                message = string.Format(Loc.LS("{0} ({1}) PICKS UP THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
+                                    MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            } else
+                            {
+                                message = message = string.Format(Loc.LS("{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
+                                    MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            }
+                            break;
+                        case CTFEvent.DROP:
+                            message = string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            break;
+                    }
+                }
+                GameplayManager.AddHUDMessage(message, -1, true);
+            }
+                
             Debug.Log("OnCTFNotify " + msg.m_event);
             switch (msg.m_event) {
                 case CTFEvent.PICKUP:
@@ -932,6 +1006,12 @@ namespace GameMod {
     class CTFCarrierGlow
     {
         static Material[] mats;
+
+        public static void ResetMats()
+        {
+            mats = null;
+            SetupMat();
+        }
 
         private static void SetupMat()
         {
