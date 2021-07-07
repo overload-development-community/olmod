@@ -1,3 +1,12 @@
+v0.4.2 - 2021-07-07
+
+- New options under Options -> Multiplayer Options to change the default team colors.  This is a per-pilot setting, which, when set to Custom, will allow you to change the color of your team and of your opponent's team in Team Anarchy, CTF, and Monsterball.  This also affects the CTF flags and related effects, but does NOT affect team-colored lighting in maps. (Thanks, Tobias!)
+- Names are shown in their team color in the kill feed and in chat. (Thanks, Tobias!)
+- When creating a game, multiplayer team options have moved to Advanced Settings -> Team Settings.  You will find Friendly Fire, Team Count, and Scale Respawn to Team Size on that menu. (Thanks, Tobias!)
+- When assists are off, they will not display to observers.
+- Fix bug with spawns in Anarchy/Team Anarchy games on CTF/Monsterball maps.
+- Second minor fix to the Linux build that was broken in 0.4.0. (Thanks, derhass!)
+
 v0.4.1 - 2021-06-30
 
 - In team anarchy, players now glow with their team color when taking damage. (Thanks, Tobias!)

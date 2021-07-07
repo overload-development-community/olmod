@@ -1,4 +1,4 @@
-olmod 0.4.1 - Overload mod
+olmod 0.4.2 - Overload mod
 Community mods for Overload
 https://github.com/overload-development-community/olmod
 
@@ -147,7 +147,9 @@ What does it do
 
 - A joystick curve editor, by luponix.
 
-- In anarcy, a multiplayer game option to turn off assist scoring, by Sirius.
+- In anarchy or team anarchy, a multiplayer game option to turn off assist scoring, by Sirius.
+
+- Custom team colors, by Tobias.
 
 How does it work
 ----------------
