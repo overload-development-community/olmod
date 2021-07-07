@@ -883,13 +883,6 @@ namespace GameMod {
                             Controls.m_disable_menu_letter_keys = true;
                             ProcessInputField(ref MPServerBrowser.mms_match_notes, Loc.LS("MATCH NOTES"), false, ref ___m_menu_state_timer);
                             break;
-                        case 3:
-                            if (UIManager.PushedSelect(100))
-                            {
-                                MenuManager.mms_friendly_fire = 1 - MenuManager.mms_friendly_fire;
-                                MenuManager.PlayCycleSound(1f, 1f);
-                            }
-                            break;
                     }
                     break;
             }
