@@ -12,7 +12,8 @@ using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace GameMod {
+namespace GameMod
+{
 
     static class MPServerBrowser
     {
@@ -234,9 +235,14 @@ namespace GameMod {
                 var inPacket = arSocket.EndReceive(ar, ref endPoint);
                 if (!CheckPingHash(inPacket))
                     return;
-                var receivedPacket = new ReceivedPacketInfo {
-                    packet = inPacket, endPoint = endPoint, time = DateTime.UtcNow.Ticks };
-                lock (receivedPackets) {
+                var receivedPacket = new ReceivedPacketInfo
+                {
+                    packet = inPacket,
+                    endPoint = endPoint,
+                    time = DateTime.UtcNow.Ticks
+                };
+                lock (receivedPackets)
+                {
                     receivedPackets.Add(receivedPacket);
                 }
                 socket.BeginReceive(receiver, arSocket);
@@ -771,7 +777,8 @@ namespace GameMod {
                                                 NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
                                                 NetworkMatch.m_match_req_password = MPServerBrowser.selectedItem.ip;
                                                 MPInternet.ServerAddress = MPInternet.FindPasswordAddress(MPServerBrowser.selectedItem.ip, out string msg);
-                                                if (Core.GameMod.HasInternetMatch()) {
+                                                if (Core.GameMod.HasInternetMatch())
+                                                {
                                                     _InternetMatch_ServerAddress_Field.SetValue(null, MPInternet.ServerAddress);
                                                 }
                                                 MenuManager.m_mp_status = Loc.LS("JOINING " + MPInternet.ClientModeName());
@@ -868,7 +875,7 @@ namespace GameMod {
                     }
                     return;
             }
-            
+
         }
 
         private static void Postfix(ref float ___m_menu_state_timer)
@@ -882,13 +889,6 @@ namespace GameMod {
                             Controls.m_disable_menu_letter_keys = false;
                             Controls.m_disable_menu_letter_keys = true;
                             ProcessInputField(ref MPServerBrowser.mms_match_notes, Loc.LS("MATCH NOTES"), false, ref ___m_menu_state_timer);
-                            break;
-                        case 3:
-                            if (UIManager.PushedSelect(100))
-                            {
-                                MenuManager.mms_friendly_fire = 1 - MenuManager.mms_friendly_fire;
-                                MenuManager.PlayCycleSound(1f, 1f);
-                            }
                             break;
                     }
                     break;
@@ -1000,7 +1000,7 @@ namespace GameMod {
                     yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
-                
+
                 // Move Advanced Match section up slightly
                 if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155)
                     code.operand = 250f;
@@ -1068,7 +1068,7 @@ namespace GameMod {
             }
             _UIElement_m_cursor_blink_timer_Field.SetValue(uie, m_cursor_blink_timer);
             bool show_cursor = m_cursor_on && selected;
-            
+
             float scale = 0.5f * 20f;
             var textCursor = text + "_";
             float stringWidth = UIManager.GetStringWidth(textCursor, scale);
