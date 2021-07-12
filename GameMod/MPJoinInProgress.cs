@@ -333,7 +333,19 @@ namespace GameMod {
                     };
                 }
                 NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetDisconnectedMatchState, dcmsg);
-            }            
+            }
+
+            // CTF Stats
+            if (MPModPrivateData.MatchMode == ExtMatchMode.CTF)
+            {
+                NetworkServer.SendToClient(connectionId, MessageTypes.MsgCTFPlayerStats, new CTF.PlayerStatesMessage() { m_player_states = CTF.PlayerStats });
+            }
+
+            // Monsterball Stats
+            if (MPModPrivateData.MatchMode == ExtMatchMode.MONSTERBALL)
+            {
+                NetworkServer.SendToClient(connectionId, MessageTypes.MsgMonsterballPlayerStats, new MonsterballAddon.PlayerStatesMessage() { m_player_states = MonsterballAddon.PlayerStats });
+            }
         }
 
         private static float SendPreGame(int connectionId, float pregameWait)

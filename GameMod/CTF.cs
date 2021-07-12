@@ -35,6 +35,15 @@ namespace GameMod {
         public static bool CarrierBoostEnabled = true;
         public static object FlagLock = new object();
         private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static Dictionary<NetworkInstanceId, CTFStats> PlayerStats = new Dictionary<NetworkInstanceId, CTFStats>();
+        public class CTFStats
+        {
+            public int CarrierKills = 0;
+            public int Pickups = 0;
+            public int Captures = 0;
+            public int Returns = 0;
+            public int Drops = 0;
+        }
 
         public static bool IsActive
         {
@@ -230,6 +239,7 @@ namespace GameMod {
             SpawnPoint = new Vector3[TeamCount];
             FlagReturnTime = new float[TeamCount];
             ShowReturnTimer = false;
+            PlayerStats = new Dictionary<NetworkInstanceId, CTFStats>();
             foreach (var timer in FlagReturnTimer)
                 if (timer != null)
                     GameManager.m_gm.StopCoroutine(timer);
@@ -500,7 +510,7 @@ namespace GameMod {
                 UnityEngine.Object.Destroy(part);
         }
 
-        private static void DrawFlagState(UIElement uie, Vector2 pos, float m_alpha, int flag)
+        public static void DrawFlagState(UIElement uie, Vector2 pos, float m_alpha, int flag)
         {
             var state = CTF.FlagStates[flag];
             if (state == FlagState.PICKEDUP)
@@ -535,6 +545,40 @@ namespace GameMod {
                 DrawFlagState(instance, pos, m_alpha, i);
                 pos.x += 60;
             }
+        }
+
+        public class PlayerStatesMessage : MessageBase
+        {
+            public override void Serialize(NetworkWriter writer)
+            {
+                writer.Write((byte)0); // version
+                writer.WritePackedUInt32((uint)m_player_states.Count);
+                foreach (var pl_state in m_player_states)
+                {
+                    writer.Write(pl_state.Key);
+                    writer.WritePackedUInt32((uint)pl_state.Value.CarrierKills);
+                    writer.WritePackedUInt32((uint)pl_state.Value.Pickups);
+                    writer.WritePackedUInt32((uint)pl_state.Value.Captures);
+                    writer.WritePackedUInt32((uint)pl_state.Value.Returns);
+                    writer.WritePackedUInt32((uint)pl_state.Value.Drops);
+                }
+            }
+            public override void Deserialize(NetworkReader reader)
+            {
+                var version = reader.ReadByte();
+                var n = reader.ReadPackedUInt32();
+                m_player_states = new Dictionary<NetworkInstanceId, CTF.CTFStats>();
+                for (int i = 0; i < n; i++)
+                    m_player_states.Add(reader.ReadNetworkId(), new CTF.CTFStats
+                    {
+                        CarrierKills = (int)reader.ReadPackedUInt32(),
+                        Pickups = (int)reader.ReadPackedUInt32(),
+                        Captures = (int)reader.ReadPackedUInt32(),
+                        Returns = (int)reader.ReadPackedUInt32(),
+                        Drops = (int)reader.ReadPackedUInt32()
+                    });
+            }
+            public Dictionary<NetworkInstanceId, CTF.CTFStats> m_player_states;
         }
     }
 
@@ -749,7 +793,9 @@ namespace GameMod {
             if (attacker == null || attacker.netId == __instance.netId)
                 return;
 
+            CTF.PlayerStats[attacker.netId].CarrierKills++;
             ServerStatLog.AddFlagEvent(attacker, "CarrierKill", MPTeams.AllTeams[flag]);
+            NetworkServer.SendToAll(MessageTypes.MsgCTFPlayerStats, new CTF.PlayerStatesMessage() { m_player_states = CTF.PlayerStats });
         }
     }
 
@@ -949,15 +995,19 @@ namespace GameMod {
                 case CTFEvent.PICKUP:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_lockdown_initiated, 1f, 0.8f, 0f, false);
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_alien_tele_warp, 1f, 0f, 0f, false);
+                    CTF.PlayerStats[msg.m_player_id].Pickups++;
                     break;
                 case CTFEvent.DROP:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.cine_sfx_warning_2, 0.7f, 0f, 0f, false);
+                    CTF.PlayerStats[msg.m_player_id].Drops++;
                     break;
                 case CTFEvent.RETURN:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_matcenter_warp_high1, 1.1f, 0f, 0f, false);
+                    CTF.PlayerStats[msg.m_player_id].Returns++;
                     break;
                 case CTFEvent.SCORE:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.ui_upgrade, 1f, 0f, 0f, false);
+                    CTF.PlayerStats[msg.m_player_id].Captures++;
                     break;
             }
         }
@@ -1053,25 +1103,6 @@ namespace GameMod {
         }
     }
 
-    [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
-    class CTFDrawHUDScoreInfo
-    {
-        private static void Prefix(Vector2 pos, float ___m_alpha, UIElement __instance)
-        {
-            if (!CTF.IsActive)
-                return;
-            pos.x -= 4f;
-            pos.y -= 5f;
-            pos.x -= 100f;
-            pos.y -= 20f;
-
-            pos.x -= 110f;
-            pos.y += 20f;
-
-            CTF.DrawFlags(__instance, pos, ___m_alpha);
-        }
-    }
-
     [HarmonyPatch(typeof(UIElement), "DrawMpDeathOverlay")]
     class CTFDrawMpDeathOverlay
     {
@@ -1118,6 +1149,63 @@ namespace GameMod {
             {
                 __result = (!__instance.isLocalPlayer || !uConsole.IsOn()) && __instance.m_input_count[(int)cc_type] >= 1;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(Client), "OnMatchStart")]
+    class CTF_Client_OnMatchStart
+    {
+        static void Postfix()
+        {
+            if (MPModPrivateData.MatchMode != ExtMatchMode.CTF)
+                return;
+
+            foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
+            {
+                if (!CTF.PlayerStats.ContainsKey(player.netId))
+                    CTF.PlayerStats.Add(player.netId, new CTF.CTFStats());
+            }
+
+        }
+    }
+
+    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
+    class CTF_Client_RegisterHandlers
+    {
+        private static void OnCTFPlayerStats(NetworkMessage msg)
+        {
+            var msmsg = msg.ReadMessage<CTF.PlayerStatesMessage>();
+            foreach (var mps in msmsg.m_player_states)
+            {
+                if (!CTF.PlayerStats.ContainsKey(mps.Key))
+                {
+                    // Likely JIP
+                    CTF.PlayerStats.Add(mps.Key, new CTF.CTFStats
+                    {
+                        Captures = mps.Value.Captures,
+                        CarrierKills = mps.Value.CarrierKills,
+                        Drops = mps.Value.Drops,
+                        Pickups = mps.Value.Pickups,
+                        Returns = mps.Value.Returns
+                    });
+                }
+                else
+                {
+                    CTF.PlayerStats[mps.Key].Captures = mps.Value.Captures;
+                    CTF.PlayerStats[mps.Key].CarrierKills = mps.Value.CarrierKills;
+                    CTF.PlayerStats[mps.Key].Drops = mps.Value.Drops;
+                    CTF.PlayerStats[mps.Key].Pickups = mps.Value.Pickups;
+                    CTF.PlayerStats[mps.Key].Returns = mps.Value.Returns;
+                }
+            }
+        }
+
+        static void Postfix()
+        {
+            if (Client.GetClient() == null)
+                return;
+
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFPlayerStats, OnCTFPlayerStats);
         }
     }
 }
