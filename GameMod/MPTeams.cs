@@ -474,7 +474,29 @@ namespace GameMod
     {
         static bool Prefix(MpTeam team, ref string __result)
         {
-            __result = MPTeams.TeamName(team) + " TEAM";
+            if (!GameplayManager.IsMultiplayerActive)
+            {
+                switch (team)
+                {
+                    case MpTeam.TEAM0:
+                        __result = Loc.LS("BLUE TEAM / TEAM 1");
+                        break;
+                    case MpTeam.TEAM1:
+                        __result = Loc.LS("ORANGE TEAM / TEAM 2");
+                        break;
+                    case MpTeam.ANARCHY:
+                        __result = Loc.LS("ANARCHY");
+                        break;
+                    default:
+                        __result = Loc.LS("UNKNOWN");
+                        break;
+                }
+            }
+            else
+            {
+                __result = MPTeams.TeamName(team) + " TEAM";
+            }
+
             return false;
         }
     }
