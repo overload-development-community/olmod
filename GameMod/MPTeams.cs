@@ -839,7 +839,7 @@ namespace GameMod
             int state = 0;
             foreach (var code in codes)
             {
-                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Field(typeof(NetworkMatch), "GetTeamScore"))
+                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkMatch), "GetTeamScore"))
                 {
                     state++;
                     yield return new CodeInstruction(OpCodes.Pop);
@@ -853,7 +853,7 @@ namespace GameMod
                     state++;
                 }
 
-                if (state > 0 && state < 4)
+                if (state > 0 && state < 3)
                     continue;
 
                 yield return code;
@@ -878,7 +878,7 @@ namespace GameMod
             int state = 0;
             foreach (var code in codes)
             {
-                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Field(typeof(NetworkMatch), "GetTeamScore"))
+                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkMatch), "GetTeamScore"))
                 {
                     state++;
                     yield return new CodeInstruction(OpCodes.Pop);
@@ -892,7 +892,7 @@ namespace GameMod
                     state++;
                 }
 
-                if (state > 0 && state < 4)
+                if (state > 0 && state < 3)
                     continue;
 
                 yield return code;
