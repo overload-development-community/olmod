@@ -306,6 +306,17 @@ namespace GameMod
                 }
             }
         }
+
+        // Support function for DrawMpPostgame transpiles
+        private static void ShowTeamWinner(ref Color c, ref string s)
+        {
+            var teams = MPTeams.TeamsByScore;
+            if (teams.Length >= 2 && NetworkMatch.m_team_scores[(int)teams[0]] != NetworkMatch.m_team_scores[(int)teams[1]])
+            {
+                c = MPTeams.TeamColor(teams[0], 4);
+                s = MPTeams.TeamName(teams[0]) + " WINS!";
+            }
+        }
     }
 
     [HarmonyPatch(typeof(UIElement), "MaybeDrawPlayerList")]
@@ -474,7 +485,29 @@ namespace GameMod
     {
         static bool Prefix(MpTeam team, ref string __result)
         {
-            __result = MPTeams.TeamName(team) + " TEAM";
+            if (!GameplayManager.IsMultiplayerActive)
+            {
+                switch (team)
+                {
+                    case MpTeam.TEAM0:
+                        __result = Loc.LS("BLUE TEAM / TEAM 1");
+                        break;
+                    case MpTeam.TEAM1:
+                        __result = Loc.LS("ORANGE TEAM / TEAM 2");
+                        break;
+                    case MpTeam.ANARCHY:
+                        __result = Loc.LS("ANARCHY");
+                        break;
+                    default:
+                        __result = Loc.LS("UNKNOWN");
+                        break;
+                }
+            }
+            else
+            {
+                __result = MPTeams.TeamName(team) + " TEAM";
+            }
+
             return false;
         }
     }
@@ -794,11 +827,37 @@ namespace GameMod
     {
         static bool Prefix(UIElement __instance)
         {
-            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) || (MPTeams.NetworkMatchTeamCount == 2 && NetworkMatch.m_players.Count <= 8))
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
                 return true;
             if (GameManager.m_local_player.m_hitpoints >= 0f)
                 MPTeams.DrawPostgame(__instance);
             return false;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkMatch), "GetTeamScore"))
+                {
+                    state++;
+                    yield return new CodeInstruction(OpCodes.Pop);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 1);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 2);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams), "ShowTeamWinner"));
+                }
+
+                if (state > 0 && state < 3 && code.opcode == OpCodes.Br)
+                {
+                    state++;
+                }
+
+                if (state > 0 && state < 3)
+                    continue;
+
+                yield return code;
+            }
         }
     }
 
@@ -812,6 +871,32 @@ namespace GameMod
             if (GameManager.m_local_player.m_hitpoints < 0f)
                 MPTeams.DrawPostgame(__instance);
             return false;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkMatch), "GetTeamScore"))
+                {
+                    state++;
+                    yield return new CodeInstruction(OpCodes.Pop);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 1);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 2);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams), "ShowTeamWinner"));
+                }
+
+                if (state > 0 && state < 3 && code.opcode == OpCodes.Br)
+                {
+                    state++;
+                }
+
+                if (state > 0 && state < 3)
+                    continue;
+
+                yield return code;
+            }
         }
     }
 
