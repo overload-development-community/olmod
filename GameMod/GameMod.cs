@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.VersionHandling;
-using Harmony;
+using HarmonyLib;
 using Overload;
 using UnityEngine;
 
@@ -33,8 +33,8 @@ namespace GameMod.Core {
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             Config.Init();
             MPInternet.CheckInternetServer();
-            HarmonyInstance.DEBUG = FindArg("-harmonydebug");
-            var harmony = HarmonyInstance.Create("olmod.olmod");
+            Harmony.DEBUG = FindArg("-harmonydebug");
+            var harmony = new Harmony("olmod.olmod");
             try
             {
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
