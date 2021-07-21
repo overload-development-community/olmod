@@ -1,4 +1,4 @@
-﻿using Harmony;
+﻿using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -21,14 +21,16 @@ namespace mod_moreaudio
             //Debug.Log(n);
         }
     }
-    [HarmonyPatch(typeof(UnityAudio), "LoadSoundEffects")]
-    class MoreAudio1 {
+
+    [HarmonyPatch]
+    class MoreAudioIterator
+    {
         static MethodBase TargetMethod()
         {
             foreach (var x in typeof(UnityAudio).GetNestedTypes(BindingFlags.NonPublic))
                 if (x.Name.Contains("LoadSoundEffects"))
                 {
-                    //Debug.Log("Found LoadSoundEffects iterator " + x.Name);
+                    //UnityEngine.Debug.Log("Found LoadSoundEffects iterator " + x.Name);
                     return x.GetMethod("MoveNext");
                 }
             return null;

@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
-using Harmony;
+using HarmonyLib;
 using Newtonsoft.Json;
 using Overload;
 using UnityEngine;

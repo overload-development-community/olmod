@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection.Emit;
 using GameMod.VersionHandling;
-using Harmony;
+using HarmonyLib;
 using Overload;
 using UnityEngine;
 using UnityEngine.Networking;

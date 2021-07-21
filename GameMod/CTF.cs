@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Harmony;
+using HarmonyLib;
 using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -201,7 +201,7 @@ namespace GameMod {
                 var team_mask = spawn.multiplayer_team_association_mask;
                 if (team_mask != 1 && team_mask != 2)
                 {
-                    rest.Add(spawn);
+                    rest.AddItem(spawn);
                     continue;
                 }
                 var team_id = team_mask - 1;
