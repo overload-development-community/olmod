@@ -1156,29 +1156,30 @@ namespace GameMod
         }
     }
 
-    // Colors shown on kill feed - still lacks >2 team support
-    [HarmonyPatch(typeof(UIElement), "GetMessageColor")]
-    class MPTeams_UIElement_GetMessageColor
+    // Colors shown on kill feed
+    // Transpiled due to odd results when modifying struct return val
+    [HarmonyPatch(typeof(UIElement), "DrawRecentKillsMP")]
+    class MPTeams_UIElement_DrawRecentKillsMP
     {
-        static bool Prefix(MpMessageColor mpmc, float flash, ref Color __result)
+        static Color GetMessageColor(UIElement uie, MpMessageColor mpmc, float flash)
         {
             switch (mpmc)
             {
                 case MpMessageColor.LOCAL:
-                    __result = Color.Lerp(UIManager.m_col_hi2, UIManager.m_col_hi7, flash);
-                    break;
+                    return Color.Lerp(UIManager.m_col_hi2, UIManager.m_col_hi7, flash);
                 case MpMessageColor.ANARCHY:
                 case MpMessageColor.NONE:
-                    __result = Color.Lerp(UIManager.m_col_ui0, UIManager.m_col_ui3, flash);
-                    break;
+                    return Color.Lerp(UIManager.m_col_ui0, UIManager.m_col_ui3, flash);
                 default:
                     Color c1 = MPTeams.TeamColor(MPTeams.GetMpTeamFromMessageColor((int)mpmc), 0);
                     Color c2 = MPTeams.TeamColor(MPTeams.GetMpTeamFromMessageColor((int)mpmc), 0);
-                    __result = Color.Lerp(c1, c2, flash);
-                    break;
+                    return Color.Lerp(c1, c2, flash);
             }
+        }
 
-            return false;
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            return codes.MethodReplacer(AccessTools.Method(typeof(UIElement), "GetMessageColor"), AccessTools.Method(typeof(MPTeams_UIElement_DrawRecentKillsMP), "GetMessageColor"));
         }
     }
 
@@ -1203,7 +1204,7 @@ namespace GameMod
                     code.operand = state == 1 ? 5 : 2;
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPTeams_NetworkMessageManager_AddKillMessage), "GetMessageColorIndex"));
-                    continue;          
+                    continue;
                 }
                 yield return code;
             }
@@ -1267,7 +1268,7 @@ namespace GameMod
         {
             if (mpmc == MpMessageColor.ANARCHY)
                 return UIManager.m_col_ui3;
-            
+
             return MPTeams.TeamColor(MPTeams.GetMpTeamFromMessageColor((int)mpmc), 0);
         }
 
