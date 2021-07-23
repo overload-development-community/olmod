@@ -13,7 +13,7 @@ using UnityEngine;
 namespace GameMod {
     [HarmonyPatch(typeof(GameManager), "Awake")]
     class ServerCleanup_GamaManager_Awake {
-        static void Postifx() {
+        static void Postfix() {
             if (GameplayManager.IsDedicatedServer()) {
                 AudioListener.pause = true;
                 Debug.Log("Dediacted Server: paused AudioListener");
