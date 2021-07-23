@@ -255,4 +255,52 @@ namespace GameMod.Core {
             return false;
         }
     }
+
+    // Fix ptaching GameManager.Awake
+    // When "GameManager.Awake" gets patched, two things happen:
+    // 1. GameManager.Version gets set to 0.0.0.0 becuae it internally uses
+    //    GetExecutingAssembly() to query the version, but the patched version
+    //     lives in another assembly
+    // 2. The "anitcheat" injection detector is triggered. But that thing
+    //    doesn't do anything useful anyway, so disable it
+    [HarmonyPatch(typeof(GameManager), "Awake")]
+    class FixGameManagerAwakePatching
+    {
+
+        // return the Assembly which contains Overload.GameManager
+        public static Assembly GetOverloadAssembly()
+        {
+            return Assembly.GetAssembly(typeof(Overload.GameManager));
+        }
+
+        // transpiler
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            // This patches the next call of Server.IsDedicatedServer() call after
+            // a StartCoroutine was called to just pushing true onto the stack instead.
+            // We play safe here becuase other patches might add IsDedicatedServer() calls
+            // to that method, so we search specifically for the first one after
+            // StartCoroutine was called.
+            int state = 0;
+
+            foreach (var code in codes) {
+                // patch GetExecutingAssembly to use GetOverloadAssembly instead
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "GetExecutingAssembly") {
+                    var method = AccessTools.Method(typeof(FixGameManagerAwakePatching), "GetOverloadAssembly");
+                    yield return new CodeInstruction(OpCodes.Call,method);
+                    continue;
+                }
+                if (state == 0 && code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "StartCoroutine") {
+                    state =1;
+                } else if (state == 1 && code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "IsDedicatedServer") {
+                  // this is the first IsDedicatedServer call after StartCoroutine
+                  yield return new CodeInstruction(OpCodes.Ldc_I4_1); // push true on the stack instead
+                  state = 2; // do not patch other invocations of StartCoroutine
+                  continue;
+                }
+
+                yield return code;
+            }
+        }
+    }
 }
