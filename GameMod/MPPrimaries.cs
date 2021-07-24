@@ -161,7 +161,11 @@ namespace GameMod
             spawn.Remaining = Mathf.Max(0f, spawn.Remaining - max / totalBudget);
 
             // Reset weapon spawn timer.
-            SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
+            if (MPClassic.matchEnabled) {
+                SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
+            } else {
+                SpawnWeaponTimer = UnityEngine.Random.Range(60f / max, 120f / max);
+            }
         }
     }
 
