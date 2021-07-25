@@ -1,3 +1,11 @@
+v0.4.3 - 2021-07-25
+
+- Update to player spawn algorithm to only consider the worst cases, not an average of all the cases.
+- Increase timer of initial primary spawn by 4x, timer between primary spawns by 8x.  This is intended to reverse a side effect caused by the primary spawn algorithm changes from v0.3.5 that made primaries far more common.
+- Invulnerability from red powerups now work properly in race mode. (Thanks, Tobias!)
+- Servers no longer play audio at 0 volume... now they just don't play audio. (Thanks, derhass!)
+- Minor fix to using arrow keys in new advanced multiplayer settings screen. (Thanks, Tobias!)
+
 v0.4.2 - 2021-07-07
 
 - New options under Options -> Multiplayer Options to change the default team colors.  This is a per-pilot setting, which, when set to Custom, will allow you to change the color of your team and of your opponent's team in Team Anarchy, CTF, and Monsterball.  This also affects the CTF flags and related effects, but does NOT affect team-colored lighting in maps. (Thanks, Tobias!)
