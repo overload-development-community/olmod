@@ -164,7 +164,7 @@ namespace GameMod
             if (MPClassic.matchEnabled) {
                 SpawnWeaponTimer = UnityEngine.Random.Range(30f / max, 60f / max);
             } else {
-                SpawnWeaponTimer = UnityEngine.Random.Range(60f / max, 120f / max);
+                SpawnWeaponTimer = UnityEngine.Random.Range(240f / max, 480f / max);
             }
         }
     }
@@ -258,7 +258,11 @@ namespace GameMod
             // Set timer if it's less than 0.
             if (MPPrimaries.SpawnWeaponTimer <= 0)
             {
-                MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(15f, 30f);
+                if (MPClassic.matchEnabled) {
+                    MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(15f, 30f);
+                } else {
+                    MPPrimaries.SpawnWeaponTimer = UnityEngine.Random.Range(60f, 120f);
+                }
             }
 
             // Short circuit the original code.
