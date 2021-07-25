@@ -92,52 +92,36 @@ namespace GameMod {
             var playerPositions = (List<Vector3>)_NetworkSpawnPoints_m_player_pos_Field.GetValue(null);
             var playerTeams = (List<MpTeam>)_NetworkSpawnPoints_m_player_team_Field.GetValue(null);
 
-            Vector3 position = GameManager.m_level_data.m_player_spawn_points[idx].position;
-
-            float num = UnityEngine.Random.Range(max / 2f, max);
             int count = playerPositions.Count;
-            float num2 = 3f / (2f + count);
 
+            // For each spawn, find the closest player, and the two players that have the least line of sight to one or the other.
+            var spawnPoint = GameManager.m_level_data.m_player_spawn_points[idx];
+            var closest = float.MaxValue;
+            var leastLoS = float.MaxValue;
+            var scale = 1f;
             for (int i = 0; i < count; i++) {
                 var dist = Math.Abs(distances[idx][i]);
-
                 if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
-                    float num3 = (Math.Abs(RUtility.FindVec3Distance(position - playerPositions[i])) + dist) / 2f;
-                    if (num3 < 40f) {
-                        float num4 = (40f - num3) * (40f - num3) * 0.2f;
-                        num -= num4 * num2;
-                        if (num3 < 10f) {
-                            num -= (10f - num3) * 50f;
-                        }
-                    }
-                    num += dist / 4;
-                } else {
-                    float num5 = (Math.Abs(RUtility.FindVec3Distance(position - playerPositions[i])) + dist) / 2f;
-                    if (num5 > 50f) {
-                        num -= (num5 - 50f) * num2;
-                    } else if (num5 < 10f) {
-                        num -= (10f - num5) * 1000f;
-                    }
+                    var angle = Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward));
+
+                    closest = Math.Min(closest, dist);
+                    leastLoS = Math.Min(leastLoS, angle);
+                }
+
+                if (dist < 10f) {
+                    scale = Math.Min(scale, dist / 10f);
                 }
             }
 
-            // Scale spawn point by least line of sight.
-            var spawnPoint = GameManager.m_level_data.m_player_spawn_points[idx];
-
-            for (int i = 0; i < count; i++) {
-                var maxAngle = Math.Max(180f - Math.Abs(RUtility.FindVec3Distance(position - playerPositions[i])), 20f);
-                if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
-                    num *= (Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), maxAngle) / maxAngle);
-                    num *= (Math.Min(Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward), maxAngle) / maxAngle);
-                }
-            }
+            // Score the spawn point with a +/- 5% random factor.
+            var score = Math.Min(closest / Math.Max(max, 1f), 1f) * Math.Min(leastLoS / 15f, 1f) * scale * UnityEngine.Random.Range(0.95f, 1.05f);
 
             // Avoid respawning two ships on the same respawn point within a short amount of time.
             if (lastRespawn.ContainsKey(idx) && lastRespawn[idx] > DateTime.Now.AddSeconds(-2)) {
-                num -= 100f * (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
+                score -= (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
             }
 
-            return num;
+            return score;
         }
     }
 }
