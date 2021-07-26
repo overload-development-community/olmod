@@ -7,7 +7,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
-using Harmony;
+using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using Overload;
 using UnityEngine;
