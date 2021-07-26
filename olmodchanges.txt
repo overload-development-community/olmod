@@ -1,3 +1,7 @@
+v0.4.4 - 2021-07-26
+
+- Fix to v0.4.3's server audio patch that prevented network audio sounds from playing more than once, such as refueling from an energy center.
+
 v0.4.3 - 2021-07-25
 
 - Update to player spawn algorithm to only consider the worst cases, not an average of all the cases.
