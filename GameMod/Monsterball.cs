@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
+using UnityEngine.Networking;
 
 // by terminal
 namespace GameMod
@@ -30,6 +31,44 @@ namespace GameMod
             }
 
             CurrentPlayer = player;
+        }
+
+        public static Dictionary<NetworkInstanceId, MBStats> PlayerStats = new Dictionary<NetworkInstanceId, MBStats>();
+        public class MBStats
+        {
+            public int Goals = 0;
+            public int GoalAssists = 0;
+            public int Blunders = 0;
+        }
+
+        public class PlayerStatesMessage : MessageBase
+        {
+            public override void Serialize(NetworkWriter writer)
+            {
+                writer.Write((byte)0); // version
+                writer.WritePackedUInt32((uint)m_player_states.Count);
+                foreach (var pl_state in m_player_states)
+                {
+                    writer.Write(pl_state.Key);
+                    writer.WritePackedUInt32((uint)pl_state.Value.Blunders);
+                    writer.WritePackedUInt32((uint)pl_state.Value.Goals);
+                    writer.WritePackedUInt32((uint)pl_state.Value.GoalAssists);
+                }
+            }
+            public override void Deserialize(NetworkReader reader)
+            {
+                var version = reader.ReadByte();
+                var n = reader.ReadPackedUInt32();
+                m_player_states = new Dictionary<NetworkInstanceId, MonsterballAddon.MBStats>();
+                for (int i = 0; i < n; i++)
+                    m_player_states.Add(reader.ReadNetworkId(), new MonsterballAddon.MBStats
+                    {
+                        Blunders = (int)reader.ReadPackedUInt32(),
+                        Goals = (int)reader.ReadPackedUInt32(),
+                        GoalAssists = (int)reader.ReadPackedUInt32()
+                    });
+            }
+            public Dictionary<NetworkInstanceId, MonsterballAddon.MBStats> m_player_states;
         }
     }
 
@@ -185,7 +224,7 @@ namespace GameMod
     //}
 
     //disable various monsterball-layer collisions we enabled at the start of the match
-    [HarmonyPatch(typeof(NetworkManager), "OnSceneUnloaded")]
+    [HarmonyPatch(typeof(Overload.NetworkManager), "OnSceneUnloaded")]
     class MonsterballDisableWeaponCollision
     {
         private static void Postfix()
@@ -291,19 +330,77 @@ namespace GameMod
     {
         private static void Prefix(Collider other, MonsterBallGoal __instance)
         {
-            if (other.gameObject.layer == 31 && NetworkManager.IsServer())
+            if (other.gameObject.layer == 31 && Overload.NetworkManager.IsServer())
             {
                 MpTeam mpTeam = (__instance.m_team != MpTeam.TEAM0) ? MpTeam.TEAM0 : MpTeam.TEAM1;
 
                 if (mpTeam == MonsterballAddon.CurrentPlayer.m_mp_team)
                 {
                     ServerStatLog.AddGoal();
+                    MonsterballAddon.PlayerStats[MonsterballAddon.CurrentPlayer.netId].Goals++;
+                    if (MonsterballAddon.LastPlayer != null)
+                        MonsterballAddon.PlayerStats[MonsterballAddon.LastPlayer.netId].GoalAssists++;
                 }
                 else
                 {
                     ServerStatLog.AddBlunder();
+                    MonsterballAddon.PlayerStats[MonsterballAddon.CurrentPlayer.netId].Blunders++;
                 }
+                NetworkServer.SendToAll(MessageTypes.MsgMonsterballPlayerStats, new MonsterballAddon.PlayerStatesMessage() { m_player_states = MonsterballAddon.PlayerStats });
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(Client), "OnMatchStart")]
+    class Monsterball_Client_OnMatchStart
+    {
+        static void Postfix()
+        {
+            if (MPModPrivateData.MatchMode != ExtMatchMode.MONSTERBALL)
+                return;
+
+            foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
+            {
+                if (!MonsterballAddon.PlayerStats.ContainsKey(player.netId))
+                    MonsterballAddon.PlayerStats.Add(player.netId, new MonsterballAddon.MBStats());
+            }
+
+        }
+    }
+
+    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
+    class Monsterball_Client_RegisterHandlers
+    {
+        private static void OnMonsterballPlayerStats(NetworkMessage msg)
+        {
+            var msmsg = msg.ReadMessage<MonsterballAddon.PlayerStatesMessage>();
+            foreach (var mps in msmsg.m_player_states)
+            {
+                if (!MonsterballAddon.PlayerStats.ContainsKey(mps.Key))
+                {
+                    // Likely JIP
+                    MonsterballAddon.PlayerStats.Add(mps.Key, new MonsterballAddon.MBStats
+                    {
+                        Blunders = mps.Value.Blunders,
+                        Goals = mps.Value.Goals,
+                        GoalAssists = mps.Value.GoalAssists
+                    });
+                }
+                else
+                {
+                    MonsterballAddon.PlayerStats[mps.Key].Blunders = mps.Value.Blunders;
+                    MonsterballAddon.PlayerStats[mps.Key].Goals = mps.Value.Goals;
+                    MonsterballAddon.PlayerStats[mps.Key].GoalAssists = mps.Value.GoalAssists;
+                }                    
+            }
+        }
+
+        static void Postfix()
+        {
+            if (Client.GetClient() == null)
+                return;
+
+            Client.GetClient().RegisterHandler(MessageTypes.MsgMonsterballPlayerStats, OnMonsterballPlayerStats);
         }
     }
 }
