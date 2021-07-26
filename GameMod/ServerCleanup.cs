@@ -11,19 +11,19 @@ using UnityEngine;
  *       I plan to add further patches later.
  */
 namespace GameMod {
-    [HarmonyPatch(typeof(GameManager), "Awake")]
-    class ServerCleanup_GamaManager_Awake {
-        static void Postifx() {
+    [HarmonyPatch(typeof(GameManager), "SetupDedicatedServer")]
+    class ServerCleanup_GameManager_SetupDedicatedServer {
+        static void Postfix() {
             if (GameplayManager.IsDedicatedServer()) {
                 AudioListener.pause = true;
-                Debug.Log("Dediacted Server: paused AudioListener");
+                Debug.Log("Dedicated Server: paused AudioListener");
             }
         }
     }
 
     /* enable this to hear the server's audio... 
     [HarmonyPatch(typeof(GameManager), "Update")]
-    class ServerCleanup_GamaManager_OverrideAudioVolume {
+    class ServerCleanup_GameManager_OverrideAudioVolume {
         static void Postfix() {
             if (GameplayManager.IsDedicatedServer()) {
                 AudioListener.volume=1.0f;

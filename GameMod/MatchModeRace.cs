@@ -140,6 +140,7 @@ namespace GameMod {
                         flag = player.AddMissileAmmo(Race.GetAmmoAmount(MissileType.HUNTER, super), MissileType.HUNTER, false, super);
                         break;
                     case SuperType.INVULNERABILITY:
+                        player.m_spawn_invul_active = false;
                         flag = player.StartInvul(30, false);
                         break;
                     case SuperType.MISSILE_POD:

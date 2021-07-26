@@ -1,4 +1,4 @@
-olmod 0.4.2 - Overload mod
+olmod 0.4.3 - Overload mod
 Community mods for Overload
 https://github.com/overload-development-community/olmod
 
@@ -150,6 +150,8 @@ What does it do
 - In anarchy or team anarchy, a multiplayer game option to turn off assist scoring, by Sirius.
 
 - Custom team colors, by Tobias.
+
+- Disables use of audio for servers, by derhass.
 
 How does it work
 ----------------
