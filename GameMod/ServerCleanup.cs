@@ -56,14 +56,16 @@ namespace GameMod {
         }
     }
 
-    [HarmonyPatch(typeof(UnityAudio), "UpdateAudio")]
-    class ServerCleanup_NoUpdateAudio {
-        static bool Prefix() {
-            // don't do UpdateAudio on the Server
-            if (GameplayManager.IsDedicatedServer()) {
-                return false;
-            }
-            return true;
-        }
-    }
+    // This patch is commented out since it causes network audio to not work (ie: energy center sound)
+
+    //[HarmonyPatch(typeof(UnityAudio), "UpdateAudio")]
+    //class ServerCleanup_NoUpdateAudio {
+    //    static bool Prefix() {
+    //        // don't do UpdateAudio on the Server
+    //        if (GameplayManager.IsDedicatedServer()) {
+    //            return false;
+    //        }
+    //        return true;
+    //    }
+    //}
 }
