@@ -350,7 +350,11 @@ namespace GameMod
                 for (int j = 0; j < list.Count; j++)
                 {
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];
-                    GameMod.CTF.CTFStats ctfStats = GameMod.CTF.PlayerStats[player.netId];
+
+                    GameMod.CTF.CTFStats ctfStats = new GameMod.CTF.CTFStats();
+                    if (GameMod.CTF.PlayerStats.ContainsKey(player.netId))
+                        ctfStats = GameMod.CTF.PlayerStats[player.netId];
+
                     if (player && !player.m_spectator)
                     {
                         float num = (!player.gameObject.activeInHierarchy) ? 0.3f : 1f;
