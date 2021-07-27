@@ -1141,11 +1141,22 @@ namespace GameMod
             return MPTeams.TeamMessageColor(team);
         }
 
+        static MatchMode IsExtMatchModeAnarchy()
+        {
+            if (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+                return MatchMode.TEAM_ANARCHY;
+
+            return MatchMode.ANARCHY;
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
             foreach (var code in codes)
             {
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkMatch), "GetMode"))
+                    code.operand = AccessTools.Method(typeof(MPTeams_NetworkMessageManager_AddKillMessage), "IsExtMatchModeAnarchy");
+
                 if (code.opcode == OpCodes.Ldc_I4_3)
                 {
                     state++;

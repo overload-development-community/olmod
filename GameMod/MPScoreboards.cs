@@ -347,7 +347,6 @@ namespace GameMod
                         : (players[a].m_assists != players[b].m_assists ? players[b].m_assists.CompareTo(players[a].m_assists) : players[a].m_deaths.CompareTo(players[b].m_deaths))
                 );
                 Color color = MPTeams.TeamColor(team, team == GameManager.m_local_player.m_mp_team ? 2 : 0);
-                Color color2 = (team != MpTeam.TEAM0) ? UIManager.m_col_mpb4 : UIManager.m_col_mpa4;
                 for (int j = 0; j < list.Count; j++)
                 {
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];
@@ -359,32 +358,26 @@ namespace GameMod
                         {
                             UIManager.DrawQuadUI(pos, 400f, 13f, UIManager.m_col_ub0, m_alpha * num * 0.1f, 13);
                         }
-                        Color c;
                         if (player.isLocalPlayer)
                         {
                             UIManager.DrawQuadUI(pos, 410f, 12f, color, m_alpha * num * 0.15f, 20);
-                            c = color2;
-                            UIManager.DrawQuadUI(pos - Vector2.up * 12f, 400f, 1.2f, c, m_alpha * num * 0.5f, 4);
-                            UIManager.DrawQuadUI(pos + Vector2.up * 12f, 400f, 1.2f, c, m_alpha * num * 0.5f, 4);
-                        }
-                        else
-                        {
-                            c = color;
+                            UIManager.DrawQuadUI(pos - Vector2.up * 12f, 400f, 1.2f, color, m_alpha * num * 0.5f, 4);
+                            UIManager.DrawQuadUI(pos + Vector2.up * 12f, 400f, 1.2f, color, m_alpha * num * 0.5f, 4);
                         }
 
-                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 35f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod1, true));
-                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
-                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, col2 - col1 - 10f);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col2, ctfStats.Captures, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col3, ctfStats.Pickups, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col4, ctfStats.CarrierKills, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col5, ctfStats.Returns, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_kills, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 35f), 0.11f, 0.11f, color, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod1, true));
+                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, color, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
+                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, color, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, col2 - col1 - 10f);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col2, ctfStats.Captures, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col3, ctfStats.Pickups, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col4, ctfStats.CarrierKills, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col5, ctfStats.Returns, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_kills, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         if (MPModPrivateData.AssistScoring)
-                            uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_assists, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_deaths, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        c = uie.GetPingColor(player.m_avg_ping_ms);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col9, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                            uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_assists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_deaths, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        color = uie.GetPingColor(player.m_avg_ping_ms);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col9, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         pos.y += 25f;
                     }
                 }
@@ -638,7 +631,6 @@ namespace GameMod
                         : (players[a].m_assists != players[b].m_assists ? players[b].m_assists.CompareTo(players[a].m_assists) : players[a].m_deaths.CompareTo(players[b].m_deaths))
                 );
                 Color color = MPTeams.TeamColor(team, team == GameManager.m_local_player.m_mp_team ? 2 : 0);
-                Color color2 = (team != MpTeam.TEAM0) ? UIManager.m_col_mpb4 : UIManager.m_col_mpa4;
                 for (int j = 0; j < list.Count; j++)
                 {
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];
@@ -650,32 +642,26 @@ namespace GameMod
                         {
                             UIManager.DrawQuadUI(pos, 400f, 13f, UIManager.m_col_ub0, m_alpha * num * 0.1f, 13);
                         }
-                        Color c;
                         if (player.isLocalPlayer)
                         {
                             UIManager.DrawQuadUI(pos, 410f, 12f, color, m_alpha * num * 0.15f, 20);
-                            c = color2;
-                            UIManager.DrawQuadUI(pos - Vector2.up * 12f, 400f, 1.2f, c, m_alpha * num * 0.5f, 4);
-                            UIManager.DrawQuadUI(pos + Vector2.up * 12f, 400f, 1.2f, c, m_alpha * num * 0.5f, 4);
-                        }
-                        else
-                        {
-                            c = color;
+                            UIManager.DrawQuadUI(pos - Vector2.up * 12f, 400f, 1.2f, color, m_alpha * num * 0.5f, 4);
+                            UIManager.DrawQuadUI(pos + Vector2.up * 12f, 400f, 1.2f, color, m_alpha * num * 0.5f, 4);
                         }
 
-                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 35f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod1, true));
-                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
-                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, col2 - col1 - 10f);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col2, stats.Goals, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 35f), 0.11f, 0.11f, color, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod1, true));
+                        UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, color, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
+                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, color, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, col2 - col1 - 10f);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col2, stats.Goals, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         if (MPModPrivateData.AssistScoring)
-                            uie.DrawDigitsVariable(pos + Vector2.right * col3, stats.GoalAssists, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col4, stats.Blunders, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col5, player.m_kills, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                            uie.DrawDigitsVariable(pos + Vector2.right * col3, stats.GoalAssists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col4, stats.Blunders, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col5, player.m_kills, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         if (MPModPrivateData.AssistScoring)
-                            uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_assists, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_deaths, 0.65f, StringOffset.CENTER, c, m_alpha * num);
-                        c = uie.GetPingColor(player.m_avg_ping_ms);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                            uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_assists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_deaths, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        color = uie.GetPingColor(player.m_avg_ping_ms);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         pos.y += 25f;
                     }
                 }
