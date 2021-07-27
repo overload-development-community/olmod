@@ -18,7 +18,7 @@ namespace GameMod
             public static void DrawMpScoreboardRaw(UIElement uie, ref Vector2 pos)
             {
                 float col1 = -330f; // Player
-                float col2 = !NetworkMatch.m_head_to_head ? 100f : 190f; // Score/Kills
+                float col2 = 100f; // Score/Kills
                 float col3 = 190f; // Assists
                 float col4 = (!NetworkMatch.m_head_to_head) ? 280f : 220f; // Deaths
                 float col5 = 350f; // Ping
