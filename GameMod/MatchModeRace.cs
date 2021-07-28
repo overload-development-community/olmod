@@ -8,7 +8,8 @@ using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace GameMod {
+namespace GameMod
+{
     public static class Race
     {
         public static List<RacePlayer> Players = new List<RacePlayer>();
@@ -315,6 +316,13 @@ namespace GameMod {
         public List<Lap> Laps;
         public Vector3? LastDeathVec;
         public bool lastTriggerForward;
+        public bool isFinished
+        {
+            get
+            {
+                return Laps.Count() >= MPModPrivateData.LapLimit;
+            }
+        }
 
         public RacePlayer(Player _player)
         {
@@ -490,7 +498,7 @@ namespace GameMod {
             if (MPModPrivateData.LapLimit == 0)
                 return true;
 
-            if (Race.Players.Any(x => x.Laps.Count() >= MPModPrivateData.LapLimit))
+            if (Race.Players.All(x => x.isFinished))
                 NetworkMatch.End();
 
             return false;
@@ -509,7 +517,7 @@ namespace GameMod {
             if (MPModPrivateData.LapLimit == 0)
                 return true;
 
-            if (Race.Players.Any(x => x.Laps.Count() >= MPModPrivateData.LapLimit))
+            if (Race.Players.All(x => x.isFinished))
                 NetworkMatch.End();
 
             return false;
@@ -548,6 +556,13 @@ namespace GameMod {
                 var matchBest = TimeSpan.FromSeconds(Race.Players.SelectMany(x => x.Laps).Min(y => y.Time));
                 GameplayManager.AddHUDMessage($"Last Lap ({lastLap.Minutes:0}:{lastLap.Seconds:00}.{lastLap.Milliseconds:000}), Personal Best ({personalBest.Minutes:0}:{personalBest.Seconds:00}.{personalBest.Milliseconds:000}), Match Best ({matchBest.Minutes:0}:{matchBest.Seconds:00}.{matchBest.Milliseconds:000})", -1, true);
             }
+
+            if (rp.isFinished)
+            {
+                rp.player.Networkm_spectator = true;
+                MPObserver.Enable();
+            }
+
             Race.Sort();
         }
 
@@ -628,6 +643,34 @@ namespace GameMod {
         }
     }
 
+    [HarmonyPatch(typeof(Client), "OnMatchStart")]
+    class MatchModeRace_Client_OnMatchStart
+    {
+        static void Postfix()
+        {
+            foreach (var player in Overload.NetworkManager.m_Players)
+            {
+                var rp = Race.Players.FirstOrDefault(x => x.player.netId == player.netId);
+                if (player.m_spectator)
+                    Race.Players.Remove(rp);
+            }
+        }
+    }
+    
+    //[HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
+    //class MatchModeRace_NetworkMatch_StartPlaying
+    //{
+    //    static void Postfix()
+    //    {
+    //        foreach (var player in Overload.NetworkManager.m_Players)
+    //        {
+    //            var rp = Race.Players.FirstOrDefault(x => x.player.netId == player.netId);
+    //            if (player.m_spectator)
+    //                Race.Players.Remove(rp);
+    //        }
+    //    }
+    //}
+
     [HarmonyPatch(typeof(Overload.NetworkManager), "AddPlayer")]
     class NetworkManager_AddPlayer
     {
@@ -636,7 +679,7 @@ namespace GameMod {
             if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
                 return;
 
-            if (!Race.Players.Any(x => x.player == player))
+            if (!Race.Players.Any(x => x.player.netId == player.netId))
                 Race.Players.Add(new RacePlayer(player));
         }
     }
@@ -1304,9 +1347,31 @@ namespace GameMod {
     [HarmonyPatch(typeof(NetworkMatch), "NetSystemShutdown")]
     class DisableWindTunnels
     {
-        static void Prefix() {
+        static void Prefix()
+        {
             foreach (var wt in UnityEngine.Object.FindObjectsOfType<TriggerWindTunnel>())
                 wt.gameObject.SetActive(false);
+        }
+    }
+
+    [HarmonyPatch(typeof(GameManager), "Start")]
+    class MatchModeRace_GameManager_Start
+    {
+        private static void Postfix()
+        {
+            uConsole.RegisterCommand("race", "Race Mode Debug", new uConsole.DebugCommand(CmdRaceDebug));
+        }
+
+        private static void CmdRaceDebug()
+        {
+            uConsole.Log("=== RACE START ===");
+
+            foreach (var rp in Race.Players)
+            {
+                uConsole.Log(rp.player.netId.ToString() + ": " + rp.player.m_mp_name + " / " + rp.player.m_spectator.ToString());
+            }
+
+            uConsole.Log("=== RACE END ===");
         }
     }
 }
