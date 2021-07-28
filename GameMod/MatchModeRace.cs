@@ -559,7 +559,7 @@ namespace GameMod
 
             if (rp.isFinished)
             {
-                rp.player.Networkm_spectator = true;
+                rp.player.m_spectator = true;
                 MPObserver.Enable();
             }
 
@@ -627,6 +627,11 @@ namespace GameMod
                         if (rp.lastTriggerForward && lapTime > 4f)
                         {
                             NetworkServer.SendToAll(MessageTypes.MsgLapCompleted, new PlayerLapMessage { m_player_id = playerShip.c_player.netId, lapNum = (uint)rp.Laps.Count() + 1, lapTime = lapTime });
+                            if (rp.Laps.Count() + 1 >= MPModPrivateData.LapLimit)
+                            {
+                                rp.player.Networkm_spectator = true;
+                                rp.player.m_spectator = true;
+                            }
                         }
                         rp.lastTriggerForward = true;
                     }
@@ -648,6 +653,9 @@ namespace GameMod
     {
         static void Postfix()
         {
+            if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
+                return;
+
             foreach (var player in Overload.NetworkManager.m_Players)
             {
                 var rp = Race.Players.FirstOrDefault(x => x.player.netId == player.netId);
@@ -763,7 +771,7 @@ namespace GameMod
     {
         static void Postfix(UIElement __instance)
         {
-            if (!GameplayManager.IsMultiplayerActive || MPModPrivateData.MatchMode != ExtMatchMode.RACE)
+            if (!GameplayManager.IsMultiplayerActive || MPModPrivateData.MatchMode != ExtMatchMode.RACE || MPObserver.Enabled)
                 return;
 
             if (!GameplayManager.ShowHud)
@@ -793,17 +801,6 @@ namespace GameMod
             vector.y += 24f;
             __instance.DrawStringSmall($"Total: {TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Minutes:0}:{TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Seconds:00}.{TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
             vector.y += 24F;
-            //var rps = Race.Players.Where(x => x.player.m_mp_name.Length > 2);
-            //if (rps.Count() > 1)
-            //{
-            //    var rp1 = rps.ElementAt(0);
-            //    var rp2 = rps.ElementAt(1);
-            //    int pathlength;
-            //    Pathfinding.FindConnectedDistancePointPoint(rp1.player.c_player_ship.SegmentIndex, rp2.player.c_player_ship.SegmentIndex, rp1.player.c_player_ship.c_transform.position, rp2.player.c_player_ship.c_transform.position, out pathlength);
-            //    __instance.DrawStringSmall("Distance: " + pathlength.ToString(), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
-            //    vector.y += 24f;
-            //    __instance.DrawStringSmall("Pathfinding: " + Pathfinding.m_precomputed_paths_valid.ToString(), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
-            //}
         }
     }
     
