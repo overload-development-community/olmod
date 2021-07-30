@@ -2,15 +2,17 @@ using HarmonyLib;
 using Overload;
 using UnityEngine;
 
-namespace GameMod {
-    public class MPErrorSmoothingFix {
-        private static Vector3    lastPosition = new Vector3();
+namespace GameMod
+{
+    public class MPErrorSmoothingFix
+    {
+        private static Vector3 lastPosition = new Vector3();
         private static Quaternion lastRotation = new Quaternion();
-        private static Vector3    currPosition = new Vector3();
+        private static Vector3 currPosition = new Vector3();
         private static Quaternion currRotation = new Quaternion();
-        private static bool       doManualInterpolation = false;
-        private static bool       targetTransformOverridden = false;
-        private static Transform  targetTransformNode = null;
+        private static bool doManualInterpolation = false;
+        private static bool targetTransformOverridden = false;
+        private static Transform targetTransformNode = null;
 
         /* These were for debugging only
         private static int hackIsEnabled = 0;
@@ -59,7 +61,8 @@ namespace GameMod {
         {
             doManualInterpolation = true;
             targetTransformNode = GameManager.m_local_player.c_player_ship.transform;
-            if (targetTransformNode) {
+            if (targetTransformNode)
+            {
                 GameManager.m_local_player.c_player_ship.c_rigidbody.interpolation = RigidbodyInterpolation.None;
                 currPosition = targetTransformNode.position;
                 currRotation = targetTransformNode.rotation;
@@ -93,8 +96,10 @@ namespace GameMod {
         // undo the transformation we modified
         private static void undoTransformOverride()
         {
-            if (targetTransformOverridden) {
-                if (targetTransformNode != null) {
+            if (targetTransformOverridden)
+            {
+                if (targetTransformNode != null)
+                {
                     targetTransformNode.position = currPosition;
                     targetTransformNode.rotation = currRotation;
                 }
@@ -103,43 +108,65 @@ namespace GameMod {
         }
 
         [HarmonyPatch(typeof(GameManager), "FixedUpdate")]
-        class MPErrorSmoothingFix_UpdateCycle {
-            static void Prefix() {
+        class MPErrorSmoothingFix_UpdateCycle
+        {
+            static void Prefix()
+            {
                 // only on the Client, in Multiplayer, in an active game, not during death roll:
-                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying) {
+                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying && !MPObserver.Enabled)
+                {
                     // undo potential override also before FixedUpdate
                     undoTransformOverride();
                 }
             }
 
-            static void Postfix() {
+            static void Postfix()
+            {
                 // only on the Client, in Multiplayer, in an active game, not during death roll:
-                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying) {
-                    if (!doManualInterpolation) {
+                if (MPObserver.Enabled)
+                    return;
+
+                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying)
+                {
+                    if (!doManualInterpolation)
+                    {
                         enableManualInterpolation();
                     }
                     lastPosition = currPosition;
                     lastRotation = currRotation;
                     currPosition = targetTransformNode.position;
                     currRotation = targetTransformNode.rotation;
-                } else if (doManualInterpolation) {
+                }
+                else if (doManualInterpolation)
+                {
                     disableManualInterpolation();
                 }
             }
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]
-        class MPErrorSmoothingFix_FixedUpdateCycle {
-            static void Prefix() {
-                if (doManualInterpolation && (targetTransformNode != null)) {
+        class MPErrorSmoothingFix_FixedUpdateCycle
+        {
+            static void Prefix()
+            {
+                if (MPObserver.Enabled)
+                    return;
+
+                if (doManualInterpolation && (targetTransformNode != null))
+                {
                     doTransformOverride();
                 }
             }
         }
-    
+
         [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
-        class MPErrorSmoothingFix_InitBeforeEachMatch {
-            private static void Prefix() {
+        class MPErrorSmoothingFix_InitBeforeEachMatch
+        {
+            private static void Prefix()
+            {
+                if (MPObserver.Enabled)
+                    return;
+
                 disableManualInterpolation();
             }
         }
