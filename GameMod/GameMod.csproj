@@ -110,6 +110,7 @@
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
     <Compile Include="JoystickCurveEditor.cs" />
+    <Compile Include="JoystickRotationFix.cs" />
     <Compile Include="LevelError.cs" />
     <Compile Include="MatchModeRace.cs" />
     <Compile Include="MessageTypes.cs" />

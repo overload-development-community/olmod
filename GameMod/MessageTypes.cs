@@ -35,6 +35,8 @@ namespace GameMod
         public const short MsgNewPlayerSnapshotToClient = 140;
         public const short MsgCTFPlayerStats = 141;
         public const short MsgMonsterballPlayerStats = 142;
+
+        public const short MsgSetTurnRampMode = 145;
         // Do not use 400, it is in use by Mod-Projdata.dll.
     }
 }
