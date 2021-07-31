@@ -549,18 +549,19 @@ namespace GameMod
             PlayerLapMessage plm = rawMsg.ReadMessage<PlayerLapMessage>();
             var rp = Race.Players.FirstOrDefault(x => x.player.netId.Value == plm.m_player_id.Value);
             rp.Laps.Add(new RacePlayer.Lap { Num = plm.lapNum, Time = plm.lapTime });
+
             if (GameManager.m_local_player == rp.player)
             {
                 var lastLap = TimeSpan.FromSeconds(rp.Laps.LastOrDefault().Time);
                 var personalBest = TimeSpan.FromSeconds(rp.Laps.Min(x => x.Time));
                 var matchBest = TimeSpan.FromSeconds(Race.Players.SelectMany(x => x.Laps).Min(y => y.Time));
                 GameplayManager.AddHUDMessage($"Last Lap ({lastLap.Minutes:0}:{lastLap.Seconds:00}.{lastLap.Milliseconds:000}), Personal Best ({personalBest.Minutes:0}:{personalBest.Seconds:00}.{personalBest.Milliseconds:000}), Match Best ({matchBest.Minutes:0}:{matchBest.Seconds:00}.{matchBest.Milliseconds:000})", -1, true);
-            }
 
-            if (rp.isFinished)
-            {
-                rp.player.m_spectator = true;
-                MPObserver.Enable();
+                if (rp.isFinished)
+                {
+                    GameManager.m_local_player.m_spectator = true;
+                    MPObserver.Enable();
+                }
             }
 
             Race.Sort();
@@ -630,7 +631,6 @@ namespace GameMod
                             if (rp.Laps.Count() + 1 >= MPModPrivateData.LapLimit)
                             {
                                 rp.player.Networkm_spectator = true;
-                                rp.player.m_spectator = true;
                             }
                         }
                         rp.lastTriggerForward = true;
