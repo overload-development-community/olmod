@@ -1380,7 +1380,7 @@ END_ENTRY
                 UIManager.m_menu_selection == 10)
             {
                 //ExtMenuManager.mms_ext_lap_limit = (ExtMenuManager.mms_ext_lap_limit + 21 + UIManager.m_select_dir) % 21;
-                ExtMenuManager.mms_ext_lap_limit = Math.Max(0, Math.Min(50, ExtMenuManager.mms_ext_lap_limit + UIManager.m_select_dir * 1));
+                ExtMenuManager.mms_ext_lap_limit = Math.Max(0, Math.Min(50, ExtMenuManager.mms_ext_lap_limit + UIManager.m_select_dir * 5));
                 MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
             }
         }

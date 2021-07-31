@@ -648,6 +648,7 @@ namespace GameMod
         }
     }
 
+    // Remove Players who are strictly observers from scoreboard
     [HarmonyPatch(typeof(Client), "OnMatchStart")]
     class MatchModeRace_Client_OnMatchStart
     {
@@ -664,20 +665,6 @@ namespace GameMod
             }
         }
     }
-    
-    //[HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
-    //class MatchModeRace_NetworkMatch_StartPlaying
-    //{
-    //    static void Postfix()
-    //    {
-    //        foreach (var player in Overload.NetworkManager.m_Players)
-    //        {
-    //            var rp = Race.Players.FirstOrDefault(x => x.player.netId == player.netId);
-    //            if (player.m_spectator)
-    //                Race.Players.Remove(rp);
-    //        }
-    //    }
-    //}
 
     [HarmonyPatch(typeof(Overload.NetworkManager), "AddPlayer")]
     class NetworkManager_AddPlayer
@@ -1351,24 +1338,4 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(GameManager), "Start")]
-    class MatchModeRace_GameManager_Start
-    {
-        private static void Postfix()
-        {
-            uConsole.RegisterCommand("race", "Race Mode Debug", new uConsole.DebugCommand(CmdRaceDebug));
-        }
-
-        private static void CmdRaceDebug()
-        {
-            uConsole.Log("=== RACE START ===");
-
-            foreach (var rp in Race.Players)
-            {
-                uConsole.Log(rp.player.netId.ToString() + ": " + rp.player.m_mp_name + " / " + rp.player.m_spectator.ToString());
-            }
-
-            uConsole.Log("=== RACE END ===");
-        }
-    }
 }
