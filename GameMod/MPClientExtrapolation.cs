@@ -644,9 +644,6 @@ namespace GameMod {
     [HarmonyPatch(typeof(Client), "FixedUpdate")]
     class MPClientExtrapolation_ClientFixedUpdate{
         static bool Prefix(){
-            if (Overload.NetworkManager.IsServer() || NetworkMatch.m_match_state != MatchState.PLAYING) {
-                return true;
-            }
             // Client.FixedUpdate() did nothing except call UpdateInterpolationBuffer,
             // which we now ignore
             return false;
