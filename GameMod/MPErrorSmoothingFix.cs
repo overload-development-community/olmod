@@ -112,21 +112,14 @@ namespace GameMod
         {
             static void Prefix()
             {
-                // only on the Client, in Multiplayer, in an active game, not during death or death roll:
-                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying && !GameManager.m_local_player.c_player_ship.m_dead && !MPObserver.Enabled)
-                {
-                    // undo potential override also before FixedUpdate
-                    undoTransformOverride();
-                }
+                // undo potential override also before FixedUpdate
+                undoTransformOverride();
             }
 
             static void Postfix()
             {
                 // only on the Client, in Multiplayer, in an active game, not during death or death roll:
-                if (MPObserver.Enabled)
-                    return;
-
-                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying && !GameManager.m_local_player.c_player_ship.m_dead)
+                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying && !GameManager.m_local_player.c_player_ship.m_dead && !MPObserver.Enabled )
                 {
                     if (!doManualInterpolation)
                     {
@@ -134,8 +127,11 @@ namespace GameMod
                     }
                     lastPosition = currPosition;
                     lastRotation = currRotation;
-                    currPosition = targetTransformNode.position;
-                    currRotation = targetTransformNode.rotation;
+                    if (targetTransformNode != null)
+                    {
+                        currPosition = targetTransformNode.position;
+                        currRotation = targetTransformNode.rotation;
+                    }
                 }
                 else if (doManualInterpolation)
                 {
@@ -149,9 +145,6 @@ namespace GameMod
         {
             static void Prefix()
             {
-                if (MPObserver.Enabled)
-                    return;
-
                 if (doManualInterpolation && (targetTransformNode != null))
                 {
                     doTransformOverride();
@@ -164,9 +157,6 @@ namespace GameMod
         {
             private static void Prefix()
             {
-                if (MPObserver.Enabled)
-                    return;
-
                 disableManualInterpolation();
             }
         }
