@@ -713,16 +713,24 @@ namespace GameMod {
         }
     }
 
-    // Skip if observer (MaybeFireWeapon does)
-    [HarmonyPatch(typeof(PlayerShip), "MaybeFireMissile")]
-    class MPObserver_PlayerShip_MaybeFireMissile
+    // Observers shouldn't count against "head to head" calc - short enough method to not bother transpiling
+    [HarmonyPatch(typeof(NetworkMatch), "SetMode")]
+    class MPObserver_NetworkMatch_SetMode
     {
-        static bool Prefix(PlayerShip __instance)
+        static bool Prefix(MatchMode mode, ref MatchMode ___m_match_mode)
         {
-            if (__instance.c_player.m_spectator)
-                return false;
-
-            return true;
+            ___m_match_mode = mode;
+            if (mode == MatchMode.ANARCHY)
+            {
+                NetworkMatch.m_head_to_head = (NetworkMatch.m_players.Count(x => x.Value.m_name.StartsWith("OBSERVER")) < 3);
+            }
+            else
+            {
+                NetworkMatch.m_head_to_head = false;
+            }
+            return false;
         }
     }
+
+
 }
