@@ -630,7 +630,7 @@ namespace GameMod {
     class MPClientExtrapolation_ClientUpdate{
         static bool Prefix(){
             // This function is called once per frame from Client.Update()
-            if (Overload.NetworkManager.IsServer() || NetworkMatch.m_match_state != MatchState.PLAYING) {
+            if (Overload.NetworkManager.IsServer() || (NetworkMatch.m_match_state != MatchState.PLAYING && NetworkMatch.m_match_state != MatchState.POSTGAME))  {
                 // no need to move ships around
                 return false;
             }
