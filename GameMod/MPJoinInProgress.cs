@@ -37,7 +37,7 @@ namespace GameMod {
             return GameManager.MultiplayerMission.GetLevelFileName(m_match_force_playlist_level_idx);
         }
 
-        public static void SetReady(Player player, bool ready)
+        public static void SetReady(Player player, bool ready, bool serverPreReady = false)
         {
             // Keep track of who has been set ready so we're not wasting CPU cycles making someone visible who is already visible.  Especially needed with the JIP visibility workaround.
             if (ready)
@@ -61,8 +61,8 @@ namespace GameMod {
             player.c_player_ship.gameObject.layer = ready ? 9 : 2;
             player.c_player_ship.enabled = ready;
             player.c_player_ship.gameObject.SetActive(ready);
-            player.enabled = ready;
-            player.gameObject.SetActive(ready);
+            player.enabled = ready || serverPreReady;
+            player.gameObject.SetActive(ready || serverPreReady);
 
             if (ready)
             {
@@ -379,7 +379,7 @@ namespace GameMod {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = false });
                     }
                 }
-                MPJoinInProgress.SetReady(newPlayer, false);
+                MPJoinInProgress.SetReady(newPlayer, false, true); // special case: do not disable the player completely, as this would prevent this player to be sent to new clients joining before we finally switch to ready
             }
 
             pregameWait = SendPreGame(connectionId, pregameWait);
