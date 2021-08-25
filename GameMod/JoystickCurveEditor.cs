@@ -547,7 +547,8 @@ namespace GameMod
                         }
                         else if (i == 200)
                         {
-                            result = a.curve_lookup[199] + ((axis_value - 0.995f) / 0.005f * (1f - a.curve_lookup[199]));
+                            result = Mathf.Clamp(a.curve_lookup[199] + ((axis_value - 0.995f) / 0.005f * (a.curve_lookup[199] - a.curve_lookup[198])), 0f, 1f);
+                            //result = a.curve_lookup[199] + ((axis_value - 0.995f) / 0.005f * (1f - a.curve_lookup[199]));
                         }
                         else
                         {
