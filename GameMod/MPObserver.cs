@@ -713,5 +713,16 @@ namespace GameMod {
         }
     }
 
+    // Skip if observer (MaybeFireWeapon does)
+    [HarmonyPatch(typeof(PlayerShip), "MaybeFireMissile")]
+    class MPObserver_PlayerShip_MaybeFireMissile
+    {
+        static bool Prefix(PlayerShip __instance)
+        {
+            if (__instance.c_player.m_spectator)
+                return false;
 
+            return true;
+        }
+    }
 }

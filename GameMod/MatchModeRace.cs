@@ -8,7 +8,8 @@ using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace GameMod {
+namespace GameMod
+{
     public static class Race
     {
         public static List<RacePlayer> Players = new List<RacePlayer>();
@@ -315,6 +316,13 @@ namespace GameMod {
         public List<Lap> Laps;
         public Vector3? LastDeathVec;
         public bool lastTriggerForward;
+        public bool isFinished
+        {
+            get
+            {
+                return Laps.Count() >= MPModPrivateData.LapLimit;
+            }
+        }
 
         public RacePlayer(Player _player)
         {
@@ -490,7 +498,7 @@ namespace GameMod {
             if (MPModPrivateData.LapLimit == 0)
                 return true;
 
-            if (Race.Players.Any(x => x.Laps.Count() >= MPModPrivateData.LapLimit))
+            if (Race.Players.All(x => x.isFinished))
                 NetworkMatch.End();
 
             return false;
@@ -509,7 +517,7 @@ namespace GameMod {
             if (MPModPrivateData.LapLimit == 0)
                 return true;
 
-            if (Race.Players.Any(x => x.Laps.Count() >= MPModPrivateData.LapLimit))
+            if (Race.Players.All(x => x.isFinished))
                 NetworkMatch.End();
 
             return false;
@@ -541,13 +549,21 @@ namespace GameMod {
             PlayerLapMessage plm = rawMsg.ReadMessage<PlayerLapMessage>();
             var rp = Race.Players.FirstOrDefault(x => x.player.netId.Value == plm.m_player_id.Value);
             rp.Laps.Add(new RacePlayer.Lap { Num = plm.lapNum, Time = plm.lapTime });
+
             if (GameManager.m_local_player == rp.player)
             {
                 var lastLap = TimeSpan.FromSeconds(rp.Laps.LastOrDefault().Time);
                 var personalBest = TimeSpan.FromSeconds(rp.Laps.Min(x => x.Time));
                 var matchBest = TimeSpan.FromSeconds(Race.Players.SelectMany(x => x.Laps).Min(y => y.Time));
                 GameplayManager.AddHUDMessage($"Last Lap ({lastLap.Minutes:0}:{lastLap.Seconds:00}.{lastLap.Milliseconds:000}), Personal Best ({personalBest.Minutes:0}:{personalBest.Seconds:00}.{personalBest.Milliseconds:000}), Match Best ({matchBest.Minutes:0}:{matchBest.Seconds:00}.{matchBest.Milliseconds:000})", -1, true);
+
+                if (rp.isFinished)
+                {
+                    GameManager.m_local_player.m_spectator = true;
+                    MPObserver.Enable();
+                }
             }
+
             Race.Sort();
         }
 
@@ -612,6 +628,10 @@ namespace GameMod {
                         if (rp.lastTriggerForward && lapTime > 4f)
                         {
                             NetworkServer.SendToAll(MessageTypes.MsgLapCompleted, new PlayerLapMessage { m_player_id = playerShip.c_player.netId, lapNum = (uint)rp.Laps.Count() + 1, lapTime = lapTime });
+                            if (rp.Laps.Count() + 1 >= MPModPrivateData.LapLimit)
+                            {
+                                rp.player.Networkm_spectator = true;
+                            }
                         }
                         rp.lastTriggerForward = true;
                     }
@@ -628,6 +648,24 @@ namespace GameMod {
         }
     }
 
+    // Remove Players who are strictly observers from scoreboard
+    [HarmonyPatch(typeof(Client), "OnMatchStart")]
+    class MatchModeRace_Client_OnMatchStart
+    {
+        static void Postfix()
+        {
+            if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
+                return;
+
+            foreach (var player in Overload.NetworkManager.m_Players)
+            {
+                var rp = Race.Players.FirstOrDefault(x => x.player.netId == player.netId);
+                if (player.m_spectator)
+                    Race.Players.Remove(rp);
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(Overload.NetworkManager), "AddPlayer")]
     class NetworkManager_AddPlayer
     {
@@ -636,7 +674,7 @@ namespace GameMod {
             if (MPModPrivateData.MatchMode != ExtMatchMode.RACE)
                 return;
 
-            if (!Race.Players.Any(x => x.player == player))
+            if (!Race.Players.Any(x => x.player.netId == player.netId))
                 Race.Players.Add(new RacePlayer(player));
         }
     }
@@ -720,7 +758,7 @@ namespace GameMod {
     {
         static void Postfix(UIElement __instance)
         {
-            if (!GameplayManager.IsMultiplayerActive || MPModPrivateData.MatchMode != ExtMatchMode.RACE)
+            if (!GameplayManager.IsMultiplayerActive || MPModPrivateData.MatchMode != ExtMatchMode.RACE || MPObserver.Enabled)
                 return;
 
             if (!GameplayManager.ShowHud)
@@ -750,17 +788,6 @@ namespace GameMod {
             vector.y += 24f;
             __instance.DrawStringSmall($"Total: {TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Minutes:0}:{TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Seconds:00}.{TimeSpan.FromSeconds(NetworkMatch.m_match_elapsed_seconds).Milliseconds:000}", vector, 0.4f, StringOffset.LEFT, UIManager.m_col_damage, 1f);
             vector.y += 24F;
-            //var rps = Race.Players.Where(x => x.player.m_mp_name.Length > 2);
-            //if (rps.Count() > 1)
-            //{
-            //    var rp1 = rps.ElementAt(0);
-            //    var rp2 = rps.ElementAt(1);
-            //    int pathlength;
-            //    Pathfinding.FindConnectedDistancePointPoint(rp1.player.c_player_ship.SegmentIndex, rp2.player.c_player_ship.SegmentIndex, rp1.player.c_player_ship.c_transform.position, rp2.player.c_player_ship.c_transform.position, out pathlength);
-            //    __instance.DrawStringSmall("Distance: " + pathlength.ToString(), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
-            //    vector.y += 24f;
-            //    __instance.DrawStringSmall("Pathfinding: " + Pathfinding.m_precomputed_paths_valid.ToString(), vector, 0.4f, StringOffset.CENTER, UIManager.m_col_damage, 1f);
-            //}
         }
     }
     
@@ -1304,9 +1331,11 @@ namespace GameMod {
     [HarmonyPatch(typeof(NetworkMatch), "NetSystemShutdown")]
     class DisableWindTunnels
     {
-        static void Prefix() {
+        static void Prefix()
+        {
             foreach (var wt in UnityEngine.Object.FindObjectsOfType<TriggerWindTunnel>())
                 wt.gameObject.SetActive(false);
         }
     }
+
 }

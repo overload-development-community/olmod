@@ -439,7 +439,7 @@ namespace GameMod
                 for (int j = 0; j < GameMod.Race.Players.Count; j++)
                 {
                     Player player = GameMod.Race.Players[j].player;
-                    if (player && !player.m_spectator)
+                    if (player && (!player.m_spectator || GameMod.Race.Players[j].isFinished))
                     {
                         float num = (!player.gameObject.activeInHierarchy) ? 0.3f : 1f;
                         if (j % 2 == 0)
@@ -516,7 +516,7 @@ namespace GameMod
                 {
                     temp_pos.y = pos.y;
                     Player player = GameMod.Race.Players[i].player;
-                    if (player && !player.m_spectator)
+                    if (player && (!player.m_spectator || GameMod.Race.Players[i].isFinished))
                     {
                         var rp = GameMod.Race.Players[i];
                         Color color3 = (!player.isLocalPlayer) ? UIManager.m_col_ui1 : UIManager.m_col_hi3;
