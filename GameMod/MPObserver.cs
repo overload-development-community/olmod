@@ -735,7 +735,7 @@ namespace GameMod {
             ___m_match_mode = mode;
             if (mode == MatchMode.ANARCHY)
             {
-                NetworkMatch.m_head_to_head = (NetworkMatch.m_players.Count(x => x.Value.m_name.StartsWith("OBSERVER")) < 3);
+                NetworkMatch.m_head_to_head = (NetworkMatch.m_players.Count(x => !x.Value.m_name.StartsWith("OBSERVER")) < 3);
             }
             else
             {

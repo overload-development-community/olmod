@@ -115,6 +115,12 @@ namespace GameMod {
             }
 
             MPJoinInProgress.SetReady(player, msg.ready);
+
+            // Check if we should be using 1v1 scoring
+            if (NetworkMatch.GetMode() == MatchMode.ANARCHY)
+            {
+                NetworkMatch.m_head_to_head = (NetworkMatch.m_players.Count(x => !x.Value.m_name.StartsWith("OBSERVER")) < 3);
+            }
         }
 
         static void Postfix()
@@ -310,6 +316,12 @@ namespace GameMod {
                     m_assists = player.m_assists
                 };
             NetworkServer.SendToClient(connectionId, MessageTypes.MsgSetMatchState, msg);
+
+            // Check if we should be using 1v1 scoring
+            if (NetworkMatch.GetMode() == MatchMode.ANARCHY)
+            {
+                NetworkMatch.m_head_to_head = (NetworkMatch.m_players.Count(x => !x.Value.m_name.StartsWith("OBSERVER")) < 3);
+            }
 
             // Send disconnected pilot stats as separate message
             if (MPTweaks.ClientHasTweak(connectionId, "jip"))
