@@ -151,6 +151,9 @@ namespace GameMod
             float alpha_mod = 1f;
             float w = 120f;
 
+            // Add partially opaque background
+            UIManager.DrawQuadUI(pos - Vector2.down * 135f, 140f, 160f, UIManager.m_col_black, 0.95f, 22);
+
             if (killer)
             {
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(killer.m_mp_team, 0) : UIManager.m_col_red;
@@ -187,7 +190,7 @@ namespace GameMod
                 DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, selfDamages);
                 pos.x -= 70f;
                 pos.y += 48f;
-            }            
+            }
         }
 
         static void DrawHeader(UIElement uie, Vector2 pos, string s, float w, Color c, float sc)
