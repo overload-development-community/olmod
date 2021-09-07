@@ -943,4 +943,70 @@ namespace GameMod
             }
         }
     }
+
+    /// <summary>
+    /// https://github.com/overload-development-community/olmod/issues/148
+    /// </summary>
+    [HarmonyPatch(typeof(UIElement), "DrawSoundMenu")]
+    class Menus_UIElement_DrawSoundMenu
+    {
+        private static void DrawSoundReload(UIElement uie, ref Vector2 position)
+        {
+            position.y += 62f;
+            uie.SelectAndDrawItem("REINITIALIZE AUDIO DEVICE", position, 5, false);
+        }
+
+        // First SelectAndDrawStringOptionItem() after "SPEAKER MODE" string, draw our menu
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "SPEAKER MODE")
+                    state = 1;
+
+                if (state == 1 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "SelectAndDrawStringOptionItem"))
+                {
+                    state = 2;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawSoundMenu), "DrawSoundReload"));
+                    continue;
+                }
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// https://github.com/overload-development-community/olmod/issues/148
+    /// </summary>
+    [HarmonyPatch(typeof(MenuManager), "SoundOptionsUpdate")]
+    class Menus_MenuManager_SoundOptionsUpdate
+    {
+        private static void HandleSoundReload(int menu_selection)
+        {
+            if (menu_selection == 5)
+            {
+                AudioSettings.Reset(AudioSettings.GetConfiguration());
+                MenuManager.PlaySelectSound(1f);
+            }
+        }
+
+        // Handle menu selection just before MenuManager.UnReverseOption
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "UnReverseOption"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldloc_1) { labels = code.labels };
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_SoundOptionsUpdate), "HandleSoundReload"));
+                    code.labels = null;
+                }
+                yield return code;
+            }
+        }
+    }
 }
