@@ -143,7 +143,7 @@ namespace GameMod
 
         static void DrawDeathSummary(UIElement uie)
         {
-            Vector2 pos = new Vector2(UIManager.UI_LEFT, UIManager.UI_TOP);
+            Vector2 pos = new Vector2(UIManager.UI_LEFT + 160f, UIManager.UI_TOP + 220f);
             Player killer = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == MPDeathReview.lastDeathReview.m_killer_id);
             Player assister = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == MPDeathReview.lastDeathReview.m_assister_id);
 
@@ -155,28 +155,24 @@ namespace GameMod
             {
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(killer.m_mp_team, 0) : UIManager.m_col_red;
                 var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == killer.netId).Value;
-                pos.x = UIManager.SCREEN_CENTER.x;
-                pos.y = UIManager.UI_TOP + 200f;
-                DrawHeader(uie, pos, "KILLER", w, c, 0.5f);
-                pos.y += 48f;
-                uie.DrawStringSmall($"{killer.m_mp_name} ({(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0})", pos, 0.5f, StringOffset.CENTER, c, alpha_mod, -1f);
+                DrawHeader(uie, pos, $"KILLER: {killer.m_mp_name} [{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
                 pos.y += 32f;
-                pos.x -= 30f;
-                DrawDamageSummary(uie, pos, c, 0.6f, alpha_mod, damages);
+                pos.x += 70f;
+                DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, damages);
+                pos.x -= 70f;
+                pos.y += 48f;
             }
 
             if (assister != null && assister.netId != killer.netId)
             {
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(assister.m_mp_team, 0) : UIManager.m_col_white;
                 var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == assister.netId).Value;
-                pos.x = UIManager.UI_LEFT + 300f;
-                pos.y = UIManager.UI_TOP + 250f;
-                DrawHeader(uie, pos, "ASSIST", w, c, 0.4f);
+                DrawHeader(uie, pos, $"ASSIST: {assister.m_mp_name} [{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                pos.y += 32f;
+                pos.x += 70f;
+                DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, damages);
+                pos.x -= 70f;
                 pos.y += 48f;
-                uie.DrawStringSmall($"{assister.m_mp_name} ({(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0})", pos, 0.4f, StringOffset.CENTER, c, alpha_mod, -1f);
-                pos.y += 24f;
-                pos.x -= 30f;
-                DrawDamageSummary(uie, pos, c, 0.5f, alpha_mod, damages);
             }
 
             // Self and misc damage
@@ -185,12 +181,12 @@ namespace GameMod
             {
                 var selfDamages = MPDeathReview.lastDeathReview.players.Where(x => selfIds.Contains(x.Key)).SelectMany(x => x.Value);
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
-                pos.x = UIManager.UI_RIGHT - 300f;
-                pos.y = UIManager.UI_TOP + 250f;
-                DrawHeader(uie, pos, "SELF/MISC", w, c, 0.4f);
+                DrawHeader(uie, pos, "SELF/MISC", w, c, 0.35f);
+                pos.y += 32f;
+                pos.x += 70f;
+                DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, selfDamages);
+                pos.x -= 70f;
                 pos.y += 48f;
-                pos.x -= 30f;
-                DrawDamageSummary(uie, pos, c, 0.5f, alpha_mod, selfDamages);
             }            
         }
 
@@ -208,7 +204,7 @@ namespace GameMod
             uie.DrawWideBox(pos, w, 1.2f, c, 1f, 4);
         }
 
-        static void DrawDamageSummary(UIElement uie, Vector2 pos, Color c, float sc, float m_alpha, IEnumerable<DamageSummary> ds)
+        static void DrawDamageSummary(UIElement uie, ref Vector2 pos, Color c, float sc, float m_alpha, IEnumerable<DamageSummary> ds)
         {
             float w = 60f * sc;
 
@@ -235,7 +231,7 @@ namespace GameMod
             pos.x = UIManager.UI_RIGHT - 100f;
             pos.y = UIManager.UI_TOP + 400f;
 
-            DrawDamageSummary(uie, pos, UIManager.m_col_ui0, 0.75f, 1f, MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value));
+            DrawDamageSummary(uie, ref pos, UIManager.m_col_ui0, 0.75f, 1f, MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value));
         }
 
         public static int GetTextureIndex(ProjPrefab prefab)
