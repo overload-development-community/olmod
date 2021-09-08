@@ -114,12 +114,21 @@ namespace GameMod {
             uConsole.Log("UI Color changed");
         }
 
+        static void CmdToggleDebugging() {
+            Debugging.Enabled = !Debugging.Enabled;
+
+            if (Debugging.Enabled) {
+
+            }
+        }
+
         public static void RegisterCommands()
         {
             uConsole.RegisterCommand("reload_missions", "Reload missions", new uConsole.DebugCommand(CmdReloadMissions));
             uConsole.RegisterCommand("xp", "Set XP", new uConsole.DebugCommand(CmdXP));
             uConsole.RegisterCommand("mipmap_bias", "Set Mipmap bias (-16 ... 15.99)", new uConsole.DebugCommand(CmdMipmapBias));
             uConsole.RegisterCommand("ui_color", "Set UI color #aabbcc", new uConsole.DebugCommand(CmdUIColor));
+            uConsole.RegisterCommand("toggle_debugging", "Toggle the display of debugging info", new uConsole.DebugCommand(CmdToggleDebugging));
         }
     }
 

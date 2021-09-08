@@ -11,8 +11,9 @@ namespace GameMod {
         private static Dictionary<int, DateTime> lastRespawn = new Dictionary<int, DateTime>();
         private static FieldInfo _NetworkSpawnPoints_m_player_pos_Field = typeof(NetworkSpawnPoints).GetField("m_player_pos", BindingFlags.NonPublic | BindingFlags.Static);
         private static FieldInfo _NetworkSpawnPoints_m_player_team_Field = typeof(NetworkSpawnPoints).GetField("m_player_team", BindingFlags.NonPublic | BindingFlags.Static);
+        private static MethodInfo _UIManager_VisibilityRaycast_Method = AccessTools.Method(typeof(UIManager), "VisibilityRaycast");
 
-        private static List<Quaternion> m_player_rot = new List<Quaternion>();
+        internal static List<Quaternion> m_player_rot = new List<Quaternion>();
 
         public static bool Prefix(MpTeam team, List<int> candidates, ref int __result) {
             m_player_rot.Clear();
@@ -45,7 +46,7 @@ namespace GameMod {
                     var segnum = GetSegmentNumber(position);
                     var playerSegnum = GetSegmentNumber(playerPositions[j]);
 
-                    var distance = Pathfinding.FindConnectedDistance(segnum, playerSegnum, out int _);
+                    var distance = FindShortestPath(segnum, playerSegnum, -1, 9999f);
                     if (distance <= 0f || distance >= 9999f) {
                         distance = RUtility.FindVec3Distance(position - playerPositions[j]);
                     }
@@ -61,6 +62,10 @@ namespace GameMod {
 
             for (int i = 0; i < candidates.Count; i++) {
                 float respawnPointScore = GetRespawnPointScore(team, candidates[i], distances, max);
+
+                // Add a +/- 5% random factor.
+                respawnPointScore *= UnityEngine.Random.Range(0.95f, 1.05f);
+
                 if (respawnPointScore > num) {
                     num = respawnPointScore;
                     result = i;
@@ -73,19 +78,8 @@ namespace GameMod {
             return false;
         }
 
-        private static int GetSegmentNumber(Vector3 position) {
-            var best = -1;
-            var bestMagnitude = float.MaxValue;
-
-            for (int i = 0; i < Pathfinding.Segments.Length; i++) {
-                var magnitude = (position - Pathfinding.Segments[i].Center).magnitude;
-                if (magnitude < bestMagnitude) {
-                    best = i;
-                    bestMagnitude = magnitude;
-                }
-            }
-
-            return best;
+        internal static int GetSegmentNumber(Vector3 position) {
+            return GameManager.m_level_data.FindSegmentContainingWorldPosition(position);
         }
 
         public static float GetRespawnPointScore(MpTeam team, int idx, Dictionary<int, List<float>> distances, float max) {
@@ -102,19 +96,30 @@ namespace GameMod {
             for (int i = 0; i < count; i++) {
                 var dist = Math.Abs(distances[idx][i]);
                 if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
-                    var angle = Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward));
-
                     closest = Math.Min(closest, dist);
-                    leastLoS = Math.Min(leastLoS, angle);
+
+                    Vector3 vector;
+                    vector.x = playerPositions[i].x - spawnPoint.position.x;
+                    vector.y = playerPositions[i].y - spawnPoint.position.y;
+                    vector.z = playerPositions[i].z - spawnPoint.position.z;
+                    float vectorDist = Mathf.Max(0.1f, vector.magnitude);
+                    vector.x /= vectorDist;
+                    vector.y /= vectorDist;
+                    vector.z /= vectorDist;
+
+                    if ((bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { spawnPoint.position, vector, vectorDist })) {
+                        var angle = Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward));
+                        leastLoS = Math.Min(leastLoS, angle);
+                    }
                 }
 
                 if (dist < 10f) {
-                    scale = Math.Min(scale, dist / 10f);
+                    scale = (float)Math.Pow(Math.Min(scale, dist / 10f), 2);
                 }
             }
 
-            // Score the spawn point with a +/- 5% random factor.
-            var score = Math.Min(closest / Math.Max(max, 1f), 1f) * Math.Min(leastLoS / 15f, 1f) * scale * UnityEngine.Random.Range(0.95f, 1.05f);
+            // Score the spawn point.
+            var score = Math.Min(closest / Math.Max(max, 1f), 1f) * Math.Min(leastLoS / 30f, 1f) * scale;
 
             // Avoid respawning two ships on the same respawn point within a short amount of time.
             if (lastRespawn.ContainsKey(idx) && lastRespawn[idx] > DateTime.Now.AddSeconds(-2)) {
@@ -122,6 +127,118 @@ namespace GameMod {
             }
 
             return score;
+        }
+
+        private static MethodInfo _Pathfinding_LegalEntryPortal_Method = AccessTools.Method(typeof(Pathfinding), "LegalEntryPortal");
+        private static MethodInfo _Pathfinding_MarkAllSegments_Method = AccessTools.Method(typeof(Pathfinding), "MarkAllSegments");
+        private static MethodInfo _Pathfinding_StorePath1_Method = AccessTools.Method(typeof(Pathfinding), "StorePath1");
+        private static FieldInfo _Pathfinding_m_level_data_Field = typeof(Pathfinding).GetField("m_level_data", BindingFlags.NonPublic | BindingFlags.Static);
+        private static FieldInfo _Pathfinding_m_path_nodes_Field = typeof(Pathfinding).GetField("m_path_nodes", BindingFlags.NonPublic | BindingFlags.Static);
+        private static FieldInfo _Pathfinding_m_segment_buffer_Field = typeof(Pathfinding).GetField("m_segment_buffer", BindingFlags.NonPublic | BindingFlags.Static);
+
+        public static float FindShortestPath(int start_seg, int end_seg, int avoid_seg, float max_distance) {
+            int num = 0;
+            int num2 = 1;
+            int num3 = end_seg;
+            float path_distance = 0f;
+            int path_length = -1;
+            if (start_seg == -1 || end_seg == -1) {
+                path_length = -1;
+                return 9999f;
+            }
+            if (Pathfinding.Segments[num3].Pathfinding == PathfindingType.NONE) {
+                path_length = -1;
+                return 9999f;
+            }
+            if (_Pathfinding_m_level_data_Field.GetValue(null) == null) {
+                Debug.Log(Time.frameCount + ": uninitialized level data.");
+                path_length = -1;
+                return 9999f;
+            }
+            Vector3 center = Pathfinding.Segments[num3].Center;
+            _Pathfinding_MarkAllSegments_Method.Invoke(null, new object[] { });
+            if (avoid_seg != -1) {
+                ((bool[])_Pathfinding_m_segment_buffer_Field.GetValue(null))[avoid_seg] = true;
+            }
+            ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[0].segnum = num3;
+            ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[0].distance = 0f;
+            ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[0].parent = -1;
+            ((bool[])_Pathfinding_m_segment_buffer_Field.GetValue(null))[num3] = true;
+            num = 1;
+            int num4 = 0;
+            Vector3 vector = default(Vector3);
+            int num10;
+            while (true) {
+                int num5;
+                if (num4 < num2 + 1) {
+                    if (((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num4].segnum != -1) {
+                        center = Pathfinding.Segments[((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num4].segnum].Center;
+                        num3 = ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num4].segnum;
+                        num5 = 0;
+                        for (int i = 0; i < 6; i++) {
+                            SegmentData segmentData = Pathfinding.Segments[num3];
+                            int num6 = segmentData.Portals[i];
+                            if (num6 != -1 || segmentData.WarpDestinationSegs[i] != -1) {
+                                int num7;
+                                if (segmentData.WarpDestinationSegs[i] != -1) {
+                                    num7 = segmentData.WarpDestinationSegs[i];
+                                } else {
+                                    PortalData portalData = Pathfinding.Portals[num6];
+                                    if ((segmentData.DecalFlags & (uint)(1 << i)) != 0 || (segmentData.Pathfinding == PathfindingType.NONE && num4 != 0) || (segmentData.Pathfinding == PathfindingType.GUIDEBOT_ONLY) || !(bool)_Pathfinding_LegalEntryPortal_Method.Invoke(null, new object[] { num3, num6, true })) {
+                                        continue;
+                                    }
+                                    num7 = ((portalData.MasterSegmentIndex != num3) ? portalData.MasterSegmentIndex : portalData.SlaveSegmentIndex);
+                                }
+                                if (!((bool[])_Pathfinding_m_segment_buffer_Field.GetValue(null))[num7]) {
+                                    vector.x = Pathfinding.Segments[num7].Center.x - center.x;
+                                    vector.y = Pathfinding.Segments[num7].Center.y - center.y;
+                                    vector.z = Pathfinding.Segments[num7].Center.z - center.z;
+                                    float num8 = vector.x * vector.x + vector.y * vector.y + vector.z * vector.z;
+                                    float num9 = ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num4].distance + (float)Math.Sqrt(num8);
+                                    if (num9 < max_distance) {
+                                        ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num + num5].distance = num9;
+                                        ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num + num5].segnum = num7;
+                                        ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num + num5].parent = num4;
+                                        ((bool[])_Pathfinding_m_segment_buffer_Field.GetValue(null))[num7] = true;
+                                        num5++;
+                                        num2 = num + num5;
+                                    } else {
+                                        ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num + num5].segnum = -1;
+                                    }
+                                } else {
+                                    ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num + num5].segnum = -1;
+                                }
+                                if (num7 != start_seg) {
+                                    continue;
+                                }
+                                goto IL_0393;
+                            }
+                            ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num + num5].segnum = -1;
+                        }
+                        num += num5;
+                    }
+                    num4++;
+                    continue;
+                }
+                num10 = -1;
+                break;
+            IL_0393:
+                num10 = num + num5 - 1;
+                path_distance = ((Pathfinding.PathNode[])_Pathfinding_m_path_nodes_Field.GetValue(null))[num10].distance;
+                break;
+            }
+            if (num4 > num2) {
+                path_length = -1;
+                return 9999f;
+            }
+            if (num10 == -1) {
+                num10 = -1;
+            }
+            path_length = (int)_Pathfinding_StorePath1_Method.Invoke(null, new object[] { null, num10, start_seg, end_seg });
+            if (path_length == -1) {
+                return 9999f;
+            }
+            return path_distance;
         }
     }
 }
