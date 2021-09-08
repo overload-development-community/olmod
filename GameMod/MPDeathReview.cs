@@ -135,15 +135,13 @@ namespace GameMod
             if (MPDeathReview.lastDeathReview == null)
                 return;
 
-            DrawRightOverlay(__instance);
-
             if (!GameplayManager.ShowMpScoreboard)
                 DrawDeathSummary(__instance);
         }
 
         static void DrawDeathSummary(UIElement uie)
         {
-            Vector2 pos = new Vector2(UIManager.UI_LEFT + 160f, UIManager.UI_TOP + 220f);
+            Vector2 pos = new Vector2(UIManager.UI_LEFT + 160f, UIManager.UI_TOP + 250f);
             Player killer = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == MPDeathReview.lastDeathReview.m_killer_id);
             Player assister = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == MPDeathReview.lastDeathReview.m_assister_id);
 
@@ -152,30 +150,38 @@ namespace GameMod
             float w = 120f;
 
             // Add partially opaque background
-            UIManager.DrawQuadUI(pos - Vector2.down * 135f, 140f, 160f, UIManager.m_col_black, 0.95f, 22);
+            UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 120f, 86f, 150f, 75f, UIManager.m_col_black, 22);
 
-            if (killer)
+            if (killer && killer != GameManager.m_local_player)
             {
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(killer.m_mp_team, 0) : UIManager.m_col_red;
                 var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == killer.netId).Value;
-                DrawHeader(uie, pos, $"KILLER: {killer.m_mp_name} [{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                DrawHeader(uie, pos, $"KILLER: {killer.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
                 pos.y += 32f;
-                pos.x += 70f;
-                DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, damages);
-                pos.x -= 70f;
-                pos.y += 48f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
+                pos.y += 40f;
             }
 
             if (assister != null && assister.netId != killer.netId)
             {
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(assister.m_mp_team, 0) : UIManager.m_col_white;
                 var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == assister.netId).Value;
-                DrawHeader(uie, pos, $"ASSIST: {assister.m_mp_name} [{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                DrawHeader(uie, pos, $"ASSIST: {assister.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
                 pos.y += 32f;
-                pos.x += 70f;
-                DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, damages);
-                pos.x -= 70f;
-                pos.y += 48f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
+                pos.y += 40f;
+            }
+
+            // Other enemy damage not contributed by killer/assister
+            var otherIds = Overload.NetworkManager.m_Players.Where(x => x.netId != GameManager.m_local_player.netId && x != killer && x != assister && (x.m_mp_team == MpTeam.ANARCHY || x.m_mp_team != GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
+            if (MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)))
+            {
+                var otherDamages = MPDeathReview.lastDeathReview.players.Where(x => otherIds.Contains(x.Key)).SelectMany(x => x.Value);
+                c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
+                DrawHeader(uie, pos, "OTHER", $"[{(otherDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                pos.y += 32f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, otherDamages);
+                pos.y += 40f;
             }
 
             // Self and misc damage
@@ -184,37 +190,40 @@ namespace GameMod
             {
                 var selfDamages = MPDeathReview.lastDeathReview.players.Where(x => selfIds.Contains(x.Key)).SelectMany(x => x.Value);
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
-                DrawHeader(uie, pos, "SELF/MISC", w, c, 0.35f);
+                DrawHeader(uie, pos, "SELF/MISC", $"[{(selfDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
                 pos.y += 32f;
-                pos.x += 70f;
-                DrawDamageSummary(uie, ref pos, c, 0.35f, alpha_mod, selfDamages);
-                pos.x -= 70f;
-                pos.y += 48f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, selfDamages);
+                pos.y += 40f;
             }
+            
         }
 
-        static void DrawHeader(UIElement uie, Vector2 pos, string s, float w, Color c, float sc)
+        static void DrawHeader(UIElement uie, Vector2 pos, string s, string p, float w, Color c, float sc)
         {
-            UIManager.DrawQuadUI(pos, w + 30f, 13f, c, 1f * 0.5f, 20);
-            uie.DrawStringSmall(s, pos, sc, StringOffset.CENTER, c, 1f, w * 1.9f);
-            UIManager.DrawSpriteUI(pos - Vector2.right * (w - 6f), 0.2f, 0.2f, c, 1f, 42);
-            UIManager.DrawSpriteUI(pos + Vector2.right * (w - 6f), 0.2f, 0.2f, c, 1f, 42);
-            pos.y += 16f;
-            UIManager.DrawQuadUI(pos, w, 3f, c, 1f, 22);
+            UIManager.DrawQuadUI(pos, w, 10f, c, 0.3f, 20); // White gradient backdrop
+            uie.DrawStringSmall(s, pos + Vector2.left * 100f, sc, StringOffset.LEFT, c, 1f, w + 30f);
+            uie.DrawStringSmall(p, pos + Vector2.right * 100f, sc, StringOffset.RIGHT, c, 1f);
+            UIManager.DrawSpriteUI(pos - Vector2.right * (w - 6f), 0.2f, 0.2f, c, 1f, 42); // Short hyphen line left
+            UIManager.DrawSpriteUI(pos + Vector2.right * (w - 6f), 0.2f, 0.2f, c, 1f, 42); // Short hyphen line right
+            pos.y += 12f;
+            UIManager.DrawQuadUI(pos, w, 3f, c, 1f, 22); // Bottom white line
             uie.DrawWideBox(pos, w, 1.2f, c, 1f, 4);
-            pos.y -= 32f;
-            UIManager.DrawQuadUI(pos, w, 3f, c, 1f, 22);
+            pos.y -= 24f;
+            UIManager.DrawQuadUI(pos, w, 3f, c, 1f, 22); // Top white line
             uie.DrawWideBox(pos, w, 1.2f, c, 1f, 4);
         }
 
-        static void DrawDamageSummary(UIElement uie, ref Vector2 pos, Color c, float sc, float m_alpha, IEnumerable<DamageSummary> ds)
+        static void DrawDamageSummary(UIElement uie, Vector2 pos, Color c, float sc, float m_alpha, IEnumerable<DamageSummary> ds)
         {
-            float w = 60f * sc;
-
+            pos.x -= 125f;
             var grouped = ds.GroupBy(x => x.weapon).OrderByDescending(x => x.Sum(y => y.damage));
+            int i = 0;
             foreach (var g in grouped)
             {
-                uie.DrawDigitsVariable(pos + Vector2.right * w, (int)g.Sum(y => y.damage), sc, StringOffset.RIGHT, c, m_alpha);
+                float w = g.Sum(y => y.damage) >= 100 ? 50f : (g.Sum(y => y.damage) >= 10 ? 30f : 10f) * sc;
+                pos.x += w + 10f;
+                uie.DrawDigitsVariable(pos, (int)Math.Max(1f, g.Sum(y => y.damage)), sc, StringOffset.RIGHT, c, m_alpha);
+                pos.x += w + (w > 10f ? 0f : 10f);
                 int tex_index = GetTextureIndex(g.Key);
                 if (tex_index >= 0)
                 {
@@ -224,19 +233,15 @@ namespace GameMod
                 {
                     uie.DrawStringSmall(">", pos, sc * 0.75f, StringOffset.CENTER, c, m_alpha);
                 }
-                pos.y += 48f * sc;
+
+                pos.x += 10f;
+                if (i+1 < grouped.Count())
+                    uie.DrawStringSmall("·", pos, sc * 1.5f, StringOffset.CENTER, c, m_alpha * 0.5f);
+
+                i++;
             }
         }
-
-        static void DrawRightOverlay(UIElement uie)
-        {
-            Vector2 pos = new Vector2();
-            pos.x = UIManager.UI_RIGHT - 100f;
-            pos.y = UIManager.UI_TOP + 400f;
-
-            DrawDamageSummary(uie, ref pos, UIManager.m_col_ui0, 0.75f, 1f, MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value));
-        }
-
+        
         public static int GetTextureIndex(ProjPrefab prefab)
         {
             switch (prefab)
