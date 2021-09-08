@@ -320,7 +320,7 @@ namespace GameMod
         {
             get
             {
-                return Laps.Count() >= MPModPrivateData.LapLimit;
+                return MPModPrivateData.LapLimit > 0 && Laps.Count() >= MPModPrivateData.LapLimit;
             }
         }
 
@@ -628,7 +628,7 @@ namespace GameMod
                         if (rp.lastTriggerForward && lapTime > 4f)
                         {
                             NetworkServer.SendToAll(MessageTypes.MsgLapCompleted, new PlayerLapMessage { m_player_id = playerShip.c_player.netId, lapNum = (uint)rp.Laps.Count() + 1, lapTime = lapTime });
-                            if (rp.Laps.Count() + 1 >= MPModPrivateData.LapLimit)
+                            if (MPModPrivateData.LapLimit > 0 && rp.Laps.Count() + 1 >= MPModPrivateData.LapLimit)
                             {
                                 rp.player.Networkm_spectator = true;
                             }
