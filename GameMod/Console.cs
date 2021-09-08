@@ -116,10 +116,26 @@ namespace GameMod {
 
         static void CmdToggleDebugging() {
             Debugging.Enabled = !Debugging.Enabled;
+        }
 
-            if (Debugging.Enabled) {
+        static void CmdDumpSegments() {
+            for (int segmentIndex = 0; segmentIndex < GameManager.m_level_data.Segments.Length; segmentIndex++) {
+                Debug.Log($"Segment Index: {segmentIndex}");
+                var segment = GameManager.m_level_data.Segments[segmentIndex];
+                Debug.Log($"  Center: x: {segment.Center.x:N4}, y: {segment.Center.y:N4}, z: {segment.Center.z:N4}");
 
+                for (int portalIndex = 0; portalIndex < segment.Portals.Length; portalIndex++) {
+                    Debug.Log($"    Portal Index: {portalIndex} Value: {segment.Portals[portalIndex]}");
+                    if (segment.Portals[portalIndex] == -1) {
+                        continue;
+                    }
+                    var portal = GameManager.m_level_data.Portals[segment.Portals[portalIndex]];
+                    Debug.Log($"      {(portal.MasterSegmentIndex == segmentIndex ? $"Master, Side: {portal.MasterSideIndex}, Other Side: {portal.SlaveSideIndex}" : $"Slave, Side: {portal.SlaveSideIndex}, Other Side: {portal.MasterSideIndex}")}");
+                    Debug.Log($"      Other Segment Index: {(portal.MasterSegmentIndex == segmentIndex ? portal.SlaveSegmentIndex : portal.MasterSegmentIndex)}");
+                }
             }
+
+            uConsole.Log("Segments dumped to debug log.");
         }
 
         public static void RegisterCommands()
@@ -129,6 +145,7 @@ namespace GameMod {
             uConsole.RegisterCommand("mipmap_bias", "Set Mipmap bias (-16 ... 15.99)", new uConsole.DebugCommand(CmdMipmapBias));
             uConsole.RegisterCommand("ui_color", "Set UI color #aabbcc", new uConsole.DebugCommand(CmdUIColor));
             uConsole.RegisterCommand("toggle_debugging", "Toggle the display of debugging info", new uConsole.DebugCommand(CmdToggleDebugging));
+            uConsole.RegisterCommand("dump_segments", "Dump segment data", new uConsole.DebugCommand(CmdDumpSegments));
         }
     }
 

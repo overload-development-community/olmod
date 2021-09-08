@@ -124,12 +124,12 @@ namespace GameMod {
 
             for (int i = 0; i < candidates.Count; i++) {
                 var dist = new List<float>();
+                Vector3 position = GameManager.m_level_data.m_player_spawn_points[candidates[i]].position;
+                var segnum = GameManager.m_level_data.FindSegmentContainingWorldPosition(position);
                 for (int j = 0; j < playerPositions.Count; j++) {
-                    Vector3 position = GameManager.m_level_data.m_player_spawn_points[candidates[i]].position;
-                    var segnum = MPRespawn_PickGoodRespawnPointForTeam.GetSegmentNumber(position);
-                    var playerSegnum = MPRespawn_PickGoodRespawnPointForTeam.GetSegmentNumber(playerPositions[j]);
+                    var playerSegnum = GameManager.m_level_data.FindSegmentContainingWorldPosition(playerPositions[j]);
 
-                    var distance = Pathfinding.FindConnectedDistance(segnum, playerSegnum, out int _);
+                    var distance = MPRespawn_PickGoodRespawnPointForTeam.FindShortestPath(segnum, playerSegnum, -1, 9999f);
                     if (distance <= 0f || distance >= 9999f) {
                         distance = RUtility.FindVec3Distance(position - playerPositions[j]);
                     }
@@ -218,30 +218,4 @@ namespace GameMod {
             __instance.DrawStringSmall($"Best Spawn: {Debugging.BestSpawn}", new Vector2(UIManager.UI_LEFT + 5f, UIManager.UI_TOP + 90f), 0.5f, StringOffset.LEFT, UIManager.m_col_white2, 0.5f, -1f);
         }
     }
-
-    //[HarmonyPatch(typeof(GameManager), "Update")]
-    //class Debugging_GameManager_Update {
-    //    static void Postfix() {
-    //        if (!Debugging.Enabled) {
-    //            return;
-    //        }
-
-    //        foreach (var segment in GameManager.m_level_data.Segments) {
-    //            for (int index = 0; index < segment.Portals.Length; index++) {
-    //                if (segment.Portals[index] == -1) {
-    //                    continue;
-    //                }
-    //                var portal = GameManager.m_level_data.Portals[segment.Portals[index]];
-    //                foreach (var poly in portal.Polygons) {
-    //                    for (int i = 0; i < poly.VertIndices.Length; i++) {
-    //                        var vert1 = GameManager.m_level_data.SegmentVerts[poly.VertIndices[i]];
-    //                        var vert2 = GameManager.m_level_data.SegmentVerts[poly.VertIndices[(i == 0 ? poly.VertIndices.Length : i) - 1]];
-
-    //                        // TODO: Draw line between vert1 and vert2
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
 }
