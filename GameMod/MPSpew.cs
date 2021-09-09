@@ -76,4 +76,15 @@ namespace GameMod {
             return false;
         }
     }
+
+    [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
+    class MPSpew_PlayerShip_SpewItemsOnDeath {
+        static void Prefix(PlayerShip __instance) {
+            if (!NetworkManager.IsServer()) {
+                return;
+            }
+
+            __instance.c_player.m_weapon_picked_up[(int)WeaponType.LANCER] = false;
+        }
+    }
 }
