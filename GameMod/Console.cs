@@ -5,6 +5,8 @@ using GameMod.Core;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
+using UnityEngine.XR;
+using Valve.VR;
 
 namespace GameMod {
     static class Console
@@ -138,21 +140,41 @@ namespace GameMod {
             uConsole.Log("Segments dumped to debug log.");
         }
 
+        // Not working.  See VRScale.cs.
+        //static void CmdVRScale() {
+        //    if (!GameplayManager.VRActive) {
+        //        uConsole.Log("You must be in VR to use this command.");
+        //        return;
+        //    }
+
+        //    string s = uConsole.GetString();
+
+        //    if (float.TryParse(s, out float scale)) {
+        //        scale = Mathf.Clamp(scale, 0.1f, 10f);
+
+        //        VRScale.VR_Scale = scale;
+        //    } else {
+        //        uConsole.Log("Invalid scale, must be a number between 0.1 and 10.");
+        //    }
+        //}
+
         public static void RegisterCommands()
         {
-            uConsole.RegisterCommand("reload_missions", "Reload missions", new uConsole.DebugCommand(CmdReloadMissions));
-            uConsole.RegisterCommand("xp", "Set XP", new uConsole.DebugCommand(CmdXP));
-            uConsole.RegisterCommand("mipmap_bias", "Set Mipmap bias (-16 ... 15.99)", new uConsole.DebugCommand(CmdMipmapBias));
-            uConsole.RegisterCommand("ui_color", "Set UI color #aabbcc", new uConsole.DebugCommand(CmdUIColor));
-            uConsole.RegisterCommand("toggle_debugging", "Toggle the display of debugging info", new uConsole.DebugCommand(CmdToggleDebugging));
             uConsole.RegisterCommand("dump_segments", "Dump segment data", new uConsole.DebugCommand(CmdDumpSegments));
+            uConsole.RegisterCommand("mipmap_bias", "Set Mipmap bias (-16 ... 15.99)", new uConsole.DebugCommand(CmdMipmapBias));
+            uConsole.RegisterCommand("reload_missions", "Reload missions", new uConsole.DebugCommand(CmdReloadMissions));
+            uConsole.RegisterCommand("toggle_debugging", "Toggle the display of debugging info", new uConsole.DebugCommand(CmdToggleDebugging));
+            uConsole.RegisterCommand("ui_color", "Set UI color #aabbcc", new uConsole.DebugCommand(CmdUIColor));
+            // Not working.  See VRScale.cs.
+            // uConsole.RegisterCommand("vr_scale", "Set VR scale (0.1 to 10)", new uConsole.DebugCommand(CmdVRScale));
+            uConsole.RegisterCommand("xp", "Set XP", new uConsole.DebugCommand(CmdXP));
         }
     }
+
 
     [HarmonyPatch(typeof(GameManager), "Start")]
     class ConsolePatch
     {
-
         static void Postfix(GameManager __instance)
         {
             GameObject go = UnityEngine.Object.Instantiate((GameObject)Resources.Load("uConsole"));
