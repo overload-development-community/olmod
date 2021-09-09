@@ -89,23 +89,31 @@ namespace GameMod {
             var closest = float.MaxValue;
             var leastLoS = float.MaxValue;
             var scale = 1f;
+            var seesEnemy = false;
+            var seesTeammate = false;
             for (int i = 0; i < count; i++) {
                 var dist = Math.Abs(distances[idx][i]);
+
+                Vector3 vector;
+                vector.x = playerPositions[i].x - spawnPoint.position.x;
+                vector.y = playerPositions[i].y - spawnPoint.position.y;
+                vector.z = playerPositions[i].z - spawnPoint.position.z;
+                float vectorDist = Mathf.Max(0.1f, vector.magnitude);
+                vector.x /= vectorDist;
+                vector.y /= vectorDist;
+                vector.z /= vectorDist;
+
                 if (team != playerTeams[i] || team == MpTeam.ANARCHY) {
                     closest = Math.Min(closest, dist);
-
-                    Vector3 vector;
-                    vector.x = playerPositions[i].x - spawnPoint.position.x;
-                    vector.y = playerPositions[i].y - spawnPoint.position.y;
-                    vector.z = playerPositions[i].z - spawnPoint.position.z;
-                    float vectorDist = Mathf.Max(0.1f, vector.magnitude);
-                    vector.x /= vectorDist;
-                    vector.y /= vectorDist;
-                    vector.z /= vectorDist;
 
                     if ((bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { spawnPoint.position, vector, vectorDist })) {
                         var angle = Math.Min(Vector3.Angle(playerPositions[i] - spawnPoint.position, spawnPoint.orientation * Vector3.forward), Vector3.Angle(spawnPoint.position - playerPositions[i], m_player_rot[i] * Vector3.forward));
                         leastLoS = Math.Min(leastLoS, angle);
+                        seesEnemy = true;
+                    }
+                } else {
+                    if ((bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { spawnPoint.position, vector, vectorDist })) {
+                        seesTeammate = true;
                     }
                 }
 
@@ -120,6 +128,11 @@ namespace GameMod {
             // Avoid respawning two ships on the same respawn point within a short amount of time.
             if (lastRespawn.ContainsKey(idx) && lastRespawn[idx] > DateTime.Now.AddSeconds(-2)) {
                 score -= (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
+            } else if (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY) {
+                // If the spawn point is not being avoided, give a bonus in team anarchy if the spawn point sees teammates and no enemies.
+                if (seesTeammate && !seesEnemy) {
+                    score += 1f;
+                }
             }
 
             return score;
