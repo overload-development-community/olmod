@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -150,7 +150,7 @@ namespace GameMod
             float w = 120f;
 
             // Add partially opaque background
-            UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 120f, 86f, 150f, 75f, UIManager.m_col_black, 22);
+            UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
 
             if (killer && killer != GameManager.m_local_player)
             {
@@ -162,6 +162,8 @@ namespace GameMod
                 pos.y += 40f;
             }
 
+            UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
+
             if (assister != null && assister.netId != killer.netId)
             {
                 c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(assister.m_mp_team, 0) : UIManager.m_col_white;
@@ -171,6 +173,8 @@ namespace GameMod
                 DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
                 pos.y += 40f;
             }
+
+            UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
 
             // Other enemy damage not contributed by killer/assister
             var otherIds = Overload.NetworkManager.m_Players.Where(x => x.netId != GameManager.m_local_player.netId && x != killer && x != assister && (x.m_mp_team == MpTeam.ANARCHY || x.m_mp_team != GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
@@ -183,6 +187,8 @@ namespace GameMod
                 DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, otherDamages);
                 pos.y += 40f;
             }
+            
+            UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
 
             // Self and misc damage
             var selfIds = Overload.NetworkManager.m_Players.Where(x => x.netId == GameManager.m_local_player.netId || (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY && x.m_mp_team == GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
@@ -195,7 +201,6 @@ namespace GameMod
                 DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, selfDamages);
                 pos.y += 40f;
             }
-            
         }
 
         static void DrawHeader(UIElement uie, Vector2 pos, string s, string p, float w, Color c, float sc)
