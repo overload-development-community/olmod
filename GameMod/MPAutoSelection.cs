@@ -283,11 +283,10 @@ namespace GameMod
                     return;
                 }
 
+                UIElement.WEAPON_SELECT_FLASH = 1.25f;
+                UIElement.WEAPON_SELECT_NAME = string.Format(Loc.LS("{0} SELECTED"), Player.WeaponNames[GameManager.m_local_player.m_weapon_type]);
                 if (!silent)
                 {
-                    UIElement.WEAPON_SELECT_FLASH = 1.25f;
-                    UIElement.WEAPON_SELECT_NAME = string.Format(Loc.LS("{0} SELECTED"), Player.WeaponNames[GameManager.m_local_player.m_weapon_type]);
-                    
                     SFXCueManager.PlayCue2D(SFXCue.hud_cycle_typeA1, 1f, 0f, 0f, false);
                     GameManager.m_audio.PlayCue2D(363, 0.1f, 0f, 0f, false);
                     GameManager.m_local_player.c_player_ship.SetRefireDelayAfterWeaponSwitch();
@@ -779,7 +778,7 @@ namespace GameMod
                 {
                     return;
                 }
-                if (GameManager.m_local_player.m_missile_type != (MissileType)weapon_num && (GameManager.m_local_player.NumUnlockedMissilesWithAmmo() > 1 || (GameManager.m_local_player.NumUnlockedMissilesWithAmmo() == 1 && GameManager.m_local_player.m_missile_ammo[(int)GameManager.m_local_player.m_missile_type] == 0)))
+                if (GameManager.m_local_player.m_missile_type != (MissileType)weapon_num)
                 {
                     GameManager.m_local_player.Networkm_missile_type = (MissileType)weapon_num;
                     GameManager.m_local_player.CallCmdSetCurrentMissile(GameManager.m_local_player.m_missile_type);
