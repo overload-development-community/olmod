@@ -157,11 +157,9 @@ namespace GameMod
             float w = 120f;
             if (showDeathReview)
             {
-                // Add partially opaque background
-                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
-                
                 if (killer && killer != GameManager.m_local_player)
                 {
+                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
                     c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(killer.m_mp_team, 0) : UIManager.m_col_red;
                     var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == killer.netId).Value;
                     DrawHeader(uie, pos, $"KILLER: {killer.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
@@ -170,10 +168,9 @@ namespace GameMod
                     pos.y += 40f;
                 }
 
-                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
-
                 if (assister != null && assister.netId != killer.netId)
                 {
+                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
                     c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(assister.m_mp_team, 0) : UIManager.m_col_white;
                     var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == assister.netId).Value;
                     DrawHeader(uie, pos, $"ASSIST: {assister.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
@@ -182,12 +179,11 @@ namespace GameMod
                     pos.y += 40f;
                 }
 
-                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
-
                 // Other enemy damage not contributed by killer/assister
                 var otherIds = Overload.NetworkManager.m_Players.Where(x => x.netId != GameManager.m_local_player.netId && x != killer && x != assister && (x.m_mp_team == MpTeam.ANARCHY || x.m_mp_team != GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
                 if (MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)))
                 {
+                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
                     var otherDamages = MPDeathReview.lastDeathReview.players.Where(x => otherIds.Contains(x.Key)).SelectMany(x => x.Value);
                     c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
                     DrawHeader(uie, pos, "OTHER", $"[{(otherDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
@@ -196,12 +192,11 @@ namespace GameMod
                     pos.y += 40f;
                 }
 
-                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.28f * UIManager.m_col_black, 199);
-
                 // Self and misc damage
                 var selfIds = Overload.NetworkManager.m_Players.Where(x => x.netId == GameManager.m_local_player.netId || (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY && x.m_mp_team == GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
                 if (MPDeathReview.lastDeathReview.players.Any(x => selfIds.Contains(x.Key)))
                 {
+                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
                     var selfDamages = MPDeathReview.lastDeathReview.players.Where(x => selfIds.Contains(x.Key)).SelectMany(x => x.Value);
                     c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
                     DrawHeader(uie, pos, "SELF/MISC", $"[{(selfDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
@@ -238,10 +233,10 @@ namespace GameMod
             int i = 0;
             foreach (var g in grouped)
             {
-                float w = g.Sum(y => y.damage) >= 100 ? 50f : (g.Sum(y => y.damage) >= 10 ? 30f : 10f) * sc;
+                float w = ((int)Mathf.Log10(g.Sum(y => y.damage)) + 1) * 10f * sc;
                 pos.x += w + 10f;
-                uie.DrawDigitsVariable(pos, (int)Math.Max(1f, g.Sum(y => y.damage)), sc, StringOffset.RIGHT, c, m_alpha);
-                pos.x += w + (w > 10f ? 0f : 10f);
+                uie.DrawDigitsVariable(pos, (int)Math.Max(1f, g.Sum(y => y.damage)), sc, StringOffset.CENTER, c, m_alpha);
+                pos.x += w + 10f;
                 int tex_index = GetTextureIndex(g.Key);
                 if (tex_index >= 0)
                 {
