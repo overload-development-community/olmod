@@ -118,8 +118,8 @@ namespace GameMod
 
             static void Postfix()
             {
-                // only on the Client, in Multiplayer, in an active game, not during death or death roll:
-                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying && !GameManager.m_local_player.c_player_ship.m_dead && !MPObserver.Enabled )
+                // only on the Client, in Multiplayer, in an active game, not during death or death roll or pregame:
+                if (!Server.IsActive() && GameplayManager.IsMultiplayerActive && NetworkMatch.InGameplay() && !GameManager.m_local_player.c_player_ship.m_dying && !GameManager.m_local_player.c_player_ship.m_dead && !GameManager.m_local_player.m_pregame && !MPObserver.Enabled)
                 {
                     if (!doManualInterpolation)
                     {

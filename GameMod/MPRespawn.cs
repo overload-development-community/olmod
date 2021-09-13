@@ -91,6 +91,7 @@ namespace GameMod {
             var scale = 1f;
             var seesEnemy = false;
             var seesTeammate = false;
+            var closestTeammate = float.MaxValue;
             for (int i = 0; i < count; i++) {
                 var dist = Math.Abs(distances[idx][i]);
 
@@ -114,6 +115,7 @@ namespace GameMod {
                 } else {
                     if ((bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { spawnPoint.position, vector, vectorDist })) {
                         seesTeammate = true;
+                        closestTeammate = Math.Min(dist, closestTeammate);
                     }
                 }
 
@@ -129,9 +131,9 @@ namespace GameMod {
             if (lastRespawn.ContainsKey(idx) && lastRespawn[idx] > DateTime.Now.AddSeconds(-2)) {
                 score -= (float)(lastRespawn[idx] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
             } else if (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY) {
-                // If the spawn point is not being avoided, give a bonus in team anarchy if the spawn point sees teammates and no enemies.
-                if (seesTeammate && !seesEnemy) {
-                    score += 1f;
+                // If the spawn point is not being avoided, give a bonus in team anarchy if the spawn point sees teammates and no enemies and doesn't have a teammate on the spawn point.
+                if (seesTeammate && !seesEnemy && closestTeammate > 5f) {
+                    score += 0.5f;
                 }
             }
 
