@@ -115,7 +115,7 @@ namespace GameMod
         {
             static void Postfix()
             {
-                if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
+                if ((UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown()) && MenuManager.m_menu_micro_state == 6)
                 {
                     switch (UIManager.m_menu_selection)
                     {
