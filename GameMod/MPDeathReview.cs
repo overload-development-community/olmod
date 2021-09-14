@@ -233,10 +233,10 @@ namespace GameMod
             int i = 0;
             foreach (var g in grouped)
             {
-                float w = ((int)Mathf.Log10(g.Sum(y => y.damage)) + 1) * 10f * sc;
-                pos.x += w + 10f;
+                float w = 10f + (((int)Math.Max(0f, Mathf.Log10(g.Sum(y => y.damage)) ) + 1f) * 10f * sc);
+                pos.x += w;
                 uie.DrawDigitsVariable(pos, (int)Math.Max(1f, g.Sum(y => y.damage)), sc, StringOffset.CENTER, c, m_alpha);
-                pos.x += w + 10f;
+                pos.x += w;
                 int tex_index = GetTextureIndex(g.Key);
                 if (tex_index >= 0)
                 {
@@ -248,9 +248,10 @@ namespace GameMod
                 }
 
                 pos.x += 10f;
-                if (i+1 < grouped.Count())
+                if (i+1 < grouped.Count() && i+1 < 5)
                     uie.DrawStringSmall("·", pos, sc * 1.5f, StringOffset.CENTER, c, m_alpha * 0.5f);
-
+                if (i+1 > 4) 
+                    break;
                 i++;
             }
         }
