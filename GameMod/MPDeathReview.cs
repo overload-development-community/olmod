@@ -378,7 +378,10 @@ namespace GameMod
             }
 
             // Send stats to client and clear out
-            NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgDeathReview, new DeathReviewMessage { m_killer_id = killer_id, m_assister_id = assister_id, players = ServerDamageLog.GetSummaryForDeadPlayer(player) });
+            if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "deathreview"))
+            {
+                NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgDeathReview, new DeathReviewMessage { m_killer_id = killer_id, m_assister_id = assister_id, players = ServerDamageLog.GetSummaryForDeadPlayer(player) });
+            }
             ServerDamageLog.Clear(player.netId);
         }
 
