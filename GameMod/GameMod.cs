@@ -103,28 +103,6 @@ namespace GameMod.Core {
 
     }
 
-    // add monsterball mb_arena1 level to multiplayer levels
-    [HarmonyPatch(typeof(GameManager), "ScanForLevels")]
-    class MBLevelPatch
-    {
-        public static bool SLInit = false;
-        static void Prefix()
-        {
-            if (SLInit)
-                return;
-            SLInit = true;
-            /*
-            Overload.GameManager.MultiplayerMission.AddLevel("mb_arena1", "ARENA", "TITAN_06", new int[]
-                        {
-                                1,
-                                4,
-                                2,
-                                8
-                        });
-            */
-        }
-    }
-
     [HarmonyPatch(typeof(LocalLANHost), "GetServerLocation")]
     class ServerLocationPatch
     {
