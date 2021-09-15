@@ -1,13 +1,13 @@
-﻿using HarmonyLib;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection.Emit;
+using HarmonyLib;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     public static class Menus
     {
 
@@ -1007,6 +1007,39 @@ namespace GameMod
                 }
                 yield return code;
             }
+        }
+    }
+
+    // Fix next/previous resolution buttons.
+    [HarmonyPatch(typeof(MenuManager), "SelectNextResolution")]
+    class FixSelectNextResolution {
+        static bool Prefix() {
+            var resolutions = Screen.resolutions.Where(r => r.width >= 800 && r.height >= 540).Select(r => new Resolution { width = r.width, height = r.height }).Distinct().ToList();
+
+            resolutions.Sort((a, b) => {
+                return a.width == b.width ? a.height - b.height : a.width - b.width;
+            });
+
+            var index = resolutions.IndexOf(new Resolution { width = MenuManager.m_resolution_width, height = MenuManager.m_resolution_height });
+
+            if (index == -1) {
+                index = resolutions.Count() - 1;
+            } else if (UIManager.m_select_dir > 0) {
+                index++;
+                if (index >= resolutions.Count()) {
+                    index = 0;
+                }
+            } else {
+                index--;
+                if (index < 0) {
+                    index = resolutions.Count() - 1;
+                }
+            }
+
+            MenuManager.m_resolution_width = resolutions[index].width;
+            MenuManager.m_resolution_height = resolutions[index].height;
+
+            return false;
         }
     }
 }
