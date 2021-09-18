@@ -139,7 +139,7 @@ namespace GameMod
             if (MPDeathReview.lastDeathReview == null)
                 return;
 
-            showDeathReviewDetails = GameplayManager.IsMultiplayerActive && !PlayerShip.m_typing_in_chat && Controls.IsPressed(CCInput.SWITCH_MISSILE)
+            showDeathReviewDetails = GameplayManager.IsMultiplayerActive && !PlayerShip.m_typing_in_chat && Controls.IsPressed(CCInput.SWITCH_MISSILE);
 
             if (!GameplayManager.ShowMpScoreboard)
                 DrawDeathSummary(__instance);
