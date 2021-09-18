@@ -204,7 +204,7 @@ namespace GameMod
             }
 
             if (!showDeathReviewDetails && ((assister != null && assister.netId != killer.netId) || MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)) || (killer != GameManager.m_local_player && MPDeathReview.lastDeathReview.players.Any(x => selfIds.Contains(x.Key))))) {
-                uie.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.SWITCH_MISSILE) + " - SHOW MORE DETAILS", true ? pos + Vector2.down * 18f : new Vector2(-503, 100), 0.3f, StringOffset.CENTER, UIManager.m_col_ui5 * (true ? 0.7f : 1f), alpha_mod, -1f);
+                uie.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.SWITCH_MISSILE) + " - SHOW MORE DETAILS", pos + Vector2.down * 18f, 0.3f, StringOffset.CENTER, UIManager.m_col_ui5 * 0.7f, alpha_mod, -1f);
             }
         }
 
