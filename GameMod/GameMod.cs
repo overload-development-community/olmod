@@ -157,24 +157,6 @@ namespace GameMod.Core {
         }
     }
 
-    // GSync fix
-    [HarmonyPatch(typeof(GameManager), "UpdateTargetFramerate")]
-    class GSyncFix
-    {
-        static bool Prefix()
-        {
-            if (GameplayManager.IsDedicatedServer())
-            {
-                Application.targetFrameRate = 120;
-            }
-            else
-            {
-                Application.targetFrameRate = -1;
-            }
-            return false;
-        }
-    }
-
     // Shenanigans.
     [HarmonyPatch(typeof(StringParse), "IsNiceWord")]
     class ReallyIsNiceWord
