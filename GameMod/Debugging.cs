@@ -34,7 +34,7 @@ namespace GameMod {
                 if ((bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { shipPos, vector, dist })) {
                     int quad_index = UIManager.m_quad_index;
                     Vector2 offset = Vector2.zero;
-                    offset.y = -80f / dist;
+                    offset.y = 2f;
                     UIManager.DrawStringAlignCenter($"{i}", offset, 1f, UIManager.m_col_white2, -1f);
                     WorldText.PreviousQuadsTransformText(segCenter, shipQuat, dist, quad_index);
                 }
