@@ -410,4 +410,43 @@ namespace GameMod
             ServerDamageLog.damageEvents = new Dictionary<NetworkInstanceId, List<DamageEvent>>();
         }
     }
+
+    [HarmonyPatch(typeof(PlayerShip), "UpdateReadChatControls")]
+    class MPDeathReview_PlayerShip_UpdateReadChatControls {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawHUD")]
+    class MPDeathReview_UIElement_DrawHUD {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpDeathOverlay")]
+    class MPDeathReview_UIElement_DrawMpDeathOverlay {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpOverlayLoadout")]
+    class MPDeathReview_UIElement_DrawMpOverlayLoadout {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    static class MPDeathReview_PatchShowMpScoreboard {
+        private static bool PatchShowMpScoreboard(bool ShowMpScoreboard) {
+            return ShowMpScoreboard || MPDeathReview_UIElement_DrawMpMiniScoreboard.showDeathReviewDetails;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(GameplayManager), "ShowMpScoreboard")) {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDeathReview_PatchShowMpScoreboard), "PatchShowMpScoreboard"));
+
+                    continue;
+                }
+
+                yield return code;
+            }
+        }
+    }
 }
