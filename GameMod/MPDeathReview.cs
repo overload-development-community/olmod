@@ -62,6 +62,13 @@ namespace GameMod
         public float damage;
     }
 
+    [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
+    class MPDeathReview_InitBeforeEachMatch {
+        private static void Prefix() {
+            MPDeathReview.lastDeathReview = null;
+        }
+    }
+
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
     class MPDeathReview_Client_RegisterHandlers
     {
@@ -125,8 +132,6 @@ namespace GameMod
         public NetworkInstanceId m_killer_id;
         public NetworkInstanceId m_assister_id;
     }
-
-    
 
     // Latch on to mini scoreboard to avoid alpha alteration through death overlay
     [HarmonyPatch(typeof(UIElement), "DrawMpMiniScoreboard")]
@@ -433,7 +438,7 @@ namespace GameMod
 
     static class MPDeathReview_PatchShowMpScoreboard {
         private static bool PatchShowMpScoreboard(bool ShowMpScoreboard) {
-            return ShowMpScoreboard || MPDeathReview_UIElement_DrawMpMiniScoreboard.showDeathReviewDetails;
+            return ShowMpScoreboard || (GameManager.m_local_player.m_hitpoints <= 0f && MPDeathReview_UIElement_DrawMpMiniScoreboard.showDeathReviewDetails);
         }
 
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
