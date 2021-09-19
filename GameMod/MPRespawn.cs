@@ -269,7 +269,7 @@ namespace GameMod {
                         seesEnemy = true;
                     }
                 } else {
-                    if ((bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { spawnPoint.position, vector, vectorDist })) {
+                    if (dist <= 20f && (bool)_UIManager_VisibilityRaycast_Method.Invoke(null, new object[] { spawnPoint.position, vector, vectorDist })) {
                         seesTeammate = true;
                         closestTeammate = Math.Min(dist, closestTeammate);
                     }
