@@ -132,15 +132,14 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawMpMiniScoreboard")]
     class MPDeathReview_UIElement_DrawMpMiniScoreboard
     {
-        public static bool showDeathReview = true;
+        public static bool showDeathReviewDetails = false;
 
         static void Postfix(UIElement __instance)
         {
             if (MPDeathReview.lastDeathReview == null)
                 return;
 
-            if (GameplayManager.IsMultiplayerActive && !PlayerShip.m_typing_in_chat && Controls.JustPressed(CCInput.SWITCH_MISSILE))
-                showDeathReview = !showDeathReview;
+            showDeathReviewDetails = GameplayManager.IsMultiplayerActive && !PlayerShip.m_typing_in_chat && Controls.IsPressed(CCInput.SWITCH_MISSILE);
 
             if (!GameplayManager.ShowMpScoreboard)
                 DrawDeathSummary(__instance);
@@ -148,67 +147,65 @@ namespace GameMod
 
         static void DrawDeathSummary(UIElement uie)
         {
-            Vector2 pos = new Vector2(UIManager.UI_LEFT + 160f, UIManager.UI_TOP + 250f);
+            float w = 120f;
+
+            Vector2 pos = new Vector2((UIManager.UI_LEFT + UIManager.UI_RIGHT) / 2f, UIManager.UI_TOP + 180f);
             Player killer = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == MPDeathReview.lastDeathReview.m_killer_id);
             Player assister = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == MPDeathReview.lastDeathReview.m_assister_id);
 
             Color c = UIManager.m_col_red;
             float alpha_mod = 1f;
-            float w = 120f;
-            if (showDeathReview)
+            if (killer && killer != GameManager.m_local_player)
             {
-                if (killer && killer != GameManager.m_local_player)
-                {
-                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
-                    c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(killer.m_mp_team, 0) : UIManager.m_col_red;
-                    var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == killer.netId).Value;
-                    DrawHeader(uie, pos, $"KILLER: {killer.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
-                    pos.y += 32f;
-                    DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
-                    pos.y += 40f;
-                }
-
-                if (assister != null && assister.netId != killer.netId)
-                {
-                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
-                    c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(assister.m_mp_team, 0) : UIManager.m_col_white;
-                    var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == assister.netId).Value;
-                    DrawHeader(uie, pos, $"ASSIST: {assister.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
-                    pos.y += 32f;
-                    DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
-                    pos.y += 40f;
-                }
-
-                // Other enemy damage not contributed by killer/assister
-                var otherIds = Overload.NetworkManager.m_Players.Where(x => x.netId != GameManager.m_local_player.netId && x != killer && x != assister && (x.m_mp_team == MpTeam.ANARCHY || x.m_mp_team != GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
-                if (MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)))
-                {
-                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
-                    var otherDamages = MPDeathReview.lastDeathReview.players.Where(x => otherIds.Contains(x.Key)).SelectMany(x => x.Value);
-                    c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
-                    DrawHeader(uie, pos, "OTHER", $"[{(otherDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
-                    pos.y += 32f;
-                    DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, otherDamages);
-                    pos.y += 40f;
-                }
-
-                // Self and misc damage
-                var selfIds = Overload.NetworkManager.m_Players.Where(x => x.netId == GameManager.m_local_player.netId || (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY && x.m_mp_team == GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
-                if (MPDeathReview.lastDeathReview.players.Any(x => selfIds.Contains(x.Key)))
-                {
-                    UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
-                    var selfDamages = MPDeathReview.lastDeathReview.players.Where(x => selfIds.Contains(x.Key)).SelectMany(x => x.Value);
-                    c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
-                    DrawHeader(uie, pos, "SELF/MISC", $"[{(selfDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
-                    pos.y += 32f;
-                    DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, selfDamages);
-                    pos.y += 40f;
-                }
-
-                
+                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
+                c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(killer.m_mp_team, 0) : UIManager.m_col_red;
+                var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == killer.netId).Value;
+                DrawHeader(uie, pos, $"KILLER: {killer.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                pos.y += 32f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
+                pos.y += 40f;
             }
-            uie.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.SWITCH_MISSILE) + " - TOGGLE DEATH SUMMARY", showDeathReview ? pos + Vector2.down * 18f : new Vector2(-503, 100), 0.3f, StringOffset.CENTER, UIManager.m_col_ui5 * (showDeathReview ? 0.7f : 1f), alpha_mod, -1f);
-            
+
+            if (showDeathReviewDetails && assister != null && assister.netId != killer.netId)
+            {
+                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
+                c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(assister.m_mp_team, 0) : UIManager.m_col_white;
+                var damages = MPDeathReview.lastDeathReview.players.FirstOrDefault(x => x.Key == assister.netId).Value;
+                DrawHeader(uie, pos, $"ASSIST: {assister.m_mp_name}", $"[{(damages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                pos.y += 32f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, damages);
+                pos.y += 40f;
+            }
+
+            // Other enemy damage not contributed by killer/assister
+            var otherIds = Overload.NetworkManager.m_Players.Where(x => x.netId != GameManager.m_local_player.netId && x != killer && x != assister && (x.m_mp_team == MpTeam.ANARCHY || x.m_mp_team != GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
+            if (showDeathReviewDetails && MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)))
+            {
+                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
+                var otherDamages = MPDeathReview.lastDeathReview.players.Where(x => otherIds.Contains(x.Key)).SelectMany(x => x.Value);
+                c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
+                DrawHeader(uie, pos, "OTHER", $"[{(otherDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                pos.y += 32f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, otherDamages);
+                pos.y += 40f;
+            }
+
+            // Self and misc damage
+            var selfIds = Overload.NetworkManager.m_Players.Where(x => x.netId == GameManager.m_local_player.netId || (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY && x.m_mp_team == GameManager.m_local_player.m_mp_team)).Select(x => x.netId);
+            if ((showDeathReviewDetails || killer == GameManager.m_local_player) && MPDeathReview.lastDeathReview.players.Any(x => selfIds.Contains(x.Key)))
+            {
+                UIManager.DrawQuadBarHorizontal(pos - Vector2.down * 24f, 103f, 36f, 36f, 0.3f * UIManager.m_col_black, 199);
+                var selfDamages = MPDeathReview.lastDeathReview.players.Where(x => selfIds.Contains(x.Key)).SelectMany(x => x.Value);
+                c = NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) ? MPTeams.TeamColor(GameManager.m_local_player.m_mp_team, 0) : UIManager.m_col_white;
+                DrawHeader(uie, pos, "SELF/MISC", $"[{(selfDamages.Sum(x => x.damage) / MPDeathReview.lastDeathReview.players.SelectMany(x => x.Value).Sum(x => x.damage)):P0}]", w, c, 0.35f);
+                pos.y += 32f;
+                DrawDamageSummary(uie, pos, c, 0.45f, alpha_mod, selfDamages);
+                pos.y += 40f;
+            }
+
+            if (!showDeathReviewDetails && ((assister != null && assister.netId != killer.netId) || MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)) || (killer != GameManager.m_local_player && MPDeathReview.lastDeathReview.players.Any(x => selfIds.Contains(x.Key))))) {
+                uie.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.SWITCH_MISSILE) + " - SHOW MORE DETAILS", pos + Vector2.down * 18f, 0.3f, StringOffset.CENTER, UIManager.m_col_ui5 * 0.7f, alpha_mod, -1f);
+            }
         }
 
         static void DrawHeader(UIElement uie, Vector2 pos, string s, string p, float w, Color c, float sc)
@@ -411,6 +408,45 @@ namespace GameMod
         private static void Postfix()
         {
             ServerDamageLog.damageEvents = new Dictionary<NetworkInstanceId, List<DamageEvent>>();
+        }
+    }
+
+    [HarmonyPatch(typeof(PlayerShip), "UpdateReadChatControls")]
+    class MPDeathReview_PlayerShip_UpdateReadChatControls {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawHUD")]
+    class MPDeathReview_UIElement_DrawHUD {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpDeathOverlay")]
+    class MPDeathReview_UIElement_DrawMpDeathOverlay {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    [HarmonyPatch(typeof(UIElement), "DrawMpOverlayLoadout")]
+    class MPDeathReview_UIElement_DrawMpOverlayLoadout {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) { return MPDeathReview_PatchShowMpScoreboard.Transpiler(codes); }
+    }
+
+    static class MPDeathReview_PatchShowMpScoreboard {
+        private static bool PatchShowMpScoreboard(bool ShowMpScoreboard) {
+            return ShowMpScoreboard || MPDeathReview_UIElement_DrawMpMiniScoreboard.showDeathReviewDetails;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(GameplayManager), "ShowMpScoreboard")) {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDeathReview_PatchShowMpScoreboard), "PatchShowMpScoreboard"));
+
+                    continue;
+                }
+
+                yield return code;
+            }
         }
     }
 }
