@@ -101,7 +101,7 @@
     <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="Controllers.cs" />
-    <Compile Include="CTF.cs" />
+    <Compile Include="MatchModeCTF.cs" />
     <Compile Include="CustomDoorAutomap.cs" />
     <Compile Include="CustomLevelResources.cs" />
     <Compile Include="DisableTimeCheat.cs" />
