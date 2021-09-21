@@ -289,7 +289,7 @@ namespace GameMod {
             } else if (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY) {
                 // If the spawn point is not being avoided, give a bonus in team anarchy if the spawn point sees teammates and no enemies and doesn't have a teammate on the spawn point.
                 if (seesTeammate && !seesEnemy && closestTeammate > 5f) {
-                    score += 0.5f;
+                    score += 0.5f * scale;
                 }
             }
 
