@@ -144,7 +144,7 @@ namespace GameMod
             if (MPDeathReview.lastDeathReview == null)
                 return;
 
-            showDeathReviewDetails = GameplayManager.IsMultiplayerActive && !PlayerShip.m_typing_in_chat && Controls.IsPressed(CCInput.SWITCH_MISSILE);
+            showDeathReviewDetails = GameplayManager.IsMultiplayerActive && !PlayerShip.m_typing_in_chat && Controls.IsPressed(CCInput.USE_BOOST);
 
             if (!GameplayManager.ShowMpScoreboard)
                 DrawDeathSummary(__instance);
@@ -209,7 +209,7 @@ namespace GameMod
             }
 
             if (!showDeathReviewDetails && ((assister != null && assister.netId != killer.netId) || MPDeathReview.lastDeathReview.players.Any(x => otherIds.Contains(x.Key)) || (killer != GameManager.m_local_player && MPDeathReview.lastDeathReview.players.Any(x => selfIds.Contains(x.Key))))) {
-                uie.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.SWITCH_MISSILE) + " - SHOW MORE DETAILS", pos + Vector2.down * 18f, 0.3f, StringOffset.CENTER, UIManager.m_col_ui5 * 0.7f, alpha_mod, -1f);
+                uie.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.USE_BOOST) + " - SHOW MORE DETAILS", pos + Vector2.down * 18f, 0.3f, StringOffset.CENTER, UIManager.m_col_ui5 * 0.7f, alpha_mod, -1f);
             }
         }
 
