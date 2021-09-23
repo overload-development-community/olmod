@@ -15,10 +15,12 @@ namespace GameMod {
         public static MenuState msLagCompensation = (MenuState)76;
         public static MenuState msAutoSelect = (MenuState)77;
         public static MenuState msAxisCurveEditor = (MenuState)78;
+        public static MenuState msTeamColors = (MenuState)79;
         //public static UIElementType uiServerBrowser = (UIElementType)89;
         public static UIElementType uiLagCompensation = (UIElementType)90;
         public static UIElementType uiAutoSelect = (UIElementType)91;
         public static UIElementType uiAxisCurveEditor = (UIElementType)92;
+        public static UIElementType uiTeamColors = (UIElementType)93;
         public static bool mms_ctf_boost { get; set; }
 
         public static string GetMMSCtfCarrierBoost()
@@ -162,6 +164,7 @@ namespace GameMod {
         public static int mms_damageeffect_alpha_mult = 30;
         public static int mms_damageeffect_drunk_blur_mult = 10;
         public static int mms_match_time_limit = 60;
+        public static bool mms_reduced_ship_explosions = false;
     }
 
 
@@ -519,11 +522,9 @@ namespace GameMod {
             position.y += 56f;
             uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 10, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
             position.y += 56f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 11, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 12, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
             position.y += 56f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 12, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
-            position.y += 56f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 13, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
+            uie.SelectAndDrawItem(Loc.LS("TEAM COLORS"), position, 11, false, 1f, 0.75f);
             position.y += 56f;
             uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
             position.y += 56f;
@@ -632,55 +633,19 @@ namespace GameMod {
                             MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
                         break;
                     case 11:
-                        Menus.mms_team_color_default = !Menus.mms_team_color_default;
+                        MenuManager.ChangeMenuState(Menus.msTeamColors, false);
+                        UIManager.DestroyAll(false);
                         MenuManager.PlaySelectSound(1f);
-                        ProcessColorSelections();
                         break;
                     case 12:
-                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
-                        if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
-                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                        Menus.mms_reduced_ship_explosions = !Menus.mms_reduced_ship_explosions;
                         MenuManager.PlaySelectSound(1f);
-                        ProcessColorSelections();
-                        break;
-                    case 13:
-                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
-                        if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
-                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
-                        MenuManager.PlaySelectSound(1f);
-                        ProcessColorSelections();
                         break;
                     default:
                         break;
                 }
                 MenuManager.UnReverseOption();
             }
-        }
-
-        static void ProcessColorSelections()
-        {
-            if (GameplayManager.IsMultiplayerActive)
-            {
-                // Update ship colors
-                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
-                {
-                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
-                    ps.UpdateRimColor(true);
-                }
-                // Update CTF flag/carrier colors
-                if (CTF.IsActive)
-                {
-                    for (int i = 0; i < CTF.FlagObjs.Count; i++)
-                    {
-                        CTF.UpdateFlagColor(CTF.FlagObjs[i], i);
-                    }
-                    foreach (var player in Overload.NetworkManager.m_Players)
-                    {
-                        CTF.UpdateShipEffects(player);
-                    }
-                }
-            }
-            UIManager.InitMpNames();
         }
     }
 
@@ -692,6 +657,9 @@ namespace GameMod {
         {
             if (MenuManager.m_menu_state == Menus.msLagCompensation)
                 LagCompensationUpdate(ref ___m_menu_state_timer);
+
+            if (MenuManager.m_menu_state == Menus.msTeamColors)
+                TeamColorsUpdate(ref ___m_menu_state_timer);
         }
 
         private static void LagCompensationUpdate(ref float m_menu_state_timer)
@@ -790,6 +758,104 @@ namespace GameMod {
             }
         }
 
+        private static void TeamColorsUpdate(ref float m_menu_state_timer)
+        {
+            UIManager.MouseSelectUpdate();
+            switch (MenuManager.m_menu_sub_state)
+            {
+                case MenuSubState.INIT:
+                    if (m_menu_state_timer > 0.25f)
+                    {
+                        UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, Menus.uiTeamColors);
+                        MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                        m_menu_state_timer = 0f;
+                        MenuManager.SetDefaultSelection(0);
+                    }
+                    break;
+                case MenuSubState.ACTIVE:
+                    UIManager.ControllerMenu();
+                    Controls.m_disable_menu_letter_keys = false;
+                    int menu_micro_state = MenuManager.m_menu_micro_state;
+
+                    if (m_menu_state_timer > 0.25f)
+                    {
+                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir() || UIManager.SliderMouseDown()))
+                        {
+                            MenuManager.MaybeReverseOption();
+                            switch (UIManager.m_menu_selection)
+                            {
+                                case 1:
+                                    Menus.mms_team_color_default = !Menus.mms_team_color_default;
+                                    MenuManager.PlaySelectSound(1f);
+                                    ProcessColorSelections();
+                                    break;
+                                case 2:
+                                    Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                                    if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
+                                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                                    MenuManager.PlaySelectSound(1f);
+                                    ProcessColorSelections();
+                                    break;
+                                case 3:
+                                    Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                                    if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
+                                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                                    MenuManager.PlaySelectSound(1f);
+                                    ProcessColorSelections();
+                                    break;
+                                case 100:
+                                    MenuManager.PlaySelectSound(1f);
+                                    m_menu_state_timer = 0f;
+                                    UIManager.DestroyAll(false);
+                                    MenuManager.m_menu_state = 0;
+                                    MenuManager.m_menu_micro_state = 0;
+                                    MenuManager.m_menu_sub_state = MenuSubState.BACK;
+                                    break;
+                            }
+                        }
+                    }
+                    break;
+                case MenuSubState.BACK:
+                    if (m_menu_state_timer > 0.25f)
+                    {
+                        MenuManager.ChangeMenuState(((Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null)).Pop(), true);
+                        AccessTools.Field(typeof(MenuManager), "m_went_back").SetValue(null, true);
+                    }
+                    break;
+                case MenuSubState.START:
+                    if (m_menu_state_timer > 0.25f)
+                    {
+
+                    }
+                    break;
+            }
+        }
+
+        static void ProcessColorSelections()
+        {
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                // Update ship colors
+                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
+                {
+                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
+                    ps.UpdateRimColor(true);
+                }
+                // Update CTF flag/carrier colors
+                if (CTF.IsActive)
+                {
+                    for (int i = 0; i < CTF.FlagObjs.Count; i++)
+                    {
+                        CTF.UpdateFlagColor(CTF.FlagObjs[i], i);
+                    }
+                    foreach (var player in Overload.NetworkManager.m_Players)
+                    {
+                        CTF.UpdateShipEffects(player);
+                    }
+                }
+            }
+            UIManager.InitMpNames();
+        }
     }
 
     [HarmonyPatch(typeof(UIElement), "Draw")]
@@ -799,6 +865,33 @@ namespace GameMod {
         {
             if (__instance.m_type == Menus.uiLagCompensation && __instance.m_alpha > 0f)
                 DrawLagCompensationWindow(__instance);
+
+            if (__instance.m_type == Menus.uiTeamColors && __instance.m_alpha > 0f)
+                DrawTeamColorsWindow(__instance);
+        }
+
+        static void DrawTeamColorsWindow(UIElement uie)
+        {
+            UIManager.ui_bg_dark = true;
+            uie.DrawMenuBG();
+            Vector2 position = uie.m_position;
+            position.y = UIManager.UI_TOP + 64f;
+            uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("TEAM COLOR SETTINGS"), 265f);
+            position.y += 20f;
+            uie.DrawMenuSeparator(position);
+            position.y += 40f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 1, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
+            position.y += 64f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 2, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
+            position.y += 64f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 3, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
+            position.y += 64f;
+            position.y = UIManager.UI_BOTTOM - 120f;
+            uie.DrawMenuSeparator(position);
+            position.y += 5f;
+            DrawMenuToolTipMultiline(uie, position, 15f);
+            position.y = UIManager.UI_BOTTOM - 30f;
+            uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
         }
 
         static void DrawLagCompensationWindow(UIElement uie)
