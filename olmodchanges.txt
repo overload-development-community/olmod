@@ -1,3 +1,26 @@
+v0.5.0 - 2020-09-25
+
+- Upgrade to Harmony 2.  The main side effect of this will be faster load times for olmod. (Thanks, Tobias!)
+- A new option for controller users under Controls -> Advanced Options for Max Turn Ramp Mode.  Choose either the Default implementation, or the Linear implementation.  The Linear option removes the default "curve" controllers were forced on and allows you to get to max ramping speed immediately.  If you use linear, be sure to play with ramping strength and the controller curve editor.  This requires 0.5.0 servers, it will fallback to Default behavior otherwise. (Thanks, luponix!)
+- Ship jitteriness due to network position/rotation error compensation has been eliminated. (Thanks, derhass!)
+- Death in multiplayer now brings up a death summary, showing all damage you took on that life.  It is divided into 4 categories: Killer, Assister, Self/Miscellanous (like lava), and Other.  Note that the damage listed is cumulative for your entire life, and due to rounding won't always add to 100 or however much armor you had on that life.  Also, the Assister box will only show if someone got credited with an assist, and shows all of the damage done by the assister, not just the damage that counted for the assist.  By default, it will show the Killer damage, and you have to toggle the rest of the boxes with the Boost button.  In Options -> Multiplayer, you can find the sticky death summary option to change its behavior to turn off entirely but with the ability to toggle it on with the Boost botton. (Thanks, Tobias!)
+- In multiplayer, lancers will no longer drop from players, you can only get them from item spawn points.
+- In multiplayer, falcons, missile pods, creepers, and hunters that drop from players will be at loadout quantity instead of normal pickup quantity.  Supers and normal pickup quantities from item spawn points are unchanged.
+- Progress in single player can now be saved using olmod. (Thanks, Arne!)
+- Ships joining in progress should no longer be invisible under certain circumstances. (Thanks, derhass!)
+- Anarchy and Team Anarchy spawning bug introduced in v0.4.1 where cubes marked as "No Pathfinding" was being applied when spawning has been resolved.  Notable maps that were particularly bad with this bug include Blizzard and Burning Indika.
+- Anarchy and Team Anarchy spawn algorithm now checks to see if enemy is in direct line of sight before deciding whether to diminish the score of a spawn point if that enemy is in a cone in front of it (or the spawn is in the cone of the enemy's line of sight).  As such, the spread of the cone has increased from 15 to 60 degrees since it now considers walls.
+- Team Anarchy spawn algorithm now makes a spawn point slightly more favorable if a teammate is in line of sight of it and an enemy is not.
+- UI opacity while cloaked increased from 20% to 60%. (Thanks, Tobias!)
+- In Options -> Audio, there is a new option to reset the audio engine.  Use this when your output audio device changes mid-game. (Thanks, Tobias!)
+- New console command `toggle_debugging` which will display in the world where all of the segments and spawn points are.  It degrades performance, so it's only intended for debugging.
+- New console command `dump_segments` which will dump the segment information into the player log.
+- CTF and Monsterball now have mode-specific scoreboards. (Thanks, Tobias!)
+- Observers will now see 1v1 scoring instead of anarchy scoring when observing 1v1 games. (Thanks, Tobias!)
+- Ships will now be able to move in postgame again.  (Thanks, derhass!)
+- When enabled, the rear view no longer appears as spinning debris after your ship explodes.
+- The fix for Gsync players no longer causes uncapped frames in menus.
+
 v0.4.4 - 2021-07-26
 
 - Fix to v0.4.3's server audio patch that prevented network audio sounds from playing more than once, such as refueling from an energy center.

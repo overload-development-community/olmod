@@ -1,4 +1,4 @@
-olmod 0.4.4 - Overload mod
+olmod 0.5.0 - Overload mod
 Community mods for Overload
 https://github.com/overload-development-community/olmod
 
@@ -152,6 +152,14 @@ What does it do
 - Custom team colors, by Tobias.
 
 - Disables use of audio for servers, by derhass.
+
+- Fixes jitteriness of network error correction, by derhass.
+
+- Controller ramping options, by luponix.
+
+- Death summary that shows what killed you, by Tobias.
+
+- Increased UI opacity while cloaked, by Tobias.
 
 How does it work
 ----------------
