@@ -10,18 +10,13 @@ namespace GameMod {
             if (GameplayManager.IsDedicatedServer()) {
                 Application.targetFrameRate = 120;
             } else {
-                Application.targetFrameRate = -1;
+                if (GameManager.m_game_state == GameManager.GameState.GAMEPLAY) {
+                    Application.targetFrameRate = -1;
+                } else {
+                    Application.targetFrameRate = 120;
+                }
             }
             return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(UIElement), "DrawMainMenu")]
-    class GSyncFix_DrawMainMenu {
-        static void Postfix() {
-            if (Application.targetFrameRate == -1) {
-                Application.targetFrameRate = 120;
-            }
         }
     }
 }
