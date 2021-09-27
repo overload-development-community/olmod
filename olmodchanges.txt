@@ -1,4 +1,9 @@
-v0.5.0 - 2020-09-25
+v0.5.1 - 2021-09-26
+
+- Fix CPU usage bug with large maps.
+- Don't consider doors to break line of sight for purposes of spawn algorithm.
+
+v0.5.0 - 2021-09-25
 
 - Upgrade to Harmony 2.  The main side effect of this will be faster load times for olmod. (Thanks, Tobias!)
 - A new option for controller users under Controls -> Advanced Options for Max Turn Ramp Mode.  Choose either the Default implementation, or the Linear implementation.  The Linear option removes the default "curve" controllers were forced on and allows you to get to max ramping speed immediately.  If you use linear, be sure to play with ramping strength and the controller curve editor.  This requires 0.5.0 servers, it will fallback to Default behavior otherwise. (Thanks, luponix!)
