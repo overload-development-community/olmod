@@ -192,8 +192,6 @@ namespace GameMod
                         Active = 0
                     });
                 }
-
-                Debug.Log($"MPPrimaries - Added {weaponType}, budget {weapon.percent}");
             }
 
             // Spawn in initial primaries.

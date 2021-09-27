@@ -103,28 +103,6 @@ namespace GameMod.Core {
 
     }
 
-    // add monsterball mb_arena1 level to multiplayer levels
-    [HarmonyPatch(typeof(GameManager), "ScanForLevels")]
-    class MBLevelPatch
-    {
-        public static bool SLInit = false;
-        static void Prefix()
-        {
-            if (SLInit)
-                return;
-            SLInit = true;
-            /*
-            Overload.GameManager.MultiplayerMission.AddLevel("mb_arena1", "ARENA", "TITAN_06", new int[]
-                        {
-                                1,
-                                4,
-                                2,
-                                8
-                        });
-            */
-        }
-    }
-
     [HarmonyPatch(typeof(LocalLANHost), "GetServerLocation")]
     class ServerLocationPatch
     {
@@ -179,24 +157,6 @@ namespace GameMod.Core {
         }
     }
 
-    // GSync fix
-    [HarmonyPatch(typeof(GameManager), "UpdateTargetFramerate")]
-    class GSyncFix
-    {
-        static bool Prefix()
-        {
-            if (GameplayManager.IsDedicatedServer())
-            {
-                Application.targetFrameRate = 120;
-            }
-            else
-            {
-                Application.targetFrameRate = -1;
-            }
-            return false;
-        }
-    }
-
     // Shenanigans.
     [HarmonyPatch(typeof(StringParse), "IsNiceWord")]
     class ReallyIsNiceWord
@@ -210,49 +170,6 @@ namespace GameMod.Core {
             }
 
             return true;
-        }
-    }
-
-    // Fix next/previous resolution buttons.
-    [HarmonyPatch(typeof(MenuManager), "SelectNextResolution")]
-    class FixSelectNextResolution
-    {
-        static bool Prefix()
-        {
-            var resolutions = Screen.resolutions.Where(r => r.width >= 800 && r.height >= 540).Select(r => new Resolution { width = r.width, height = r.height }).Distinct().ToList();
-
-            resolutions.Sort((a, b) =>
-            {
-                return a.width == b.width ? a.height - b.height : a.width - b.width;
-            });
-
-            var index = resolutions.IndexOf(new Resolution { width = MenuManager.m_resolution_width, height = MenuManager.m_resolution_height });
-
-            if (index == -1)
-            {
-                index = resolutions.Count() - 1;
-            }
-            else if (UIManager.m_select_dir > 0)
-            {
-                index++;
-                if (index >= resolutions.Count())
-                {
-                    index = 0;
-                }
-            }
-            else
-            {
-                index--;
-                if (index < 0)
-                {
-                    index = resolutions.Count() - 1;
-                }
-            }
-
-            MenuManager.m_resolution_width = resolutions[index].width;
-            MenuManager.m_resolution_height = resolutions[index].height;
-
-            return false;
         }
     }
 }

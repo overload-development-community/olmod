@@ -1,13 +1,13 @@
-﻿using HarmonyLib;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection.Emit;
+using HarmonyLib;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     public static class Menus
     {
 
@@ -158,6 +158,7 @@ namespace GameMod
         public static int mms_lag_compensation_strength = 2;
         public static int mms_lag_compensation_use_interpolation = 0;
         public static string mms_mp_projdata_fn = "STOCK";
+        public static bool mms_sticky_death_summary = false;
         public static int mms_damageeffect_alpha_mult = 30;
         public static int mms_damageeffect_drunk_blur_mult = 10;
         public static int mms_match_time_limit = 60;
@@ -512,18 +513,20 @@ namespace GameMod
     {
         static void DrawMoreOptions(UIElement uie, ref Vector2 position)
         {
-            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 8, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
-            position.y += 62f;
-            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
-            position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 10, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
-            position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 11, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
-            position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 12, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
-            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("STICKY DEATH SUMMARY"), position, 8, Menus.mms_sticky_death_summary ? "YES" : "NO", "KEEP DEATH SUMMARY ON THE SCREEN AFTER LETTING GO OF THE TOGGLE");
+            position.y += 56f;
+            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
+            position.y += 56f;
+            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 10, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
+            position.y += 56f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 11, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
+            position.y += 56f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 12, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
+            position.y += 56f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 13, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
+            position.y += 56f;
             uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
-            position.y += 62f;
+            position.y += 56f;
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
@@ -531,9 +534,14 @@ namespace GameMod
             int state = 0;
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155f)
-                {
-                    code.operand = 300f;
+                if (code.opcode == OpCodes.Ldc_R4) {
+                    if ((float)code.operand == 155f) {
+                        code.operand = 300f;
+                    }
+
+                    if ((float)code.operand == 62f) {
+                        code.operand = 56f;
+                    }
                 }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
                 {
@@ -609,28 +617,33 @@ namespace GameMod
                         MenuManager.PlaySelectSound(1f);
                         break;
                     case 8:
+                        Menus.mms_sticky_death_summary = !Menus.mms_sticky_death_summary;
+                        MPDeathReview.stickyDeathReview = Menus.mms_sticky_death_summary;
+                        MenuManager.PlaySelectSound(1f);
+                        break;
+                    case 9:
                         Menus.mms_damageeffect_drunk_blur_mult = (int)(UIElement.SliderPos * 100f);
                         if (Input.GetMouseButtonDown(0))
                             MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
                         break;
-                    case 9:
+                    case 10:
                         Menus.mms_damageeffect_alpha_mult = (int)(UIElement.SliderPos * 100f);
                         if (Input.GetMouseButtonDown(0))
                             MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
                         break;
-                    case 10:
+                    case 11:
                         Menus.mms_team_color_default = !Menus.mms_team_color_default;
                         MenuManager.PlaySelectSound(1f);
                         ProcessColorSelections();
                         break;
-                    case 11:
+                    case 12:
                         Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                         if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
                             Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                         MenuManager.PlaySelectSound(1f);
                         ProcessColorSelections();
                         break;
-                    case 12:
+                    case 13:
                         Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
                         if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
                             Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
@@ -1007,6 +1020,39 @@ namespace GameMod
                 }
                 yield return code;
             }
+        }
+    }
+
+    // Fix next/previous resolution buttons.
+    [HarmonyPatch(typeof(MenuManager), "SelectNextResolution")]
+    class FixSelectNextResolution {
+        static bool Prefix() {
+            var resolutions = Screen.resolutions.Where(r => r.width >= 800 && r.height >= 540).Select(r => new Resolution { width = r.width, height = r.height }).Distinct().ToList();
+
+            resolutions.Sort((a, b) => {
+                return a.width == b.width ? a.height - b.height : a.width - b.width;
+            });
+
+            var index = resolutions.IndexOf(new Resolution { width = MenuManager.m_resolution_width, height = MenuManager.m_resolution_height });
+
+            if (index == -1) {
+                index = resolutions.Count() - 1;
+            } else if (UIManager.m_select_dir > 0) {
+                index++;
+                if (index >= resolutions.Count()) {
+                    index = 0;
+                }
+            } else {
+                index--;
+                if (index < 0) {
+                    index = resolutions.Count() - 1;
+                }
+            }
+
+            MenuManager.m_resolution_width = resolutions[index].width;
+            MenuManager.m_resolution_height = resolutions[index].height;
+
+            return false;
         }
     }
 }
