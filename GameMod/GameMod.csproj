@@ -129,6 +129,7 @@
     <Compile Include="MPCreeperSync.cs" />
     <Compile Include="MPCustomModeFile.cs" />
     <Compile Include="MPDamageEffects.cs" />
+    <Compile Include="MPDeathExplosion.cs" />
     <Compile Include="MPDeathReview.cs" />
     <Compile Include="MPErrorSmoothingFix.cs" />
     <Compile Include="MPFixGhostProjectiles.cs" />
