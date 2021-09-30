@@ -1,3 +1,18 @@
+v0.5.2 - 2021-09-30
+
+- Update to balance settings for multiplayer games only: (Thanks to zero for coordinating, and all the pilots who tested this!)
+  - Cyclone damage -7.4%
+  - Cyclone projectile speed -20%
+  - Crusher damage -12.8%
+  - Crusher muzzle flash, added the driller muzzle flash
+  - Crusher trails, changed from crusher trails to driller trails for more visibility
+    - As a result, crusher has been removed from being weapon lag compensated so you can actually see them
+  - Hunter homing strength +5.6% (this restores half of what was taken away in v0.4.0)
+- Option for reduced ship explosion effects for multiplayer, find in Options -> Multiplayer Options, defaults to Full. (Thanks, Tobias!)
+- Server browser doesn't reset to page 1 every time it refreshes.
+- Binding for Roll Left 90° no longer brings up an empty curve editor. (Thanks, luponix!)
+- Erroneous weapon swap message on spawn has been removed. (Thanks, luponix!)
+
 v0.5.1 - 2021-09-26
 
 - Fix CPU usage bug with large maps.
