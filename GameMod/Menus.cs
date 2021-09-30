@@ -164,7 +164,7 @@ namespace GameMod {
         public static int mms_damageeffect_alpha_mult = 30;
         public static int mms_damageeffect_drunk_blur_mult = 10;
         public static int mms_match_time_limit = 60;
-        public static bool mms_reduced_ship_explosions = false;
+        public static bool mms_reduced_ship_explosions = true;
     }
 
 

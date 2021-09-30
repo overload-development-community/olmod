@@ -12,7 +12,7 @@ namespace GameMod
     {
         static void CreateExitMovingExplosion(Vector3 vector)
         {
-            if (!Menus.mms_reduced_ship_explosions)
+            if (!GameplayManager.IsMultiplayer || !Menus.mms_reduced_ship_explosions)
             {
                 ExplosionManager.CreateExitMovingExplosion(vector);
             }
@@ -20,7 +20,7 @@ namespace GameMod
 
         static void StartAndEmitParticleInstant(ParticleSubManager psm, int pp_idx, Vector3 pos, Quaternion rot, int emit_count)
         {
-            if (!Menus.mms_reduced_ship_explosions)
+            if (!GameplayManager.IsMultiplayer || !Menus.mms_reduced_ship_explosions)
             {
                 psm.StartAndEmitParticleInstant(pp_idx, pos, rot, emit_count);
             }
@@ -28,7 +28,7 @@ namespace GameMod
 
         static void CreateExpElementFromResourcesAndEmit(FXExpElement exp_element, Transform transform, int emit_count, bool all = false)
         {
-            if (!Menus.mms_reduced_ship_explosions)
+            if (!GameplayManager.IsMultiplayer || !Menus.mms_reduced_ship_explosions)
             {
                 ExplosionManager.CreateExpElementFromResourcesAndEmit(exp_element, transform, emit_count, all);
             }
@@ -36,7 +36,7 @@ namespace GameMod
 
         static void CreateMinorExplosion(Vector3 vector)
         {
-            if (!Menus.mms_reduced_ship_explosions)
+            if (!GameplayManager.IsMultiplayer || !Menus.mms_reduced_ship_explosions)
             {
                 ExplosionManager.CreateMinorExplosion(vector);
             }
@@ -71,7 +71,7 @@ namespace GameMod
     {
         static ParticleElement CreateRandomExplosionSimple(Transform transform, float scale = 1f, float sim_speed = 1f)
         {
-            if (!Menus.mms_reduced_ship_explosions)
+            if (!GameplayManager.IsMultiplayer || !Menus.mms_reduced_ship_explosions)
             {
                 return ExplosionManager.CreateRandomExplosionSimple(transform, scale, sim_speed);
             }
