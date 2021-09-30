@@ -553,7 +553,7 @@ namespace GameMod {
                 players = NetworkMatch.m_players.Values.Where(x => !x.m_name.StartsWith("OBSERVER")).Select(x => x.m_name),
                 hasPassword = MPModPrivateData.HasPassword,
                 matchNotes = MPModPrivateData.MatchNotes,
-                classicSpanwsEnabled = MPClassic.matchEnabled,
+                classicSpawnsEnabled = MPClassic.matchEnabled,
                 ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled
             });
         }
