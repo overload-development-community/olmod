@@ -84,7 +84,7 @@ END_ENTRY
 proj_vortex
 m_damage_robot;7
 m_damage_player;4
-m_damage_mp;3.135
+m_damage_mp;2.8875
 m_damage_energy;True
 m_stun_multiplier;1.1
 m_push_force_robot;5
@@ -94,7 +94,7 @@ m_push_torque_player;0.25
 m_lifetime_min;0.3
 m_lifetime_max;-1
 m_lifetime_robot_multiplier;1
-m_init_speed_min;75
+m_init_speed_min;60
 m_init_speed_max;-1
 m_init_speed_robot_multiplier;0.65
 m_acceleration;0
@@ -168,7 +168,7 @@ END_ENTRY
 proj_shotgun
 m_damage_robot;7
 m_damage_player;5
-m_damage_mp;2.12
+m_damage_mp;1.85
 m_damage_energy;False
 m_stun_multiplier;0.6
 m_push_force_robot;7
@@ -204,8 +204,8 @@ m_death_sfx;none
 m_trail_particle;none
 m_trail_renderer;trail_renderer_crusher
 m_trail_post_lifetime;1
-m_muzzle_flash_particle;none
-m_muzzle_flash_particle_player;none
+m_muzzle_flash_particle;muzzle_flash_driller_mini
+m_muzzle_flash_particle_player;muzzle_flash_driller_mini_player
 END_ENTRY
 proj_driller_mini
 m_damage_robot;14
@@ -731,7 +731,7 @@ m_acceleration;2
 m_vel_inherit_player;0
 m_vel_inherit_robot;0
 m_track_direction;False
-m_homing_strength;0.63
+m_homing_strength;0.665
 m_homing_strength_robot;0.4
 m_homing_max_dist;60
 m_homing_min_dot;0.7
