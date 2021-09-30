@@ -215,7 +215,9 @@ namespace GameMod
         {
             MenuManager.m_list_items_total_count = Items.Count();
             MenuManager.m_list_items_max_per_page = Math.Min(MenuManager.m_list_items_total_count, 12);
-            MenuManager.m_list_items_first = 0;
+            while (MenuManager.m_list_items_first > MenuManager.m_list_items_total_count) {
+                MenuManager.m_list_items_first -= 12;
+            }
             MenuManager.m_list_items_last = Mathf.Min(MenuManager.m_list_items_first + MenuManager.m_list_items_max_per_page - 1, MenuManager.m_list_items_total_count - 1);
             MenuManager.m_list_item_paging = (MenuManager.m_list_items_total_count > 12);
         }
