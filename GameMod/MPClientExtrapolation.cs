@@ -35,6 +35,7 @@ namespace GameMod {
                 c_proj.m_type == ProjPrefab.missile_timebomb ||  // a time bomb (handled by creeper/TB sync)
                 c_proj.m_type == ProjPrefab.proj_flak_cannon ||  // a flak projectile (lifespan is too short to make a difference)
                 c_proj.m_type == ProjPrefab.proj_driller ||      // a driller projectile (projectile is too fast to make a difference)
+                c_proj.m_type == ProjPrefab.proj_shotgun ||      // a crusher projectile (projectile is too fast to make a difference)
                 c_proj.m_type == ProjPrefab.proj_driller_mini || // do not lerp projectile children
                 c_proj.m_type == ProjPrefab.missile_smart_mini ||
                 c_proj.m_type == ProjPrefab.missile_devastator_mini
