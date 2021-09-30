@@ -202,7 +202,7 @@ m_death_particle_robot;none
 m_firing_sfx;weapon_shotgun
 m_death_sfx;none
 m_trail_particle;none
-m_trail_renderer;trail_renderer_crusher
+m_trail_renderer;trail_renderer_driller
 m_trail_post_lifetime;1
 m_muzzle_flash_particle;muzzle_flash_driller_mini
 m_muzzle_flash_particle_player;muzzle_flash_driller_mini_player
