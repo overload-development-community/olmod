@@ -490,7 +490,39 @@ namespace GameMod {
             if (HandlePlayerRespawn(player,snapshot)) {
                 return;
             }
-            player.c_player_ship.c_transform.localPosition = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos+snapshot.m_vel, t);
+            Vector3 newPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos+snapshot.m_vel, t);
+            // limit ship dive-in if enabled:
+            if (Menus.mms_lag_compensation_collision_limit > 0) {
+                const float radius = 0.98f; /// the ship's collider is radius 1, we use a bit smaller one
+                Vector3 basePos = snapshot.m_pos;
+                Vector3 deltaPos = newPos - basePos;
+                float dist = deltaPos.magnitude;
+                if (dist > 0.05f) { // only if ship is moved by a significant amount
+                    // NOTE: we only test against LAVA and LEVEL, not other players, because that
+                    //       would have two drawbacks:
+                    //       - we would test against the player ship itslef, if speed and ping
+                    //         is high enough (I tried to disable that collider, but that didn't work)
+                    //       - if multipe opponents collide, the first one we processed here
+                    //         would get maximal movement and the others would be cut short, which
+                    //         is not correct either...
+                    const int layerMask = (1<<(int)UnityObjectLayers.LEVEL) | (1<<(int)UnityObjectLayers.LAVA);
+                    RaycastHit hitInfo;
+                    Vector3 direction = (1.0f/dist) * deltaPos;
+
+                    if (Physics.SphereCast(basePos, radius, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore)) {
+                        // how far the ship's enclosing shpere dives into the collider
+                        float diveIn = dist - hitInfo.distance;
+                        // how far the ship's enclosing sphere is allowed to dive in
+                        float maxDive = (100.0f - (float)Menus.mms_lag_compensation_collision_limit)/50.0f * radius;
+                        if (diveIn > maxDive) {
+                            // limit the ship position
+                            diveIn = maxDive;
+                            newPos = basePos + (hitInfo.distance + diveIn) * direction;
+                        }
+                    }
+                }
+            }
+            player.c_player_ship.c_transform.localPosition = newPos;
             player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot*Quaternion.Euler(snapshot.m_vrot), t);
             player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
         }
