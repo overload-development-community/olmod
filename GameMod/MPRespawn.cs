@@ -281,8 +281,8 @@ namespace GameMod {
             if (lastRespawn.ContainsKey(spawnPoint) && lastRespawn[spawnPoint] > DateTime.Now.AddSeconds(-2)) {
                 score -= (float)(lastRespawn[spawnPoint] - DateTime.Now.AddSeconds(-2)).TotalSeconds;
             } else if (NetworkMatch.GetMode() == MatchMode.TEAM_ANARCHY) {
-                // If the spawn point is not being avoided, give a bonus in team anarchy if the spawn point sees teammates and no enemies and doesn't have a teammate on the spawn point.
-                if (seesTeammate && !seesEnemy && closestTeammate > 5f) {
+                // If the spawn point is not being avoided, give a bonus in team anarchy if the spawn point sees teammates and no enemies and doesn't have a teammate on the spawn point and no enemy is within 8 cubes.
+                if (seesTeammate && !seesEnemy && closestTeammate > 5f && closest > 32f) {
                     score += 0.5f * scale;
                 }
             }
