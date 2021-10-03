@@ -108,6 +108,7 @@ namespace GameMod
                         ip = result.server.ip,
                         port = result.server.port,
                         name = result.server.name,
+                        version = result.server.version.Replace("olmod ", ""),
                         serverNotes = result.server.serverNotes,
                         online = result.server.online,
                         gameStarted = result.game == null ? (DateTime?)null : result.game.gameStarted,
@@ -173,7 +174,7 @@ namespace GameMod
                     item._lastPing = 0;
             }
             Items.AddRange(newItems);
-            Items = Items.OrderByDescending(x => x.currentPlayers).ThenByDescending(x => x.status).ThenByDescending(x => x.name.StartsWith("roncli")).ThenBy(x => x.name).ToList();
+            Items = Items.OrderByDescending(x => x.currentPlayers).ThenByDescending(x => x.status).ThenBy(x => x.name).ToList();
             UpdateList();
         }
 
@@ -316,6 +317,7 @@ namespace GameMod
                 public string ip { get; set; }
                 public int port { get; set; }
                 public string name { get; set; }
+                public string version { get; set; }
                 public string serverNotes { get; set; }
                 public bool online { get; set; }
             }
@@ -341,6 +343,7 @@ namespace GameMod
         public string ip { get; set; }
         public int port { get; set; }
         public string name { get; set; }
+        public string version { get; set; }
         public string serverNotes { get; set; }
         public bool online { get; set; }
         public DateTime? gameStarted { get; set; }
@@ -502,6 +505,7 @@ namespace GameMod
                     uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("SERVER BROWSER"), 265f);
                     position.y += 20f;
                     float d = -600f; // Title
+                    float d1 = -420f; // Version
                     float d2 = -310f; // Level
                     float d3 = -110f; // Players
                     //float d4 = 20f; // Status
@@ -511,6 +515,7 @@ namespace GameMod
                                      //float d8 = 490f; // PW
                     float d9 = 550f + 50f;
                     uie.DrawStringSmall(Loc.LS("SERVER"), position + Vector2.right * d, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("VERSION"), position + Vector2.right * d1, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
                     uie.DrawStringSmall(Loc.LS("LEVEL"), position + Vector2.right * d2, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
                     uie.DrawStringSmall(Loc.LS("STATUS"), position + Vector2.right * d3, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
                     uie.DrawStringSmall(Loc.LS("MODE"), position + Vector2.right * d5, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
@@ -528,7 +533,8 @@ namespace GameMod
 
                         Color c = item.online ? UIManager.m_col_ui3 : new Color(0.2f, 0.2f, 0.2f);
                         position.y += 35f;
-                        uie.DrawStringSmall(item.name /*.Substring(0, Math.Min(item.name.Length, 28))*/, position + Vector2.right * d, 0.5f, StringOffset.LEFT, c, 1f, d2 - d - 4f);
+                        uie.DrawStringSmall(item.name /*.Substring(0, Math.Min(item.name.Length, 28))*/, position + Vector2.right * d, 0.5f, StringOffset.LEFT, c, 1f, d1 - d - 4f);
+                        uie.DrawStringSmall(item.version /*.Substring(0, Math.Min(item.name.Length, 28))*/, position + Vector2.right * d1, 0.5f, StringOffset.LEFT, c, 1f, d2 - d1 - 4f);
                         uie.DrawStringSmall(item.mapName /*.Substring(0, Math.Min(item.mapName.Length, 18))*/, position + Vector2.right * d2, 0.5f, StringOffset.LEFT, c, 1f, d3 - d2 - 4f);
                         if (item.status == MPServerBrowserItem.BrowserItemStatus.INLOBBY || item.status == MPServerBrowserItem.BrowserItemStatus.PLAYING)
                         {
