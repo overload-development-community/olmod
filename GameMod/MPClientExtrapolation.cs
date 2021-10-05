@@ -494,10 +494,12 @@ namespace GameMod {
             // limit ship dive-in if enabled:
             if (Menus.mms_lag_compensation_collision_limit > 0) {
                 const float radius = 0.98f; /// the ship's collider is radius 1, we use a bit smaller one
+                // how far the ship's enclosing sphere is allowed to dive in
+                float maxDive = (100.0f - (float)Menus.mms_lag_compensation_collision_limit)/50.0f * radius;
                 Vector3 basePos = snapshot.m_pos;
                 Vector3 deltaPos = newPos - basePos;
                 float dist = deltaPos.magnitude;
-                if (dist > 0.05f) { // only if ship is moved by a significant amount
+                if (dist > 0.05f && dist > maxDive) { // only if ship is moved by a significant amount
                     // NOTE: we only test against LAVA and LEVEL, not other players, because that
                     //       would have two drawbacks:
                     //       - we would test against the player ship itslef, if speed and ping
@@ -512,8 +514,6 @@ namespace GameMod {
                     if (Physics.SphereCast(basePos, radius, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore)) {
                         // how far the ship's enclosing shpere dives into the collider
                         float diveIn = dist - hitInfo.distance;
-                        // how far the ship's enclosing sphere is allowed to dive in
-                        float maxDive = (100.0f - (float)Menus.mms_lag_compensation_collision_limit)/50.0f * radius;
                         if (diveIn > maxDive) {
                             // limit the ship position
                             diveIn = maxDive;
