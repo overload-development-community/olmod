@@ -286,24 +286,24 @@ namespace GameMod
                 int i = 0;
                 foreach (var team in MPTeams.TeamsByScore)
                 {
-                    DrawTeamScore(uie, pos, team, NetworkMatch.GetTeamScore(team), 350f, team == GameManager.m_local_player.m_mp_team);
+                    DrawTeamScore(uie, ref pos, team, NetworkMatch.GetTeamScore(team), 350f, team == GameManager.m_local_player.m_mp_team);
                     pos.y += 35f;
                     // Only draw header for first team in column
                     if (i == 0)
                     {
-                        DrawScoreHeader(uie, pos, false);
+                        DrawScoreHeader(uie, ref pos, false);
                         pos.y += 15f;
                         uie.DrawVariableSeparator(pos, 350f);
                         pos.y += 20f;
                     }
 
-                    DrawScoresForTeam(uie, team, pos);
+                    DrawScoresForTeam(uie, team, ref pos);
                     pos.y += 35f;
                     i++;
                 }
             }
 
-            static void DrawTeamScore(UIElement uie, Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
+            static void DrawTeamScore(UIElement uie, ref Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
             {
                 Color c = MPTeams.TeamColor(team, my_team ? 2 : 0);
                 Color color = MPTeams.TeamColor(team, my_team ? 4 : 2);
@@ -315,7 +315,7 @@ namespace GameMod
                 uie.DrawStringSmall(NetworkMatch.GetTeamName(team), pos - Vector2.right * (w + 9f), 0.6f, StringOffset.LEFT, color, 1f, -1f);
             }
 
-            static void DrawScoreHeader(UIElement uie, Vector2 pos, bool score = false)
+            static void DrawScoreHeader(UIElement uie, ref Vector2 pos, bool score = false)
             {
                 uie.DrawStringSmall("PLAYER", pos + Vector2.right * col1, 0.4f, StringOffset.LEFT, UIManager.m_col_ui0, 1f, -1f);
                 uie.DrawStringSmall("CAPT", pos + Vector2.right * col2, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
@@ -329,7 +329,7 @@ namespace GameMod
                 UIManager.DrawSpriteUI(pos + Vector2.right * col9, 0.13f, 0.13f, UIManager.m_col_ui0, uie.m_alpha, 204);
             }
 
-            static int DrawScoresForTeam(UIElement uie, MpTeam team, Vector2 pos)
+            static int DrawScoresForTeam(UIElement uie, MpTeam team, ref Vector2 pos)
             {
                 float m_alpha = (float)AccessTools.Field(typeof(UIElement), "m_alpha").GetValue(uie);
                 List<Player> players = NetworkManager.m_PlayersForScoreboard;
@@ -574,24 +574,24 @@ namespace GameMod
                 int i = 0;
                 foreach (var team in MPTeams.TeamsByScore)
                 {
-                    DrawTeamScore(uie, pos, team, NetworkMatch.GetTeamScore(team), 350f, team == GameManager.m_local_player.m_mp_team);
+                    DrawTeamScore(uie, ref pos, team, NetworkMatch.GetTeamScore(team), 350f, team == GameManager.m_local_player.m_mp_team);
                     pos.y += 35f;
                     // Only draw header for first team in column
                     if (i == 0)
                     {
-                        DrawScoreHeader(uie, pos, false);
+                        DrawScoreHeader(uie, ref pos, false);
                         pos.y += 15f;
                         uie.DrawVariableSeparator(pos, 350f);
                         pos.y += 20f;
                     }
 
-                    DrawScoresForTeam(uie, team, pos);
+                    DrawScoresForTeam(uie, team, ref pos);
                     pos.y += 35f;
                     i++;
                 }
             }
 
-            static void DrawTeamScore(UIElement uie, Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
+            static void DrawTeamScore(UIElement uie, ref Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
             {
                 Color c = MPTeams.TeamColor(team, my_team ? 2 : 0);
                 Color color = MPTeams.TeamColor(team, my_team ? 4 : 2);
@@ -603,7 +603,7 @@ namespace GameMod
                 uie.DrawStringSmall(NetworkMatch.GetTeamName(team), pos - Vector2.right * (w + 9f), 0.6f, StringOffset.LEFT, color, 1f, -1f);
             }
 
-            static void DrawScoreHeader(UIElement uie, Vector2 pos, bool score = false)
+            static void DrawScoreHeader(UIElement uie, ref Vector2 pos, bool score = false)
             {
                 uie.DrawStringSmall("PLAYER", pos + Vector2.right * col1, 0.4f, StringOffset.LEFT, UIManager.m_col_ui0, 1f, -1f);
                 uie.DrawStringSmall("GOALS", pos + Vector2.right * col2, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
@@ -617,7 +617,7 @@ namespace GameMod
                 UIManager.DrawSpriteUI(pos + Vector2.right * col8, 0.13f, 0.13f, UIManager.m_col_ui0, uie.m_alpha, 204);
             }
 
-            static int DrawScoresForTeam(UIElement uie, MpTeam team, Vector2 pos)
+            static int DrawScoresForTeam(UIElement uie, MpTeam team, ref Vector2 pos)
             {
                 float m_alpha = (float)AccessTools.Field(typeof(UIElement), "m_alpha").GetValue(uie);
                 List<Player> players = NetworkManager.m_PlayersForScoreboard;
