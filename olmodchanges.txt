@@ -1,3 +1,10 @@
+v0.5.3 - 2021-10-08
+
+- Lag Compensation now has a "dive-in limiter" that lets you control how far ships can dive into walls when being lag compensated.
+- For team anarchy, the teammate bonus given to spawn points is no longer given if an enemy is within 32 units.
+- Server browser now shows the olmod version the server is running.
+- Fix for CTF/Monsterball scoreboards.
+
 v0.5.2 - 2021-09-30
 
 - Update to balance settings for multiplayer games only: (Thanks to zero for coordinating, and all the pilots who tested this!)
