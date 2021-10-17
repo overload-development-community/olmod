@@ -108,7 +108,7 @@ namespace GameMod
                         ip = result.server.ip,
                         port = result.server.port,
                         name = result.server.name,
-                        version = result.server.version.Replace("olmod ", ""),
+                        version = result.server.version?.Replace("olmod ", ""),
                         serverNotes = result.server.serverNotes,
                         online = result.server.online,
                         gameStarted = result.game == null ? (DateTime?)null : result.game.gameStarted,
