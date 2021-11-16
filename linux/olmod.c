@@ -212,8 +212,8 @@ static void *my_mono_image_open_from_data_with_name(char *data, int data_len, in
 #define org_dlsym dlsym
 #else
 #define new_dlsym dlsym
-static void *(*org_dlsym)(void*,const char*);
-extern void *_dl_sym(void *, const char *, void *);
+typedef void *(*DLSYM_PROC_T)(void*, const char*);
+DLSYM_PROC_T org_dlsym;
 #endif
 
 // separate function needed on mac to prevent stub_helper in dlsym which prevents opengl driver loading (???)
@@ -278,9 +278,33 @@ __attribute__((used)) static const struct { void *a, *b; } interpose_dlsym[]
 #else
 __attribute__((constructor)) static void olmod_init(void) 
 {
-	if (!(org_dlsym = _dl_sym(RTLD_NEXT, "dlsym", olmod_init))) {
+	// We need to get the address of "dlsym", but we can't call
+	// dlsym to query it as we define that symbol by ourselves to
+	// hook it. The previous method was to use the internal function
+	// _dl_sym which was exported by glibc prior to 2.34, but now
+	// is hidden.
+	//
+	// As a workaround, we can use dlvsym, but that requires us to
+	// know the exact version of the symbol to query. Fortunately,
+	// this is defined in the glibc ABI, so it won't change even in
+	// future glibc versions. Unfortunately, it varies by architecture.
+	// These macros might be GCC-specific...
+#if defined(__x86_64__)
+#define DLSYM_ABI_VERSION "2.2.5"
+#elif defined (__i386__)
+#define DLSYM_ABI_VERSION "2.0"
+#else
+#error NOT SUPPORTED FOR THIS ARCHITECTURE
+#endif
+	if (!(org_dlsym = (DLSYM_PROC_T)dlvsym(RTLD_NEXT, "dlsym", "GLIBC_" DLSYM_ABI_VERSION))) {
 		print("olmod failed dlsym lookup\n");
 		abort();
+	} else {
+		// Use the versioned one to look up the unversioned version, as this might be a different one.
+		DLSYM_PROC_T ptr = (DLSYM_PROC_T)org_dlsym(RTLD_NEXT, "dlsym");
+		if (ptr && (ptr != org_dlsym)) {
+			org_dlsym = ptr;
+		}
 	}
 }
 #endif
