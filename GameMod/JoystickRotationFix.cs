@@ -204,7 +204,7 @@ namespace GameMod
                     server_support = true;
                     Debug.Log("JoystickRamping.server_support didnt reset properly");
                 }
-                position.y += 62f;
+                position.y += 55f;
                 uie.SelectAndDrawStringOptionItem(Loc.LS("MAX TURN RAMP MODE"), position, 0, alt_turn_ramp_mode ? "LINEAR" : "DEFAULT", "LINEAR ADDS THE MAX TURN RAMPING SPEED LINEARLY ALONG THE INPUT [KB/JOYSTICK ONLY]", 1.5f, !server_support);
             }
 
