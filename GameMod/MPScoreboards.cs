@@ -380,8 +380,7 @@ namespace GameMod
                         if (MPModPrivateData.AssistScoring)
                             uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_assists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_deaths, 0.65f, StringOffset.CENTER, color, m_alpha * num);
-                        color = uie.GetPingColor(player.m_avg_ping_ms);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col9, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col9, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, uie.GetPingColor(player.m_avg_ping_ms), m_alpha * num);
                         pos.y += 25f;
                     }
                 }
@@ -664,8 +663,7 @@ namespace GameMod
                         if (MPModPrivateData.AssistScoring)
                             uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_assists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_deaths, 0.65f, StringOffset.CENTER, color, m_alpha * num);
-                        color = uie.GetPingColor(player.m_avg_ping_ms);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, uie.GetPingColor(player.m_avg_ping_ms), m_alpha * num);
                         pos.y += 25f;
                     }
                 }
