@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using Overload;
@@ -12,15 +13,15 @@ namespace GameMod {
     {
 
         //public static MenuState msServerBrowser = (MenuState)75;
-        public static MenuState msLagCompensation = (MenuState)76;
+        //public static MenuState msLagCompensation = (MenuState)76;
         public static MenuState msAutoSelect = (MenuState)77;
         public static MenuState msAxisCurveEditor = (MenuState)78;
-        public static MenuState msTeamColors = (MenuState)79;
+        //public static MenuState msTeamColors = (MenuState)79;
         //public static UIElementType uiServerBrowser = (UIElementType)89;
-        public static UIElementType uiLagCompensation = (UIElementType)90;
+        //public static UIElementType uiLagCompensation = (UIElementType)90;
         public static UIElementType uiAutoSelect = (UIElementType)91;
         public static UIElementType uiAxisCurveEditor = (UIElementType)92;
-        public static UIElementType uiTeamColors = (UIElementType)93;
+        //public static UIElementType uiTeamColors = (UIElementType)93;
         public static bool mms_ctf_boost { get; set; }
 
         public static string GetMMSCtfCarrierBoost()
@@ -516,439 +517,123 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIElement), "DrawMpOptions")]
     class Menus_UIElement_DrawMpOptions
     {
-        static void DrawMoreOptions(UIElement uie, ref Vector2 position)
+        static bool Prefix(UIElement __instance)
         {
-            uie.SelectAndDrawStringOptionItem(Loc.LS("STICKY DEATH SUMMARY"), position, 8, Menus.mms_sticky_death_summary ? "YES" : "NO", "KEEP DEATH SUMMARY ON THE SCREEN AFTER LETTING GO OF THE TOGGLE");
-            position.y += 56f;
-            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 9, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
-            position.y += 56f;
-            uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 10, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
-            position.y += 56f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 12, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
-            position.y += 56f;
-            uie.SelectAndDrawItem(Loc.LS("TEAM COLORS"), position, 11, false, 1f, 0.75f);
-            position.y += 56f;
-            uie.SelectAndDrawItem(Loc.LS("LAG COMPENSATION SETTINGS"), position, 6, false, 1f, 0.75f);
-            position.y += 56f;
-        }
-
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
-            int state = 0;
-            foreach (var code in codes)
-            {
-                if (code.opcode == OpCodes.Ldc_R4) {
-                    if ((float)code.operand == 155f) {
-                        code.operand = 300f;
-                    }
-
-                    if ((float)code.operand == 62f) {
-                        code.operand = 56f;
-                    }
-                }
-                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "QUICK CHAT")
-                {
-                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpOptions), "DrawMoreOptions"));
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                }
-
-                // Remove deprecated "Cross-Platform Play" option
-                // Skip block of code starting at first DrawMenuSeparator call through position.y += 62f
-                if (state == 0 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "DrawMenuSeparator"))
-                {
-                    state = 1;
-                    yield return code;
-                    continue;
-                }
-
-                if (state == 1)
-                {
-                    if (code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(Vector2), "y"))
-                        state = 2;
-                    continue;
-                }
-
-                // Remove deprecated "Cross-Platform Chat" option
-                // Skip starting at the ldstr call (preserving ldarg_0 for next call) and ending at the next ldarg_0 for Auto-Respawn Timer
-                if (state == 2 && code.opcode == OpCodes.Ldstr && (string)code.operand == "CROSS-PLATFORM CHAT")
-                {
-                    state = 3;
-                }
-
-                if (state == 3)
-                {
-                    if (code.opcode == OpCodes.Ldarg_0)
-                        state = 4;
-                    continue;
-                }
-                yield return code;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuManager), "MpOptionsUpdate")]
-    class Menus_MenuManager_MpOptionsUpdate
-    {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
-            int state = 0;
-            foreach (var code in codes)
-            {
-                //    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "MaybeReverseOption"))
-                if (state == 0 && code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 100)
-                {
-                    state = 1;
-                    // A simple Postfix breaks the left arrow functionality, have to transpile after MaybeReverseOption
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_MpOptionsUpdate), "Update")) { labels = code.labels };
-                    code.labels = null;
-                }
-                yield return code;
-            }
-        }
-
-        static void Update()
-        {
-            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()) || UIManager.SliderMouseDown())
-            {
-                MenuManager.MaybeReverseOption();
-                switch (UIManager.m_menu_selection)
-                {
-                    case 6:
-                        MenuManager.ChangeMenuState(Menus.msLagCompensation, false);
-                        UIManager.DestroyAll(false);
-                        MenuManager.PlaySelectSound(1f);
-                        break;
-                    case 8:
-                        Menus.mms_sticky_death_summary = !Menus.mms_sticky_death_summary;
-                        MPDeathReview.stickyDeathReview = Menus.mms_sticky_death_summary;
-                        MenuManager.PlaySelectSound(1f);
-                        break;
-                    case 9:
-                        Menus.mms_damageeffect_drunk_blur_mult = (int)(UIElement.SliderPos * 100f);
-                        if (Input.GetMouseButtonDown(0))
-                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
-                        break;
-                    case 10:
-                        Menus.mms_damageeffect_alpha_mult = (int)(UIElement.SliderPos * 100f);
-                        if (Input.GetMouseButtonDown(0))
-                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
-                        break;
-                    case 11:
-                        MenuManager.ChangeMenuState(Menus.msTeamColors, false);
-                        UIManager.DestroyAll(false);
-                        MenuManager.PlaySelectSound(1f);
-                        break;
-                    case 12:
-                        Menus.mms_reduced_ship_explosions = !Menus.mms_reduced_ship_explosions;
-                        MenuManager.PlaySelectSound(1f);
-                        break;
-                    default:
-                        break;
-                }
-                MenuManager.UnReverseOption();
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuManager), "Update")]
-    class Menus_MenuManager_Update
-    {
-
-        private static void Postfix(ref float ___m_menu_state_timer)
-        {
-            if (MenuManager.m_menu_state == Menus.msLagCompensation)
-                LagCompensationUpdate(ref ___m_menu_state_timer);
-
-            if (MenuManager.m_menu_state == Menus.msTeamColors)
-                TeamColorsUpdate(ref ___m_menu_state_timer);
-        }
-
-        private static void LagCompensationUpdate(ref float m_menu_state_timer)
-        {
-            UIManager.MouseSelectUpdate();
-            switch (MenuManager.m_menu_sub_state)
-            {
-                case MenuSubState.INIT:
-                    if (m_menu_state_timer > 0.25f)
-                    {
-                        UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, Menus.uiLagCompensation);
-                        MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
-                        m_menu_state_timer = 0f;
-                        MenuManager.SetDefaultSelection(0);
-                    }
-                    break;
-                case MenuSubState.ACTIVE:
-                    UIManager.ControllerMenu();
-                    Controls.m_disable_menu_letter_keys = false;
-                    int menu_micro_state = MenuManager.m_menu_micro_state;
-
-                    if (m_menu_state_timer > 0.25f)
-                    {
-                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir() || UIManager.SliderMouseDown()))
-                        {
-                            MenuManager.MaybeReverseOption();
-                            switch (UIManager.m_menu_selection)
-                            {
-                                case 1:
-                                    Menus.mms_lag_compensation = (Menus.mms_lag_compensation + 4 + UIManager.m_select_dir) % 4;
-                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                                    break;
-                                case 2:
-                                    Menus.mms_lag_compensation_advanced = !Menus.mms_lag_compensation_advanced;
-                                    if (!Menus.mms_lag_compensation_advanced)
-                                    {
-                                        Menus.SetLagCompensationDefaults();
-                                    }
-                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                                    break;
-                                case 3:
-                                    Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
-                                    Menus.mms_weapon_lag_compensation_max = Menus.mms_ship_lag_compensation_max;
-                                    break;
-                                case 4:
-                                    Menus.mms_lag_compensation_strength = (Menus.mms_lag_compensation_strength + 3 + UIManager.m_select_dir) % 3;
-                                    Menus.mms_weapon_lag_compensation_scale = (int)Math.Round((Menus.mms_lag_compensation_strength + 1) * 100f / 3f, 0);
-                                    Menus.mms_ship_lag_compensation_scale = Menus.mms_weapon_lag_compensation_scale;
-                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                                    break;
-                                case 5:
-                                    Menus.mms_lag_compensation_use_interpolation = (Menus.mms_lag_compensation_use_interpolation + 4 + UIManager.m_select_dir) % 4;
-                                    Menus.mms_lag_compensation_ship_added_lag = (int)Math.Round(Menus.mms_lag_compensation_use_interpolation * 1000f / 60f, 0);
-                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                                    break;
-                                case 6:
-                                    Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
-                                    break;
-                                case 7:
-                                    Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
-                                    break;
-                                case 8:
-                                    Menus.mms_weapon_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
-                                    break;
-                                case 9:
-                                    Menus.mms_ship_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
-                                    break;
-                                case 10:
-                                    Menus.mms_lag_compensation_ship_added_lag = (int)(UIElement.SliderPos * 50f);
-                                    break;
-                                case 11:
-                                    Menus.mms_lag_compensation_collision_limit = (int)(UIElement.SliderPos * 100f+0.5f);
-                                    break;
-                                case 100:
-                                    MenuManager.PlaySelectSound(1f);
-                                    m_menu_state_timer = 0f;
-                                    UIManager.DestroyAll(false);
-                                    MenuManager.m_menu_state = 0;
-                                    MenuManager.m_menu_micro_state = 0;
-                                    MenuManager.m_menu_sub_state = MenuSubState.BACK;
-                                    break;
-                            }
-                        }
-                    }
-                    break;
-                case MenuSubState.BACK:
-                    if (m_menu_state_timer > 0.25f)
-                    {
-                        MenuManager.ChangeMenuState(((Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null)).Pop(), true);
-                        AccessTools.Field(typeof(MenuManager), "m_went_back").SetValue(null, true);
-                    }
-                    break;
-                case MenuSubState.START:
-                    if (m_menu_state_timer > 0.25f)
-                    {
-
-                    }
-                    break;
-            }
-        }
-
-        private static void TeamColorsUpdate(ref float m_menu_state_timer)
-        {
-            UIManager.MouseSelectUpdate();
-            switch (MenuManager.m_menu_sub_state)
-            {
-                case MenuSubState.INIT:
-                    if (m_menu_state_timer > 0.25f)
-                    {
-                        UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, Menus.uiTeamColors);
-                        MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
-                        m_menu_state_timer = 0f;
-                        MenuManager.SetDefaultSelection(0);
-                    }
-                    break;
-                case MenuSubState.ACTIVE:
-                    UIManager.ControllerMenu();
-                    Controls.m_disable_menu_letter_keys = false;
-                    int menu_micro_state = MenuManager.m_menu_micro_state;
-
-                    if (m_menu_state_timer > 0.25f)
-                    {
-                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir() || UIManager.SliderMouseDown()))
-                        {
-                            MenuManager.MaybeReverseOption();
-                            switch (UIManager.m_menu_selection)
-                            {
-                                case 1:
-                                    Menus.mms_team_color_default = !Menus.mms_team_color_default;
-                                    MenuManager.PlaySelectSound(1f);
-                                    ProcessColorSelections();
-                                    break;
-                                case 2:
-                                    Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
-                                    if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
-                                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
-                                    MenuManager.PlaySelectSound(1f);
-                                    ProcessColorSelections();
-                                    break;
-                                case 3:
-                                    Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
-                                    if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
-                                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
-                                    MenuManager.PlaySelectSound(1f);
-                                    ProcessColorSelections();
-                                    break;
-                                case 100:
-                                    MenuManager.PlaySelectSound(1f);
-                                    m_menu_state_timer = 0f;
-                                    UIManager.DestroyAll(false);
-                                    MenuManager.m_menu_state = 0;
-                                    MenuManager.m_menu_micro_state = 0;
-                                    MenuManager.m_menu_sub_state = MenuSubState.BACK;
-                                    break;
-                            }
-                        }
-                    }
-                    break;
-                case MenuSubState.BACK:
-                    if (m_menu_state_timer > 0.25f)
-                    {
-                        MenuManager.ChangeMenuState(((Stack<MenuState>)AccessTools.Field(typeof(MenuManager), "m_back_stack").GetValue(null)).Pop(), true);
-                        AccessTools.Field(typeof(MenuManager), "m_went_back").SetValue(null, true);
-                    }
-                    break;
-                case MenuSubState.START:
-                    if (m_menu_state_timer > 0.25f)
-                    {
-
-                    }
-                    break;
-            }
-        }
-
-        static void ProcessColorSelections()
-        {
-            if (GameplayManager.IsMultiplayerActive)
-            {
-                // Update ship colors
-                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
-                {
-                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
-                    ps.UpdateRimColor(true);
-                }
-                // Update CTF flag/carrier colors
-                if (CTF.IsActive)
-                {
-                    for (int i = 0; i < CTF.FlagObjs.Count; i++)
-                    {
-                        CTF.UpdateFlagColor(CTF.FlagObjs[i], i);
-                    }
-                    foreach (var player in Overload.NetworkManager.m_Players)
-                    {
-                        CTF.UpdateShipEffects(player);
-                    }
-                }
-            }
-            UIManager.InitMpNames();
-        }
-    }
-
-    [HarmonyPatch(typeof(UIElement), "Draw")]
-    class Menus_UIElement_Draw
-    {
-        static void Postfix(UIElement __instance)
-        {
-            if (__instance.m_type == Menus.uiLagCompensation && __instance.m_alpha > 0f)
-                DrawLagCompensationWindow(__instance);
-
-            if (__instance.m_type == Menus.uiTeamColors && __instance.m_alpha > 0f)
-                DrawTeamColorsWindow(__instance);
-        }
-
-        static void DrawTeamColorsWindow(UIElement uie)
-        {
+            UIManager.X_SCALE = 0.2f;
             UIManager.ui_bg_dark = true;
-            uie.DrawMenuBG();
-            Vector2 position = uie.m_position;
-            position.y = UIManager.UI_TOP + 64f;
-            uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("TEAM COLOR SETTINGS"), 265f);
+            __instance.DrawMenuBG();
+            UIElement.ToolTipActive = false;
+            Vector2 position = __instance.m_position;
+            position.y = UIManager.UI_TOP + 60f;
+            __instance.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 20f), Loc.LS("MULTIPLAYER OPTIONS"), 265f);
             position.y += 20f;
-            uie.DrawMenuSeparator(position);
+            //__instance.DrawMenuSeparator(position);
+            DrawTabs(__instance, position, MenuManager.m_menu_micro_state);
             position.y += 40f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 1, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
-            position.y += 64f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 2, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
-            position.y += 64f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 3, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
-            position.y += 64f;
-            position.y = UIManager.UI_BOTTOM - 120f;
-            uie.DrawMenuSeparator(position);
-            position.y += 5f;
-            DrawMenuToolTipMultiline(uie, position, 15f);
+            __instance.DrawMenuSeparator(position);
+            position.y += 40f;
+
+            switch (MenuManager.m_menu_micro_state)
+            {
+                case 0:
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("TEXT CHAT"), position, 0, MenuManager.GetMPTextChat(), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("AUTO-RESPAWN TIMER"), position, 2, MenuManager.GetToggleSetting(MenuManager.opt_mp_auto_respawn), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("STICKY DEATH SUMMARY"), position, 3, Menus.mms_sticky_death_summary ? "YES" : "NO", "KEEP DEATH SUMMARY ON THE SCREEN AFTER LETTING GO OF THE TOGGLE");
+                    position.y += 62f;
+                    __instance.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 4, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
+                    position.y += 62f;
+                    __instance.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 5, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 6, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
+                    position.y += 62f;
+                    __instance.SelectAndDrawItem(Loc.LS("QUICK CHAT"), position, 1, false, 1f, 0.75f);
+                    break;
+                case 1:
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("TEAMMATE NAMES"), position, 0, MenuManager.GetMPTeammateNames(), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("TEAM COLORS"), position, 1, Menus.GetMMSTeamColorDefault(), "DISPLAY TEAM COLORS IN DEFAULT ORANGE/BLUE OR CUSTOM", 1.5f, false);
+                    position.y += 64f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 2, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
+                    position.y += 64f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 3, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
+                    break;
+                case 2:
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("USE ADVANCED SETTINGS"), position, 2, Menus.GetMMSLagCompensationAdvanced(), "SHOW ADVANCED SETTINGS TO FURTHER FINE TUNE YOUR LAG COMPENSATION", 1.5f, false);
+                    position.y += 62f;
+                    __instance.DrawTextLineSmall("WARNING: ONCE ON, TURNING OFF ADVANCED SETTINGS", position);
+                    position.y += 28f;
+                    __instance.DrawTextLineSmall("WILL RESET YOUR LAG COMPENSATION SETTINGS TO DEFAULT.", position);
+                    position.y += 62f;
+                    if (!Menus.mms_lag_compensation_advanced)
+                    {
+                        SelectAndDrawSliderItem(__instance, Loc.LS("MAX PING TO COMPENSATE"), position, 3, Menus.mms_ship_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT", Menus.mms_lag_compensation == 0);
+                        position.y += 62f;
+                        __instance.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION STRENGTH"), position, 4, Menus.GetMMSLagCompensationStrength(), "SCALES THE STRENGTH OF LAG COMPENSATION RELATIVE TO YOUR PING", fade: Menus.mms_lag_compensation == 0);
+                        position.y += 62f;
+                        __instance.SelectAndDrawStringOptionItem(Loc.LS("USE INTERPOLATION"), position, 5, Menus.GetMMSLagCompensationUseInterpolation(), "HOW STRONGLY TO INTERPOLATE SHIP POSITIONS AT THE COST OF ADDED LAG." + Environment.NewLine + "A STRONGER VALUE WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE", fade: Menus.mms_lag_compensation == 1 || Menus.mms_lag_compensation == 3);
+                    }
+                    else
+                    {
+                        SelectAndDrawSliderItem(__instance, Loc.LS("MAX PING TO COMPENSATE FOR WEAPONS"), position, 6, Menus.mms_weapon_lag_compensation_max, 250, "LIMIT WEAPON LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR FROM THE FIRING SHIP WEAPONS WILL BE DRAWN, AT THE COST OF HAVING TO LEAD YOUR DODGES MORE", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1);
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(__instance, Loc.LS("MAX PING TO COMPENSATE FOR SHIPS"), position, 7, Menus.mms_ship_lag_compensation_max, 250, "LIMIT SHIP LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR INTO THE FUTURE SHIP POSITIONS WILL BE GUESSED, AT THE COST OF HAVING TO LEAD YOUR SHOTS MORE", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2);
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(__instance, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100, "THE SCALE AT WHICH WEAPON LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR DODGING CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR WEAPONS", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1);
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(__instance, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100, "THE SCALE AT WHICH SHIP LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR SHOTS THAT HIT SHIPS CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR SHIPS", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2);
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(__instance, Loc.LS("SHIP LAG ADDED"), position, 10, Menus.mms_lag_compensation_ship_added_lag, 50, "ADDS A SET AMOUNT OF LAG TO THE END OF THE SHIP LAG COMPENSATION CALCULATIONS. USEFUL WHEN SHIP LAG COMPENSATION IS TURNED OFF." + Environment.NewLine + "A HIGHER SETTING WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
+                        position.y += 62f;
+                        SelectAndDrawSliderItem(__instance, Loc.LS("LIMIT SHIPS DIVING INTO WALLS"), position, 11, Menus.mms_lag_compensation_collision_limit, 100, "LIMIT HOW FAR SHIPS MIGHT DIVE INTO WALLS (BUT SHIPS MIGHT APPEAR STUCK AT THE WALLS FOR SHORT MOMENTS INSTEAD)." + Environment.NewLine + "0 FOR UNLIMITED (NO CALCULATION OVERHEAD), OTHERWISE PERCENTAGE OF SHIP DIAMETER WHICH MUST REMAIN VISIBLE (100 = NO DIVE-IN AT ALL).");
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            __instance.DrawMenuSeparator(position + Vector2.up * 40f);
+            __instance.DrawMenuToolTip(position + Vector2.up * 40f, 15f);
             position.y = UIManager.UI_BOTTOM - 30f;
-            uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
+            __instance.SelectAndDrawItem(Loc.LS("BACK"), position, 100, false, 1f, 0.75f);
+            __instance.MaybeShowMpStatus();
+
+            return false;
         }
 
-        static void DrawLagCompensationWindow(UIElement uie)
+        public static void DrawTabs(UIElement uie, Vector2 pos, int tab_selected)
         {
-            UIManager.ui_bg_dark = true;
-            uie.DrawMenuBG();
-            Vector2 position = uie.m_position;
-            position.y = UIManager.UI_TOP + 40f;
-            uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 25f), Loc.LS("LAG COMPENSATION SETTINGS"), 265f);
-            position.y += 12f;
-            uie.DrawMenuSeparator(position);
-            position.y += 32f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
-            position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("USE ADVANCED SETTINGS"), position, 2, Menus.GetMMSLagCompensationAdvanced(), "SHOW ADVANCED SETTINGS TO FURTHER FINE TUNE YOUR LAG COMPENSATION", 1.5f, false);
-            position.y += 62f;
-            uie.DrawTextLineSmall("WARNING: ONCE ON, TURNING OFF ADVANCED SETTINGS", position);
-            position.y += 28f;
-            uie.DrawTextLineSmall("WILL RESET YOUR LAG COMPENSATION SETTINGS TO DEFAULT.", position);
-            position.y += 62f;
-            if (!Menus.mms_lag_compensation_advanced)
+            float w = 378f;
+            uie.DrawWideBox(pos, w, 22f, UIManager.m_col_ub2, uie.m_alpha, 7);
+            string[] array = new string[]
             {
-                SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE"), position, 3, Menus.mms_ship_lag_compensation_max, 250, "LIMIT LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT", Menus.mms_lag_compensation == 0);
-                position.y += 62f;
-                uie.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION STRENGTH"), position, 4, Menus.GetMMSLagCompensationStrength(), "SCALES THE STRENGTH OF LAG COMPENSATION RELATIVE TO YOUR PING", fade: Menus.mms_lag_compensation == 0);
-                position.y += 62f;
-                uie.SelectAndDrawStringOptionItem(Loc.LS("USE INTERPOLATION"), position, 5, Menus.GetMMSLagCompensationUseInterpolation(), "HOW STRONGLY TO INTERPOLATE SHIP POSITIONS AT THE COST OF ADDED LAG." + Environment.NewLine + "A STRONGER VALUE WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE", fade: Menus.mms_lag_compensation == 1 || Menus.mms_lag_compensation == 3);
-                position.y += 62f;
-            }
-            else
+                "GENERAL",
+                "TEAM",
+                "LAG COMPENSATION"
+            };
+            for (int i = 0; i < array.Length; i++)
             {
-                SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR WEAPONS"), position, 6, Menus.mms_weapon_lag_compensation_max, 250, "LIMIT WEAPON LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR FROM THE FIRING SHIP WEAPONS WILL BE DRAWN, AT THE COST OF HAVING TO LEAD YOUR DODGES MORE", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1);
-                position.y += 62f;
-                SelectAndDrawSliderItem(uie, Loc.LS("MAX PING TO COMPENSATE FOR SHIPS"), position, 7, Menus.mms_ship_lag_compensation_max, 250, "LIMIT SHIP LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR INTO THE FUTURE SHIP POSITIONS WILL BE GUESSED, AT THE COST OF HAVING TO LEAD YOUR SHOTS MORE", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2);
-                position.y += 62f;
-                SelectAndDrawSliderItem(uie, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100, "THE SCALE AT WHICH WEAPON LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR DODGING CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR WEAPONS", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1);
-                position.y += 62f;
-                SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100, "THE SCALE AT WHICH SHIP LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR SHOTS THAT HIT SHIPS CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR SHIPS", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2);
-                position.y += 62f;
-                SelectAndDrawSliderItem(uie, Loc.LS("SHIP LAG ADDED"), position, 10, Menus.mms_lag_compensation_ship_added_lag, 50, "ADDS A SET AMOUNT OF LAG TO THE END OF THE SHIP LAG COMPENSATION CALCULATIONS. USEFUL WHEN SHIP LAG COMPENSATION IS TURNED OFF." + Environment.NewLine + "A HIGHER SETTING WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
-                position.y += 62f;
-                SelectAndDrawSliderItem(uie, Loc.LS("LIMIT SHIPS DIVING INTO WALLS"), position, 11, Menus.mms_lag_compensation_collision_limit, 100, "LIMIT HOW FAR SHIPS MIGHT DIVE INTO WALLS (BUT SHIPS MIGHT APPEAR STUCK AT THE WALLS FOR SHORT MOMENTS INSTEAD)." + Environment.NewLine + "0 FOR UNLIMITED (NO CALCULATION OVERHEAD), OTHERWISE PERCENTAGE OF SHIP DIAMETER WHICH MUST REMAIN VISIBLE (100 = NO DIVE-IN AT ALL).");
-                position.y += 62f;
+                pos.x = ((float)i - 1f) * 265f;
+                uie.TestMouseInRect(pos, 112f, 16f, 200 + i, false);
+                if (UIManager.m_menu_selection == 200 + i)
+                {
+                    uie.DrawWideBox(pos, 112f, 19f, UIManager.m_col_ui4, uie.m_alpha, 7);
+                }
+                if (i == tab_selected)
+                {
+                    uie.DrawWideBox(pos, 112f, 16f, UIManager.m_col_ui4, uie.m_alpha, 12);
+                    uie.DrawStringSmall(array[i], pos, 0.6f, StringOffset.CENTER, UIManager.m_col_ub3, 1f, -1f);
+                }
+                else
+                {
+                    uie.DrawWideBox(pos, 112f, 16f, UIManager.m_col_ui0, uie.m_alpha, 8);
+                    uie.DrawStringSmall(array[i], pos, 0.6f, StringOffset.CENTER, UIManager.m_col_ui1, 1f, -1f);
+                }
             }
-            position.y = UIManager.UI_BOTTOM - 118f;
-            uie.DrawMenuSeparator(position);
-            position.y += 5f;
-            DrawMenuToolTipMultiline(uie, position, 15f);
-            position.y = UIManager.UI_BOTTOM - 30f;
-            uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
         }
-
 
         // Tweak of original SelectAndDrawSliderItem to support non-100 max, tooltip
         public static void SelectAndDrawSliderItem(UIElement uie, string s, Vector2 pos, int selection, float amt, float max, string tool_tip, bool fade = false)
@@ -1020,22 +705,210 @@ namespace GameMod {
             if (fade)
                 UIManager.PreviousQuadsAlpha(quad_index, 0.3f);
         }
+    }
 
-        public static void DrawMenuToolTipMultiline(UIElement uie, Vector2 pos, float offset = 15f)
+    [HarmonyPatch(typeof(MenuManager), "MpOptionsUpdate")]
+    class Menus_MenuManager_MpOptionsUpdate
+    {
+        private static MethodInfo _MenuManager_GoBack_Method = AccessTools.Method(typeof(MenuManager), "GoBack");
+        private static MethodInfo _MenuManager_PlayHighlightSound_Method = AccessTools.Method(typeof(MenuManager), "PlayHighlightSound");
+
+        static bool Prefix(ref float ___m_menu_state_timer)
         {
-            if (!UIElement.ToolTipActive)
+            MenuManager.UpdateMPStatus();
+            UIManager.MouseSelectUpdate();
+            MenuSubState menu_sub_state = MenuManager.m_menu_sub_state;
+            if (menu_sub_state != MenuSubState.INIT)
             {
-                return;
+                if (menu_sub_state == MenuSubState.ACTIVE)
+                {
+                    UIManager.ControllerMenu();
+                    if (Controls.JustPressed(CCInput.MENU_SECONDARY))
+                    {
+                        MenuManager.m_mp_status_minimized = !MenuManager.m_mp_status_minimized;
+                        MenuManager.PlayCycleSound(1f, 1f);
+                    }
+                    if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()))
+                    {
+                        MenuManager.MaybeReverseOption();
+                        int menu_selection = UIManager.m_menu_selection;
+                        switch (menu_selection)
+                        {
+                            case 200:
+                            case 201:
+                            case 202:
+                                MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
+                                MenuManager.UIPulse(1f);
+                                _MenuManager_PlayHighlightSound_Method.Invoke(null, new object[] { 0.4f, 0.07f });
+                                break;
+                            default:
+                                if (menu_selection == 100)
+                                {
+                                    _MenuManager_GoBack_Method.Invoke(null, null);
+                                    UIManager.DestroyAll(false);
+                                    MenuManager.PlaySelectSound(1f);
+                                }
+                                break;
+                        }
+
+                        switch (MenuManager.m_menu_micro_state)
+                        {
+                            case 0:
+                                switch (menu_selection)
+                                {
+                                    case 0:
+                                        MenuManager.opt_mp_text_chat = (MenuManager.opt_mp_text_chat + 4 + UIManager.m_select_dir) % 4;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 1:
+                                        MenuManager.ChangeMenuState(MenuState.MP_QC_OPTIONS, false);
+                                        UIManager.DestroyAll(false);
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 2:
+                                        MenuManager.opt_mp_auto_respawn = (MenuManager.opt_mp_auto_respawn + 1) % 2;
+                                        MenuManager.PlayCycleSound(1f, 1f);
+                                        break;
+                                    case 3:
+                                        Menus.mms_sticky_death_summary = !Menus.mms_sticky_death_summary;
+                                        MPDeathReview.stickyDeathReview = Menus.mms_sticky_death_summary;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 4:
+                                        Menus.mms_damageeffect_drunk_blur_mult = (int)(UIElement.SliderPos * 100f);
+                                        if (Input.GetMouseButtonDown(0))
+                                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
+                                        break;
+                                    case 5:
+                                        Menus.mms_damageeffect_alpha_mult = (int)(UIElement.SliderPos * 100f);
+                                        if (Input.GetMouseButtonDown(0))
+                                            MenuManager.PlayCycleSound(1f, (float)((double)UIElement.SliderPos * 5.0 - 3.0));
+                                        break;
+                                    case 6:
+                                        Menus.mms_reduced_ship_explosions = !Menus.mms_reduced_ship_explosions;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                }
+                                break;
+                            case 1:
+                                switch (menu_selection)
+                                {
+                                    case 0:
+                                        MenuManager.opt_mp_teammates = (MenuManager.opt_mp_teammates + 2 + UIManager.m_select_dir) % 2;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 1:
+                                        Menus.mms_team_color_default = !Menus.mms_team_color_default;
+                                        MenuManager.PlaySelectSound(1f);
+                                        ProcessColorSelections();
+                                        break;
+                                    case 2:
+                                        Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                                        if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
+                                            Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
+                                        MenuManager.PlaySelectSound(1f);
+                                        ProcessColorSelections();
+                                        break;
+                                    case 3:
+                                        Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                                        if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
+                                            Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
+                                        MenuManager.PlaySelectSound(1f);
+                                        ProcessColorSelections();
+                                        break;
+                                }
+                                break;
+                            case 2:
+                                switch (menu_selection)
+                                {
+                                    case 1:
+                                        Menus.mms_lag_compensation = (Menus.mms_lag_compensation + 4 + UIManager.m_select_dir) % 4;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 2:
+                                        Menus.mms_lag_compensation_advanced = !Menus.mms_lag_compensation_advanced;
+                                        if (!Menus.mms_lag_compensation_advanced)
+                                        {
+                                            Menus.SetLagCompensationDefaults();
+                                        }
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 3:
+                                        Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                        Menus.mms_weapon_lag_compensation_max = Menus.mms_ship_lag_compensation_max;
+                                        break;
+                                    case 4:
+                                        Menus.mms_lag_compensation_strength = (Menus.mms_lag_compensation_strength + 3 + UIManager.m_select_dir) % 3;
+                                        Menus.mms_weapon_lag_compensation_scale = (int)Math.Round((Menus.mms_lag_compensation_strength + 1) * 100f / 3f, 0);
+                                        Menus.mms_ship_lag_compensation_scale = Menus.mms_weapon_lag_compensation_scale;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 5:
+                                        Menus.mms_lag_compensation_use_interpolation = (Menus.mms_lag_compensation_use_interpolation + 4 + UIManager.m_select_dir) % 4;
+                                        Menus.mms_lag_compensation_ship_added_lag = (int)Math.Round(Menus.mms_lag_compensation_use_interpolation * 1000f / 60f, 0);
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 6:
+                                        Menus.mms_weapon_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                        break;
+                                    case 7:
+                                        Menus.mms_ship_lag_compensation_max = (int)(UIElement.SliderPos * 250f);
+                                        break;
+                                    case 8:
+                                        Menus.mms_weapon_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
+                                        break;
+                                    case 9:
+                                        Menus.mms_ship_lag_compensation_scale = (int)(UIElement.SliderPos * 100f);
+                                        break;
+                                    case 10:
+                                        Menus.mms_lag_compensation_ship_added_lag = (int)(UIElement.SliderPos * 50f);
+                                        break;
+                                    case 11:
+                                        Menus.mms_lag_compensation_collision_limit = (int)(UIElement.SliderPos * 100f + 0.5f);
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        MenuManager.UnReverseOption();
+                    }
+                }
             }
-            string str = (!(UIElement.ToolTipTitle != string.Empty)) ? string.Empty : ("[" + UIElement.ToolTipTitle + "] - ");
-            pos.y += offset;
-            UIManager.DrawQuadUI(pos, 700f, 10f, UIManager.m_col_ub2, 0.7f * uie.m_alpha, 20);
-            string[] strs = UIElement.ToolTipDescription.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-            for (int i = 0; i < strs.Length; i++)
+            else if (___m_menu_state_timer > 0.25f)
             {
-                uie.DrawStringSmall((i == 0 ? str : "") + strs[i], pos - (Vector2.down * i * 20f), 0.5f, StringOffset.CENTER, UIManager.m_col_ub0, 1f, 1280f);
+                UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, UIElementType.MP_OPTIONS);
+                MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                MenuManager.SetDefaultSelection(0);
             }
 
+            return false;
+        }
+
+        static void ProcessColorSelections()
+        {
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                // Update ship colors
+                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
+                {
+                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
+                    ps.UpdateRimColor(true);
+                }
+                // Update CTF flag/carrier colors
+                if (CTF.IsActive)
+                {
+                    for (int i = 0; i < CTF.FlagObjs.Count; i++)
+                    {
+                        CTF.UpdateFlagColor(CTF.FlagObjs[i], i);
+                    }
+                    foreach (var player in Overload.NetworkManager.m_Players)
+                    {
+                        CTF.UpdateShipEffects(player);
+                    }
+                }
+            }
+            UIManager.InitMpNames();
         }
     }
 
