@@ -84,7 +84,7 @@ namespace GameMod
                         UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 35f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod1, true));
                         UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
                         float max_width = col2 - col1 - (float)((!NetworkMatch.m_head_to_head) ? 130 : 10);
-                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, max_width);
+                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, MPColoredPlayerNames.isActive ? MPColoredPlayerNames.GetPlayerColor(player) * 0.7f : c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, max_width);
                         if (!NetworkMatch.m_head_to_head)
                         {
                             if (score)

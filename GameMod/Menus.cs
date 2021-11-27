@@ -548,6 +548,8 @@ namespace GameMod {
                     position.y += 62f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 6, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
                     position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), position, 7, MPColoredPlayerNames.isActive ? "YES" : "NO", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]"));
+                    position.y += 62f;
                     __instance.SelectAndDrawItem(Loc.LS("QUICK CHAT"), position, 1, false, 1f, 0.75f);
                     break;
                 case 1:
@@ -786,6 +788,10 @@ namespace GameMod {
                                         break;
                                     case 6:
                                         Menus.mms_reduced_ship_explosions = !Menus.mms_reduced_ship_explosions;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 7:
+                                        MPColoredPlayerNames.isActive = !MPColoredPlayerNames.isActive;
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                 }
