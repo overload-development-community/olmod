@@ -62,7 +62,8 @@ namespace GameMod
                 classicSpawnsEnabled = Menus.mms_classic_spawns,
                 alwaysCloaked = Menus.mms_always_cloaked,
                 allowSmash = Menus.mms_allow_smash,
-                assistScoring = Menus.mms_assist_scoring
+                assistScoring = Menus.mms_assist_scoring,
+                teamCount = MPTeams.MenuManagerTeamCount
             });
 
             presets.Add(new MPMatchPreset
@@ -99,7 +100,8 @@ namespace GameMod
                 classicSpawnsEnabled = false,
                 alwaysCloaked = false,
                 allowSmash = false,
-                assistScoring = true
+                assistScoring = true,
+                teamCount = 2
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -140,6 +142,7 @@ namespace GameMod
             public bool alwaysCloaked;
             public bool allowSmash;
             public bool assistScoring = true;
+            public int teamCount = 2;
 
             public void Apply()
             {
@@ -175,6 +178,7 @@ namespace GameMod
                 Menus.mms_always_cloaked = this.alwaysCloaked;
                 Menus.mms_allow_smash = this.allowSmash;
                 Menus.mms_assist_scoring = this.assistScoring;
+                MPTeams.MenuManagerTeamCount = this.teamCount;
             }
         }
 
