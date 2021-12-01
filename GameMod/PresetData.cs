@@ -67,19 +67,27 @@ namespace GameMod
             }
             else
             {
-                // Look for "robotdata.txt" in SP/CM zip files and use if possible
+                // Look for "projdata.txt" in SP/CM zip files and use if possible
                 if (!GameplayManager.IsMultiplayer && GameplayManager.Level.IsAddOn)
                 {
-                    string text3 = null;
-                    string filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "projdata");
-                    byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[]
+                    var filePaths = new string[]
+                        {
+                            Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), $"{GameplayManager.Level.FileName}-projdata"),
+                            Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), $"{GameplayManager.Level.Mission.FileName}-projdata"),
+                            Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "projdata")
+                        };
+                    foreach (var filepath in filePaths)
                     {
+                        string text3 = null;
+                        byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[]
+                        {
                         ".txt"
-                    });
-                    if (array != null)
-                    {
-                        return System.Text.Encoding.UTF8.GetString(array);
-                    }
+                        });
+                        if (array != null)
+                        {
+                            return System.Text.Encoding.UTF8.GetString(array);
+                        }
+                    }                    
                 }
                 return GetData(ta, "projdata.txt");
             }
@@ -90,16 +98,24 @@ namespace GameMod
             // Look for "robotdata.txt" in SP/CM zip files and use if possible
             if (!GameplayManager.IsMultiplayer && GameplayManager.Level.IsAddOn)
             {
-                string text3 = null;
-                string filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "robotdata");
-                byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[]
+                var filePaths = new string[]
+                    {
+                        Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), $"{GameplayManager.Level.FileName}-robotdata"),
+                        Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), $"{GameplayManager.Level.Mission.FileName}-robotdata"),
+                        Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), "robotdata")
+                    };
+                foreach (var filepath in filePaths)
                 {
+                    string text3 = null;
+                    byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[]
+                    {
                         ".txt"
-                });
-                if (array != null)
-                {
-                    return System.Text.Encoding.UTF8.GetString(array);
-                }
+                    });
+                    if (array != null)
+                    {
+                        return System.Text.Encoding.UTF8.GetString(array);
+                    }
+                }                
             }
             return GetData(ta, "robotdata.txt");
         }
