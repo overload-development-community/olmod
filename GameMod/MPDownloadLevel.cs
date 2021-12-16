@@ -43,7 +43,11 @@ namespace GameMod {
             }
         }
 
-        // same algorithm as Mission.AddAddOnLevel
+        /// <summary>
+        /// Finds the index of a given level in the provided level list. Checks level file name and
+        /// display name; does not guarantee matching contents.
+        /// Same algorithm as Mission.AddAddOnLevel
+        /// </summary>
         private static int FindLevelIndex(List<LevelInfo> levels, string levelIdHash)
         {
             string fileNameExt = levelIdHash.Split(new[] { ':' })[0];
@@ -64,6 +68,12 @@ namespace GameMod {
             return _Mission_Levels_Field.GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
         }
 
+        /// <summary>
+        /// Returns the path of a loaded multiplayer level that matches the filename from the given level ID hash,
+        /// regardless of whether the version matches. Also returns a reference to the level list and position of
+        /// the matching level within that list.
+        /// Returns null if no matching level is loaded.
+        /// </summary>
         private static string DifferentVersionFilename(string levelIdHash, out List<LevelInfo> levels, out int idx)
         {
             levels = GetMPLevels();
@@ -75,7 +85,11 @@ namespace GameMod {
         }
 
         private static PropertyInfo _LevelInfo_LevelNum_property = typeof(LevelInfo).GetProperty("LevelNum", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        // return false if failed
+        /// <summary>
+        /// Disables any active level matching the filename of the given level ID hash.
+        /// </summary>
+        /// <returns>True if the level was disabled, or no matching level was found;
+        /// false if the operation failed.</returns>
         private static bool DisableDifferentVersion(string levelIdHash, Action<string, bool> log)
         {
             string fn = DifferentVersionFilename(levelIdHash, out List<LevelInfo> levels, out int idx);
@@ -140,6 +154,10 @@ namespace GameMod {
             return false;
         }
 
+        /// <summary>
+        /// Returns the path to a disabled .zip file that contains the specified level (whose version must match),
+        /// or null if none exists.
+        /// </summary>
         private static string FindDisabledLevel(string levelIdHash)
         {
             foreach (var dir in new [] { DataLevelDir, DLCLevelDir })
