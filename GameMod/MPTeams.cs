@@ -99,6 +99,42 @@ namespace GameMod
             return ret;
         }
 
+        public static string TeamNameNotLocalized(MpTeam team) {
+            var c = MenuManager.mpc_decal_color;
+            var cIdx = colorIdx[TeamNum(team)];
+            if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS && !Menus.mms_team_color_default) {
+                bool my_team = team == GameManager.m_local_player.m_mp_team;
+                cIdx = my_team ? Menus.mms_team_color_self : Menus.mms_team_color_enemy;
+            }
+
+            switch (cIdx) {
+                case 0:
+                    return "ORANGE";
+                case 1:
+                    return "YELLOW";
+                case 2:
+                    return "GREEN";
+                case 3:
+                    return "AQUA";
+                case 4:
+                    return "BLUE";
+                case 5:
+                    return "PURPLE";
+                case 6:
+                    return "PINK";
+                case 7:
+                    return "RED";
+                case 8:
+                    return "WHITE";
+                case 9:
+                    return "BLACK";
+                case 10:
+                    return "GRAY";
+                default:
+                    return "UNKNOWN";
+            };
+        }
+
         public static string ColorName(int index)
         {
             var c = MenuManager.mpc_decal_color;

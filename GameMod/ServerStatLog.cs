@@ -280,7 +280,7 @@ namespace GameMod {
 
         private static string TeamName(MpTeam? team)
         {
-            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : MPTeams.TeamName((MpTeam)team);
+            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : MPTeams.TeamNameNotLocalized((MpTeam)team);
         }
 
         public static void AddGoal()
