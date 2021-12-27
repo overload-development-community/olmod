@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.329
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32002.185
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "olmod", "olmod\olmod.vcxproj", "{CFB62AD7-1212-4E0F-A695-1503E89A578F}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLModUnitTest", "OLModUnitTest\OLModUnitTest.csproj", "{A3A1AFA7-6214-4624-80F6-B17B60B36916}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +52,14 @@ Global
 		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|x64.ActiveCfg = Release|Any CPU
 		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|x64.Build.0 = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|x64.Build.0 = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|x64.ActiveCfg = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

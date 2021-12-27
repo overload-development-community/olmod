@@ -15,28 +15,37 @@ namespace GameMod
         private const string MapHiddenMarker = "_OCT_Hidden";
         private static Regex MapHiddenMarkerRE = new Regex(MapHiddenMarker + "[0-9]*$");
 
-        internal Func<List<LevelInfo>> _getMPLevels;
-        internal Action<int> _removeMPLevel;
-        internal Action<string> _addMPLevel;
-        internal Func<string, bool> _canCreateFile;
-        internal Func<string, bool> _fileExists = System.IO.File.Exists;
-        internal Action<string, string> _moveFile = System.IO.File.Move;
-        internal Action<string> _deleteFile = System.IO.File.Delete;
-        internal Func<string, string, bool> _zipContainsLevel;
-        internal Func<string[]> _getLevelDirectories;
-        internal Func<string, bool> _directoryExists = System.IO.Directory.Exists;
-        internal Func<string, string, string[]> _getDirectoryFiles = System.IO.Directory.GetFiles;
-        internal Func<string, System.IO.DirectoryInfo> _createDirectory = System.IO.Directory.CreateDirectory;
-        internal Action<string, bool> _showStatusMessage;
-        internal delegate void LogErrorHandler(string errorMessage, bool showInStatus, float flash = 1f);
-        internal LogErrorHandler _logError;
-        internal Action _downloadFailed;
-        internal delegate void ServerDownloadCompletedHandler(int newLevelIndex);
-        internal ServerDownloadCompletedHandler _serverDownloadCompleted;
+        public Func<List<LevelInfo>> _getMPLevels;
+        public Action<int> _removeMPLevel;
+        public Action<string> _addMPLevel;
+        public Func<string, bool> _canCreateFile;
+        public Func<string, bool> _fileExists = System.IO.File.Exists;
+        public Action<string, string> _moveFile = System.IO.File.Move;
+        public Action<string> _deleteFile = System.IO.File.Delete;
+        public Func<string, string, bool> _zipContainsLevel;
+        public Func<string[]> _getLevelDirectories;
+        public Func<string, bool> _directoryExists = System.IO.Directory.Exists;
+        public Func<string, string, string[]> _getDirectoryFiles = System.IO.Directory.GetFiles;
+        public Func<string, System.IO.DirectoryInfo> _createDirectory = System.IO.Directory.CreateDirectory;
+        public Func<string, IEnumerable<string>> _getLevelDownloadUrl;
+        public Func<string, string, IEnumerable> _downloadLevel;
+        public Action<string, bool> _showStatusMessage;
+        public delegate void LogErrorHandler(string errorMessage, bool showInStatus, float flash = 1f);
+        public LogErrorHandler _logError;
+        public Action<object> _logDebug;
+        public Action _downloadFailed;
+        public delegate void ServerDownloadCompletedHandler(int newLevelIndex);
+        public ServerDownloadCompletedHandler _serverDownloadCompleted;
+
+        public MPDownloadLevelAlgorithm()
+        {
+            _getLevelDownloadUrl = GetLevelDownloadUrl;
+            _downloadLevel = DownloadLevel;
+        }
 
         public IEnumerator DoGetLevel(string levelIdHash)
         {
-            Debug.Log("DoGetLevel " + levelIdHash);
+            _logDebug("DoGetLevel " + levelIdHash);
 
             bool downloadRequired = true;
             if (FindDisabledLevel(levelIdHash) != null)
@@ -93,7 +102,7 @@ namespace GameMod
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log("FindDisabledLevel: reading " + dir + ": " + ex);
+                    _logDebug("FindDisabledLevel: reading " + dir + ": " + ex);
                 }
             return null;
         }
@@ -173,7 +182,7 @@ namespace GameMod
             }
             catch (Exception ex)
             {
-                Debug.Log(ex);
+                _logDebug(ex);
                 _logError("CANNOT DISABLE OTHER VERSION " + Path.GetFileName(fn), true);
                 throw ex;
             }
@@ -203,7 +212,7 @@ namespace GameMod
         private IEnumerable LookupAndDownloadLevel(string levelIdHash)
         {
             string url = null;
-            foreach (var x in GetLevelDownloadUrl(levelIdHash))
+            foreach (var x in _getLevelDownloadUrl(levelIdHash))
             {
                 url = x;
                 yield return null;
@@ -222,7 +231,7 @@ namespace GameMod
             }
             else if (_zipContainsLevel(fileName, levelIdHash))
             {
-                // The correct version of the level is already there. Don't need to download, but do need to enable it
+                // The correct version of the level is already there. Don't need to download, but do need to add it
             }
             else
             {
@@ -236,13 +245,13 @@ namespace GameMod
                 }
 
                 _showStatusMessage("DOWNLOADING " + displayName, true);
-                foreach (var x in DownloadLevel(url, fileName))
+                foreach (var x in _downloadLevel(url, fileName))
                 {
                     yield return null;
                 }
             }
 
-            // Now enable the level and ensure it's available
+            // Now add the level and ensure it's available
             _addMPLevel(fileName);
             if (FindLevelIndex(_getMPLevels(), levelIdHash) < 0)
             {
@@ -277,7 +286,7 @@ namespace GameMod
             }
             catch (Exception ex)
             {
-                Debug.Log(ex);
+                _logDebug(ex);
             }
             if (result == null)
             {
@@ -310,7 +319,7 @@ namespace GameMod
                     string curVersionFile = DifferentVersionFilename(levelIdHash, out int idx);
                     if (tryfn != curVersionFile)
                     {
-                        Debug.Log("Download: " + basefn + " already exists, current file: " + curVersionFile);
+                        _logDebug("Download: " + basefn + " already exists, current file: " + curVersionFile);
                         _logError("DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS", true);
                         return null;
                     }
@@ -327,7 +336,7 @@ namespace GameMod
 
         private IEnumerable DownloadLevel(string url, string fn)
         {
-            Debug.Log("Downloading " + url + " to " + fn);
+            _logDebug("Downloading " + url + " to " + fn);
             var basefn = Path.GetFileName(fn);
             var fntmp = fn + ".tmp";
             using (UnityWebRequest www = new UnityWebRequest(url, "GET"))
@@ -354,7 +363,7 @@ namespace GameMod
             }
             catch (Exception ex)
             {
-                Debug.Log(ex);
+                _logDebug(ex);
                 msg = ex.Message;
             }
             if (msg != null)

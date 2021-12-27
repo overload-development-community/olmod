@@ -159,6 +159,7 @@ namespace GameMod {
                 _getLevelDirectories = () => new[] { DataLevelDir, DLCLevelDir },
                 _showStatusMessage = ShowStatus,
                 _logError = OnLogError,
+                _logDebug = Debug.Log,
                 _downloadFailed = OnDownloadFailed,
                 _serverDownloadCompleted = OnServerDownloadCompleted
             };
