@@ -1,12 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using GameMod.Core;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
-using UnityEngine.XR;
-using Valve.VR;
 
 namespace GameMod {
     static class Console
