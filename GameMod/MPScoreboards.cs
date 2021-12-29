@@ -120,9 +120,6 @@ namespace GameMod
 
                 foreach (MpTeam team in MPTeams.TeamsByScore)
                 {
-                    if (!NetworkManager.m_PlayersForScoreboard.Any(x => x.m_mp_team == team))
-                        continue;
-
                     DrawTeamScore(uie, pos, team, NetworkMatch.GetTeamScore(team), 350f, GameManager.m_local_player.m_mp_team == myTeam);
                     pos.y += 35f;
                     DrawScoreHeader(uie, pos, col1, col2, col3, col4, col5);
@@ -242,9 +239,6 @@ namespace GameMod
                 MpTeam myTeam = GameManager.m_local_player.m_mp_team;
                 foreach (var team in MPTeams.TeamsByScore)
                 {
-                    if (!NetworkManager.m_PlayersForScoreboard.Any(x => x.m_mp_team == team))
-                        continue;
-
                     MPTeams.DrawTeamScoreSmall(uie, pos, team, NetworkMatch.GetTeamScore(team), 98f, team == myTeam);
                     pos.y += 28f;
                 }

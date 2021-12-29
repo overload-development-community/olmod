@@ -1590,7 +1590,7 @@ END_ENTRY
                     MPModPrivateData.CustomProjdata = System.IO.File.ReadAllText(Menus.mms_mp_projdata_fn);
                     
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     Debug.Log("Unable to read custom projdata file: " + Menus.mms_mp_projdata_fn);
                     MPModPrivateData.CustomProjdata = String.Empty;
