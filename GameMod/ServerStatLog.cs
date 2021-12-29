@@ -611,7 +611,8 @@ namespace GameMod {
                 hasPassword = MPModPrivateData.HasPassword,
                 matchNotes = MPModPrivateData.MatchNotes,
                 classicSpawnsEnabled = MPClassic.matchEnabled,
-                ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled
+                ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled,
+                suddenDeath = MPSuddenDeath.SuddenDeathMenuEnabled
             });
         }
 
