@@ -1,16 +1,14 @@
-﻿using Newtonsoft.Json;
-using Overload;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Collections;
+using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
+using Overload;
 using UnityEngine;
 using UnityEngine.Networking;
 using Version = System.Version;
-using System.Linq;
 
-namespace GameMod.VersionHandling
-{
+namespace GameMod.VersionHandling {
 
     public static class OlmodVersion
     {
@@ -71,12 +69,12 @@ namespace GameMod.VersionHandling
             }
             else
             {
-                GitHubRelease latestRelease;
+                JArray releases;
                 try
                 {
-                    List<GitHubRelease> releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(request.downloadHandler.text);
-                    if ((latestRelease = releases?.FirstOrDefault()) == null)
-                    {
+                    releases = JArray.Parse(request.downloadHandler.text);
+
+                    if (releases == null) {
                         yield break;
                     }
                 }
@@ -85,8 +83,8 @@ namespace GameMod.VersionHandling
                     Debug.Log($"Unable to parse github releases response: {e}");
                     yield break;
                 }
-                                
-                Match versionMatch1 = Regex.Match(latestRelease.tag_name, @"\d+\.\d+\.\d+(\.\d+)?");
+
+                Match versionMatch1 = Regex.Match(releases.First()["tag_name"].GetString(), @"\d+\.\d+\.\d+(\.\d+)?");
                 if (versionMatch1.Success)
                 {
                     // store the latest known versions so we can alert players on the main menu screen if the running version is outdated
@@ -94,11 +92,5 @@ namespace GameMod.VersionHandling
                 }
             }
         }
-
-        private class GitHubRelease 
-        {
-            public string tag_name;
-        }
-
     }
 }
