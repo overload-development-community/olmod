@@ -1338,6 +1338,24 @@ namespace GameMod
             var targetLobbyData = NetworkMatch.m_players.FirstOrDefault(x => x.Value.m_name == targetPlayer.m_mp_name).Value;
             targetLobbyData.m_team = msg.newTeam;
 
+            // CTF behavior, need to account for flag carrier switching
+            if (CTF.IsActiveServer)
+            {
+                if (CTF.PlayerHasFlag.ContainsKey(targetPlayer.netId) && CTF.PlayerHasFlag.TryGetValue(targetPlayer.netId, out int flag))
+                {
+                    CTF.SendCTFLose(-1, targetPlayer.netId, flag, FlagState.HOME, true);
+                    
+                    if (!CTF.CarrierBoostEnabled)
+                    {
+                        targetPlayer.c_player_ship.m_boost_overheat_timer = 0;
+                        targetPlayer.c_player_ship.m_boost_heat = 0;
+                    }
+
+                    CTF.NotifyAll(CTFEvent.RETURN, $"{MPTeams.TeamName(targetPlayer.m_mp_team)} FLAG RETURNED AFTER {targetPlayer.m_mp_name} CHANGED TEAMS",
+                        targetPlayer, flag);
+                }
+            }
+            
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
             {
                 // Send message to clients with 'changeteam' support to give them HUD message
