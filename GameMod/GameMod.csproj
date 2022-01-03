@@ -154,6 +154,7 @@
     <Compile Include="MPSmash.cs" />
     <Compile Include="MPSniperPackets.cs" />
     <Compile Include="MPSpawnInitialization.cs" />
+    <Compile Include="MPSpawnInvuln.cs" />
     <Compile Include="MPSpew.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
