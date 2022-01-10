@@ -23,13 +23,18 @@ namespace GameMod
         // Legacy autoselect file.
         public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
 
-        // On Game Loading or when selecting a different PILOT read or generate PILOT.extendedconfig
+        // On Game Loading or when selecting a different PILOT read or generating PILOT.extendedconfig
         [HarmonyPatch(typeof(PilotManager), "Select", new Type[] { typeof(string) })]
         internal class ExtendedConfig_PilotManager_Select
         {
             public static void Prefix(string name)
             {
-                if( Network.isServer )
+                LoadPilotExtendedConfig(name);
+            }
+
+            public static void LoadPilotExtendedConfig( string name )
+            {
+                if (Network.isServer)
                 {
                     Debug.Log("ExtendedConfig_PilotManager_Select called on the server");
                     return;
@@ -49,11 +54,14 @@ namespace GameMod
                     }
                 }
 
-                if (!loaded) {
+                if (!loaded)
+                {
                     // Attempt to use autoselect from pre 0.4.1.
-                    if (File.Exists(textFile)) {
+                    if (File.Exists(textFile))
+                    {
                         Debug.Log("Extended config does not exist for pilot, attempting to load pre-0.4.1 autoselect.");
-                        using (StreamReader sr = File.OpenText(textFile)) {
+                        using (StreamReader sr = File.OpenText(textFile))
+                        {
                             MPAutoSelection.PrimaryPriorityArray[0] = sr.ReadLine();
                             MPAutoSelection.PrimaryPriorityArray[1] = sr.ReadLine();
                             MPAutoSelection.PrimaryPriorityArray[2] = sr.ReadLine();
@@ -101,6 +109,7 @@ namespace GameMod
                 ApplyConfigData();
             }
         }
+
 
         // reads all lines and passes them to their respective functions to process them 
         // unknown sections get stored in ExtendedConfig.unknown_lines to reattach them to the end when saving
@@ -240,9 +249,24 @@ namespace GameMod
         {
             static void Prefix()
             {
+                Debug.Log("++[OnControllerConnected]: ");
                 if (!Network.isServer)
                 {
-                    PilotManager.Select(PilotManager.ActivePilot);
+                    ExtendedConfig_PilotManager_Select.LoadPilotExtendedConfig(PilotManager.PilotName);
+                    //PilotManager.Select(PilotManager.ActivePilot);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Controls), "OnControllerDisconnected")]
+        internal class ExtendedConfig_Controls_OnControllerDisconnected
+        {
+            static void Prefix()
+            {
+                Debug.Log("--[OnControllerDisconnected]: ");
+                if (!Network.isServer)
+                {
+                    
                 }
             }
         }
@@ -255,7 +279,7 @@ namespace GameMod
         private static List<string> known_sections = new List<string> {
             "[SECTION: AUTOSELECT]",
             "[SECTION: JOYSTICKCURVE]",
-
+            //...
         };
 
 
@@ -269,7 +293,7 @@ namespace GameMod
             {
                 Section_JoystickCurve.Load(section);
             }
-
+            //...
 
         }
 
@@ -293,6 +317,7 @@ namespace GameMod
                     Section_JoystickCurve.Save(w);
                     w.WriteLine("[/END]");
 
+                    //...
 
                     if (unknown_sections != null)
                     {
@@ -510,6 +535,28 @@ namespace GameMod
                     }
                 }
 
+                List<Controller> copy_of_controllers = new List<Controller>();
+                foreach(Controller c in controllers)
+                {
+
+                    copy_of_controllers.Add(new Controller
+                    {
+                        name = c.name,
+                        axes = new List<Controller.Axis>()
+                    });
+
+                    foreach (Controller.Axis axis in c.axes)
+                    {
+                        copy_of_controllers[copy_of_controllers.Count-1].axes.Add(new Controller.Axis()
+                        {
+                            curve_points = axis.curve_points,
+                            curve_lookup = axis.curve_lookup
+                        });
+                    }
+                }
+
+
+
                 try
                 {
                     SetDefault();
@@ -545,8 +592,8 @@ namespace GameMod
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Default Values.");
-                    SetDefault();
+                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Former Values.");
+                    controllers = copy_of_controllers;
 
                 }
             }
