@@ -115,6 +115,7 @@ namespace GameMod
         // unknown sections get stored in ExtendedConfig.unknown_lines to reattach them to the end when saving
         private static void ReadConfigData(string filepath)
         {
+            uConsole.Log("ReadConfigData");
             using (StreamReader sr = new StreamReader(filepath))
             {
                 unknown_sections = new List<string>();
@@ -171,6 +172,7 @@ namespace GameMod
         {
             public static void Postfix()
             {
+                //uConsole.Log("ExtendedConfig_Controls_SaveControlData");
                 if (Network.isServer)
                 {
                     Debug.Log("ExtendedConfig_Controls_SaveControlData called on the server");
@@ -185,6 +187,7 @@ namespace GameMod
         {
             public static void Postfix()
             {
+                //uConsole.Log("ExtendedConfig_PilotManager_SavePreferences");
                 if (Network.isServer)
                 {
                     Debug.Log("ExtendedConfig_Controls_SavePreferences called on the server");
@@ -199,6 +202,7 @@ namespace GameMod
         {
             public static void Prefix()
             {
+                uConsole.Log("ExtendedConfig_PilotManager_Create");
                 if (Network.isServer)
                 {
                     Debug.Log("ExtendedConfig_PilotManager_Create called on the server");
@@ -249,7 +253,7 @@ namespace GameMod
         {
             static void Prefix()
             {
-                Debug.Log("++[OnControllerConnected]: ");
+                //Debug.Log("ExtendedConfig_Controls_OnControllerConnected");
                 if (!Network.isServer)
                 {
                     ExtendedConfig_PilotManager_Select.LoadPilotExtendedConfig(PilotManager.PilotName);
@@ -257,19 +261,19 @@ namespace GameMod
                 }
             }
         }
-
+        /*
         [HarmonyPatch(typeof(Controls), "OnControllerDisconnected")]
         internal class ExtendedConfig_Controls_OnControllerDisconnected
         {
             static void Prefix()
             {
-                Debug.Log("--[OnControllerDisconnected]: ");
+                //Debug.Log("ExtendedConfig_Controls_OnControllerDisconnected");
                 if (!Network.isServer)
                 {
                     
                 }
             }
-        }
+        }*/
 
 
         /////////////////////////////////////////////////////////////////////////////////////////
@@ -577,6 +581,9 @@ namespace GameMod
                         }
                         for (int j = 0; j < numAxes; j++)
                         {
+                            if(j >= controllers[i].axes.Count) {
+                                controllers[i].axes.Add(new Controller.Axis());
+                            }
                             float value = 0f;
                             controllers[i].axes[j].curve_points = DefaultCurvePoints();
                             controllers[i].axes[j].curve_points[0].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
