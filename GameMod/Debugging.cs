@@ -5,6 +5,7 @@ using HarmonyLib;
 using Overload;
 using UnityEngine;
 using System.Linq;
+using System;
 
 namespace GameMod {
     public class Debugging {
@@ -143,6 +144,88 @@ namespace GameMod {
 
             int curSeg = GameManager.m_player_ship.GetMovingObject().CurrentSegmentIndex;
             __instance.DrawStringSmall($"Cur Seg: {curSeg}", new Vector2(UIManager.UI_LEFT + 5f, UIManager.UI_TOP + 75f), 0.5f, StringOffset.LEFT, UIManager.m_col_white2, 0.5f, -1f);
+        }
+    }
+
+    // Temporary debugging to find a bug with SwitchVisibleWeapon
+    [HarmonyPatch(typeof(PlayerShip), "SwitchVisibleWeapon")]
+    class Debugging_PlayerShip_SwitchVisibleWeapon {
+        static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM) {
+            if (wt == WeaponType.NUM) {
+                wt = __instance.c_player.m_weapon_type;
+            }
+            if (__instance.IsCockpitVisible || force_visible || !__instance.isLocalPlayer) {
+                for (int i = 0; i < 8; i++) {
+                    try {
+                        __instance.m_weapon_mounts1[i].SetActive(i == (int)wt);
+                    } catch (Exception e) {
+                        Debug.Log("Exception setting the first weapon mount's active state.");
+                        Debug.LogException(e);
+                    }
+                    if (__instance.c_player.m_cloaked && i == (int)wt) {
+                        MeshRenderer[] componentsInChildren = null;
+                        try {
+                            componentsInChildren = __instance.m_weapon_mounts1[i].GetComponentsInChildren<MeshRenderer>(includeInactive: true);
+                        } catch (Exception e) {
+                            Debug.Log("Exception getting the first weapon mount's components.");
+                            Debug.LogException(e);
+                        }
+                        if (componentsInChildren != null) {
+                            foreach (MeshRenderer meshRenderer in componentsInChildren) {
+                                meshRenderer.enabled = false;
+                            }
+                        }
+                    }
+                    if (i == 4 || i == 1) {
+                        continue;
+                    }
+
+                    try {
+                        __instance.m_weapon_mounts2[i].SetActive(i == (int)wt);
+                    } catch (Exception e) {
+                        Debug.Log("Exception setting the second weapon mount's active state.");
+                        Debug.LogException(e);
+                    }
+                    if (__instance.c_player.m_cloaked && i == (int)wt) {
+                        MeshRenderer[] componentsInChildren2 = null;
+                        try {
+                            componentsInChildren2 = __instance.m_weapon_mounts2[i].GetComponentsInChildren<MeshRenderer>(includeInactive: true);
+                        } catch (Exception e) {
+                            Debug.Log("Exception getting the second weapon mount's components.");
+                            Debug.LogException(e);
+                        }
+                        if (componentsInChildren2 != null) {
+                            foreach (MeshRenderer meshRenderer2 in componentsInChildren2) {
+                                meshRenderer2.enabled = false;
+                            }
+                        }
+                    }
+                }
+            }
+            if (__instance.c_player.m_weapon_type == WeaponType.DRILLER || __instance.c_player.m_weapon_type == WeaponType.CYCLONE) {
+                Vector3 localPosition = __instance.m_muzzle_center.localPosition;
+                try {
+                    localPosition.y = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition.z = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                } catch (Exception e) {
+                    Debug.Log("Exception getting the firing points for the driller or cyclone.");
+                    Debug.LogException(e);
+                }
+                __instance.m_muzzle_center.localPosition = localPosition;
+            } else {
+                Vector3 localPosition2 = __instance.m_muzzle_left.localPosition;
+                try {
+                    localPosition2.y = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition2.z = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                } catch (Exception e) {
+                    Debug.Log("Exception getting the firing points for other weapons.");
+                    Debug.LogException(e);
+                }
+                __instance.m_muzzle_left.localPosition = localPosition2;
+                localPosition2.x = __instance.m_muzzle_right.localPosition.x;
+                __instance.m_muzzle_right.localPosition = localPosition2;
+            }
+            return false;
         }
     }
 }
