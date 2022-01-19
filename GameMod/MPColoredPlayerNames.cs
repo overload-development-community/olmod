@@ -80,17 +80,17 @@ namespace GameMod
         {
             new Color(133f,0f,0f)/255,
             new Color(255f,215f,0f)/255,
-            new Color(0f,0f,195f)/255,
+            new Color(0f,113f,196f)/255,
             new Color(255f,69f,0f)/255,
 
             new Color(37f,220f,252f)/255,
-            new Color(50f,205f,50f)/255,
+            new Color(255f,0f,255f)/255,
             new Color(255f,0f,0f)/255,
             new Color(240f,230f,140f)/255,
 
             new Color(65f,105f,225f)/255,
             new Color(255f,165f,0f)/255,
-            new Color(255f,0f,255f)/255,
+            new Color(50f,205f,50f)/255,
             new Color(0f,100f,0f)/255,
 
             new Color(233f,56f,109f)/255,
