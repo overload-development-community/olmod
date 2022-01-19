@@ -1,6 +1,7 @@
 using HarmonyLib;
 using Overload;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 /* NOTE: This class is meant as the central place for "cleaning up" server
@@ -68,4 +69,33 @@ namespace GameMod {
     //        return true;
     //    }
     //}
+
+    // Don't show level loading screen on server, which is prone to crashing.
+    [HarmonyPatch(typeof(MenuManager), "PlayGameUpdate")]
+    class ServerCleanup_MenuManager_PlayGameUpdate {
+        private static FieldInfo _MenuManager_m_seconds_waiting_for_gi_covergence = typeof(MenuManager).GetField("m_seconds_waiting_for_gi_covergence", BindingFlags.Static | BindingFlags.NonPublic);
+        private static MethodInfo _MenuManager_ResetBackStack = AccessTools.Method(typeof(MenuManager), "ResetBackStack");
+        static bool Prefix(bool returning_from_secret) {
+            if (!NetworkManager.IsServer() || MenuManager.m_menu_sub_state != MenuSubState.INIT) {
+                return true;
+            }
+
+            MenuManager.m_returning_from_secret = returning_from_secret;
+            GameplayManager.m_game_time_mission = (float)GameplayManager.m_game_time_mission + (Time.realtimeSinceStartup - GameplayManager.m_between_level_start);
+            if (GameplayManager.LevelIsLoading()) {
+                GameplayManager.CompleteLevelLoad();
+            }
+            if (GameplayManager.LevelIsLoading()) {
+                GameplayManager.CompleteLevelLoad();
+            } else {
+                GameplayManager.LoadLevel(GameplayManager.m_level_info);
+                GameplayManager.AllowSceneActivation();
+            }
+            MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+            _MenuManager_m_seconds_waiting_for_gi_covergence.SetValue(null, 0f);
+            _MenuManager_ResetBackStack.Invoke(null, new object[] { });
+
+            return false;
+        }
+    }
 }

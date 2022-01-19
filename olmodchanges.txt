@@ -1,3 +1,28 @@
+v0.5.4 - 2022-01-09
+
+- The Thunderbolt has been rebalanced:
+  - Self overcharge damage +300% (4 per second instead of 1 per second).  Note only servers using this version or later will have this nerf.
+  - Self overcharge now has a warning noise when damage begins.
+  - Thunderbolt projectiles are now closer together by 28.5% (0.4 units, or 1/10 of a standard cube).  Note only clients using this version or later will have this buff.
+- You can now switch teams in team games that are join in progress.  Use the escape menu to change teams.
+- Respawn invulnerability no longer decays with ship speed.  The only way to lose invulnerability on spawn is by firing, or letting the full timer run out.
+- In anarchy, you can increase the size of the names and give each player a separate color.  You can find this in Options -> Multiplayer Options -> Individual Player Colors.
+- You can now use the `-missionpath` parameter to specify where to find missions.  It defaults to `-missionpath c:\ProgramData\Revival\Overload` on Windows.
+- Scoreboard colors have been fixed for CTF and Monsterball.
+- When creating a multiplayer match, if a preset specifies a team count, it will be honored.
+- For tracker compatibility, team names are always sent as English to the tracker, regardles of the server's chosen language.
+- Per-mission and per-level projdata and robotdata files are now possible.
+  - First a level will look for `<level name>-projdata.txt` and `<level name>-robotdata.txt`.
+  - If not found, it will look for `<mission name>-projdata.txt` and `<mission name>-robotdata.txt`.
+  - If not found, it will look for `projdata.txt` and `robotdata.txt` in your olmod directory.
+  - If none of these are found, it will use the stock versions of the files.
+- Fixed an audio issue that would cause ambient sounds not to be played after the first time the level was loaded.
+- Fixed a bug with the server browser showing up empty when old version of olmod connect to it.
+- Fixed a bug that prevented olmod from starting on Linux with glib 2.34 or newer.
+- Fixed a bug that prevented olmod from starting on Windows with modern CPUs due to an OpenSSL issue.
+- Fixed a bug that sometimes caused olmod to crash while loading a level.
+- Upgrade to Harmony 2.2.
+
 v0.5.3 - 2021-10-08
 
 - Lag Compensation now has a "dive-in limiter" that lets you control how far ships can dive into walls when being lag compensated. (Thanks, derhass!)

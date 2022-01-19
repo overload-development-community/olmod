@@ -808,21 +808,21 @@ namespace GameMod {
                                     case 1:
                                         Menus.mms_team_color_default = !Menus.mms_team_color_default;
                                         MenuManager.PlaySelectSound(1f);
-                                        ProcessColorSelections();
+                                        MPTeams.UpdateClientColors();
                                         break;
                                     case 2:
                                         Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                                         if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
                                             Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                                         MenuManager.PlaySelectSound(1f);
-                                        ProcessColorSelections();
+                                        MPTeams.UpdateClientColors();
                                         break;
                                     case 3:
                                         Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
                                         if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
                                             Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
                                         MenuManager.PlaySelectSound(1f);
-                                        ProcessColorSelections();
+                                        MPTeams.UpdateClientColors();
                                         break;
                                 }
                                 break;
@@ -893,31 +893,6 @@ namespace GameMod {
             return false;
         }
 
-        static void ProcessColorSelections()
-        {
-            if (GameplayManager.IsMultiplayerActive)
-            {
-                // Update ship colors
-                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
-                {
-                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
-                    ps.UpdateRimColor(true);
-                }
-                // Update CTF flag/carrier colors
-                if (CTF.IsActive)
-                {
-                    for (int i = 0; i < CTF.FlagObjs.Count; i++)
-                    {
-                        CTF.UpdateFlagColor(CTF.FlagObjs[i], i);
-                    }
-                    foreach (var player in Overload.NetworkManager.m_Players)
-                    {
-                        CTF.UpdateShipEffects(player);
-                    }
-                }
-            }
-            UIManager.InitMpNames();
-        }
     }
 
     /// <summary>

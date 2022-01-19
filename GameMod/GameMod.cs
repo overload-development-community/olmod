@@ -26,7 +26,7 @@ namespace GameMod.Core {
             }
 
             Modded = FindArg("-modded");
-            VREnabled = FindArg("-vrmode");
+            VREnabled = FindArgVal("-vrmode", out var vrmode) && vrmode != "none";
 
             GameVersion = typeof(GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + OlmodVersion.FullVersionString + ", game " + GameVersion);

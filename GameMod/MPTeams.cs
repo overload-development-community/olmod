@@ -384,6 +384,34 @@ namespace GameMod
                 newTeam = (MpTeam)reader.ReadPackedUInt32();
             }
         }
+
+        public static void UpdateClientColors()
+        {
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                // Update ship colors
+                foreach (var ps in UnityEngine.Object.FindObjectsOfType<PlayerShip>())
+                {
+                    ps.UpdateShipColors(ps.c_player.m_mp_team, -1, -1, -1);
+                    ps.UpdateRimColor(true);
+                }
+
+                // Update CTF flag/carrier colors
+                if (CTF.IsActive)
+                {
+                    for (int i = 0; i < CTF.FlagObjs.Count; i++)
+                    {
+                        CTF.UpdateFlagColor(CTF.FlagObjs[i], i);
+                    }
+                    foreach (var player in Overload.NetworkManager.m_Players)
+                    {
+                        CTF.UpdateShipEffects(player);
+                    }
+                }
+            }
+            UIManager.InitMpNames();
+        }
+
     }
 
     [HarmonyPatch(typeof(UIElement), "MaybeDrawPlayerList")]
@@ -1383,6 +1411,9 @@ namespace GameMod
 
             if (player != null && msg.newTeam != player.m_mp_team)
             {
+                player.m_mp_team = msg.newTeam;
+                MPTeams.UpdateClientColors();
+
                 GameplayManager.AddHUDMessage($"{player.m_mp_name} changed teams", -1, true);
                 SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_message1);
             }
