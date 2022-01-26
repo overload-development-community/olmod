@@ -654,12 +654,20 @@ namespace GameMod
         }
     }
 
+    class ReceivedPacket {
+        public SniperPacketMessage m_message;
+        public float m_received_at;
+        public bool m_overdrive;
+    }
+
     /// <summary>
     /// Handles sniper packet related messages on the server.
     /// </summary>
     [HarmonyPatch(typeof(Server), "RegisterHandlers")]
     class MPSniperPacketsServerHandlers
     {
+        public static List<ReceivedPacket> _packets = new List<ReceivedPacket>();
+
         /// <summary>
         /// Handles the SniperPacketMessage on the server.  This generates the weapon fire on the server as received by the client, as long as they are still alive.
         /// </summary>
@@ -675,6 +683,95 @@ namespace GameMod
             {
                 return;
             }
+
+            var now = NetworkMatch.m_match_elapsed_seconds;
+
+            _packets.RemoveAll(p => p.m_received_at < now - 5f);
+
+            var typePackets = _packets.Where(p => p.m_message.m_player_id == msg.m_player_id && p.m_message.m_type == msg.m_type && p.m_overdrive == player.m_overdrive);
+
+            // Defaults handle case for flares and vortexes.
+            float refireTime = 0.5f;
+            int projectileCount = 1;
+
+            switch (msg.m_type) {
+                case ProjPrefab.proj_flare:
+                case ProjPrefab.missile_vortex:
+                    break;
+                case ProjPrefab.proj_impulse:
+                    refireTime = (player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A ? 0.28f : 0.25f) / (player.m_overdrive ? 1.5f : 1f);
+                    projectileCount = player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A ? 4 : 2;
+                    break;
+                case ProjPrefab.proj_vortex:
+                    refireTime = 0.12f / (player.m_overdrive ? 1.5f : 1f); ;
+                    projectileCount = 3;
+                    break;
+                case ProjPrefab.proj_reflex:
+                    refireTime = 0.1f / (player.m_overdrive ? 1.5f : 1f);
+                    break;
+                case ProjPrefab.proj_driller:
+                    refireTime = 0.22f / (player.m_overdrive ? 1.5f : 1f);
+                    break;
+                case ProjPrefab.proj_shotgun:
+                    refireTime = (player.m_overdrive ? 0.55f : 0.45f) / (player.m_overdrive ? 1.5f : 1f);
+                    projectileCount = 16;
+                    break;
+                case ProjPrefab.proj_flak_cannon:
+                    refireTime = 0.105f / (player.m_overdrive ? 1.5f : 1f);
+                    projectileCount = 2;
+                    break;
+                case ProjPrefab.proj_thunderbolt:
+                    refireTime = 0.5f / (player.m_overdrive ? 1.5f : 1f);
+                    projectileCount = 2;
+                    break;
+                case ProjPrefab.proj_beam:
+                    refireTime = (player.m_overdrive ? 0.29f : 0.23f) / (player.m_overdrive ? 1.5f : 1f);
+                    projectileCount = 2;
+                    break;
+                case ProjPrefab.missile_falcon:
+                    refireTime = 0.3f;
+                    break;
+                case ProjPrefab.missile_pod:
+                    refireTime = 0.11f;
+                    break;
+                case ProjPrefab.missile_hunter:
+                    refireTime = 0.35f;
+                    projectileCount = 2;
+                    break;
+                case ProjPrefab.missile_creeper:
+                    refireTime = 0.12f;
+                    break;
+                case ProjPrefab.missile_smart:
+                    refireTime = 0.4f;
+                    break;
+                case ProjPrefab.missile_timebomb:
+                case ProjPrefab.missile_devastator:
+                    refireTime = 1f;
+                    break;
+
+                // Don't fire what we don't know about.
+                default:
+                    Debug.Log($"Fire packet dropped, invalid projectile: {player.m_mp_name} - {msg.m_type}");
+                    return;
+            }
+
+            if (
+                typePackets.Where(p => p.m_received_at > now - (refireTime + 0.01f)).Count() > 2 * projectileCount - 1
+                && typePackets.Where(p => p.m_received_at > now - (2 * refireTime + 0.01f)).Count() > 3 * projectileCount - 1
+                && typePackets.Where(p => p.m_received_at > now - (3 * refireTime + 0.01f)).Count() > 4 * projectileCount - 1
+                && typePackets.Where(p => p.m_received_at > now - (4 * refireTime - 0.05f)).Count() > 4 * projectileCount - 1
+                && typePackets.Where(p => p.m_received_at > now - (4 * refireTime + 0.01f)).Count() > 5 * projectileCount - 1
+            ) {
+                // Do not fire, weapon is bursting too much.
+                Debug.Log($"Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
+                return;
+            }
+
+            _packets.Add(new ReceivedPacket {
+                m_message = msg,
+                m_received_at = now,
+                m_overdrive = player.m_overdrive
+            });
 
             ProjectileManager.PlayerFire(player, msg.m_type, msg.m_pos, msg.m_rot, msg.m_strength, msg.m_upgrade_lvl, msg.m_no_sound, msg.m_slot, msg.m_force_id);
         }
