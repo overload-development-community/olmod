@@ -654,19 +654,13 @@ namespace GameMod
         }
     }
 
-    class ReceivedPacket {
-        public SniperPacketMessage m_message;
-        public float m_received_at;
-        public bool m_overdrive;
-    }
-
     /// <summary>
     /// Handles sniper packet related messages on the server.
     /// </summary>
     [HarmonyPatch(typeof(Server), "RegisterHandlers")]
     class MPSniperPacketsServerHandlers
     {
-        public static List<ReceivedPacket> _packets = new List<ReceivedPacket>();
+        public static Dictionary<string, List<float>> _packets = new Dictionary<string, List<float>>();
 
         /// <summary>
         /// Handles the SniperPacketMessage on the server.  This generates the weapon fire on the server as received by the client, as long as they are still alive.
@@ -686,9 +680,13 @@ namespace GameMod
 
             var now = NetworkMatch.m_match_elapsed_seconds;
 
-            _packets.RemoveAll(p => p.m_received_at < now - 5f);
+            var key = $"{msg.m_player_id.Value}-{(int)msg.m_type}-{(player.m_overdrive ? "1" : "0")}";
 
-            var typePackets = _packets.Where(p => p.m_message.m_player_id == msg.m_player_id && p.m_message.m_type == msg.m_type && p.m_overdrive == player.m_overdrive);
+            if (!_packets.ContainsKey(key)) {
+                _packets.Add(key, new List<float>());
+            }
+
+            _packets[key].RemoveAll(p => p < now - 5f);
 
             // Defaults handle case for flares and vortexes.
             float refireTime = 0.5f;
@@ -703,7 +701,7 @@ namespace GameMod
                     projectileCount = (!MPClassic.matchEnabled || player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A) ? 4 : 2;
                     break;
                 case ProjPrefab.proj_vortex:
-                    refireTime = 0.12f / (player.m_overdrive ? 1.5f : 1f); ;
+                    refireTime = 0.12f / (player.m_overdrive ? 1.5f : 1f);
                     projectileCount = 3;
                     break;
                 case ProjPrefab.proj_reflex:
@@ -756,22 +754,18 @@ namespace GameMod
             }
 
             if (
-                typePackets.Where(p => p.m_received_at > now - (refireTime + 0.01f)).Count() > 2 * projectileCount - 1
-                && typePackets.Where(p => p.m_received_at > now - (2 * refireTime + 0.01f)).Count() > 3 * projectileCount - 1
-                && typePackets.Where(p => p.m_received_at > now - (3 * refireTime + 0.01f)).Count() > 4 * projectileCount - 1
-                && typePackets.Where(p => p.m_received_at > now - (4 * refireTime - 0.05f)).Count() > 4 * projectileCount - 1
-                && typePackets.Where(p => p.m_received_at > now - (4 * refireTime + 0.01f)).Count() > 5 * projectileCount - 1
+                _packets[key].Where(p => p > now - (refireTime + 0.01f)).Count() > 2 * projectileCount - 1
+                && _packets[key].Where(p => p > now - (2 * refireTime + 0.01f)).Count() > 3 * projectileCount - 1
+                && _packets[key].Where(p => p > now - (3 * refireTime + 0.01f)).Count() > 4 * projectileCount - 1
+                && _packets[key].Where(p => p > now - (4 * refireTime - 0.05f)).Count() > 4 * projectileCount - 1
+                && _packets[key].Where(p => p > now - (4 * refireTime + 0.01f)).Count() > 5 * projectileCount - 1
             ) {
                 // Do not fire, weapon is bursting too much.
                 Debug.Log($"Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
                 return;
             }
 
-            _packets.Add(new ReceivedPacket {
-                m_message = msg,
-                m_received_at = now,
-                m_overdrive = player.m_overdrive
-            });
+            _packets[key].Add(now);
 
             ProjectileManager.PlayerFire(player, msg.m_type, msg.m_pos, msg.m_rot, msg.m_strength, msg.m_upgrade_lvl, msg.m_no_sound, msg.m_slot, msg.m_force_id);
         }
