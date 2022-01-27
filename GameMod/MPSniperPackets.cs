@@ -699,8 +699,8 @@ namespace GameMod
                 case ProjPrefab.missile_vortex:
                     break;
                 case ProjPrefab.proj_impulse:
-                    refireTime = (player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A ? 0.28f : 0.25f) / (player.m_overdrive ? 1.5f : 1f);
-                    projectileCount = player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A ? 4 : 2;
+                    refireTime = ((!MPClassic.matchEnabled || player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A) ? 0.28f : 0.25f) / (player.m_overdrive ? 1.5f : 1f);
+                    projectileCount = (!MPClassic.matchEnabled || player.m_weapon_level[(int)WeaponType.IMPULSE] == WeaponUnlock.LEVEL_2A) ? 4 : 2;
                     break;
                 case ProjPrefab.proj_vortex:
                     refireTime = 0.12f / (player.m_overdrive ? 1.5f : 1f); ;
