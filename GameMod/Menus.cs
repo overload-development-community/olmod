@@ -170,6 +170,7 @@ namespace GameMod {
         public static int mms_damageeffect_drunk_blur_mult = 10;
         public static int mms_match_time_limit = 60;
         public static bool mms_reduced_ship_explosions = true;
+        public static bool mms_show_framerate = false;
     }
 
 
@@ -305,43 +306,65 @@ namespace GameMod {
     }
 
     /// <summary>
-    /// Add Rear View option to Options -> Cockpit & HUD Options
+    /// Add Rear View, Ship Velocity, Frame Rate options to Options -> Cockpit & HUD Options
     /// </summary>
     [HarmonyPatch(typeof(UIElement), "DrawHUDMenu")]
-    class RearView_UIElement_DrawHUDMenu
+    class Menus_UIElement_DrawHUDMenu
     {
-        static void DrawRearViewOption(UIElement uie, ref Vector2 pos)
+        static bool Prefix(UIElement __instance)
         {
-            pos.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("SHOW REAR VIEW CAMERA"), pos, 11, RearView.MenuManagerEnabled ? "ON" : "OFF", "SHOW REAR VIEW CAMERA ON HUD", 1.5f, false);
-        }
+            UIManager.ui_bg_dark = true;
+            Vector2 position = __instance.m_position;
+            __instance.DrawMenuBG();
+            UIElement.ToolTipActive = false;
+            __instance.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 20f), Loc.LS("COCKPIT & HUD OPTIONS"), 265f);
+            position.y -= 296f;
+            __instance.DrawMenuSeparator(position);
+            position.y += 40f;
 
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
-            int state = 0;
-            foreach (var code in codes)
+            switch (MenuManager.m_menu_micro_state)
             {
-                // Bump up options towards header
-                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 248f)
-                    code.operand = 310f;
+                case 0:
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("UI PRIMARY COLOR"), position, 0, MenuManager.GetHUDColor(), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("CAMERA SHAKE"), position, 9, MenuManager.GetHUDShake(), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SCREEN FLICKER"), position, 10, MenuManager.GetHUDFlicker(), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("RETICLE STYLE"), position, 1, MenuManager.GetHUDReticle(), string.Empty, 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("HUD RIGHT SIDE DISPLAY"), position, 2, MenuManager.GetHUDWeapons(), Loc.LS("SWAP WEAPONS TO THE RIGHT SIDE (BEST FOR GAMEPAD CONTROLS)"), 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW LARGE BANNER MESSAGES"), position, 6, MenuManager.GetHUDBannerMessages(), Loc.LS("DISPLAY LARGE BANNER MESSAGES IN CENTER OF SCREEN"), 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEXT FOR AUDIO MESSAGES"), position, 7, MenuManager.GetTextForAudio(), Loc.LS("DISPLAYS ENGLISH TEXT FOR COMM AND LOG AUDIO MESSAGES"), 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("COCKPIT SWAY"), position, 3, MenuManager.GetHUDSway(), Loc.LS("ADD MOTION TO COCKPIT WHEN MOVING"), 1.5f, false);
+                    
+                    break;
+                case 1:
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW SPEEDRUN TIMERS"), position, 8, (!MenuManager.opt_speedrun_timers) ? Loc.LS("NO") : Loc.LS("YES"), Loc.LS("SHOW CURRENT LEVEL AND MISSION TIME ON HUD"), 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW REAR VIEW CAMERA"), position, 11, RearView.MenuManagerEnabled ? "ON" : "OFF", "SHOW REAR VIEW CAMERA ON HUD", 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW SHIP VELOCITY"), position, 12, HUDVelocity.MenuManagerEnabled ? "ON" : "OFF", "SHOW SHIP VELOCITY ON HUD", 1.5f, false);
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW FRAME RATE"), position, 13, Menus.mms_show_framerate ? "ON" : "OFF", "SHOW FRAME RATE ON HUD (FPS)", 1.5f, false);
 
-                // Adjust top line slightly to compensate for squishing extra option in
-                if (state == 0 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 40f)
-                    code.operand = 30f;
-
-                if (state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "SHOW CURRENT LEVEL AND MISSION TIME ON HUD")
-                    state = 1;
-
-                if (state == 1 && code.opcode == OpCodes.Ldarg_0)
-                {
-                    state = 2;
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RearView_UIElement_DrawHUDMenu), "DrawRearViewOption"));
-                }
-
-                yield return code;
+                    break;
+                default:
+                    break;
             }
+
+            position.y = UIManager.UI_BOTTOM - 180f;
+            __instance.DrawMenuSeparator(position + Vector2.up * 40f);
+            __instance.DrawMenuToolTip(position + Vector2.up * 40f, 15f);
+            __instance.DrawPageControls(position + Vector2.up * 85f, string.Format(Loc.LS("PAGE {0} OF {1}"), MenuManager.m_menu_micro_state + 1, 2), true, true, false, false, 420, 302, false);
+            position.y = UIManager.UI_BOTTOM - 30f;
+            __instance.SelectAndDrawItem(Loc.LS("BACK"), position, 100, false, 1f, 0.75f);
+            __instance.MaybeShowMpStatus();
+
+            return false;
         }
     }
 
@@ -1107,6 +1130,134 @@ namespace GameMod {
             {
                 Client.GetClient().Send(MessageTypes.MsgChangeTeam, new MPTeams.ChangeTeamMessage { netId = GameManager.m_local_player.netId, newTeam = Menus.mms_team_selection.Value });
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(MenuManager), "HUDOptionsUpdate")]
+    class Menus_MenuManager_HUDOptionsUpdate
+    {
+        private static MethodInfo _MenuManager_GoBack_Method = AccessTools.Method(typeof(MenuManager), "GoBack");
+        private static MethodInfo _MenuManager_PlayHighlightSound_Method = AccessTools.Method(typeof(MenuManager), "PlayHighlightSound");
+        private static FieldInfo _MenuManager_m_menu_state_timer_Field = AccessTools.Field(typeof(MenuManager), "m_menu_state_timer");
+
+        static bool Prefix()
+        {
+            MenuManager.UpdateMPStatus();
+            UIManager.MouseSelectUpdate();
+            MenuSubState menu_sub_state = MenuManager.m_menu_sub_state;
+            if (menu_sub_state != MenuSubState.INIT)
+            {
+                if (menu_sub_state == MenuSubState.ACTIVE)
+                {
+                    UIManager.ControllerMenu();
+                    if (Controls.JustPressed(CCInput.MENU_SECONDARY))
+                    {
+                        MenuManager.m_mp_status_minimized = !MenuManager.m_mp_status_minimized;
+                        MenuManager.PlayCycleSound(1f, 1f);
+                    }
+                    if (Controls.JustPressed(CCInput.MENU_PGUP) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 198))
+                    {
+                        _MenuManager_PlayHighlightSound_Method.Invoke(null, new object[] { 0.4f, 0.05f });
+                        MenuManager.UIPulse(1f);
+                        MenuManager.m_menu_micro_state = 1 - MenuManager.m_menu_micro_state;
+                    }
+                    else if (Controls.JustPressed(CCInput.MENU_PGDN) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 199))
+                    {
+                        _MenuManager_PlayHighlightSound_Method.Invoke(null, new object[] { 0.4f, 0.05f });
+                        MenuManager.UIPulse(1f);
+                        MenuManager.m_menu_micro_state = 1 - MenuManager.m_menu_micro_state;
+                    }
+                    else
+                    {
+                        if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()))
+                        {
+                            MenuManager.MaybeReverseOption();
+                            int menu_selection = UIManager.m_menu_selection;
+                            switch (menu_selection)
+                            {
+                                case 0:
+                                    MenuManager.opt_hud_color = (MenuManager.opt_hud_color + 5 + UIManager.m_select_dir) % 5;
+                                    UIManager.UpdateUIColors(MenuManager.opt_hud_color);
+                                    Robot.GuidebotFadeAmt -= 0.01f;
+                                    AutomapMarker.m_update_color = true;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 1:
+                                    MenuManager.opt_hud_reticle = (MenuManager.opt_hud_reticle + 3 + UIManager.m_select_dir) % 3;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 2:
+                                    MenuManager.opt_hud_weapons = (MenuManager.opt_hud_weapons + 2 + UIManager.m_select_dir) % 2;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 3:
+                                    MenuManager.opt_hud_sway = (MenuManager.opt_hud_sway + 3 + UIManager.m_select_dir) % 3;
+                                    GameManager.m_player_ship.ResetCameraSway(false);
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 4:
+                                    GameManager.m_player_ship.ToggleCockpitVisible();
+                                    if (GameManager.m_player_ship.c_player.m_cloaked)
+                                    {
+                                        GameManager.m_player_ship.CloakUpdateCockpit();
+                                    }
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 6:
+                                    MenuManager.opt_hud_banner_messages = (MenuManager.opt_hud_banner_messages + 2 + UIManager.m_select_dir) % 2;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 7:
+                                    MenuManager.opt_text_for_audio = (MenuManager.opt_text_for_audio + 2 + UIManager.m_select_dir) % 2;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 8:
+                                    MenuManager.opt_speedrun_timers = !MenuManager.opt_speedrun_timers;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 9:
+                                    MenuManager.opt_hud_shake = (MenuManager.opt_hud_shake + 3 + UIManager.m_select_dir) % 3;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 10:
+                                    MenuManager.opt_hud_flicker = (MenuManager.opt_hud_flicker + 3 + UIManager.m_select_dir) % 3;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 11:
+                                    RearView.Toggle();
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 12:
+                                    HUDVelocity.MenuManagerEnabled = !HUDVelocity.MenuManagerEnabled;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                case 13:
+                                    Menus.mms_show_framerate = !Menus.mms_show_framerate;
+                                    GameManager.m_display_fps = Menus.mms_show_framerate;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    break;
+                                default:
+                                    if (menu_selection == 100)
+                                    {
+                                        _MenuManager_GoBack_Method.Invoke(null, null);
+                                        UIManager.DestroyAll(false);
+                                        MenuManager.PlaySelectSound(1f);
+                                    }
+                                    break;
+                            }
+                            MenuManager.UnReverseOption();
+                        }
+                    }                    
+                }
+            }
+            else if ((float)_MenuManager_m_menu_state_timer_Field.GetValue(null) > 0.25f)
+            {
+                UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, UIElementType.HUD_MENU);
+                MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                MenuManager.SetDefaultSelection(0);
+            }
+
+            return false;
         }
     }
 }
