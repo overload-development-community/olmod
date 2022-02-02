@@ -660,7 +660,9 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "RegisterHandlers")]
     class MPSniperPacketsServerHandlers
     {
-        public static Dictionary<string, float> _firebuffer = new Dictionary<string, float>();
+        public static Dictionary<string, float> _primaryFireBuffer = new Dictionary<string, float>();
+        public static Dictionary<string, float> _secondaryFireBuffer = new Dictionary<string, float>();
+        public static Dictionary<string, float> _flareFireBuffer = new Dictionary<string, float>();
 
         /// <summary>
         /// Handles the SniperPacketMessage on the server.  This generates the weapon fire on the server as received by the client, as long as they are still alive.
@@ -682,10 +684,22 @@ namespace GameMod
 
             var key = msg.m_player_id.Value.ToString();
 
-            if (!_firebuffer.ContainsKey(key)) {
-                _firebuffer.Add(key, now);
-            } else if (_firebuffer[key] < now) {
-                _firebuffer[key] = now;
+            if (!_primaryFireBuffer.ContainsKey(key)) {
+                _primaryFireBuffer.Add(key, now);
+            } else if (_primaryFireBuffer[key] < now) {
+                _primaryFireBuffer[key] = now;
+            }
+
+            if (!_secondaryFireBuffer.ContainsKey(key)) {
+                _secondaryFireBuffer.Add(key, now);
+            } else if (_secondaryFireBuffer[key] < now) {
+                _secondaryFireBuffer[key] = now;
+            }
+
+            if (!_flareFireBuffer.ContainsKey(key)) {
+                _flareFireBuffer.Add(key, now);
+            } else if (_flareFireBuffer[key] < now) {
+                _flareFireBuffer[key] = now;
             }
 
             // Defaults handle case for flares and vortexes.
@@ -749,20 +763,46 @@ namespace GameMod
 
                 // Don't fire what we don't know about.
                 default:
-                    Debug.Log($"Fire packet dropped, invalid projectile: {player.m_mp_name} - {msg.m_type}");
+                    Debug.Log($"{DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt} - Fire packet dropped, invalid projectile: {player.m_mp_name} - {msg.m_type}");
                     return;
             }
 
-            _firebuffer[key] += refireTime / projectileCount;
+            if (new ProjPrefab[] { ProjPrefab.proj_impulse, ProjPrefab.proj_vortex, ProjPrefab.proj_reflex, ProjPrefab.proj_shotgun, ProjPrefab.proj_driller, ProjPrefab.proj_flak_cannon, ProjPrefab.proj_thunderbolt, ProjPrefab.proj_beam }.Contains(msg.m_type)) {
+                _primaryFireBuffer[key] += refireTime / projectileCount;
 
-            if (_firebuffer[key] - now - 0.25f < refireTime) {
-                Debug.Log($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} - Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
+                if (_primaryFireBuffer[key] - now - 0.25f > refireTime) {
+                    Debug.Log($"{DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt} - Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
 
-                if (_firebuffer[key] - now > refireTime) {
-                    _firebuffer[key] = now + refireTime;
+                    if (_primaryFireBuffer[key] - now > refireTime) {
+                        _primaryFireBuffer[key] = now + refireTime;
+                    }
+
+                    return;
                 }
+            } else if (new ProjPrefab[] { ProjPrefab.missile_falcon, ProjPrefab.missile_pod, ProjPrefab.missile_hunter, ProjPrefab.missile_creeper, ProjPrefab.missile_smart, ProjPrefab.missile_timebomb, ProjPrefab.missile_devastator, ProjPrefab.missile_vortex }.Contains(msg.m_type)) {
+                _secondaryFireBuffer[key] += refireTime / projectileCount;
 
-                return;
+                if (_secondaryFireBuffer[key] - now - 0.25f > refireTime) {
+                    Debug.Log($"{DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt} - Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
+
+                    if (_secondaryFireBuffer[key] - now > refireTime) {
+                        _secondaryFireBuffer[key] = now + refireTime;
+                    }
+
+                    return;
+                }
+            } else if (msg.m_type == ProjPrefab.proj_flare) {
+                _flareFireBuffer[key] += refireTime / projectileCount;
+
+                if (_flareFireBuffer[key] - now - 0.25f > refireTime) {
+                    Debug.Log($"{DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt} - Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
+
+                    if (_flareFireBuffer[key] - now > refireTime) {
+                        _flareFireBuffer[key] = now + refireTime;
+                    }
+
+                    return;
+                }
             }
 
             ProjectileManager.PlayerFire(player, msg.m_type, msg.m_pos, msg.m_rot, msg.m_strength, msg.m_upgrade_lvl, msg.m_no_sound, msg.m_slot, msg.m_force_id);
