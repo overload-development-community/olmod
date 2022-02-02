@@ -660,7 +660,7 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "RegisterHandlers")]
     class MPSniperPacketsServerHandlers
     {
-        public static Dictionary<string, List<float>> _packets = new Dictionary<string, List<float>>();
+        public static Dictionary<string, float> _firebuffer = new Dictionary<string, float>();
 
         /// <summary>
         /// Handles the SniperPacketMessage on the server.  This generates the weapon fire on the server as received by the client, as long as they are still alive.
@@ -680,13 +680,13 @@ namespace GameMod
 
             var now = NetworkMatch.m_match_elapsed_seconds;
 
-            var key = $"{msg.m_player_id.Value}-{(int)msg.m_type}-{(player.m_overdrive ? "1" : "0")}";
+            var key = msg.m_player_id.Value.ToString();
 
-            if (!_packets.ContainsKey(key)) {
-                _packets.Add(key, new List<float>());
+            if (!_firebuffer.ContainsKey(key)) {
+                _firebuffer.Add(key, now);
+            } else if (_firebuffer[key] < now) {
+                _firebuffer[key] = now;
             }
-
-            _packets[key].RemoveAll(p => p < now - 5f);
 
             // Defaults handle case for flares and vortexes.
             float refireTime = 0.5f;
@@ -753,19 +753,17 @@ namespace GameMod
                     return;
             }
 
-            if (
-                _packets[key].Where(p => p > now - (refireTime + 0.01f)).Count() > 2 * projectileCount - 1
-                && _packets[key].Where(p => p > now - (2 * refireTime + 0.01f)).Count() > 3 * projectileCount - 1
-                && _packets[key].Where(p => p > now - (3 * refireTime + 0.01f)).Count() > 4 * projectileCount - 1
-                && _packets[key].Where(p => p > now - (4 * refireTime - 0.05f)).Count() > 4 * projectileCount - 1
-                && _packets[key].Where(p => p > now - (4 * refireTime + 0.01f)).Count() > 5 * projectileCount - 1
-            ) {
-                // Do not fire, weapon is bursting too much.
-                Debug.Log($"Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
+            _firebuffer[key] += refireTime / projectileCount;
+
+            if (_firebuffer[key] - now - 0.25f < refireTime) {
+                Debug.Log($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} - Fire packet dropped, client is bursting: {player.m_mp_name} - {msg.m_type}");
+
+                if (_firebuffer[key] - now > refireTime) {
+                    _firebuffer[key] = now + refireTime;
+                }
+
                 return;
             }
-
-            _packets[key].Add(now);
 
             ProjectileManager.PlayerFire(player, msg.m_type, msg.m_pos, msg.m_rot, msg.m_strength, msg.m_upgrade_lvl, msg.m_no_sound, msg.m_slot, msg.m_force_id);
         }
