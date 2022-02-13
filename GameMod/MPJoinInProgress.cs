@@ -453,6 +453,7 @@ namespace GameMod {
                 });
             }
             ServerStatLog.Connected(newPlayer.m_mp_name);
+            MPBanPlayers.ApplyAllBans(); // make sure the newly connected player gets proper treatment if he is BANNED
         }
 
         private static void Postfix(NetworkMessage msg)

@@ -675,7 +675,7 @@ namespace GameMod
             var msg = rawMsg.ReadMessage<SniperPacketMessage>();
             var player = Overload.NetworkManager.m_Players.Find(p => p.netId == msg.m_player_id);
 
-            if (player == null || player.c_player_ship.m_dead || player.c_player_ship.m_dying)
+            if (player == null || player.c_player_ship.m_dead || player.c_player_ship.m_dying || player.m_spectator)
             {
                 return;
             }
