@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -1206,6 +1207,42 @@ namespace GameMod {
                 return;
 
             Client.GetClient().RegisterHandler(MessageTypes.MsgCTFPlayerStats, OnCTFPlayerStats);
+        }
+    }
+
+    // CTF flag objects somehow end up in SP save games,
+    // explicitly skip them when saving a game.
+    [HarmonyPatch]
+    class CTFPreventFlagObjectsInSave
+    {
+        static MethodInfo TargetMethod() {
+            // This is the method generated for the SerializeObjects line:
+            // where c.gameObject.scene.name != null
+            return typeof(SaveLoad)
+                .GetMethod("<SerializeObjects`1>m__0", BindingFlags.NonPublic | BindingFlags.Static)
+                .MakeGenericMethod(typeof(Item));
+        }
+
+        static bool WhereClauseForGameObject(GameObject item)
+        {
+            return item.scene.name != null && !CTF.FlagObjs.Contains(item);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Callvirt)
+                {
+                    yield return code; // calls get_gameObject
+                    yield return new CodeInstruction(OpCodes.Call,
+                        typeof(CTFPreventFlagObjectsInSave)
+                            .GetMethod("WhereClauseForGameObject", BindingFlags.NonPublic | BindingFlags.Static));
+                    yield return new CodeInstruction(OpCodes.Ret);
+                    break;
+                }
+                yield return code;
+            }
         }
     }
 }
