@@ -9,12 +9,13 @@ using UnityEngine.Networking;
 namespace GameMod {
     // Generic utility class for chat messages
     public class MPChatTools {
-
         // Send a chat message
         // Set connection_id to the ID of a specific client, or to -1 to send to all
         // clients except except_connection_id (if that is >= 0)
+        // If authOnly is true, only send to clients which are authenticated for chat
+        // commands.
         // You need to already know if we are currently in Lobby or not
-        public static bool SendTo(bool inLobby, string msg, int connection_id=-1 , int except_connection_id=-1, string sender_name = "Server", MpTeam team = MpTeam.TEAM0) {
+        public static bool SendTo(bool inLobby, string msg, int connection_id=-1, int except_connection_id=-1, bool authOnly=false, string sender_name = "Server", MpTeam team = MpTeam.TEAM0) {
             bool toAll = (connection_id < 0);
             if (!toAll) {
                 if (connection_id >= NetworkServer.connections.Count ||  NetworkServer.connections[connection_id] == null) {
@@ -25,23 +26,29 @@ namespace GameMod {
             if (inLobby) {
                 var lmsg = new LobbyChatMessage(connection_id, sender_name, team, msg, false);
                 if (toAll) {
-                    if (except_connection_id < 0) {
+                    if (except_connection_id < 0 && !authOnly) {
                         NetworkServer.SendToAll(75, lmsg);
                     } else {
                         foreach(NetworkConnection c in NetworkServer.connections) {
                             if (c != null && c.connectionId != except_connection_id) {
-                                NetworkServer.SendToClient(c.connectionId, 75, lmsg);
+                                if (!authOnly || MPChatCommand.CheckPermission(c.connectionId, true)) {
+                                    NetworkServer.SendToClient(c.connectionId, 75, lmsg);
+                                }
                             }
                         }
                     }
                 } else {
-                    NetworkServer.SendToClient(connection_id, 75, lmsg);
+                    if (!authOnly || MPChatCommand.CheckPermission(connection_id, true)) {
+                        NetworkServer.SendToClient(connection_id, 75, lmsg);
+                    }
                 }
             } else {
                 foreach (var p in Overload.NetworkManager.m_Players) {
                     if (p != null && p.connectionToClient != null) {
                         if ((toAll && p.connectionToClient.connectionId != except_connection_id) || (p.connectionToClient.connectionId == connection_id)) {
-                            p.CallTargetSendFullChat(p.connectionToClient, connection_id, sender_name, team, msg);
+                            if (!authOnly || MPChatCommand.CheckPermission(new MPBanEntry(p))) {
+                                p.CallTargetSendFullChat(p.connectionToClient, connection_id, sender_name, team, msg);
+                            }
                         }
                     }
                 }
@@ -52,14 +59,16 @@ namespace GameMod {
         // Send a chat message
         // Set connection_id to the ID of a specific client, or to -1 to send to all
         // clients except except_connection_id (if that is >= 0)
-        public static bool SendTo(string msg, int connection_id=-1 , int except_connection_id=-1, string sender_name = "Server", MpTeam team = MpTeam.TEAM0) {
+        // if onlyAuth is true, onlsy sent to clients which are authenticated for
+        // chat commands
+        public static bool SendTo(string msg, int connection_id=-1 , int except_connection_id=-1, bool authOnly=false, string sender_name = "Server", MpTeam team = MpTeam.TEAM0) {
             MatchState s = NetworkMatch.GetMatchState();
             if (s == MatchState.NONE || s == MatchState.LOBBY_LOADING_SCENE) {
                 Debug.LogFormat("MPChatTools SendTo() called during match state {0}, ignored",s);
                 return false;
             }
             bool inLobby = (s == MatchState.LOBBY || s == MatchState.LOBBY_LOAD_COUNTDOWN);
-            return SendTo(inLobby, msg, connection_id, except_connection_id, sender_name, team);
+            return SendTo(inLobby, msg, connection_id, except_connection_id, authOnly, sender_name, team);
         }
     }
 
@@ -343,11 +352,24 @@ namespace GameMod {
                 MPBanPlayers.UnbanAll(banMode);
                 ReturnTo(String.Format("ban list {0} has been cleared",banMode));
             } else {
+                // check against names in ban list (must not be current player names)
                 string pattern = arg.ToUpper();
                 var banList=MPBanPlayers.GetList(banMode);
                 int cnt = banList.RemoveAll(entry => (MatchPlayerName(entry.name, pattern) != 0));
-                MPBanPlayers.OnUpdate(banMode, false);
-                ReturnTo(String.Format("{0} players have been UNBANNED from {1} list", cnt, banMode));
+                if (cnt > 0) {
+                    MPBanPlayers.OnUpdate(banMode, false);
+                } else {
+                    // check the currently connected players
+                    if (SelectPlayer(arg)) {
+                        cnt = MPBanPlayers.Unban(selectedPlayerEntry, banMode);
+                    }
+                }
+
+                if (cnt > 0) {
+                    ReturnTo(String.Format("{0} players have been UNBANNED from {1} list", cnt, banMode));
+                } else {
+                    ReturnToSender(String.Format("Un{0}: no player {1} found",banMode, arg));
+                }
             }
             return false;
         }
@@ -412,8 +434,8 @@ namespace GameMod {
         }
 
         // Send a chat message to all clients except the given connection id, -1 for all
-        public bool ReturnTo(string msg, int connection_id = -1, int except_connection_id = -1) {
-            return MPChatTools.SendTo(inLobby, msg, connection_id, except_connection_id);
+        public bool ReturnTo(string msg, int connection_id = -1, int except_connection_id = -1, bool authOnly=false) {
+            return MPChatTools.SendTo(inLobby, msg, connection_id, except_connection_id, authOnly);
         }
 
         // Select a player by a pattern
@@ -447,7 +469,7 @@ namespace GameMod {
         }
 
         // Find the player ID string based on a connection ID
-        public string FindPlayerIDForConnection(int conn_id, bool inLobby) {
+        public static string FindPlayerIDForConnection(int conn_id, bool inLobby) {
             MPBanEntry entry = FindPlayerEntryForConnection(conn_id, inLobby);
             if (entry != null && !String.IsNullOrEmpty(entry.id)) {
                 return entry.id;
@@ -456,7 +478,7 @@ namespace GameMod {
         }
 
         // Find the player name string based on a connection ID
-        public string FindPlayerNameForConnection(int conn_id, bool inLobby) {
+        public static string FindPlayerNameForConnection(int conn_id, bool inLobby) {
             MPBanEntry entry = FindPlayerEntryForConnection(conn_id, inLobby);
             if (entry != null && !String.IsNullOrEmpty(entry.name)) {
                 return entry.name;
@@ -465,7 +487,7 @@ namespace GameMod {
         }
 
         // Make a MPBanEntry candidate from a connection ID
-        public MPBanEntry FindPlayerEntryForConnection(int conn_id, bool inLobby) {
+        public static MPBanEntry FindPlayerEntryForConnection(int conn_id, bool inLobby) {
             if (inLobby) {
                 foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
                     if (p.Value != null && p.Value.m_id == conn_id) {
@@ -487,26 +509,26 @@ namespace GameMod {
             if (entry == null) {
                 return false;
             }
-            if (MPBanPlayers.MatchCreator != null && entry.matches(MPBanPlayers.MatchCreator)) {
+            if (MPBanPlayers.MatchCreator != null && entry.matches(MPBanPlayers.MatchCreator, "MATCH CREATOR: ")) {
                 // the match creator is always authenticated
                 return true;
             }
 
             if (String.IsNullOrEmpty(entry.id)) {
-                Debug.LogFormat("CheckPermission: failed to get player ID");
                 return false;
             }
             return (authenticatedConnections.ContainsKey(entry.id) && authenticatedConnections[entry.id] == true);
         }
 
+        // Check if a client on a specific connection id is authenticated
+        public static bool CheckPermission(int connection_id, bool inLobby) {
+            MPBanEntry entry = FindPlayerEntryForConnection(connection_id, inLobby);
+            return CheckPermission(entry);
+        }
+
         // Check if the sender of the message is authenticated
         public bool CheckPermission() {
-            MPBanEntry entry = FindPlayerEntryForConnection(sender_conn, inLobby);
-            if (entry == null) {
-                Debug.LogFormat("CheckPermission: failed to query player for connection {0}", sender_conn);
-                return false;
-            }
-            return CheckPermission(entry);
+            return CheckPermission(sender_conn, inLobby);
         }
 
         // Match string name version pattern,
@@ -619,6 +641,13 @@ namespace GameMod {
                 Debug.LogFormat("CHATCMD: did not find a player matching {0}", pattern);
             }
             return bestPlayer;
+        }
+
+        // Check if we have set any MPChatCommand related state
+        // Currently, this check only whether the authl list is not empty
+        public static bool HasModifiedState()
+        {
+            return (authenticatedConnections.Count > 0);
         }
 
         // Reset the state of the chat commands

@@ -92,13 +92,13 @@ namespace GameMod {
             }*/
             if (!String.IsNullOrEmpty(address) && !String.IsNullOrEmpty(candidate.address)) {
                 if (address == candidate.address) {
-                    Debug.LogFormat("{0}player {1} matches ban list entry {2} by ADDRESS", prefix, candidate.Describe(), Describe());
+                    Debug.LogFormat("{0}player {1} matches entry {2} by ADDRESS", prefix, candidate.Describe(), Describe());
                     return true;
                 }
             }
             if (!String.IsNullOrEmpty(id) && !String.IsNullOrEmpty(candidate.id)) {
                 if (id == candidate.id) {
-                    Debug.LogFormat("{0}player {1} matches ban list entry {2} by ID", prefix, candidate.Describe(), Describe());
+                    Debug.LogFormat("{0}player {1} matches entry {2} by ID", prefix, candidate.Describe(), Describe());
                     return true;
                 }
             }
@@ -113,7 +113,13 @@ namespace GameMod {
         // this is the Ban List
         private static List<MPBanEntry>[] banLists = new List<MPBanEntry>[(int)MPBanMode.Count];
         private static int totalBanCount=0; // Count of bans in all lists
+
         public static MPBanEntry MatchCreator = null; // description of the Game Creator
+        public static string bannedName = " ** BANNED ** ";
+        public static bool JoiningPlayerIsBanned = false;
+        public static bool JoiningPlayerIsAnnoyed = false;
+        public static int  JoiningPlayerConnectionId = -1;
+        public static PlayerLobbyData JoiningPlayerLobbyData = null;
 
         // Get the ban list
         public static List<MPBanEntry> GetList(MPBanMode mode = MPBanMode.Ban) {
@@ -144,7 +150,7 @@ namespace GameMod {
                     p.m_spectator = true;
                     Debug.LogFormat("BAN ANNOY player {0}",p.m_mp_name);
                     if (p.connectionToClient != null) {
-                        MPChatTools.SendTo(String.Format("ANNOY BANNED player {0}",p.m_mp_name), -1, p.connectionToClient.connectionId);
+                        MPChatTools.SendTo(String.Format("ANNOY-BANNING player {0}",p.m_mp_name), -1, p.connectionToClient.connectionId, true);
                     }
                 }
             }
@@ -167,26 +173,30 @@ namespace GameMod {
         }
 
         // Delayed disconnect on Kick
+        static private MethodInfo _Server_OnDisconnect_Method = AccessTools.Method(typeof(Overload.Server), "OnDisconnect");
+
         public static IEnumerator DelayedDisconnect(int connection_id)
         {
             yield return new WaitForSecondsRealtime(1);
             if (connection_id < NetworkServer.connections.Count && NetworkServer.connections[connection_id] != null) {
-                NetworkServer.connections[connection_id].Disconnect();
+                NetworkConnection conn =  NetworkServer.connections[connection_id];
+                NetworkMessage msg = new NetworkMessage();
+                msg.conn = conn;
+                msg.msgType = 33; // Disconnect
+                _Server_OnDisconnect_Method.Invoke(null, new object[] { msg });
+                conn.Disconnect();
             }
         }
 
         // Kicks a player by a connection id. Also works in the Lobby
-        public static void KickPlayer(int connection_id, string name="")
+        public static void KickPlayer(int connection_id, string name="", bool banned = false)
         {
             if (connection_id < 0 || connection_id >= NetworkServer.connections.Count) {
                 return;
             }
             if (NetworkServer.connections[connection_id] != null) {
-                MPChatTools.SendTo(String.Format("KICKED player {0}",name), -1, connection_id);
-                //
-                NetworkServer.SendToClient(connection_id,51, new IntegerMessage(2000000000));
-                // SendPostGame(), prevents that the client immediately re-joins when in GAME
-                // (doesn't help in Lobby)
+                MPChatTools.SendTo(String.Format("KICKING {0}player {1}",((banned)?"BANNED ":""),name), -1, connection_id, true);
+                // SendPostGame(), prevents that the client immediately re-joins
                 NetworkServer.SendToClient(connection_id,74, new IntegerMessage(0));
                 // Goodbye
                 //NetworkServer.connections[connection_id].Disconnect();
@@ -197,18 +207,18 @@ namespace GameMod {
         }
 
         // Kicks an active Player
-        public static void KickPlayer(Player p)
+        public static void KickPlayer(Player p, bool banned = false)
         {
             if (p != null && p.connectionToClient != null) {
-                KickPlayer(p.connectionToClient.connectionId, p.m_mp_name);
+                KickPlayer(p.connectionToClient.connectionId, p.m_mp_name, banned);
             }
         }
 
         // Kicks an Player in Lobby State
-        public static void KickPlayer(PlayerLobbyData p)
+        public static void KickPlayer(PlayerLobbyData p, bool banned = false)
         {
             if (p != null) {
-                KickPlayer(p.m_id, p.m_name);
+                KickPlayer(p.m_id, p.m_name, banned);
             }
         }
 
@@ -227,7 +237,7 @@ namespace GameMod {
                     if (p.Value != null) {
                         MPBanEntry candidate = new MPBanEntry(p.Value);
                         if (IsBanned(candidate, MPBanMode.Ban)) {
-                            KickPlayer(p.Value);
+                            KickPlayer(p.Value, true);
                         }
                     }
                 }
@@ -235,7 +245,7 @@ namespace GameMod {
                 foreach(var p in Overload.NetworkManager.m_Players) {
                     MPBanEntry candidate = new MPBanEntry(p);
                     if (IsBanned(candidate, MPBanMode.Ban)) {
-                        KickPlayer(p);
+                        KickPlayer(p, true);
                     }
                 }
             }
@@ -287,15 +297,14 @@ namespace GameMod {
         }
 
         // Remove all entries matching a candidate from the ban list
-        public static bool Unban(MPBanEntry candidate, MPBanMode mode = MPBanMode.Ban)
+        public static int Unban(MPBanEntry candidate, MPBanMode mode = MPBanMode.Ban)
         {
             var banList = GetList(mode);
             int cnt = banList.RemoveAll(entry => entry.matches(candidate,"UNBAN: "));
             if (cnt > 0) {
                 OnUpdate(mode, false);
-                return true;
             }
-            return false;
+            return cnt;
         }
 
         // Remove all bans
@@ -312,7 +321,13 @@ namespace GameMod {
             OnUpdate(mode, false);
         }
 
-        // Reset the bans for the next game if a new player creates it
+        // Check if the MPBanPlayers has a non-default state
+        // This checks if any bans are present
+        public static bool HasModifiedState() {
+            return (totalBanCount > 0);
+        }
+
+        // Reset the MPBanPlayers state
         // Removes all non-permanent bans of all modes
         public static void Reset() {
             Debug.Log("MPBanPlayers: resetting all non-permanent bans");
@@ -322,6 +337,10 @@ namespace GameMod {
         }
     }
 
+    // Check the playe joining the lobby,
+    // Apply bans  and annoy-bans
+    // Also check if the joining player is the match creator,
+    // and reset bans and permissions accordingly for the new match.
     [HarmonyPatch(typeof(NetworkMatch), "AcceptNewConnection")]
     class MPBanPlayers_AcceptNewConnection {
         // Delayed end game
@@ -332,6 +351,10 @@ namespace GameMod {
         }
 
         private static void Postfix(ref bool __result, int connection_id, int version, string player_name, string player_session_id, string player_id, string player_uid) {
+            MPBanPlayers.JoiningPlayerIsBanned = false;
+            MPBanPlayers.JoiningPlayerIsAnnoyed = false;
+            MPBanPlayers.JoiningPlayerConnectionId = connection_id;
+            MPBanPlayers.JoiningPlayerLobbyData = null;
             if (__result) {
                 // the player has been accepted by the game's matchmaking
                 MPBanEntry candidate = new MPBanEntry(player_name, connection_id, player_id);
@@ -343,16 +366,16 @@ namespace GameMod {
                     }
                 }
                 // check if player is banned
-                bool isBanned = MPBanPlayers.IsBanned(candidate);
-                if (isCreator && !isBanned) {
-                    // also check annoy-bans, annoy-banned players shall not create matches either
-                    // (although they can join games)
-                    isBanned = MPBanPlayers.IsBanned(candidate, MPBanMode.Annoy);
+                MPBanPlayers.JoiningPlayerIsBanned = MPBanPlayers.IsBanned(candidate);
+                MPBanPlayers.JoiningPlayerIsAnnoyed = MPBanPlayers.IsBanned(candidate, MPBanMode.Annoy);
+                if (isCreator && MPBanPlayers.JoiningPlayerIsAnnoyed) {
+                    // annoyed players are treated as Banned for creating new matches
+                    MPBanPlayers.JoiningPlayerIsBanned = true;
                 }
-                if (isBanned) {
+                if (MPBanPlayers.JoiningPlayerIsBanned) {
                     // banned player entered the lobby
                     // NOTE: we cannot just say __accept = false, because this causes all sorts of troubles later
-                    MPBanPlayers.KickPlayer(connection_id, player_name);
+                    MPBanPlayers.KickPlayer(connection_id, player_name, true);
                     if (isCreator) {
                         Debug.LogFormat("Creator for this match {0} is BANNED, ending match", candidate.name);
                         GameManager.m_gm.StartCoroutine(DelayedEndMatch());
@@ -360,6 +383,7 @@ namespace GameMod {
                 } else {
                     // unbanned player entered the lobby
                     if (isCreator) {
+                        bool haveModifiedState = MPBanPlayers.HasModifiedState() || MPChatCommand.HasModifiedState();
                         bool doReset = true;
                         if (MPChatCommand.CheckPermission(candidate)) {
                             Debug.Log("MPBanPlayers: same game creator as last match, or with permissions");
@@ -370,12 +394,59 @@ namespace GameMod {
                             Debug.Log("MPBanPlayers: new game creator, resetting bans and permissions");
                             MPBanPlayers.Reset();
                             MPChatCommand.Reset();
+                            if (haveModifiedState) {
+                                MPChatTools.SendTo(true, "cleared all bans and permissions", connection_id);
+                            }
                         } else {
-                            MPChatTools.SendTo(true, "keeping bans and permissions from previous match", connection_id);
+                            if (haveModifiedState) {
+                                MPChatTools.SendTo(true, "keeping bans and permissions from previous match", connection_id);
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    // Don't send banned players in the lobby to other players
+    // rename ANNOY-BANNED players
+    [HarmonyPatch(typeof(Overload.Server), "SendPlayersInLobbyToAllClients")]
+    class MPBanPlayers_SendPlayersInLobbyToAllClients {
+        private static void Prefix() {
+            if (MPBanPlayers.JoiningPlayerConnectionId >= 0) {
+                if (MPBanPlayers.JoiningPlayerIsAnnoyed) {
+                    // rename annoy-banned players
+                    if (MPBanPlayers.JoiningPlayerIsAnnoyed) {
+                        foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
+                            if (p.Key == MPBanPlayers.JoiningPlayerConnectionId) {
+                                if (p.Value != null) {
+                                    MPChatTools.SendTo(String.Format("ANNOY-BANNED player {0} joined, renamed to {1}",p.Value.m_name, MPBanPlayers.bannedName), -1, MPBanPlayers.JoiningPlayerConnectionId, true);
+                                    p.Value.m_name = MPBanPlayers.bannedName;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (MPBanPlayers.JoiningPlayerIsBanned) {
+                    if (NetworkMatch.m_players.ContainsKey(MPBanPlayers.JoiningPlayerConnectionId)) {
+                        // Save the PlayerLobbyData that we remove here, we add it back after SendPlayersInLobbyToAllClients
+                        MPBanPlayers.JoiningPlayerLobbyData = NetworkMatch.m_players[MPBanPlayers.JoiningPlayerConnectionId];
+                        NetworkMatch.m_players.Remove(MPBanPlayers.JoiningPlayerConnectionId);
+                    }
+                }
+            }
+        }
+
+        private static void Posfix() {
+            if (MPBanPlayers.JoiningPlayerIsBanned && MPBanPlayers.JoiningPlayerConnectionId >= 0 && MPBanPlayers.JoiningPlayerLobbyData != null) {
+                // Add back the PlayerLobbyData which we temporarily removed
+                NetworkMatch.m_players.Add(MPBanPlayers.JoiningPlayerConnectionId, MPBanPlayers.JoiningPlayerLobbyData);
+            }
+            // clear the JoiningPlayer ban state, everything is applied
+            MPBanPlayers.JoiningPlayerIsBanned = false;
+            MPBanPlayers.JoiningPlayerIsAnnoyed = false;
+            MPBanPlayers.JoiningPlayerConnectionId = -1;
+            MPBanPlayers.JoiningPlayerLobbyData = null;
         }
     }
 
