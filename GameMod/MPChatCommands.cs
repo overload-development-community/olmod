@@ -271,7 +271,7 @@ namespace GameMod {
             if (!GameMod.Core.GameMod.FindArgVal("-trustedPlayerIds", out idstring) && String.IsNullOrEmpty(idstring)) {
                 return; // no trustedPlayerIds specified;
             }
-            string[] ids = idstring.Split(';');
+            string[] ids = idstring.Split(',',';',':','|');
             foreach (string id in ids) {
                 MPBanEntry entry = new MPBanEntry(null, null, id);
                 if (entry.IsValid()) {
