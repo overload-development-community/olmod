@@ -99,6 +99,7 @@ namespace GameMod {
         public int sender_conn;
         public bool needAuth;
         public bool inLobby;
+        public MPBanEntry senderEntry = null;
         public MPBanEntry selectedPlayerEntry = null;
         public Player selectedPlayer = null;
         public PlayerLobbyData selectedPlayerLobbyData = null;
@@ -125,6 +126,7 @@ namespace GameMod {
             sender_conn = sender_connection_id;
             needAuth = false;
             inLobby = isInLobby;
+            senderEntry = null;
 
             if (message == null || message.Length < 2 || message[0] != '/') {
                 // not a valid command
@@ -200,9 +202,14 @@ namespace GameMod {
                 }
                 return true;
             }
-            Debug.LogFormat("CHATCMD {0}: {1} {2}", cmd, cmdName, arg);
+            senderEntry=FindPlayerEntryForConnection(sender_conn, inLobby);
+            if (senderEntry == null || String.IsNullOrEmpty(senderEntry.name)) {
+                Debug.LogFormat("CHATCMD {0}: {1} {2}: failed to identify sender", cmd, cmdName, arg);
+                return false;
+            }
+            Debug.LogFormat("CHATCMD {0}: {1} {2} by {3}", cmd, cmdName, arg, senderEntry.name);
             if (needAuth) {
-                if (!CheckPermission()) {
+                if (!CheckPermission(senderEntry)) {
                     ReturnToSender(String.Format("You do not have the permission for command {0}!", cmd));
                     Debug.LogFormat("CHATCMD {0}: client is not authenticated!", cmd);
                     return false;
@@ -334,7 +341,7 @@ namespace GameMod {
             if (SetAuth(give, selectedPlayerEntry.id)) {
                 ReturnToSender(String.Format("{0}: player {1} applied",op,selectedPlayerEntry.name));
                 if (selectedPlayerConnectionId >= 0) {
-                    ReturnTo(String.Format("You have been {0} CHAT COMMAND permissions.",(give)?"granted":"revoked"),selectedPlayerConnectionId);
+                    ReturnTo(String.Format("{0} COMMAND permission by {1}",((give)?"Granted":"Revoked"), senderEntry.name),selectedPlayerConnectionId);
                 }
             } else {
                 ReturnToSender(String.Format("{0}: player {1} failed",op,selectedPlayerEntry.name));
@@ -377,9 +384,10 @@ namespace GameMod {
 
             if (doBan) {
                 MPBanPlayers.Ban(selectedPlayerEntry, banMode);
-                ReturnTo(String.Format("{0} player {1}", banOp, selectedPlayerEntry.name), -1, selectedPlayerConnectionId);
+                ReturnTo(String.Format("{0} player {1} by {2}", banOp, selectedPlayerEntry.name, senderEntry.name), -1, selectedPlayerConnectionId);
             }
             if (doKick) {
+                ReturnTo(String.Format("KICK player {0} by {1}", selectedPlayerEntry.name, senderEntry.name), -1, selectedPlayerConnectionId);
                 if (selectedPlayer != null) {
                     MPBanPlayers.KickPlayer(selectedPlayer);
                 } else if (selectedPlayerLobbyData != null) {
@@ -396,7 +404,7 @@ namespace GameMod {
         {
             if (String.IsNullOrEmpty(arg)) {
                 MPBanPlayers.UnbanAll(banMode);
-                ReturnTo(String.Format("ban list {0} has been cleared",banMode));
+                ReturnTo(String.Format("ban list {0} cleared by {1}",banMode,senderEntry.name));
             } else {
                 // check against names in ban list (must not be current player names)
                 string pattern = arg.ToUpper();
@@ -412,7 +420,7 @@ namespace GameMod {
                 }
 
                 if (cnt > 0) {
-                    ReturnTo(String.Format("{0} players have been UNBANNED from {1} list", cnt, banMode));
+                    ReturnTo(String.Format("{0} players UNBANNED from {1} list by {2}", cnt, banMode, senderEntry.name));
                 } else {
                     ReturnToSender(String.Format("Un{0}: no player {1} found",banMode, arg));
                 }
@@ -424,7 +432,7 @@ namespace GameMod {
         public bool DoEnd()
         {
             Debug.Log("END request via chat command");
-            ReturnTo("manual match END request");
+            ReturnTo(String.Format("manual match END request by {0}",senderEntry.name));
             NetworkMatch.End();
             return false;
         }
@@ -434,11 +442,11 @@ namespace GameMod {
         {
             if (!inLobby) {
                 Debug.LogFormat("START request via chat command ignored in non-LOBBY state");
-                ReturnTo("START: not possible because I'm not in the Lobby");
+                ReturnToSender("START: not possible because I'm not in the Lobby");
                 return false;
             }
             Debug.LogFormat("START request via chat command");
-            ReturnTo("manual match START request");
+            ReturnTo(String.Format("manual match START request by {0}",senderEntry.name));
             MPChatCommands_ModifyLobbyStartTime.StartMatch = true;
             return false;
         }
@@ -453,11 +461,13 @@ namespace GameMod {
                 creator = "<UNKNOWN>";
             }
 
-            ReturnToSender(String.Format("STATUS: {0}'s game, your auth: {1}", creator,CheckPermission()));
-            ReturnToSender(String.Format("STATUS: bans: {0}, annoy-bans: {1}, authList: {2}",
+            GetTrustedPlayerIds();
+            ReturnToSender(String.Format("STATUS: {0}'s game, your auth: {1}", creator,CheckPermission(senderEntry)));
+            ReturnToSender(String.Format("STATUS: bans: {0}, annoy-bans: {1}, auth: {2} trust: {3}",
                                          MPBanPlayers.GetList(MPBanMode.Ban).Count,
                                          MPBanPlayers.GetList(MPBanMode.Annoy).Count,
-                                         authenticatedConnections.Count));
+                                         authenticatedConnections.Count,
+                                         trustedPlayers.Count));
             return false;
         }
 
@@ -574,11 +584,6 @@ namespace GameMod {
         public static bool CheckPermission(int connection_id, bool inLobby) {
             MPBanEntry entry = FindPlayerEntryForConnection(connection_id, inLobby);
             return CheckPermission(entry);
-        }
-
-        // Check if the sender of the message is authenticated
-        public bool CheckPermission() {
-            return CheckPermission(sender_conn, inLobby);
         }
 
         // Match string name version pattern,
