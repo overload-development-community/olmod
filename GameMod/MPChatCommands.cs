@@ -107,8 +107,8 @@ namespace GameMod {
 
         // this Dictionary contains the set of authenticated players
         // Authentication is done based on Player.m_player_id / PlayerLobbyData.m_player_id
-        private static Dictionary<string,bool> authenticatedConnections = new Dictionary<string,bool>();
-        private static Dictionary<string,bool> trustedPlayers = null;
+        private static List<MPBanEntry> authenticatedPlayers = new List<MPBanEntry>();
+        private static List<MPBanEntry> trustedPlayers = null;
         private static int chatCommandsEnabled = -1;
 
         // Check if chat commands are enabled.
@@ -266,46 +266,72 @@ namespace GameMod {
             if (trustedPlayers != null) {
                 return; // already set
             }
-            trustedPlayers = new Dictionary<string, bool>();
+            trustedPlayers = new List<MPBanEntry>();
             string idstring = null;
             if (!GameMod.Core.GameMod.FindArgVal("-trustedPlayerIds", out idstring) && String.IsNullOrEmpty(idstring)) {
                 return; // no trustedPlayerIds specified;
             }
             string[] ids = idstring.Split(';');
             foreach (string id in ids) {
-                if (!String.IsNullOrEmpty(id)) {
-                    string pId = id.ToUpper().Trim();
-                    if (!String.IsNullOrEmpty(pId)) {
-                        Debug.LogFormat("MPChatCommands: adding trusted player {0}", pId);
-                        if (!trustedPlayers.ContainsKey(pId)) {
-                            trustedPlayers.Add(pId, true);
+                MPBanEntry entry = new MPBanEntry(null, null, id);
+                if (entry.IsValid()) {
+                    bool doAdd = true;
+                    foreach(MPBanEntry e in trustedPlayers) {
+                        if (e.matches(entry, "TRUSTED PLAYER: ")) {
+                            doAdd = false;
                         }
+                    }
+                    if (doAdd) {
+                        Debug.LogFormat("MPChatCommands: adding trusted player {0}", entry.Describe());
+                        trustedPlayers.Add(entry);
                     }
                 }
             }
         }
 
         // set authentication status of player by id
-        public static bool SetAuth(bool allowed, string id)
+        private static bool SetAuth(bool allowed, MPBanEntry playerEntry)
         {
-            if (String.IsNullOrEmpty(id)) {
-                Debug.LogFormat("SETAUTH callid without valid player id");
+            if (playerEntry == null || !playerEntry.IsValid()) {
+                Debug.LogFormat("SETAUTH callid without valid player");
                 return false;
             }
 
             if (allowed) {
-                Debug.LogFormat("AUTH: client {0} is authenticated", id);
-                if (!authenticatedConnections.ContainsKey(id)) {
-                    authenticatedConnections.Add(id, true);
+                Debug.LogFormat("AUTH: player {0} is authenticated", playerEntry.name);
+                bool doAdd = true;
+                foreach(MPBanEntry entry in authenticatedPlayers) {
+                    if (entry.matches(playerEntry, "AUTHENTICATED PLAYER: ")) {
+                        entry.Set(playerEntry);
+                        doAdd = false;
+                    }
+                }
+                if (doAdd) {
+                    authenticatedPlayers.Add(playerEntry);
                 }
             } else {
                 // de-auth
-                Debug.LogFormat("AUTH: client {0} is NOT authenticated", id);
-                if (authenticatedConnections.ContainsKey(id)) {
-                    authenticatedConnections.Remove(id);
+                Debug.LogFormat("AUTH: player {0} is NOT authenticated any more", playerEntry.name);
+                if (authenticatedPlayers.RemoveAll(entry => entry.matches(playerEntry, "AUTHENTICATED PLAYER: ")) < 1) {
+                    return false;
                 }
             }
             return true;
+        }
+
+        // Check if a player is an authenticated player on this server
+        public static bool IsAuthenticatedPlayer(MPBanEntry playerEntry)
+        {
+            if (playerEntry == null || !playerEntry.IsValid()) {
+                Debug.LogFormat("IsAuthenticatedPlayer without valid player");
+                return false;
+            }
+            foreach(MPBanEntry e in authenticatedPlayers) {
+                if (e.matches(playerEntry, "AUTHENTICATED PLAYER: ")) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // Check if a player is a trusted player on this server
@@ -315,9 +341,11 @@ namespace GameMod {
                 return false;
             }
             GetTrustedPlayerIds();
-            if (trustedPlayers.ContainsKey(entry.id)) {
-                Debug.LogFormat("MPChatCommands: player id {0} is trusted on this server", entry.id);
-                return true;
+            foreach(MPBanEntry e in trustedPlayers) {
+                if (e.matches(entry, "TRUSTED PLAYER: ")) {
+                    Debug.LogFormat("MPChatCommands: player {0} id {0} is trusted on this server", entry.name, entry.id);
+                    return true;
+                }
             }
             return false;
         }
@@ -332,13 +360,13 @@ namespace GameMod {
                     ReturnToSender(String.Format("{0}: player {1} not found",op, arg));
                     return false;
                 } else {
-                    authenticatedConnections.Clear();
+                    authenticatedPlayers.Clear();
                     Debug.LogFormat("{0}: all client permissions revoked", op, arg);
                     ReturnToSender(String.Format("{0}: all client permissions revoked",op));
                 }
             }
 
-            if (SetAuth(give, selectedPlayerEntry.id)) {
+            if (SetAuth(give, selectedPlayerEntry)) {
                 ReturnToSender(String.Format("{0}: player {1} applied",op,selectedPlayerEntry.name));
                 if (selectedPlayerConnectionId >= 0) {
                     ReturnTo(String.Format("{0} COMMAND permission by {1}",((give)?"Granted":"Revoked"), senderEntry.name),selectedPlayerConnectionId);
@@ -466,7 +494,7 @@ namespace GameMod {
             ReturnToSender(String.Format("STATUS: bans: {0}, annoy-bans: {1}, auth: {2} trust: {3}",
                                          MPBanPlayers.GetList(MPBanMode.Ban).Count,
                                          MPBanPlayers.GetList(MPBanMode.Annoy).Count,
-                                         authenticatedConnections.Count,
+                                         authenticatedPlayers.Count,
                                          trustedPlayers.Count));
             return false;
         }
@@ -577,7 +605,7 @@ namespace GameMod {
             if (IsTrustedPlayer(entry)) {
                 return true;
             }
-            return (authenticatedConnections.ContainsKey(entry.id) && authenticatedConnections[entry.id] == true);
+            return IsAuthenticatedPlayer(entry);
         }
 
         // Check if a client on a specific connection id is authenticated
@@ -702,14 +730,14 @@ namespace GameMod {
         // Currently, this check only whether the authl list is not empty
         public static bool HasModifiedState()
         {
-            return (authenticatedConnections.Count > 0);
+            return (authenticatedPlayers.Count > 0);
         }
 
         // Reset the state of the chat commands
         // This clears all authentications
         public static void Reset() {
             Debug.Log("MPChatCommands: clearing command authentications");
-            authenticatedConnections.Clear();
+            authenticatedPlayers.Clear();
         }
     }
 

@@ -26,6 +26,8 @@ namespace GameMod {
         public bool permanent = false;
         public DateTime timeCreated;
 
+        public static string NullId = "00000000-0000-0000-0000-000000000000";
+
         // generate MPBanEntry from individual entries
         public MPBanEntry(string playerName, string connAddress, string playerId) {
             Set(playerName, connAddress, playerId);
@@ -55,6 +57,13 @@ namespace GameMod {
             name = (String.IsNullOrEmpty(playerName))?null:playerName.ToUpper();
             address = (String.IsNullOrEmpty(connAddress))?null:connAddress.ToUpper().Trim();
             id = (String.IsNullOrEmpty(playerId))?null:playerId.ToUpper().Trim();
+            if (id != null) {
+                // check validity of the ID
+                if (id.Length < 8 || id == NullId) {
+                    Debug.LogFormat("BAN ENTRY: invalid player id {0}, ignoring", id);
+                    id = null;
+                }
+            }
             timeCreated = DateTime.Now;
         }
 
@@ -105,6 +114,12 @@ namespace GameMod {
 
             // does not match
             return false;
+        }
+
+        // Check wether a ban entry is valid
+        public bool IsValid() {
+            // we need at least id or address
+            return !String.IsNullOrEmpty(id) || !String.IsNullOrEmpty(address);
         }
     }
 
@@ -287,6 +302,9 @@ namespace GameMod {
         // Add a player to the Ban List
         public static bool Ban(MPBanEntry candidate, MPBanMode mode = MPBanMode.Ban, bool permanent = false)
         {
+            if (!candidate.IsValid()) {
+                return false;
+            }
             candidate.permanent = permanent;
             var banList=GetList(mode);
             foreach (var entry in banList) {
@@ -462,6 +480,25 @@ namespace GameMod {
     class MPBanPlayers_OnStartPlaying {
         private static void Postfix() {
             MPBanPlayers.ApplyAllBans();
+        }
+    }
+
+    [HarmonyPatch(typeof(NetworkMatch), "SetPlayerId")]
+    class MPChatCommands_SetPlayerId {
+        public static bool StartMatch = false;
+        private static void Prefix(ref string player_id) {
+            // the game uses an AWS web service to query the player IDs
+            // If it is down or not reachable, we get all zero ID,
+            // fall back to the local user ID from the "prefs" file
+            if (String.IsNullOrEmpty(player_id) || player_id == MPBanEntry.NullId) {
+                string id = PlayerPrefs.GetString("UserID");
+                if (String.IsNullOrEmpty(id)) {
+                    id = Guid.NewGuid().ToString();
+                    PlayerPrefs.SetString("UserID", id);
+                    PlayerPrefs.Save();
+                }
+                player_id = id;
+            }
         }
     }
 }
