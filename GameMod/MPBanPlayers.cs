@@ -175,15 +175,25 @@ namespace GameMod {
         // Delayed disconnect on Kick
         static private MethodInfo _Server_OnDisconnect_Method = AccessTools.Method(typeof(Overload.Server), "OnDisconnect");
 
-        public static IEnumerator DelayedDisconnect(int connection_id)
+        public static IEnumerator DelayedDisconnect(int connection_id, bool banned)
         {
-            yield return new WaitForSecondsRealtime(1);
             if (connection_id < NetworkServer.connections.Count && NetworkServer.connections[connection_id] != null) {
-                NetworkConnection conn =  NetworkServer.connections[connection_id];
+                NetworkConnection conn = NetworkServer.connections[connection_id];
+                if (NetworkMatch.GetMatchState() >= MatchState.PREGAME) {
+                    // Sending this command first prevents the client to load the scene
+                    // and getting into some inconsistend state
+                    NetworkServer.SendToClient(connection_id, CustomMsgType.MatchEnd, new IntegerMessage(0));
+                    yield return new WaitForSecondsRealtime(0.5f);
+                }
+                // nicely tell the client to FUCK OFF :)
+                NetworkServer.SendToClient(connection_id, CustomMsgType.UnsupportedMatch, new StringMessage(String.Format("You {0} from this server",(banned)?"are BANNED":"were KICKED")));
+                yield return new WaitForSecondsRealtime(0.5f);
+                // Fake client's OnDisconnect message
                 NetworkMessage msg = new NetworkMessage();
                 msg.conn = conn;
                 msg.msgType = 33; // Disconnect
                 _Server_OnDisconnect_Method.Invoke(null, new object[] { msg });
+                // get rid of the client
                 conn.Disconnect();
             }
         }
@@ -196,12 +206,9 @@ namespace GameMod {
             }
             if (NetworkServer.connections[connection_id] != null) {
                 MPChatTools.SendTo(String.Format("KICKING {0}player {1}",((banned)?"BANNED ":""),name), -1, connection_id, true);
-                // SendPostGame(), prevents that the client immediately re-joins
-                NetworkServer.SendToClient(connection_id,74, new IntegerMessage(0));
                 // Goodbye
-                //NetworkServer.connections[connection_id].Disconnect();
-                // disconnect it in an instant, to give client time to execute the commands
-                GameManager.m_gm.StartCoroutine(DelayedDisconnect(connection_id));
+                // disconnect it in short moment, to give client time to execute the commands
+                GameManager.m_gm.StartCoroutine(DelayedDisconnect(connection_id,banned));
             }
 
         }
