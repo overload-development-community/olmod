@@ -87,6 +87,8 @@ namespace GameMod {
             Unban,
             Annoy,
             Unannoy,
+            BlockChat,
+            UnblockChat,
             End,
             Start,
             Status,
@@ -175,6 +177,12 @@ namespace GameMod {
             } else if (cmdName == "UB" || cmdName == "UNBAN") {
                 cmd = Command.Unban;
                 needAuth = true;
+            } else if (cmdName == "BC" || cmdName == "BLOCKCHAT") {
+                cmd = Command.BlockChat;
+                needAuth = true;
+            } else if (cmdName == "UBC" || cmdName == "UNBLOCKCHAT") {
+                cmd = Command.UnblockChat;
+                needAuth = true;
             } else if (cmdName == "E" || cmdName == "END") {
                 cmd = Command.End;
                 needAuth = true;
@@ -197,10 +205,10 @@ namespace GameMod {
             }
 
             if (cmd == Command.None) {
-                // there might be Annoy-Banned players, and we can just ignore their ramblings
-                if (MPBanPlayers.GetList(MPBanMode.Annoy).Count > 0) {
+                // there might be BlockChat-Banned players, and we can just ignore their ramblings
+                if (MPBanPlayers.GetList(MPBanMode.BlockChat).Count > 0) {
                     MPBanEntry we = FindPlayerEntryForConnection(sender_conn, inLobby);
-                    if (we != null && MPBanPlayers.IsBanned(we, MPBanMode.Annoy)) {
+                    if (we != null && MPBanPlayers.IsBanned(we, MPBanMode.BlockChat)) {
                         return false;
                     }
                 }
@@ -247,6 +255,12 @@ namespace GameMod {
                     break;
                 case Command.Unannoy:
                     result = DoUnban(MPBanMode.Annoy);
+                    break;
+                case Command.BlockChat:
+                    result = DoKickBan(false, true, MPBanMode.BlockChat);
+                    break;
+                case Command.UnblockChat:
+                    result = DoUnban(MPBanMode.BlockChat);
                     break;
                 case Command.End:
                     result = DoEnd();
@@ -428,7 +442,7 @@ namespace GameMod {
             return false;
         }
 
-        // Execute KICK or BAN or KICKBAN or ANNOY command
+        // Execute KICK or BAN or KICKBAN or ANNOY or BLOCKCHAT command
         public bool DoKickBan(bool doKick, bool doBan, MPBanMode banMode) {
             string op;
             string banOp = banMode.ToString().ToUpper();
@@ -462,6 +476,10 @@ namespace GameMod {
 
             if (doBan) {
                 MPBanPlayers.Ban(selectedPlayerEntry, banMode);
+                if (banMode == MPBanMode.Annoy) {
+                    // ANNOY also implies BLOCKCHAT
+                    MPBanPlayers.Ban(selectedPlayerEntry, MPBanMode.BlockChat);
+                }
                 ReturnTo(String.Format("{0} player {1} by {2}", banOp, selectedPlayerEntry.name, senderEntry.name), -1, selectedPlayerConnectionId);
             }
             if (doKick) {
@@ -477,14 +495,18 @@ namespace GameMod {
             return false;
         }
 
-        // Execute UNBAN or UNANNOY
+        // Execute UNBAN or UNANNOY or UNBLOCKCHAT
         public bool DoUnban(MPBanMode banMode)
         {
+            if (banMode == MPBanMode.Annoy) {
+                // UNANNOY also implies UNBLOCKCHAT
+                DoUnban(MPBanMode.BlockChat);
+            }
             if (String.IsNullOrEmpty(arg)) {
                 MPBanPlayers.UnbanAll(banMode);
                 ReturnTo(String.Format("ban list {0} cleared by {1}",banMode,senderEntry.name));
             } else {
-                // check against names in ban list (must not be current player names)
+                // check against names in ban list (may not be current player names)
                 string pattern = arg.ToUpper();
                 var banList=MPBanPlayers.GetList(banMode);
                 int cnt = banList.RemoveAll(entry => (MatchPlayerName(entry.name, pattern) != 0));
@@ -541,9 +563,10 @@ namespace GameMod {
 
             GetTrustedPlayerIds();
             ReturnToSender(String.Format("STATUS: {0}'s game, your auth: {1}", creator,CheckPermission(senderEntry)));
-            ReturnToSender(String.Format("STATUS: bans: {0}, annoy-bans: {1}, auth: {2} trust: {3}",
+            ReturnToSender(String.Format("STATUS: bans: {0}, annoys: {1}, blocks: {2}, auth: {3} trust: {4}",
                                          MPBanPlayers.GetList(MPBanMode.Ban).Count,
                                          MPBanPlayers.GetList(MPBanMode.Annoy).Count,
+                                         MPBanPlayers.GetList(MPBanMode.BlockChat).Count,
                                          authenticatedPlayers.Count,
                                          trustedPlayers.Count));
             return false;

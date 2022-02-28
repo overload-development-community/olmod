@@ -14,6 +14,7 @@ namespace GameMod {
     public enum MPBanMode : int {
         Ban=0,
         Annoy,
+        BlockChat,
         Count // End Marker, always add before
     }
 
