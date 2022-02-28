@@ -80,6 +80,7 @@ namespace GameMod {
             // List of Commands
             GivePerm,
             RevokePerm,
+            Auth,
             Kick,
             Ban,
             KickBan,
@@ -153,6 +154,9 @@ namespace GameMod {
             } else if (cmdName == "RP" || cmdName == "REVOKEPERM") {
                 cmd = Command.RevokePerm;
                 needAuth = true;
+            } else if (cmdName == "AUTH") {
+                cmd = Command.Auth;
+                needAuth = false;
             } else if (cmdName == "K" || cmdName == "KICK") {
                 cmd = Command.Kick;
                 needAuth = true;
@@ -223,6 +227,9 @@ namespace GameMod {
                 case Command.RevokePerm:
                     result = DoPerm(false);
                     break;
+                case Command.Auth:
+                    result = DoAuth();
+                    break;
                 case Command.Kick:
                     result = DoKickBan(true, false, MPBanMode.Ban);
                     break;
@@ -268,7 +275,7 @@ namespace GameMod {
             }
             trustedPlayers = new List<MPBanEntry>();
             string idstring = null;
-            if (!GameMod.Core.GameMod.FindArgVal("-trustedPlayerIds", out idstring) && String.IsNullOrEmpty(idstring)) {
+            if (!GameMod.Core.GameMod.FindArgVal("-trustedPlayerIds", out idstring) || String.IsNullOrEmpty(idstring)) {
                 return; // no trustedPlayerIds specified;
             }
             string[] ids = idstring.Split(',',';',':','|');
@@ -293,7 +300,7 @@ namespace GameMod {
         private static bool SetAuth(bool allowed, MPBanEntry playerEntry)
         {
             if (playerEntry == null || !playerEntry.IsValid()) {
-                Debug.LogFormat("SETAUTH callid without valid player");
+                Debug.LogFormat("SETAUTH called without valid player");
                 return false;
             }
 
@@ -317,6 +324,26 @@ namespace GameMod {
                 }
             }
             return true;
+        }
+
+        // check if the supplied password matches the server password
+        private static bool SetAuthIsPassword(string password)
+        {
+            if (String.IsNullOrEmpty(password)) {
+                Debug.Log("SETAUTH Password check called without password");
+                return false;
+            }
+            string serverPassword = null;
+            if (!GameMod.Core.GameMod.FindArgVal("-chatCommandPassword", out serverPassword) || String.IsNullOrEmpty(serverPassword)) {
+                Debug.Log("SETAUTH Password is DISABLED on this server");
+                return false;
+            }
+            if (password.ToUpper() == serverPassword.ToUpper()) {
+                Debug.Log("SETAUTH Password CORRECT");
+                return true;
+            }
+            Debug.LogFormat("SETAUTH Password {0} is WRONG", password);
+            return false;
         }
 
         // Check if a player is an authenticated player on this server
@@ -375,6 +402,29 @@ namespace GameMod {
                 ReturnToSender(String.Format("{0}: player {1} failed",op,selectedPlayerEntry.name));
             }
 
+            return false;
+        }
+
+        // Execute the AUTH command
+        public bool DoAuth()
+        {
+            if (!SetAuthIsPassword(arg)) {
+                ReturnToSender("Nope.");
+                // De-Authenticate player with wrong password
+                SetAuth(false, senderEntry);
+                return false;
+            }
+
+            if (IsAuthenticatedPlayer(senderEntry)) {
+                ReturnToSender("Already Authenticated");
+                return false;
+            }
+            if (SetAuth(true, senderEntry)) {
+                ReturnToSender("AUTH successfull.");
+            } else {
+                // this shouldn't really happen...
+                ReturnToSender("AUTH failed! See server log for details.");
+            }
             return false;
         }
 
