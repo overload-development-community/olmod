@@ -9,13 +9,36 @@ using UnityEngine.Networking;
 namespace GameMod {
     // Generic utility class for chat messages
     public class MPChatTools {
+
+        // helper function to send a lobby chat message
+        private static void SendToLobbyHelper(LobbyChatMessage lmsg, int connection_id, bool authOnly, bool unblockedOnly) {
+            bool doSend = true;
+            if (authOnly || unblockedOnly) {
+                MPBanEntry entry = MPChatCommand.FindPlayerEntryForConnection(connection_id, true);
+                if (authOnly) {
+                    doSend = doSend && MPChatCommand.CheckPermission(entry);
+                }
+                if (doSend && unblockedOnly) {
+                    if (entry != null) {
+                        doSend = !MPBanPlayers.IsBanned(entry, MPBanMode.BlockChat);
+                    } else {
+                        doSend = false;
+                    }
+                }
+            }
+            if (doSend) {
+                NetworkServer.SendToClient(connection_id, 75, lmsg);
+            }
+        }
+
         // Send a chat message
         // Set connection_id to the ID of a specific client, or to -1 to send to all
         // clients except except_connection_id (if that is >= 0)
         // If authOnly is true, only send to clients which are authenticated for chat
         // commands.
+        // If unblockedOnly is true, only send to clients which are not BlockChat-BANNED
         // You need to already know if we are currently in Lobby or not
-        public static bool SendTo(bool inLobby, string msg, int connection_id=-1, int except_connection_id=-1, bool authOnly=false, string sender_name = "Server", MpTeam team = MpTeam.TEAM0) {
+        public static bool SendTo(bool inLobby, string msg, int connection_id=-1, int except_connection_id=-1, bool authOnly=false, bool unblockedOnly=false, string sender_name = "Server", MpTeam team = MpTeam.TEAM0, bool isTeamMessage=false, int sender_connection_id=-1) {
             bool toAll = (connection_id < 0);
             if (!toAll) {
                 if (connection_id >= NetworkServer.connections.Count ||  NetworkServer.connections[connection_id] == null) {
@@ -24,29 +47,38 @@ namespace GameMod {
             }
 
             if (inLobby) {
-                var lmsg = new LobbyChatMessage(connection_id, sender_name, team, msg, false);
+                var lmsg = new LobbyChatMessage(sender_connection_id, sender_name, team, msg, isTeamMessage);
                 if (toAll) {
-                    if (except_connection_id < 0 && !authOnly) {
+                    if (except_connection_id < 0 && !authOnly && !unblockedOnly) {
                         NetworkServer.SendToAll(75, lmsg);
                     } else {
                         foreach(NetworkConnection c in NetworkServer.connections) {
                             if (c != null && c.connectionId != except_connection_id) {
-                                if (!authOnly || MPChatCommand.CheckPermission(c.connectionId, true)) {
-                                    NetworkServer.SendToClient(c.connectionId, 75, lmsg);
-                                }
+                                SendToLobbyHelper(lmsg, c.connectionId, authOnly, unblockedOnly);
                             }
                         }
                     }
                 } else {
-                    if (!authOnly || MPChatCommand.CheckPermission(connection_id, true)) {
-                        NetworkServer.SendToClient(connection_id, 75, lmsg);
-                    }
+                    SendToLobbyHelper(lmsg, connection_id, authOnly, unblockedOnly);
                 }
             } else {
+                if (isTeamMessage) {
+                    msg = Loc.LS("[TEAM]")+" " + msg;
+                }
                 foreach (var p in Overload.NetworkManager.m_Players) {
                     if (p != null && p.connectionToClient != null) {
                         if ((toAll && p.connectionToClient.connectionId != except_connection_id) || (p.connectionToClient.connectionId == connection_id)) {
-                            if (!authOnly || MPChatCommand.CheckPermission(new MPBanEntry(p))) {
+                            bool doSend = true;
+                            if (authOnly || unblockedOnly) {
+                                MPBanEntry entry = new MPBanEntry(p);
+                                if (authOnly) {
+                                    doSend = doSend && MPChatCommand.CheckPermission(entry);
+                                }
+                                if (doSend && unblockedOnly) {
+                                    doSend = !MPBanPlayers.IsBanned(entry, MPBanMode.BlockChat);
+                                }
+                            }
+                            if (doSend) {
                                 p.CallTargetSendFullChat(p.connectionToClient, connection_id, sender_name, team, msg);
                             }
                         }
@@ -60,15 +92,16 @@ namespace GameMod {
         // Set connection_id to the ID of a specific client, or to -1 to send to all
         // clients except except_connection_id (if that is >= 0)
         // if onlyAuth is true, onlsy sent to clients which are authenticated for
+        // If unblockedOnly is true, only send to clients which are not BlockChat-BANNED
         // chat commands
-        public static bool SendTo(string msg, int connection_id=-1 , int except_connection_id=-1, bool authOnly=false, string sender_name = "Server", MpTeam team = MpTeam.TEAM0) {
+        public static bool SendTo(string msg, int connection_id=-1 , int except_connection_id=-1, bool authOnly=false, bool unblockedOnly=false, string sender_name = "Server", MpTeam team = MpTeam.TEAM0, bool isTeamMessage=false, int sender_connection_id=-1) {
             MatchState s = NetworkMatch.GetMatchState();
             if (s == MatchState.NONE || s == MatchState.LOBBY_LOADING_SCENE) {
                 Debug.LogFormat("MPChatTools SendTo() called during match state {0}, ignored",s);
                 return false;
             }
             bool inLobby = (s == MatchState.LOBBY || s == MatchState.LOBBY_LOAD_COUNTDOWN);
-            return SendTo(inLobby, msg, connection_id, except_connection_id, authOnly, sender_name, team);
+            return SendTo(inLobby, msg, connection_id, except_connection_id, authOnly, unblockedOnly, sender_name, team, isTeamMessage, sender_connection_id);
         }
     }
 
@@ -92,6 +125,7 @@ namespace GameMod {
             End,
             Start,
             Status,
+            Say,
             Test,
         }
 
@@ -100,6 +134,10 @@ namespace GameMod {
         public string cmdName;
         public string arg;
         public int sender_conn;
+        public string sender_name;
+        public MpTeam sender_team;
+        public string sender_message;
+        public bool isTeamMessage;
         public bool needAuth;
         public bool inLobby;
         public MPBanEntry senderEntry = null;
@@ -124,9 +162,18 @@ namespace GameMod {
         }
 
         // Construct a MPChatCommand from a Chat message
-        public MPChatCommand(string message, int sender_connection_id, bool isInLobby) {
+        public MPChatCommand(string message, int sender_connection_id, string sender_player_name, MpTeam sender_player_team, bool isInLobby) {
             cmd = Command.None;
+
+            isTeamMessage = NetworkMessageManager.IsTeamMessage(message);
+            if (isTeamMessage) {
+                message = NetworkMessageManager.StripTeamPrefix(message);
+            }
+
             sender_conn = sender_connection_id;
+            sender_name = sender_player_name;
+            sender_team = sender_player_team;
+            sender_message = message;
             needAuth = false;
             inLobby = isInLobby;
             senderEntry = null;
@@ -191,6 +238,8 @@ namespace GameMod {
                 needAuth = true;
             } else if (cmdName == "STATUS") {
                 cmd = Command.Status;
+            } else if (cmdName == "SAY" || cmdName == "CHAT") {
+                cmd = Command.Say;
             } else if (cmdName == "T" || cmdName == "TEST") {
                 cmd = Command.Test;
             }
@@ -209,6 +258,8 @@ namespace GameMod {
                 if (MPBanPlayers.GetList(MPBanMode.BlockChat).Count > 0) {
                     MPBanEntry we = FindPlayerEntryForConnection(sender_conn, inLobby);
                     if (we != null && MPBanPlayers.IsBanned(we, MPBanMode.BlockChat)) {
+                        // send the message back to the sender ONLY
+                        MPChatTools.SendTo(inLobby, sender_message, sender_conn, -1, false, false, sender_name, sender_team, isTeamMessage, sender_conn);
                         return false;
                     }
                 }
@@ -270,6 +321,9 @@ namespace GameMod {
                     break;
                 case Command.Status:
                     result = DoStatus();
+                    break;
+                case Command.Say:
+                    result = DoSay();
                     break;
                 case Command.Test:
                     result = DoTest();
@@ -572,6 +626,14 @@ namespace GameMod {
             return false;
         }
 
+        // Execute SAY command
+        public bool DoSay()
+        {
+            string msg = (String.IsNullOrEmpty(arg))?"":arg;
+            MPChatTools.SendTo(inLobby, msg, -1, -1, false, true, sender_name, sender_team, isTeamMessage, sender_conn);
+            return false;
+        }
+
         // Execute TEST command
         public bool DoTest()
         {
@@ -587,12 +649,12 @@ namespace GameMod {
         // Send a chat message back to the sender of the command
         // HA: An Elvis reference!
         public bool ReturnToSender(string msg) {
-            return MPChatTools.SendTo(inLobby, msg, sender_conn);
+            return MPChatTools.SendTo(inLobby, msg, sender_conn, -1, false, false, "Server", MpTeam.TEAM0, false, sender_conn);
         }
 
         // Send a chat message to all clients except the given connection id, -1 for all
         public bool ReturnTo(string msg, int connection_id = -1, int except_connection_id = -1, bool authOnly=false) {
-            return MPChatTools.SendTo(inLobby, msg, connection_id, except_connection_id, authOnly);
+            return MPChatTools.SendTo(inLobby, msg, connection_id, except_connection_id, authOnly, false, "Server", MpTeam.TEAM0, false, sender_conn);
         }
 
         // Select a player by a pattern
@@ -817,7 +879,8 @@ namespace GameMod {
     [HarmonyPatch(typeof(NetworkMatch), "ProcessLobbyChatMessageOnServer")]
     class MPChatCommands_ProcessLobbyMessage {
         private static bool Prefix(int sender_connection_id, LobbyChatMessage msg) {
-            MPChatCommand cmd = new MPChatCommand(NetworkMessageManager.StripTeamPrefix(msg.m_text), sender_connection_id, true);
+            MpTeam team = NetworkMatch.GetTeamFromLobbyData(sender_connection_id);
+            MPChatCommand cmd = new MPChatCommand(msg.m_text, sender_connection_id, msg.m_sender_name, team, true);
             return cmd.Execute();
         }
     }
@@ -825,7 +888,7 @@ namespace GameMod {
     [HarmonyPatch(typeof(Player), "CmdSendFullChat")]
     class MPChatCommands_ProcessIngameMessage {
         private static bool Prefix(int sender_connection_id, string sender_name, MpTeam sender_team, string msg) {
-            MPChatCommand cmd = new MPChatCommand(msg, sender_connection_id, false);
+            MPChatCommand cmd = new MPChatCommand(msg, sender_connection_id, sender_name, sender_team, false);
             return cmd.Execute();
         }
     }
