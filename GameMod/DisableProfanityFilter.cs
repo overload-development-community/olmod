@@ -13,7 +13,7 @@ namespace GameMod
         /// and shifts the responsibility to the clients
         /// </summary>
 
-        public static bool profanity_filter = Application.systemLanguage == SystemLanguage.English ? true : false;
+        public static bool profanity_filter = false;
 
         [HarmonyPatch(typeof(StringParse), "ProfanityFilter")]
         class DisableProfanityFilter_StringParse_ProfanityFilter
