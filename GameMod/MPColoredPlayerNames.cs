@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
 using Overload;
+using System.Collections.Generic;
+using System.Reflection.Emit;
 using UnityEngine;
 
 namespace GameMod
@@ -47,6 +49,46 @@ namespace GameMod
             }
         }
 
+        // color the player names in the killfeed
+        [HarmonyPriority(Priority.Last)]
+        [HarmonyPatch(typeof(UIElement), "DrawRecentKillsMP")]
+        class MPPlayerDistinction_UIElement_DrawRecentKillsMP
+        {
+            public static Color MaybeReplaceVictimColor(Color original, int i)
+            {
+                return !(isActive && NetworkMatch.GetMode() == MatchMode.ANARCHY) ? original : GetPlayerColorByName(GameplayManager.RecentKillNames[i]);
+            }
+
+            public static Color MaybeReplaceKillerColor(Color original, int i)
+            {
+                return !(isActive && NetworkMatch.GetMode() == MatchMode.ANARCHY) ? original : GetPlayerColorByName(GameplayManager.RecentKillerNames[i]);
+            }
+
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                int count = 0;
+                foreach (var code in instructions)
+                {
+                    yield return code;
+                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MPTeams_UIElement_DrawRecentKillsMP), "GetMessageColor"))//AccessTools.Method(typeof(UIElement), AccessTools.Method(typeof(UIElement), "GetMessageColor"))
+                    {
+                        if(count == 0)
+                        {
+                            yield return new CodeInstruction(OpCodes.Ldloc_S, 5);
+                            yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPPlayerDistinction_UIElement_DrawRecentKillsMP), "MaybeReplaceVictimColor"));
+                        }
+                        if(count == 1)
+                        {
+                            yield return new CodeInstruction(OpCodes.Ldloc_S, 5);
+                            yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPPlayerDistinction_UIElement_DrawRecentKillsMP), "MaybeReplaceKillerColor"));
+                        }
+                        count++;
+                    }
+                }
+            }
+        }
+
+
         /*
         [HarmonyPatch(typeof(UIElement), "DrawMpMiniScoreboard")]
         class MPPlayerDistinction_UIElement_DrawMpMiniScoreboard
@@ -80,7 +122,7 @@ namespace GameMod
         {
             new Color(133f,0f,0f)/255,
             new Color(255f,215f,0f)/255,
-            new Color(0f,113f,196f)/255,
+            new Color(0f,0f,255f)/255,
             new Color(255f,69f,0f)/255,
 
             new Color(37f,220f,252f)/255,
@@ -90,8 +132,8 @@ namespace GameMod
 
             new Color(65f,105f,225f)/255,
             new Color(255f,165f,0f)/255,
-            new Color(50f,205f,50f)/255,
             new Color(0f,100f,0f)/255,
+            new Color(50f,205f,50f)/255,
 
             new Color(233f,56f,109f)/255,
             new Color(105f,105f,105f)/255,
@@ -104,20 +146,25 @@ namespace GameMod
 
         public static Color GetPlayerColor(Player player)
         {
+            return GetPlayerColorByName(player.m_mp_name);
+        }
+
+        public static Color GetPlayerColorByName(string player_name)
+        {
             for (int i = 0; i < 16; i++)
             {
-                if (color_lookup[i] != null && color_lookup[i].Equals(player.m_mp_name))
+                if (color_lookup[i] != null && color_lookup[i].Equals(player_name))
                     return m_colors[i];
             }
             // add the player to the color_lookup array
-            uint pos = ((uint)player.m_mp_name.GetHashCode()) % 16;
+            uint pos = ((uint)player_name.GetHashCode()) % 16;
             int count = 0;
             while (color_lookup[pos] != null && count <= 16)
             {
                 pos = (pos + 1) % 16;
                 count++;
             }
-            color_lookup[pos] = player.m_mp_name;
+            color_lookup[pos] = player_name;
             return m_colors[pos];
         }
 
