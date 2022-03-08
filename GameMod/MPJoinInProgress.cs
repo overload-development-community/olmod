@@ -240,6 +240,47 @@ namespace GameMod {
     [HarmonyPatch(typeof(Server), "OnPlayerJoinLobbyMessage")]
     class JIPJoinLobby
     {
+        private static IEnumerator WaitForMPTweaks(int connectionId, int maxSeconds, int informAfter=-1)
+        {
+            int cnt = 0;
+            while (!MPTweaks.ClientHasMod(connectionId) && cnt < maxSeconds * 10)  {
+                cnt++;
+                yield return new WaitForSecondsRealtime(0.1f);
+                if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
+                    yield break;
+                if (cnt == informAfter * 10) {
+                    // it's already unlikely to be a modded client.
+                    LobbyChatMessage lmsg = new LobbyChatMessage(connectionId, "Server", MpTeam.TEAM0, "This server uses OLMod", false);
+                    NetworkServer.SendToClient(connectionId, 75, lmsg);
+                }
+            }
+        }
+
+        private static IEnumerator InformClientAboutOlmod(int connectionId, bool customLevel, int delaySeconds)
+        {
+            if (!MPTweaks.ClientHasMod(connectionId)) {
+                yield return GameManager.m_gm.StartCoroutine(WaitForMPTweaks(connectionId,3,1));
+            }
+            if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
+                yield break;
+            if (!MPTweaks.ClientHasMod(connectionId)) {
+                // client does not have olmod
+                LobbyChatMessage lmsg = null;
+                if (customLevel) {
+                    Debug.LogFormat("client {0} doesn't seem to have olmod, but we use a custom level, warning it", connectionId);
+                    lmsg = new LobbyChatMessage(connectionId, "Server", MpTeam.TEAM0, "Joining this match might be impossible without OLMod!", false);
+                    NetworkServer.SendToClient(connectionId, 75, lmsg);
+                } else {
+                    lmsg = new LobbyChatMessage(connectionId, "Server", MpTeam.TEAM0, "Please install OLMod for enhanced multiplayer experience!", false);
+                    NetworkServer.SendToClient(connectionId, 75, lmsg);
+                }
+                lmsg = new LobbyChatMessage(connectionId, "Server", MpTeam.TEAM0, "See olmod.overloadmaps.com for instructions...", false);
+                NetworkServer.SendToClient(connectionId, 75, lmsg);
+                if (delaySeconds > 0) {
+                    yield return new WaitForSecondsRealtime((float)(delaySeconds*10));
+                }
+            }
+        }
         private static IEnumerator SendSceneLoad(int connectionId)
         {
             // wait until we've received the loadout
@@ -249,8 +290,16 @@ namespace GameMod {
                     yield break;
                 yield return null;
             }
+            string level = MPJoinInProgress.NetworkMatchLevelName();
+            bool customLevel = (level != null)? level.Contains(':') : false;
+            if (customLevel && !MPTweaks.ClientHasMod(connectionId)) {
+                // client seems not to have olmod, warn it
+                yield return GameManager.m_gm.StartCoroutine(InformClientAboutOlmod(connectionId, customLevel, 8));
+                if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
+                    yield break;
+            }
 
-            StringMessage levelNameMsg = new StringMessage(MPJoinInProgress.NetworkMatchLevelName());
+            StringMessage levelNameMsg = new StringMessage(level);
             NetworkServer.SendToClient(connectionId, CustomMsgType.SceneLoad, levelNameMsg);
             Debug.Log("JIP: sending scene load " + levelNameMsg.value);
 
@@ -268,6 +317,10 @@ namespace GameMod {
             if (match_state != MatchState.LOBBY && match_state != MatchState.LOBBY_LOAD_COUNTDOWN)
             {
                 GameManager.m_gm.StartCoroutine(SendSceneLoad(msg.conn.connectionId));
+            } else {
+                string level = MPJoinInProgress.NetworkMatchLevelName();
+                bool customLevel = (level != null)? level.Contains(':') : false;
+                GameManager.m_gm.StartCoroutine(InformClientAboutOlmod(msg.conn.connectionId, customLevel, 0));
             }
         }
     }

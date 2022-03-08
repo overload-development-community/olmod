@@ -247,6 +247,8 @@ namespace GameMod {
                 Menus.mms_team_color_default = ModPrefs.GetBool("MP_PM_TEAM_COLOR_DEFAULT", Menus.mms_team_color_default);
                 Menus.mms_team_color_self = ModPrefs.GetInt("MP_PM_TEAM_COLOR_SELF", Menus.mms_team_color_self);
                 Menus.mms_team_color_enemy = ModPrefs.GetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
+                HUDVelocity.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
+                Menus.mms_show_framerate = ModPrefs.GetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -306,6 +308,8 @@ namespace GameMod {
             ModPrefs.SetBool("MP_PM_TEAM_COLOR_DEFAULT", Menus.mms_team_color_default);
             ModPrefs.SetInt("MP_PM_TEAM_COLOR_SELF", Menus.mms_team_color_self);
             ModPrefs.SetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
+            ModPrefs.SetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
+            ModPrefs.SetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
             ModPrefs.Flush(filename + "mod");
         }
 

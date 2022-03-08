@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Overload;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -35,6 +36,24 @@ namespace GameMod
                     continue;
                 }
                 yield return c;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(GameplayManager), "DoneLevel")]
+    internal class DisableTimeCheat_GameplayManager_DoneLevel
+    {
+        private static void Postfix()
+        {
+
+            if (!PilotSave.OtherDetected() && (GameplayManager.IsChallengeMode && GameplayManager.m_level_info.Mission.FileName != "_EDITOR" && ChallengeManager.ChallengeRobotsDestroyed > 0))
+            {
+                try {
+                    Scores.UpdateChallengeScore(GameplayManager.m_level_info.LevelNum, GameplayManager.DifficultyLevel, ChallengeManager.CountdownMode, PilotManager.PilotName, ChallengeManager.ChallengeScore, ChallengeManager.ChallengeRobotsDestroyed, GameplayManager.MostDamagingWeapon(), GameplayManager.AliveTime);
+                }
+                catch (Exception ex) {
+                    uConsole.Log(ex.Message);
+                }
             }
         }
     }
