@@ -135,6 +135,7 @@
     <Compile Include="MPDamageEffects.cs" />
     <Compile Include="MPDeathExplosion.cs" />
     <Compile Include="MPDeathReview.cs" />
+    <Compile Include="MPDeathRollSync.cs" />
     <Compile Include="MPErrorSmoothingFix.cs" />
     <Compile Include="MPFixGhostProjectiles.cs" />
     <Compile Include="MPHUDMessage.cs" />
