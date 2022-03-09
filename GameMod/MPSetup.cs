@@ -224,6 +224,7 @@ namespace GameMod {
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
                 JoystickRotationFix.alt_turn_ramp_mode = ModPrefs.GetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
                 MPColoredPlayerNames.isActive = ModPrefs.GetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
+                DisableProfanityFilter.profanity_filter = ModPrefs.GetBool("MP_PROFANITY_FILTER", DisableProfanityFilter.profanity_filter);
                 Menus.mms_scale_respawn_time = ModPrefs.GetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
                 if (Core.GameMod.HasInternetMatch())
                     MPInternet.MenuIPAddress = ModPrefs.GetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
@@ -286,6 +287,7 @@ namespace GameMod {
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.SetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
             ModPrefs.SetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
+            ModPrefs.SetBool("MP_PROFANITY_FILTER", DisableProfanityFilter.profanity_filter);
             ModPrefs.SetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             ModPrefs.SetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
             ModPrefs.SetInt("MP_PM_LAG_COMPENSATION", Menus.mms_lag_compensation);

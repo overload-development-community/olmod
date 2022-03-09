@@ -105,6 +105,7 @@
     <Compile Include="Controllers.cs" />
     <Compile Include="CrusherTrails.cs" />
     <Compile Include="HUDVelocity.cs" />
+    <Compile Include="DisableProfanityFilter.cs" />
     <Compile Include="MatchModeCTF.cs" />
     <Compile Include="CustomDoorAutomap.cs" />
     <Compile Include="CustomLevelResources.cs" />

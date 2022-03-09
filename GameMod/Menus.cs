@@ -573,7 +573,9 @@ namespace GameMod {
                     position.y += 62f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 6, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
                     position.y += 62f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), position, 7, MPColoredPlayerNames.isActive ? "YES" : "NO", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]"));
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), position, 7, MPColoredPlayerNames.isActive ? "ON" : "OFF", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]"));
+                    position.y += 62f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("PROFANITY FILTER"), position, 8, DisableProfanityFilter.profanity_filter ? "ON" : "OFF", Loc.LS(""));
                     position.y += 62f;
                     __instance.SelectAndDrawItem(Loc.LS("QUICK CHAT"), position, 1, false, 1f, 0.75f);
                     break;
@@ -624,7 +626,7 @@ namespace GameMod {
 
             __instance.DrawMenuSeparator(position + Vector2.up * 40f);
             __instance.DrawMenuToolTip(position + Vector2.up * 40f, 15f);
-            position.y = UIManager.UI_BOTTOM - 30f;
+            position.y = UIManager.UI_BOTTOM - 23f;
             __instance.SelectAndDrawItem(Loc.LS("BACK"), position, 100, false, 1f, 0.75f);
             __instance.MaybeShowMpStatus();
 
@@ -817,6 +819,10 @@ namespace GameMod {
                                         break;
                                     case 7:
                                         MPColoredPlayerNames.isActive = !MPColoredPlayerNames.isActive;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 8:
+                                        DisableProfanityFilter.profanity_filter = !DisableProfanityFilter.profanity_filter;
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                 }
