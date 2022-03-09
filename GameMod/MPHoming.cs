@@ -16,7 +16,7 @@ namespace GameMod
     {
         public static bool UseNonFixedHoming(Projectile proj)
         {
-            return (proj.m_type == ProjPrefab.missile_hunter || proj.m_type == ProjPrefab.missile_pod) &&
+            return (proj.m_type == ProjPrefab.missile_hunter || proj.m_type == ProjPrefab.missile_pod || proj.m_type == ProjPrefab.missile_smart_mini || proj.m_type == ProjPrefab.missile_creeper || proj.m_type == ProjPrefab.missile_timebomb) &&
                 !GameplayManager.IsDedicatedServer() && GameplayManager.IsMultiplayer && MenuManager.m_mp_lan_match;
         }
     }
