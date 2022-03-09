@@ -379,6 +379,14 @@ namespace GameMod {
         private static IEnumerator MatchStart(int connectionId)
         {
             var newPlayer = Server.FindPlayerByConnectionId(connectionId);
+            MPBanEntry newPlayerEntry = new MPBanEntry(newPlayer);
+
+            // prevent banned players from JIP into our match
+            // there is already a delayed Disconnect going on, just
+            // prevent this player from entering the JIP code
+            if (MPBanPlayers.IsBanned(newPlayerEntry)) {
+                yield break;
+            }
 
             float pregameWait = 3f;
 
@@ -453,6 +461,7 @@ namespace GameMod {
                 });
             }
             ServerStatLog.Connected(newPlayer.m_mp_name);
+            MPBanPlayers.ApplyAllBans(); // make sure the newly connected player gets proper treatment if he is BANNED
         }
 
         private static void Postfix(NetworkMessage msg)

@@ -124,7 +124,9 @@
     <Compile Include="MPAutomap.cs" />
     <Compile Include="MPAutoSelection.cs" />
     <Compile Include="MPAutoSelectionUI.cs" />
+    <Compile Include="MPBanPlayers.cs" />
     <Compile Include="MPCeiling.cs" />
+    <Compile Include="MPChatCommands.cs" />
     <Compile Include="MPClassic.cs" />
     <Compile Include="MPClientExtrapolation.cs" />
     <Compile Include="MPCloak.cs" />
