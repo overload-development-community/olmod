@@ -1171,7 +1171,7 @@ namespace GameMod
     [HarmonyPatch(typeof(Item), "MaybeDespawnPowerup")]
     class MatchModeRace_Item_MaybeDespawnPowerup
     {
-        static void Postfix(float __result)
+        static void Postfix(ref float __result)
         {
             if (GameplayManager.IsMultiplayerActive && MPModPrivateData.MatchMode == ExtMatchMode.RACE)
                 __result = 0f;
