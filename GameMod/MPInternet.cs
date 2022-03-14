@@ -23,11 +23,13 @@ namespace GameMod {
             msg = null;
             var i = password.IndexOf('_'); // allow password suffix with '_'
             string name = i == -1 ? password : password.Substring(0, i);
+            /* Allow a host name without any dots...
             if (!name.Contains('.'))
             {
                 msg = "Invalid IP/server name";
                 return null;
             }
+            */
             if (new Regex(@"\d{1,3}([.]\d{1,3}){3}").IsMatch(name) &&
                 IPAddress.TryParse(name, out IPAddress adr))
                 return adr;
@@ -693,6 +695,100 @@ namespace GameMod {
                 }
             }
             return null;
+        }
+    }
+
+    [HarmonyPatch]
+    class MPInternetIgnoreIPHostnameForMatchmaking
+    {
+        // helper function to find the types for the anon classes
+        private static Type FindTypeHelper(string name)
+        {
+            foreach (var x in typeof(NetworkMatch).GetNestedTypes(BindingFlags.NonPublic)) {
+                if (x.Name.Contains(name)) {
+                    return x;
+                }
+            }
+            return null;
+        }
+
+        // the traget method for the harmony patch
+        public static MethodBase TargetMethod()
+        {
+            var x = FindTypeHelper("c__AnonStoreyF");
+            if (x != null) {
+                var m = AccessTools.Method(x, "<>m__1");
+                if (m != null) {
+                    //Debug.Log("TryLocalMatchmaking TargetMethod found");
+                    return m;
+                }
+            }
+            Debug.Log("TryLocalMatchmaking TargetMethod not found");
+            return null;
+        }
+
+        public static string TransformPassword(string pw)
+        {
+            if (pw != null && MPInternet.Enabled) {
+                // ignore IP/hostname for password comparison
+                int pos = pw.IndexOf('_');
+                if (pos >= 0) {
+                    // there is a password, use it (including the underscore)
+                    pw = pw.Substring(pos);
+                    //Debug.LogFormat("TryLocalMatchmaking: using \"{0}\" as passowrd", pw);
+                } else {
+                    pw = "EMPTY"; // without underscore, so no client could have sent it
+                    //Debug.LogFormat("TryLocalMatchmaking: game with no password, using \"{0}\" internally", pw);
+                }
+            }
+            return pw;
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            var our_Method = AccessTools.Method(typeof(MPInternetIgnoreIPHostnameForMatchmaking), "TransformPassword");
+            foreach (var code in codes)
+            {
+                // Loc 5 is the password, we modify it before it gets stored
+                if (code.opcode == OpCodes.Stloc_S && ((LocalBuilder)code.operand).LocalIndex == 5) {
+                    yield return new CodeInstruction(OpCodes.Call, our_Method);
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch]
+    class MPInternetAllowSimpleHostname {
+        // the traget method for the harmony patch
+        public static MethodBase TargetMethod()
+        {
+            var x = typeof(GameManager).Assembly.GetType("InternetMatch");
+            if (x != null) {
+                var m = AccessTools.Method(x, "FindPasswordAddress");
+                if (m != null) {
+                    return m;
+                }
+            }
+            Debug.Log("InternetMatch FindPasswordAddress TargetMethod not found");
+            return null;
+        }
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (state == 0 && code.opcode == OpCodes.Ldstr && ((string)code.operand) == "Invalid IP address or server name") {
+                    state = 1;
+                    yield return code;
+                } else if (state == 1 && code.opcode == OpCodes.Ret) {
+                    state = 2;
+                    // omit this return, pop the return value from the stack again instead
+                    yield return new CodeInstruction(OpCodes.Pop);
+                } else {
+                    yield return code;
+                }
+            }
         }
     }
 }
