@@ -35,7 +35,7 @@ namespace GameMod {
                 return adr;
             try
             {
-                var adrs = Dns.GetHostAddresses(name); // async is better but would need moving bottom of NetworkMatch.SwitchToLobbyMenu to NetSystemDoTick
+                var adrs = ResolveIPAddress(name);
                 return adrs == null || adrs.Length == 0 ? null : adrs[0];
             }
             catch (SocketException ex)
@@ -47,6 +47,38 @@ namespace GameMod {
                 msg = "Error looking up " + name + ": " + ex.Message;
             }
             return null;
+        }
+        public static IPAddress[] ResolveIPAddress(string name)
+        {
+            bool foundV4 = false;
+            IPAddress[] addrs = Dns.GetHostAddresses(name); // async is better but would need moving bottom of NetworkMatch.SwitchToLobbyMenu to NetSystemDoTick
+            // the game doesn't like IPv6,
+            // so for now, try to find a V4 address if there is any
+            // The caller of this function simply takes the first element of the array,
+            // so we can sort the V4 to the first place if there is one
+            if (addrs != null && addrs.Length > 0) {
+                for(int i = 0; i< addrs.Length; i++) {
+                    if (addrs[i].AddressFamily == AddressFamily.InterNetwork) {
+                        // this is a IPv4
+                        if (i > 0) {
+                            // swap it to first place
+                            IPAddress tmp = addrs[0];
+                            addrs[0] = addrs[i];
+                            addrs[i] = tmp;
+                        }
+                        foundV4=true;
+                        Debug.LogFormat("DNS: host {0} is IPv4 {1}",name,addrs[0].ToString());
+                        break;
+                    }
+                }
+                if (!foundV4) {
+                    // TODO: anlayze what breaks in the V6 case, maybe we can make it work?
+                    Debug.LogFormat("Did not find an IPv4 for {0}, game might crash on V6 addresses", name);
+                }
+            } else {
+                Debug.LogFormat("Failed to resolve host name {0}", name);
+            }
+            return addrs;
         }
         public static string ClientModeName()
         {
@@ -776,6 +808,7 @@ namespace GameMod {
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
+            var our_Method = AccessTools.Method(typeof(MPInternet), "ResolveIPAddress");
             foreach (var code in codes)
             {
                 if (state == 0 && code.opcode == OpCodes.Ldstr && ((string)code.operand) == "Invalid IP address or server name") {
@@ -785,6 +818,10 @@ namespace GameMod {
                     state = 2;
                     // omit this return, pop the return value from the stack again instead
                     yield return new CodeInstruction(OpCodes.Pop);
+                } else if (state == 2 && code.opcode == OpCodes.Call && ((MemberInfo)code.operand).Name == "GetHostAddresses") {
+                    state = 3;
+                    // call our ResolveIPAddress instead of Dns.GetHostAddresses
+                    yield return new CodeInstruction(OpCodes.Call, our_Method);
                 } else {
                     yield return code;
                 }
