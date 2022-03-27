@@ -151,6 +151,10 @@ namespace GameMod
 
         public static Color GetPlayerColorByName(string player_name)
         {
+            if (player_name.StartsWith("*"))
+            {
+                player_name = player_name.Substring(1);
+            }
             for (int i = 0; i < 16; i++)
             {
                 if (color_lookup[i] != null && color_lookup[i].Equals(player_name))
