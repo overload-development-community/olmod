@@ -1,23 +1,32 @@
 ﻿using Newtonsoft.Json.Linq;
 using Overload;
-using Path = System.IO.Path;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEngine;
 using UnityEngine.Networking;
+using Path = System.IO.Path;
 
 namespace GameMod
 {
+    public interface ILevelDownloadInfo
+    {
+        string FileName { get; }
+        string DisplayName { get; }
+        string ZipPath { get; }
+        string FilePath { get; }
+    }
+
     public class MPDownloadLevelAlgorithm
     {
         private const string MapHiddenMarker = "_OCT_Hidden";
         private static Regex MapHiddenMarkerRE = new Regex(MapHiddenMarker + "[0-9]*$");
 
-        public Func<List<LevelInfo>> _getMPLevels;
-        public Action<int> _removeMPLevel;
+        public Func<IEnumerable<ILevelDownloadInfo>> _getMPLevels;
         public Action<string> _addMPLevel;
+        public Action<int> _removeMPLevel;
+        public Func<string, int> _getAddOnLevelIndex;
         public Func<string, bool> _canCreateFile;
         public Func<string, bool> _fileExists = System.IO.File.Exists;
         public Action<string, string> _moveFile = System.IO.File.Move;
@@ -33,6 +42,7 @@ namespace GameMod
         public delegate void LogErrorHandler(string errorMessage, bool showInStatus, float flash = 1f);
         public LogErrorHandler _logError;
         public Action<object> _logDebug;
+        public Func<bool> _isServer = Overload.NetworkManager.IsServer;
         public Action _downloadFailed;
         public delegate void ServerDownloadCompletedHandler(int newLevelIndex);
         public ServerDownloadCompletedHandler _serverDownloadCompleted;
@@ -72,9 +82,9 @@ namespace GameMod
                 }
             }
 
-            if (Overload.NetworkManager.IsServer())
+            if (_isServer())
             {
-                int idx = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(levelIdHash);
+                int idx = _getAddOnLevelIndex(levelIdHash);
                 if (idx < 0)
                 {
                     _downloadFailed(); // if we don't have the level the last message was the error message
@@ -152,11 +162,11 @@ namespace GameMod
         /// </summary>
         private string DifferentVersionFilename(string levelIdHash, out int idx)
         {
-            List<LevelInfo> levels = _getMPLevels();
+            var levels = _getMPLevels();
             idx = FindLevelIndex(levels, levelIdHash);
             if (idx < 0)
                 return null;
-            LevelInfo level = levels[idx];
+            var level = levels.ElementAt(idx);
             return level.ZipPath ?? level.FilePath;
         }
 
@@ -195,18 +205,12 @@ namespace GameMod
         /// display name; does not guarantee matching contents.
         /// Same algorithm as Mission.AddAddOnLevel
         /// </summary>
-        private static int FindLevelIndex(List<LevelInfo> levels, string levelIdHash)
+        private static int FindLevelIndex(IEnumerable<ILevelDownloadInfo> levels, string levelIdHash)
         {
             string fileNameExt = levelIdHash.Split(new[] { ':' })[0];
             string fileName = Path.GetFileNameWithoutExtension(fileNameExt);
             string displayName = fileName.Replace('_', ' ').ToUpper();
-            for (int i = 0, count = levels.Count; i < count; i++)
-            {
-                var level = levels[i];
-                if (level.FileName == fileName || level.DisplayName == displayName)
-                    return i;
-            }
-            return -1;
+            return levels.IndexOf(level => level.FileName == fileName || level.DisplayName == displayName);
         }
 
         private IEnumerable LookupAndDownloadLevel(string levelIdHash)

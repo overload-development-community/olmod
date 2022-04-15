@@ -67,9 +67,31 @@ namespace GameMod {
         }
 
         private static FieldInfo _Mission_Levels_Field = typeof(Mission).GetField("Levels", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static List<LevelInfo> GetMPLevels()
+        private static IEnumerable<ILevelDownloadInfo> GetMPLevels()
         {
-            return _Mission_Levels_Field.GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
+            var levels = _Mission_Levels_Field.GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
+            foreach (var level in levels)
+            {
+                yield return new LevelDownloadInfoAdapter(level);
+            }
+        }
+
+        private class LevelDownloadInfoAdapter : ILevelDownloadInfo
+        {
+            private readonly LevelInfo level;
+
+            public LevelDownloadInfoAdapter(LevelInfo level)
+            {
+                this.level = level;
+            }
+
+            public string FileName => level.FileName;
+
+            public string DisplayName => level.DisplayName;
+
+            public string ZipPath => level.ZipPath;
+
+            public string FilePath => level.FilePath;
         }
 
         private static void AddMPLevel(string filename)
@@ -87,7 +109,7 @@ namespace GameMod {
         private static PropertyInfo _LevelInfo_LevelNum_property = typeof(LevelInfo).GetProperty("LevelNum", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static void RemoveMPLevel(int index)
         {
-            var levels = GetMPLevels();
+            var levels = _Mission_Levels_Field.GetValue(GameManager.MultiplayerMission) as List<LevelInfo>;
             levels.RemoveAt(index);
             for (int i = 0, count = levels.Count; i < count; i++)
             {
@@ -154,6 +176,7 @@ namespace GameMod {
                 _getMPLevels = GetMPLevels,
                 _addMPLevel = AddMPLevel,
                 _removeMPLevel = RemoveMPLevel,
+                _getAddOnLevelIndex = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash,
                 _canCreateFile = CanCreateFile,
                 _zipContainsLevel = ZipContainsLevel,
                 _getLevelDirectories = () => new[] { DataLevelDir, DLCLevelDir },
