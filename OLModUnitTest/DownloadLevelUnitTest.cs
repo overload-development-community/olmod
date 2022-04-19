@@ -1,5 +1,6 @@
 ﻿using GameMod;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,62 +15,218 @@ namespace OLModUnitTest
         [TestMethod]
         public void TestBasicClientDownload()
         {
-            (var fileSystem, var gameList, var algorithm) = CreateDefaultAlgorithm();
-            bool downloadComplete = false;
-            algorithm._addMPLevel = (filename) => downloadComplete = true;
+            (var fileSystem, var gameList, var callbacks, var algorithm) = CreateDefaultAlgorithm();
             var iterator = algorithm.DoGetLevel("TESTLEVEL.MP");
             while (iterator.MoveNext()) ;
-            Assert.IsTrue(downloadComplete);
+            callbacks.Verify(c => c.AddMPLevel(@"C:\ProgramData\Revival\Overload\testlevel.zip"));
         }
 
         [TestMethod]
         public void TestBasicServerDownload()
         {
-            (var fileSystem, var gameList, var algorithm) = CreateDefaultAlgorithm();
-            bool downloadComplete = false;
-            algorithm._isServer = () => true;
-            algorithm._serverDownloadCompleted = (newIndex) => downloadComplete = true;
+            (var fileSystem, var gameList, var callbacks, var algorithm) = CreateDefaultAlgorithm();
+            callbacks.SetupGet(c => c.IsServer).Returns(true);
+            callbacks.Setup(c => c.ServerDownloadCompleted(It.IsAny<int>()));
             var iterator = algorithm.DoGetLevel("TESTLEVEL.MP");
             while (iterator.MoveNext()) ;
-            Assert.IsTrue(downloadComplete);
+            callbacks.Verify(c => c.ServerDownloadCompleted(It.IsAny<int>()));
         }
 
-        private (FakeFileSystem fileSystem, FakeGameList gameList, MPDownloadLevelAlgorithm algorithm) CreateDefaultAlgorithm()
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestEnableLevel()
+        {
+            (var fileSystem, var gameList, var callbacks, var algorithm) = CreateDefaultAlgorithm();
+
+            // Create a simulated level already on disk but not in the game list
+            var file = fileSystem.CreateFile(fileSystem.GetLevelDirectories()[0] + "\\testlevel.zip_OCT_Hidden");
+            file.IsMission = true;
+            file.Levels.Add("testlevel.mp");
+
+            callbacks.Setup(c => c.DownloadLevel(It.IsAny<string>(), It.IsAny<string>()));
+            callbacks.Setup(c => c.AddMPLevel(It.IsAny<string>()));
+
+            var iterator = algorithm.DoGetLevel("TESTLEVEL.MP");
+            while (iterator.MoveNext()) ;
+
+            // The algorithm should not download the level
+            callbacks.Verify(c => c.DownloadLevel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            // The algorithm should still add the level
+            callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()));
+            // We expect the file to have been renamed too
+            Assert.AreEqual("testlevel.zip", file.Filename);
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestEnableLevel_UpperCase()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestEnableLevel_DifferentVersionDisabled()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestEnableLevel_MultipleDifferentVersions()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestEnableLevel_DifferentVersionDisableFails_Abort()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestEnableLevelFails_Download()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestFindDisabledLevel_LevelNotPresent_Skip()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("EnableLevel")]
+        [TestMethod]
+        public void TestFindDisabledLevel_LevelNotDisabled_Skip()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod]
+        public void TestDownloadLevel_UrlNotFound_Abort()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_CreateDirectory()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_CannotWriteFirstDirectory_UseSecondDirectory()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_FileExistsLevelPresent_AddLevel()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_FileExistsDifferentVersionPresent_DisableExistingLevel()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_FileExistsLevelNotPresent_DisableExistingLevel()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_FileExistsWriteProtected_Abort()
+        {
+            Assert.Fail();
+        }
+
+        [TestCategory("GetLocalDownloadPath")]
+        [TestMethod]
+        public void TestGetLocalDownloadPath_NoWriteablePath_Abort()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod]
+        public void TestDownloadFails_Abort()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod]
+        public void TestDownloadBadMission_Abort()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod]
+        public void TestServerDownloadFails_ReportError()
+        {
+            Assert.Fail();
+        }
+
+        private (FakeFileSystem fileSystem, FakeGameList gameList, Mock<DownloadLevelCallbacks> callbacks,
+            MPDownloadLevelAlgorithm algorithm) CreateDefaultAlgorithm()
         {
             var fileSystem = new FakeFileSystem(@"C:\ProgramData\Revival\Overload", @"E:\steamapps\common\Overload\DLC");
             var gameList = new FakeGameList(fileSystem);
-            var algorithm = new MPDownloadLevelAlgorithm
-            {
-                _getLevelDownloadUrl = (levelId) => new List<string> {
-                    $"https://overloadmaps.com/files/{Guid.NewGuid():N}/{Path.GetFileNameWithoutExtension(levelId)}.zip"
-                },
-                _downloadLevel = (url, filename) =>
+            var callbacks = new Mock<DownloadLevelCallbacks> { CallBase = true };
+            var algorithm = new MPDownloadLevelAlgorithm(callbacks.Object);
+
+            callbacks.Setup(c => c.GetLevelDownloadUrl(It.IsAny<string>()))
+                .Returns<string>(levelId => new List<string>
+                {
+                    $"https://overloadmaps.com/files/{Guid.NewGuid():N}/{Path.GetFileNameWithoutExtension(levelId).ToLower()}.zip"
+                });
+            callbacks.Setup(c => c.DownloadLevel(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns((string url, string filename) =>
                 {
                     var file = fileSystem.CreateFile(filename);
                     file.Levels.Add(Path.GetFileNameWithoutExtension(filename) + ".MP");
-                    return new List<string> { null };
-                },
-                _getMPLevels = () => gameList.GetMPLevels(),
-                _addMPLevel = (filename) => gameList.AddMPLevel(filename),
-                _removeMPLevel = (index) => gameList.RemoveMPLevel(index),
-                _getAddOnLevelIndex = (levelId) => gameList.GetAddOnLevelIndex(levelId),
-                _showStatusMessage = (m, forceId) => { },
-                _logError = (e, show, flash) => { },
-                _logDebug = (m) => { },
-                _isServer = () => false,
-                _downloadFailed = () => { },
-                _serverDownloadCompleted = (newIndex) => { },
-                _canCreateFile = fileSystem.CanCreateFile,
-                _fileExists = fileSystem.FileExists,
-                _moveFile = fileSystem.MoveFile,
-                _deleteFile = fileSystem.DeleteFile,
-                _zipContainsLevel = fileSystem.ZipContainsLevel,
-                _getLevelDirectories = fileSystem.GetLevelDirectories,
-                _directoryExists = fileSystem.DirectoryExists,
-                _getDirectoryFiles = fileSystem.GetDirectoryFiles,
-                _createDirectory = fileSystem.CreateDirectory
-            };
-            return (fileSystem, gameList, algorithm);
+                    return new List<string>();
+                });
+            callbacks.Setup(c => c.GetMPLevels()).Returns(gameList.GetMPLevels());
+            callbacks.Setup(c => c.AddMPLevel(It.IsAny<string>()))
+                .Callback<string>(filename => gameList.AddMPLevel(filename));
+            callbacks.Setup(c => c.RemoveMPLevel(It.IsAny<int>()))
+                .Callback<int>(index => gameList.RemoveMPLevel(index));
+            callbacks.Setup(c => c.GetAddOnLevelIndex(It.IsAny<string>()))
+                .Returns<string>(levelId => gameList.GetAddOnLevelIndex(levelId));
+            callbacks.SetupGet(c => c.IsServer).Returns(false);
+            callbacks.Setup(c => c.CanCreateFile(It.IsAny<string>()))
+                .Returns((string filename) => fileSystem.CanCreateFile(filename));
+            callbacks.Setup(c => c.FileExists(It.IsAny<string>()))
+                .Returns((string filename) => fileSystem.FileExists(filename));
+            callbacks.Setup(c => c.MoveFile(It.IsAny<string>(), It.IsAny<string>()))
+                .Callback((string filePath, string newFilePath) => fileSystem.MoveFile(filePath, newFilePath));
+            callbacks.Setup(c => c.DeleteFile(It.IsAny<string>()))
+                .Callback<string>(filePath => fileSystem.DeleteFile(filePath));
+            callbacks.Setup(c => c.ZipContainsLevel(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns((string zipFilename, string levelIdHash) =>
+                fileSystem.ZipContainsLevel(zipFilename, levelIdHash));
+            callbacks.SetupGet(c => c.LevelDirectories).Returns(fileSystem.GetLevelDirectories());
+            callbacks.Setup(c => c.DirectoryExists(It.IsAny<string>()))
+                .Returns((string path) => fileSystem.DirectoryExists(path));
+            callbacks.Setup(c => c.GetDirectoryFiles(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns((string path, string searchPattern) => fileSystem.GetDirectoryFiles(path, searchPattern));
+            callbacks.Setup(c => c.CreateDirectory(It.IsAny<string>()))
+                .Callback<string>(path => fileSystem.CreateDirectory(path));
+
+            return (fileSystem, gameList, callbacks, algorithm);
         }
     }
 
@@ -115,6 +272,7 @@ namespace OLModUnitTest
             var file = fromDirectory.Files[fromFilename];
             fromDirectory.Files.Remove(fromFilename);
             toDirectory.Files.Add(toFilename, file);
+            file.Filename = toFilename;
         }
 
         internal FakeFile CreateFile(string filePath)
@@ -157,7 +315,7 @@ namespace OLModUnitTest
                 return false;
             }
             var file = directory.Files[filename];
-            return file.IsMission && file.Levels.Contains(levelIdHash);
+            return file.IsMission && file.Levels.Contains(levelIdHash, StringComparer.OrdinalIgnoreCase);
         }
 
         internal string[] GetLevelDirectories()
@@ -177,8 +335,11 @@ namespace OLModUnitTest
             {
                 throw new DirectoryNotFoundException();
             }
+            var pathWithSeparator = path.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             var regexSearchPattern = "^" + Regex.Escape(searchPattern).Replace("\\?", ".").Replace("\\*", ".*") + "$";
-            var matches = directory.Files.Keys.Where(filename => Regex.IsMatch(filename, regexSearchPattern));
+            var matches = from filename in directory.Files.Keys
+                          where Regex.IsMatch(filename, regexSearchPattern)
+                          select pathWithSeparator + filename;
             return matches.ToArray();
         }
 
@@ -255,7 +416,7 @@ namespace OLModUnitTest
 
             public bool Locked { get; set; } = false;
 
-            public bool IsMission { get; }
+            public bool IsMission { get; set; }
 
             public List<string> Levels { get; } = new List<string>();
         }
@@ -305,7 +466,8 @@ namespace OLModUnitTest
 
         internal int GetAddOnLevelIndex(string levelId)
         {
-            return _levels.FindIndex(levelInfo => levelInfo.FileName == Path.GetFileNameWithoutExtension(levelId));
+            return _levels.FindIndex(levelInfo => StringComparer.OrdinalIgnoreCase.Compare(levelInfo.FileName,
+                Path.GetFileNameWithoutExtension(levelId)) == 0);
         }
 
         private class LevelDownloadInfo : ILevelDownloadInfo

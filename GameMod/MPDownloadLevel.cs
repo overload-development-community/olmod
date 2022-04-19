@@ -13,7 +13,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
-namespace GameMod {
+namespace GameMod
+{
     static class MPDownloadLevel
     {
         public static bool DownloadBusy;
@@ -117,7 +118,8 @@ namespace GameMod {
             }
         }
 
-        private static string DataLevelDir {
+        private static string DataLevelDir
+        {
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Path.Combine("Revival", "Overload")); }
         }
 
@@ -171,22 +173,29 @@ namespace GameMod {
                 return;
             DownloadBusy = true;
             LastDownloadAttempt = levelIdHash;
-            var algorithm = new MPDownloadLevelAlgorithm
-            {
-                _getMPLevels = GetMPLevels,
-                _addMPLevel = AddMPLevel,
-                _removeMPLevel = RemoveMPLevel,
-                _getAddOnLevelIndex = GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash,
-                _canCreateFile = CanCreateFile,
-                _zipContainsLevel = ZipContainsLevel,
-                _getLevelDirectories = () => new[] { DataLevelDir, DLCLevelDir },
-                _showStatusMessage = ShowStatus,
-                _logError = OnLogError,
-                _logDebug = Debug.Log,
-                _downloadFailed = OnDownloadFailed,
-                _serverDownloadCompleted = OnServerDownloadCompleted
-            };
+            var algorithm = new MPDownloadLevelAlgorithm(new DownloadLevelCallbacksImpl());
             GameManager.m_gm.StartCoroutine(algorithm.DoGetLevel(levelIdHash));
+        }
+
+        class DownloadLevelCallbacksImpl : DownloadLevelCallbacks
+        {
+            public override bool IsServer => Overload.NetworkManager.IsServer();
+            public override void AddMPLevel(string path) => MPDownloadLevel.AddMPLevel(path);
+            public override bool CanCreateFile(string path) => MPDownloadLevel.CanCreateFile(path);
+            public override void DownloadFailed() => OnDownloadFailed();
+            public override int GetAddOnLevelIndex(string levelIdHash) =>
+                GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(levelIdHash);
+            public override string[] LevelDirectories => new[] { DataLevelDir, DLCLevelDir };
+            public override IEnumerable<ILevelDownloadInfo> GetMPLevels() => MPDownloadLevel.GetMPLevels();
+            public override void LogDebug(object message) => Debug.Log(message);
+            public override void LogError(string errorMessage, bool showInStatus, float flash = 1) =>
+                OnLogError(errorMessage, showInStatus, flash);
+            public override void RemoveMPLevel(int index) => MPDownloadLevel.RemoveMPLevel(index);
+            public override void ServerDownloadCompleted(int newLevelIndex) =>
+                OnServerDownloadCompleted(newLevelIndex);
+            public override void ShowStatusMessage(string message, bool forceId) => ShowStatus(message, forceId);
+            public override bool ZipContainsLevel(string zipPath, string levelIdHash) =>
+                MPDownloadLevel.ZipContainsLevel(zipPath, levelIdHash);
         }
     }
 
@@ -230,7 +239,8 @@ namespace GameMod {
                 return true;
             if (!MPDownloadLevel.DownloadBusy && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) < 0)
                 MPDownloadLevel.StartGetLevel(name);
-            if (MPDownloadLevel.DownloadBusy) {
+            if (MPDownloadLevel.DownloadBusy)
+            {
                 Debug.Log("Level still downloading when loading match scene, delay scene load " + name);
                 GameManager.m_gm.StartCoroutine(WaitLevel(name));
                 return false;

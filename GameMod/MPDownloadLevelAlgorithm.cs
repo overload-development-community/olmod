@@ -10,6 +10,109 @@ using Path = System.IO.Path;
 
 namespace GameMod
 {
+    public abstract class DownloadLevelCallbacks
+    {
+        public abstract IEnumerable<ILevelDownloadInfo> GetMPLevels();
+        public abstract void AddMPLevel(string path);
+        public abstract void RemoveMPLevel(int index);
+        public abstract int GetAddOnLevelIndex(string levelIdHash);
+        public abstract bool CanCreateFile(string path);
+        public virtual bool FileExists(string path) => System.IO.File.Exists(path);
+        public virtual void MoveFile(string sourceFileName, string destFileName) =>
+            System.IO.File.Move(sourceFileName, destFileName);
+        public virtual void DeleteFile(string path) => System.IO.File.Delete(path);
+        public abstract bool ZipContainsLevel(string zipPath, string levelIdHash);
+        public abstract string[] LevelDirectories { get; }
+        public virtual bool DirectoryExists(string path) => System.IO.Directory.Exists(path);
+        public virtual string[] GetDirectoryFiles(string path, string searchPattern) =>
+            System.IO.Directory.GetFiles(path, searchPattern);
+        public virtual System.IO.DirectoryInfo CreateDirectory(string path) =>
+            System.IO.Directory.CreateDirectory(path);
+        public abstract void ShowStatusMessage(string message, bool forceId);
+        public abstract void LogError(string errorMessage, bool showInStatus, float flash = 1f);
+        public abstract void LogDebug(object message);
+        public abstract bool IsServer { get; }
+        public abstract void DownloadFailed();
+        public abstract void ServerDownloadCompleted(int newLevelIndex);
+
+        /// <summary>
+        /// Queries overloadmaps.com for a level download URL matching the specified hash.
+        /// The final return value will contain the URL (which may be null if the query failed).
+        /// </summary>
+        public virtual IEnumerable<string> GetLevelDownloadUrl(string levelIdHash)
+        {
+            var li = levelIdHash.IndexOf(".MP");
+            ShowStatusMessage("SEARCHING " + levelIdHash.Substring(0, li), true);
+
+            string lastData = null;
+            foreach (var x in NetworkMatch.Get("mpget", new Dictionary<string, string> { { "level", levelIdHash } }, "https://www.overloadmaps.com/api/"))
+            {
+                lastData = x;
+                yield return null;
+            }
+
+            JObject result = null;
+            try
+            {
+                result = JObject.Parse(lastData);
+            }
+            catch (Exception ex)
+            {
+                LogDebug(ex);
+            }
+            if (result == null)
+            {
+                LogError("OVERLOADMAPS.COM LOOKUP FAILED", true, 2f);
+                yield break;
+            }
+
+            if (!result.TryGetValue("url", out JToken urlVal))
+            {
+                LogError("LEVEL NOT FOUND ON OVERLOADMAPS.COM", true, 2f);
+                yield break;
+            }
+            yield return urlVal.GetString();
+        }
+
+        public virtual IEnumerable DownloadLevel(string url, string fn)
+        {
+            LogDebug("Downloading " + url + " to " + fn);
+            var basefn = Path.GetFileName(fn);
+            var fntmp = fn + ".tmp";
+            using (UnityWebRequest www = new UnityWebRequest(url, "GET"))
+            {
+                www.downloadHandler = new DownloadHandlerFile(fntmp);
+                var request = www.SendWebRequest();
+                while (!request.isDone)
+                {
+                    ShowStatusMessage("DOWNLOADING " + basefn + " ... " + Math.Round(request.progress * 100) + "%", true);
+                    yield return null;
+                }
+                if (www.isNetworkError || www.isHttpError)
+                {
+                    DeleteFile(fntmp);
+                    ShowStatusMessage("DOWNLOADING " + basefn + " FAILED, " + (www.isNetworkError ? "NETWORK ERROR" : "SERVER ERROR"), true);
+                    yield break;
+                }
+            }
+            ShowStatusMessage("DOWNLOADING " + basefn + " ... INSTALLING", true);
+            string msg = null;
+            try
+            {
+                MoveFile(fntmp, fn);
+            }
+            catch (Exception ex)
+            {
+                LogDebug(ex);
+                msg = ex.Message;
+            }
+            if (msg != null)
+            {
+                ShowStatusMessage("DOWNLOADING " + basefn + " FAILED, " + msg, true);
+            }
+        }
+    }
+
     public interface ILevelDownloadInfo
     {
         string FileName { get; }
@@ -22,40 +125,16 @@ namespace GameMod
     {
         private const string MapHiddenMarker = "_OCT_Hidden";
         private static Regex MapHiddenMarkerRE = new Regex(MapHiddenMarker + "[0-9]*$");
+        private readonly DownloadLevelCallbacks _callbacks;
 
-        public Func<IEnumerable<ILevelDownloadInfo>> _getMPLevels;
-        public Action<string> _addMPLevel;
-        public Action<int> _removeMPLevel;
-        public Func<string, int> _getAddOnLevelIndex;
-        public Func<string, bool> _canCreateFile;
-        public Func<string, bool> _fileExists = System.IO.File.Exists;
-        public Action<string, string> _moveFile = System.IO.File.Move;
-        public Action<string> _deleteFile = System.IO.File.Delete;
-        public Func<string, string, bool> _zipContainsLevel;
-        public Func<string[]> _getLevelDirectories;
-        public Func<string, bool> _directoryExists = System.IO.Directory.Exists;
-        public Func<string, string, string[]> _getDirectoryFiles = System.IO.Directory.GetFiles;
-        public Func<string, System.IO.DirectoryInfo> _createDirectory = System.IO.Directory.CreateDirectory;
-        public Func<string, IEnumerable<string>> _getLevelDownloadUrl;
-        public Func<string, string, IEnumerable> _downloadLevel;
-        public Action<string, bool> _showStatusMessage;
-        public delegate void LogErrorHandler(string errorMessage, bool showInStatus, float flash = 1f);
-        public LogErrorHandler _logError;
-        public Action<object> _logDebug;
-        public Func<bool> _isServer = Overload.NetworkManager.IsServer;
-        public Action _downloadFailed;
-        public delegate void ServerDownloadCompletedHandler(int newLevelIndex);
-        public ServerDownloadCompletedHandler _serverDownloadCompleted;
-
-        public MPDownloadLevelAlgorithm()
+        public MPDownloadLevelAlgorithm(DownloadLevelCallbacks callbacks)
         {
-            _getLevelDownloadUrl = GetLevelDownloadUrl;
-            _downloadLevel = DownloadLevel;
+            _callbacks = callbacks;
         }
 
         public IEnumerator DoGetLevel(string levelIdHash)
         {
-            _logDebug("DoGetLevel " + levelIdHash);
+            _callbacks.LogDebug("DoGetLevel " + levelIdHash);
 
             bool downloadRequired = true;
             if (FindDisabledLevel(levelIdHash) != null)
@@ -69,7 +148,7 @@ namespace GameMod
                 }
                 catch (Exception)
                 {
-                    _downloadFailed();
+                    _callbacks.DownloadFailed();
                     yield break;
                 }
             }
@@ -82,16 +161,16 @@ namespace GameMod
                 }
             }
 
-            if (_isServer())
+            if (_callbacks.IsServer)
             {
-                int idx = _getAddOnLevelIndex(levelIdHash);
+                int idx = _callbacks.GetAddOnLevelIndex(levelIdHash);
                 if (idx < 0)
                 {
-                    _downloadFailed(); // if we don't have the level the last message was the error message
+                    _callbacks.DownloadFailed(); // if we don't have the level the last message was the error message
                 }
                 else
                 {
-                    _serverDownloadCompleted(idx);
+                    _callbacks.ServerDownloadCompleted(idx);
                 }
             }
         }
@@ -102,17 +181,17 @@ namespace GameMod
         /// </summary>
         private string FindDisabledLevel(string levelIdHash)
         {
-            foreach (var dir in _getLevelDirectories())
+            foreach (var dir in _callbacks.LevelDirectories)
                 try
                 {
-                    if (_directoryExists(dir))
-                        foreach (var zipFilename in _getDirectoryFiles(dir, "*.zip" + MapHiddenMarker + "*"))
-                            if (MapHiddenMarkerRE.IsMatch(zipFilename) && _zipContainsLevel(zipFilename, levelIdHash))
+                    if (_callbacks.DirectoryExists(dir))
+                        foreach (var zipFilename in _callbacks.GetDirectoryFiles(dir, "*.zip" + MapHiddenMarker + "*"))
+                            if (MapHiddenMarkerRE.IsMatch(zipFilename) && _callbacks.ZipContainsLevel(zipFilename, levelIdHash))
                                 return zipFilename;
                 }
                 catch (Exception ex)
                 {
-                    _logDebug("FindDisabledLevel: reading " + dir + ": " + ex);
+                    _callbacks.LogDebug("FindDisabledLevel: reading " + dir + ": " + ex);
                 }
             return null;
         }
@@ -134,23 +213,23 @@ namespace GameMod
             string originalFilename = MapHiddenMarkerRE.Replace(disabledFilename, "");
             try
             {
-                _moveFile(disabledFilename, originalFilename);
+                _callbacks.MoveFile(disabledFilename, originalFilename);
             }
             catch (Exception ex)
             {
-                _showStatusMessage("ENABLING " + Path.GetFileName(originalFilename) + " FAILED, " + ex.Message, false);
+                _callbacks.ShowStatusMessage("ENABLING " + Path.GetFileName(originalFilename) + " FAILED, " + ex.Message, false);
                 return false; // try download
             }
-            _addMPLevel(originalFilename);
+            _callbacks.AddMPLevel(originalFilename);
 
-            if (FindLevelIndex(_getMPLevels(), levelIdHash) < 0)
+            if (FindLevelIndex(_callbacks.GetMPLevels(), levelIdHash) < 0)
             {
                 // not possible? would be bug in FindDisabledLevel
-                _logError("ENABLING " + Path.GetFileName(originalFilename) + " FAILED, LEVEL NOT IN FILE", true);
+                _callbacks.LogError("ENABLING " + Path.GetFileName(originalFilename) + " FAILED, LEVEL NOT IN FILE", true);
                 throw new Exception();
             }
 
-            _showStatusMessage("ENABLING " + Path.GetFileName(originalFilename) + " SUCCEEDED", false);
+            _callbacks.ShowStatusMessage("ENABLING " + Path.GetFileName(originalFilename) + " SUCCEEDED", false);
             return true;
         }
 
@@ -162,7 +241,7 @@ namespace GameMod
         /// </summary>
         private string DifferentVersionFilename(string levelIdHash, out int idx)
         {
-            var levels = _getMPLevels();
+            var levels = _callbacks.GetMPLevels();
             idx = FindLevelIndex(levels, levelIdHash);
             if (idx < 0)
                 return null;
@@ -183,21 +262,21 @@ namespace GameMod
                 for (var i = 0; ; i++)
                 {
                     string dest = fn + MapHiddenMarker + (i == 0 ? "" : i.ToString());
-                    if (!_fileExists(dest))
+                    if (!_callbacks.FileExists(dest))
                     {
-                        _moveFile(fn, dest);
+                        _callbacks.MoveFile(fn, dest);
                         break;
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logDebug(ex);
-                _logError("CANNOT DISABLE OTHER VERSION " + Path.GetFileName(fn), true);
+                _callbacks.LogDebug(ex);
+                _callbacks.LogError("CANNOT DISABLE OTHER VERSION " + Path.GetFileName(fn), true);
                 throw ex;
             }
-            _removeMPLevel(idx);
-            _showStatusMessage("OTHER VERSION " + Path.GetFileName(fn) + " DISABLED", false);
+            _callbacks.RemoveMPLevel(idx);
+            _callbacks.ShowStatusMessage("OTHER VERSION " + Path.GetFileName(fn) + " DISABLED", false);
         }
 
         /// <summary>
@@ -216,7 +295,7 @@ namespace GameMod
         private IEnumerable LookupAndDownloadLevel(string levelIdHash)
         {
             string url = null;
-            foreach (var x in _getLevelDownloadUrl(levelIdHash))
+            foreach (var x in _callbacks.GetLevelDownloadUrl(levelIdHash))
             {
                 url = x;
                 yield return null;
@@ -233,7 +312,7 @@ namespace GameMod
                 // Failed to find a usable local path
                 yield break;
             }
-            else if (_zipContainsLevel(fileName, levelIdHash))
+            else if (_callbacks.ZipContainsLevel(fileName, levelIdHash))
             {
                 // The correct version of the level is already there. Don't need to download, but do need to add it
             }
@@ -248,132 +327,55 @@ namespace GameMod
                     yield break;
                 }
 
-                _showStatusMessage("DOWNLOADING " + displayName, true);
-                foreach (var x in _downloadLevel(url, fileName))
+                _callbacks.ShowStatusMessage("DOWNLOADING " + displayName, true);
+                foreach (var x in _callbacks.DownloadLevel(url, fileName))
                 {
                     yield return null;
                 }
             }
 
             // Now add the level and ensure it's available
-            _addMPLevel(fileName);
-            if (FindLevelIndex(_getMPLevels(), levelIdHash) < 0)
+            _callbacks.AddMPLevel(fileName);
+            if (FindLevelIndex(_callbacks.GetMPLevels(), levelIdHash) < 0)
             {
-                _logError("DOWNLOADING " + displayName + " FAILED, LEVEL NOT IN FILE", true);
+                _callbacks.LogError("DOWNLOADING " + displayName + " FAILED, LEVEL NOT IN FILE", true);
             }
             else
             {
-                _showStatusMessage("DOWNLOADING " + displayName + " COMPLETED", true);
+                _callbacks.ShowStatusMessage("DOWNLOADING " + displayName + " COMPLETED", true);
             }
-        }
-
-        /// <summary>
-        /// Queries overloadmaps.com for a level download URL matching the specified hash.
-        /// The final return value will contain the URL (which may be null if the query failed).
-        /// </summary>
-        private IEnumerable<string> GetLevelDownloadUrl(string levelIdHash)
-        {
-            var li = levelIdHash.IndexOf(".MP");
-            _showStatusMessage("SEARCHING " + levelIdHash.Substring(0, li), true);
-
-            string lastData = null;
-            foreach (var x in NetworkMatch.Get("mpget", new Dictionary<string, string> { { "level", levelIdHash } }, "https://www.overloadmaps.com/api/"))
-            {
-                lastData = x;
-                yield return null;
-            }
-
-            JObject result = null;
-            try
-            {
-                result = JObject.Parse(lastData);
-            }
-            catch (Exception ex)
-            {
-                _logDebug(ex);
-            }
-            if (result == null)
-            {
-                _logError("OVERLOADMAPS.COM LOOKUP FAILED", true, 2f);
-                yield break;
-            }
-
-            if (!result.TryGetValue("url", out JToken urlVal))
-            {
-                _logError("LEVEL NOT FOUND ON OVERLOADMAPS.COM", true, 2f);
-                yield break;
-            }
-            yield return urlVal.GetString();
         }
 
         private string GetLocalDownloadPath(string url, string levelIdHash)
         {
             var i = url.LastIndexOf('/');
             var basefn = url.Substring(i + 1);
-            foreach (var dir in _getLevelDirectories())
+            foreach (var dir in _callbacks.LevelDirectories)
             {
-                try { _createDirectory(dir); } catch (Exception) { }
+                try { _callbacks.CreateDirectory(dir); } catch (Exception) { }
                 var tryfn = Path.Combine(dir, basefn);
-                if (_fileExists(tryfn))
+                if (_callbacks.FileExists(tryfn))
                 {
-                    if (_zipContainsLevel(tryfn, levelIdHash))
+                    if (_callbacks.ZipContainsLevel(tryfn, levelIdHash))
                     {
                         return tryfn;
                     }
                     string curVersionFile = DifferentVersionFilename(levelIdHash, out int idx);
                     if (tryfn != curVersionFile)
                     {
-                        _logDebug("Download: " + basefn + " already exists, current file: " + curVersionFile);
-                        _logError("DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS", true);
+                        _callbacks.LogDebug("Download: " + basefn + " already exists, current file: " + curVersionFile);
+                        _callbacks.LogError("DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS", true);
                         return null;
                     }
                 }
-                if (_canCreateFile(tryfn + ".tmp"))
+                if (_callbacks.CanCreateFile(tryfn + ".tmp"))
                 {
                     return tryfn;
                 }
             }
 
-            _logError("DOWNLOAD FAILED: NO WRITABLE DIRECTORY", true);
+            _callbacks.LogError("DOWNLOAD FAILED: NO WRITABLE DIRECTORY", true);
             return null;
-        }
-
-        private IEnumerable DownloadLevel(string url, string fn)
-        {
-            _logDebug("Downloading " + url + " to " + fn);
-            var basefn = Path.GetFileName(fn);
-            var fntmp = fn + ".tmp";
-            using (UnityWebRequest www = new UnityWebRequest(url, "GET"))
-            {
-                www.downloadHandler = new DownloadHandlerFile(fntmp);
-                var request = www.SendWebRequest();
-                while (!request.isDone)
-                {
-                    _showStatusMessage("DOWNLOADING " + basefn + " ... " + Math.Round(request.progress * 100) + "%", true);
-                    yield return null;
-                }
-                if (www.isNetworkError || www.isHttpError)
-                {
-                    _deleteFile(fntmp);
-                    _showStatusMessage("DOWNLOADING " + basefn + " FAILED, " + (www.isNetworkError ? "NETWORK ERROR" : "SERVER ERROR"), true);
-                    yield break;
-                }
-            }
-            _showStatusMessage("DOWNLOADING " + basefn + " ... INSTALLING", true);
-            string msg = null;
-            try
-            {
-                _moveFile(fntmp, fn);
-            }
-            catch (Exception ex)
-            {
-                _logDebug(ex);
-                msg = ex.Message;
-            }
-            if (msg != null)
-            {
-                _showStatusMessage("DOWNLOADING " + basefn + " FAILED, " + msg, true);
-            }
         }
     }
 }
