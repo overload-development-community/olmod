@@ -119,6 +119,7 @@ namespace GameMod
         string DisplayName { get; }
         string ZipPath { get; }
         string FilePath { get; }
+        string IdStringHash { get; }
     }
 
     public class MPDownloadLevelAlgorithm
@@ -152,7 +153,7 @@ namespace GameMod
                     yield break;
                 }
             }
-            
+
             if (downloadRequired)
             {
                 foreach (var x in LookupAndDownloadLevel(levelIdHash))
@@ -161,17 +162,14 @@ namespace GameMod
                 }
             }
 
-            if (_callbacks.IsServer)
+            int idx = _callbacks.GetAddOnLevelIndex(levelIdHash);
+            if (idx < 0)
             {
-                int idx = _callbacks.GetAddOnLevelIndex(levelIdHash);
-                if (idx < 0)
-                {
-                    _callbacks.DownloadFailed(); // if we don't have the level the last message was the error message
-                }
-                else
-                {
-                    _callbacks.ServerDownloadCompleted(idx);
-                }
+                _callbacks.DownloadFailed(); // if we don't have the level the last message was the error message
+            }
+            else if (_callbacks.IsServer)
+            {
+                _callbacks.ServerDownloadCompleted(idx);
             }
         }
 
@@ -235,14 +233,13 @@ namespace GameMod
 
         /// <summary>
         /// Returns the path of a loaded multiplayer level that matches the filename from the given level ID hash,
-        /// regardless of whether the version matches. Also returns the position of the matching level within the
-        /// loaded multiplayer level list.
+        /// regardless of whether the version matches.
         /// Returns null if no matching level is loaded.
         /// </summary>
-        private string DifferentVersionFilename(string levelIdHash, out int idx)
+        private string DifferentVersionFilename(string levelIdHash)
         {
             var levels = _callbacks.GetMPLevels();
-            idx = FindLevelIndex(levels, levelIdHash);
+            int idx = FindLevelIndex(levels, levelIdHash);
             if (idx < 0)
                 return null;
             var level = levels.ElementAt(idx);
@@ -250,21 +247,40 @@ namespace GameMod
         }
 
         /// <summary>
-        /// Disables any active level matching the filename of the given level ID hash.
+        /// Returns a list of level ID hashes found in the specified mission file.
         /// </summary>
-        private void DisableDifferentVersion(string levelIdHash)
+        private IEnumerable<string> GetActiveLevelsFromFilename(string zipPath)
         {
-            string fn = DifferentVersionFilename(levelIdHash, out int idx);
-            if (fn == null)
+            var levels = _callbacks.GetMPLevels();
+            var matchingLevels = new List<string>();
+            foreach (var level in levels)
+            {
+                if (_callbacks.ZipContainsLevel(zipPath, level.IdStringHash))
+                {
+                    matchingLevels.Add(level.IdStringHash);
+                }
+            }
+            return matchingLevels;
+        }
+
+        /// <summary>
+        /// Disables any active levels loaded from the specified zip file.
+        /// </summary>
+        private void DisableLevelsFromZip(string zipPath)
+        {
+            if (!_callbacks.FileExists(zipPath))
+            {
                 return;
+            }
+            var levelsToRemove = GetActiveLevelsFromFilename(zipPath);
             try
             {
                 for (var i = 0; ; i++)
                 {
-                    string dest = fn + MapHiddenMarker + (i == 0 ? "" : i.ToString());
+                    string dest = zipPath + MapHiddenMarker + (i == 0 ? "" : i.ToString());
                     if (!_callbacks.FileExists(dest))
                     {
-                        _callbacks.MoveFile(fn, dest);
+                        _callbacks.MoveFile(zipPath, dest);
                         break;
                     }
                 }
@@ -272,10 +288,37 @@ namespace GameMod
             catch (Exception ex)
             {
                 _callbacks.LogDebug(ex);
-                _callbacks.LogError("CANNOT DISABLE OTHER VERSION " + Path.GetFileName(fn), true);
                 throw ex;
             }
-            _callbacks.RemoveMPLevel(idx);
+            foreach (var level in levelsToRemove)
+            {
+                var levels = _callbacks.GetMPLevels();
+                int idx = FindLevelIndex(levels, level);
+                if (idx >= 0)
+                {
+                    _callbacks.RemoveMPLevel(idx);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Disables any active level matching the filename of the given level ID hash.
+        /// Also disables other active levels from the same file, if any.
+        /// </summary>
+        private void DisableDifferentVersion(string levelIdHash)
+        {
+            string fn = DifferentVersionFilename(levelIdHash);
+            if (fn == null)
+                return;
+            try
+            {
+                DisableLevelsFromZip(fn);
+            }
+            catch (Exception)
+            {
+                _callbacks.LogError("CANNOT DISABLE OTHER VERSION " + Path.GetFileName(fn), true);
+                throw;
+            }
             _callbacks.ShowStatusMessage("OTHER VERSION " + Path.GetFileName(fn) + " DISABLED", false);
         }
 
@@ -321,6 +364,7 @@ namespace GameMod
                 try
                 {
                     DisableDifferentVersion(levelIdHash);
+                    DisableLevelsFromZip(fileName);
                 }
                 catch (Exception)
                 {
@@ -354,20 +398,6 @@ namespace GameMod
             {
                 try { _callbacks.CreateDirectory(dir); } catch (Exception) { }
                 var tryfn = Path.Combine(dir, basefn);
-                if (_callbacks.FileExists(tryfn))
-                {
-                    if (_callbacks.ZipContainsLevel(tryfn, levelIdHash))
-                    {
-                        return tryfn;
-                    }
-                    string curVersionFile = DifferentVersionFilename(levelIdHash, out int idx);
-                    if (tryfn != curVersionFile)
-                    {
-                        _callbacks.LogDebug("Download: " + basefn + " already exists, current file: " + curVersionFile);
-                        _callbacks.LogError("DOWNLOAD FAILED: " + basefn + " ALREADY EXISTS", true);
-                        return null;
-                    }
-                }
                 if (_callbacks.CanCreateFile(tryfn + ".tmp"))
                 {
                     return tryfn;

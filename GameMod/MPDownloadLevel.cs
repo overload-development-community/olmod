@@ -93,6 +93,8 @@ namespace GameMod
             public string ZipPath => level.ZipPath;
 
             public string FilePath => level.FilePath;
+
+            public string IdStringHash => level.GetAddOnLevelIdStringHash();
         }
 
         private static void AddMPLevel(string filename)
