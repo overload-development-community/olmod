@@ -163,9 +163,12 @@ namespace GameMod
         }
 
         private static FieldInfo _NetworkMatch_m_match_force_playlist_level_idx_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", BindingFlags.NonPublic | BindingFlags.Static);
-        private static void OnServerDownloadCompleted(int newLevelIndex)
+        private static void OnDownloadCompleted(int newLevelIndex)
         {
-            _NetworkMatch_m_match_force_playlist_level_idx_Field.SetValue(null, newLevelIndex);
+            if (Overload.NetworkManager.IsServer())
+            {
+                _NetworkMatch_m_match_force_playlist_level_idx_Field.SetValue(null, newLevelIndex);
+            }
             DownloadBusy = false;
         }
 
@@ -193,8 +196,8 @@ namespace GameMod
             public override void LogError(string errorMessage, bool showInStatus, float flash = 1) =>
                 OnLogError(errorMessage, showInStatus, flash);
             public override void RemoveMPLevel(int index) => MPDownloadLevel.RemoveMPLevel(index);
-            public override void ServerDownloadCompleted(int newLevelIndex) =>
-                OnServerDownloadCompleted(newLevelIndex);
+            public override void DownloadCompleted(int newLevelIndex) =>
+                OnDownloadCompleted(newLevelIndex);
             public override void ShowStatusMessage(string message, bool forceId) => ShowStatus(message, forceId);
             public override bool ZipContainsLevel(string zipPath, string levelIdHash) =>
                 MPDownloadLevel.ZipContainsLevel(zipPath, levelIdHash);

@@ -33,7 +33,7 @@ namespace GameMod
         public abstract void LogDebug(object message);
         public abstract bool IsServer { get; }
         public abstract void DownloadFailed();
-        public abstract void ServerDownloadCompleted(int newLevelIndex);
+        public abstract void DownloadCompleted(int newLevelIndex);
 
         /// <summary>
         /// Queries overloadmaps.com for a level download URL matching the specified hash.
@@ -167,9 +167,9 @@ namespace GameMod
             {
                 _callbacks.DownloadFailed(); // if we don't have the level the last message was the error message
             }
-            else if (_callbacks.IsServer)
+            else
             {
-                _callbacks.ServerDownloadCompleted(idx);
+                _callbacks.DownloadCompleted(idx);
             }
         }
 

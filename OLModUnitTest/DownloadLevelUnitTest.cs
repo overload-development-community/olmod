@@ -23,6 +23,7 @@ namespace OLModUnitTest
             while (iterator.MoveNext()) ;
 
             callbacks.Verify(c => c.AddMPLevel(@"C:\ProgramData\Revival\Overload\testlevel.zip"));
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestMethod]
@@ -32,12 +33,12 @@ namespace OLModUnitTest
             serverFiles.Add(Guid.NewGuid(), new FakeFileSystem.FakeFile { Levels = { { "testlevel.mp", 0xAF5E61F2 } } });
 
             callbacks.SetupGet(c => c.IsServer).Returns(true);
-            callbacks.Setup(c => c.ServerDownloadCompleted(It.IsAny<int>()));
+            callbacks.Setup(c => c.DownloadCompleted(It.IsAny<int>()));
 
             var iterator = algorithm.DoGetLevel("TESTLEVEL.MP:AF5E61F2");
             while (iterator.MoveNext()) ;
 
-            callbacks.Verify(c => c.ServerDownloadCompleted(It.IsAny<int>()));
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("EnableLevel")]
@@ -59,6 +60,9 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()));
             // We expect the file to have been renamed too
             Assert.AreEqual("testlevel.zip", file.Filename);
+            // DownloadCompleted should be signalled (note this means the "download attempt" succeeded,
+            // not necessarily that anything actually had to be downloaded)
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("EnableLevel")]
@@ -75,6 +79,7 @@ namespace OLModUnitTest
 
             callbacks.Verify(c => c.DownloadLevel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()));
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
             Assert.AreEqual("TESTLEVEL.ZIP", file.Filename);
         }
 
@@ -92,6 +97,7 @@ namespace OLModUnitTest
 
             callbacks.Verify(c => c.DownloadLevel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()));
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
             Assert.AreEqual("testlevel2.zip", file.Filename);
         }
 
@@ -184,6 +190,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()), Times.Never);
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         [TestCategory("EnableLevel")]
@@ -212,6 +219,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.RemoveMPLevel(0));
             // The algorithm should add the new level
             callbacks.Verify(c => c.AddMPLevel(originalFilePath));
+            callbacks.Verify(c => c.DownloadCompleted(0));
             // The old level should be renamed
             Assert.AreEqual("testlevel.zip_OCT_Hidden1", currentFile.Filename);
         }
@@ -262,6 +270,7 @@ namespace OLModUnitTest
             // The algorithm should add the new level
             string expectedFilePath = fileSystem.GetLevelDirectories()[0] + "\\testlevel.zip";
             callbacks.Verify(c => c.AddMPLevel(expectedFilePath));
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
             // The existing files should not have been renamed
             Assert.AreEqual("otherlevel.zip", otherFile.Filename);
             Assert.AreEqual("otherlevel2.zip", otherFile2.Filename);
@@ -282,6 +291,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()), Times.Never);
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -311,6 +321,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.DownloadLevel(It.IsAny<string>(), It.IsAny<string>()));
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -336,6 +347,7 @@ namespace OLModUnitTest
             Assert.AreEqual(0, firstDirectory.Files.Count);
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -359,6 +371,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.AddMPLevel(filePath));
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -387,6 +400,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.RemoveMPLevel(0));
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -415,6 +429,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.RemoveMPLevel(0));
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -442,6 +457,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.RemoveMPLevel(It.IsAny<int>()), Times.Never);
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -471,6 +487,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.RemoveMPLevel(0));
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -501,6 +518,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.RemoveMPLevel(It.IsAny<int>()), Times.Exactly(2));
             // The download should not be reported as failed
             callbacks.Verify(c => c.DownloadFailed(), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()));
         }
 
         [TestCategory("GetLocalDownloadPath")]
@@ -524,6 +542,7 @@ namespace OLModUnitTest
             callbacks.Verify(c => c.AddMPLevel(It.IsAny<string>()), Times.Never);
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         [TestMethod]
@@ -548,6 +567,7 @@ namespace OLModUnitTest
             }
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         [TestMethod]
@@ -572,6 +592,7 @@ namespace OLModUnitTest
             Assert.AreEqual(-1, gameList.GetAddOnLevelIndex("TESTLEVEL.MP:AF5E61F2"));
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         [TestMethod]
@@ -591,7 +612,7 @@ namespace OLModUnitTest
             // The download should be reported as failed
             callbacks.Verify(c => c.DownloadFailed());
             // The download should NOT be reported as completed
-            callbacks.Verify(c => c.ServerDownloadCompleted(It.IsAny<int>()), Times.Never);
+            callbacks.Verify(c => c.DownloadCompleted(It.IsAny<int>()), Times.Never);
         }
 
         private (FakeFileSystem fileSystem, FakeGameList gameList,
