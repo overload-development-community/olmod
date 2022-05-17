@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -131,6 +132,8 @@ namespace GameMod {
         private static int totalBanCount=0; // Count of bans in all lists
 
         public static MPBanEntry MatchCreator = null; // description of the Game Creator
+        public static MPBanEntry PlayerWithPrivateMatchData = null; // internal only: description of the player who's private match data was taken to create the game (id only)
+        public static bool MatchCreatorIsInGame = false;
         public static string bannedName = " ** BANNED ** ";
         public static bool JoiningPlayerIsBanned = false;
         public static bool JoiningPlayerIsAnnoyed = false;
@@ -363,7 +366,90 @@ namespace GameMod {
         }
     }
 
-    // Check the playe joining the lobby,
+    // A new match is created, clear the state
+    [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
+    class MPBanPlayers_InitBeforeEachMatch {
+        private static void Postfix() {
+            MPBanPlayers.MatchCreatorIsInGame = false;
+        }
+    }
+
+    // Find the player ID of the player who created the game
+    [HarmonyPatch(typeof(NetworkMatch), "NetSystemOnGameSessionStart")]
+    class MPBanPlayers_FindGameCreator
+    {
+        static void SetCreatorId(string id) {
+            MPBanPlayers.PlayerWithPrivateMatchData = new MPBanEntry(null, null, id);
+            //Debug.LogFormat("MPBanPlayers: FindGameCreator: player with private match data is id {0}",id);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            var our_Method = AccessTools.Method(typeof(MPBanPlayers_FindGameCreator), "SetCreatorId");
+            LocalBuilder hpmi = null; // the Local variable storing the HostPlayerMatchmakerInfo
+            Type hpmiType = null;
+            int state = 0;
+
+            foreach (var code in codes)
+            {
+                //Debug.LogFormat("YYTS: {0} {1} {2}",state,code.opcode,code.operand);
+                if (state == 0) {
+                    /// Search the part where the private match data is searched
+                    if (code.opcode == OpCodes.Ldstr && (string)code.operand == "Looking for player with private match data...") {
+                        state = 1;
+                    }
+                } else if (state == 1) {
+                    // the latest Stloc_S before we look up the private_match_data field is the one we search for
+                    if (code.opcode == OpCodes.Stloc_S) {
+                        hpmi = (LocalBuilder)code.operand;
+                        state = 2;
+                    } else if (code.opcode == OpCodes.Ldstr && (string)code.operand == "private_match_data") {
+                        state = -1;
+                    }
+                } else if (state == 2) {
+                    // check if Stloc.s hpmi is immediately followed by Ldloc.s hpmi
+                    if (code.opcode == OpCodes.Ldloc_S && (LocalBuilder)code.operand == hpmi) {
+                        state = 3;
+                    } else {
+                        // not the one we're searching for
+                        state = 1;
+                    }
+                } else if (state == 3) {
+                    // check if immediately followed by Ldfld m_player
+                    if (code.opcode == OpCodes.Ldfld) {
+                        FieldInfo field=(FieldInfo)code.operand;
+                        if (field.Name == "m_player") {
+                            hpmiType = field.DeclaringType;
+                            state = 4;
+                        } else {
+                            // not the one we're searching for
+                            state = 1;
+                        }
+                    } else {
+                        // not the one we're searching for
+                        state = 1;
+                    }
+                } else if (state == 4) {
+                    if (code.opcode == OpCodes.Ldstr && (string)code.operand == "Found private match data: {0}") {
+                        state = 5;
+                        // Actual patch:
+                        // Load field hpmi.m_playerId onto stack
+                        var hpmiPlayerID = AccessTools.Field(hpmiType, "m_playerId");
+                        yield return new CodeInstruction(OpCodes.Ldloc_S, hpmi);
+                        yield return new CodeInstruction(OpCodes.Ldfld, hpmiPlayerID);
+                        // feed it to our method
+                        yield return new CodeInstruction(OpCodes.Call, our_Method);
+                    }
+                }
+                yield return code;
+            }
+            if (state != 5) {
+                Debug.LogFormat("MPBanPlayers_FindGameCreator: transpiler failed at state {0}",state);
+            }
+        }
+    }
+
+    // Check the player joining the lobby,
     // Apply bans  and annoy-bans
     // Also check if the joining player is the match creator,
     // and reset bans and permissions accordingly for the new match.
@@ -385,10 +471,11 @@ namespace GameMod {
                 // the player has been accepted by the game's matchmaking
                 MPBanEntry candidate = new MPBanEntry(player_name, connection_id, player_id);
                 bool isCreator = false;
-                if (!String.IsNullOrEmpty(NetworkMatch.m_name) && !String.IsNullOrEmpty(candidate.name)) {
-                    string creator = NetworkMatch.m_name.Split('\0')[0].ToUpper();
-                    if (creator == candidate.name) {
+                if (!MPBanPlayers.MatchCreatorIsInGame && MPBanPlayers.PlayerWithPrivateMatchData != null && !String.IsNullOrEmpty(MPBanPlayers.PlayerWithPrivateMatchData.id) && !String.IsNullOrEmpty(candidate.id)) {
+                    if (candidate.id == MPBanPlayers.PlayerWithPrivateMatchData.id) {
+                        Debug.LogFormat("MPBanPlayers: Match creator entered the lobby: {0}",player_name);
                         isCreator = true;
+                        MPBanPlayers.MatchCreatorIsInGame = true;
                     }
                 }
                 // check if player is banned
