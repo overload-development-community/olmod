@@ -38,6 +38,7 @@ namespace GameMod
         public const short MsgDeathReview = 143;
 
         public const short MsgSetTurnRampMode = 145;
+        public const short MsgChangeTeam = 146;
         // Do not use 400, it is in use by Mod-Projdata.dll.
     }
 }

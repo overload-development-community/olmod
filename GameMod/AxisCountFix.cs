@@ -13,7 +13,7 @@ namespace GameMod
         [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
         internal class AxisCountFix_MenuManager_ControlsOptionsUpdate
         {
-            public static void MaybeAdjustAxisSelection( int controller )
+            public static void MaybeAdjustAxisSelection(int controller)
             {
                 if (Controls.m_controllers[controller].m_joystick.axisCount <= MenuManager.m_calibration_current_axis)
                     MenuManager.m_calibration_current_axis = 0;

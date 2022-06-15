@@ -1,4 +1,4 @@
-olmod 0.5.3 - Overload mod
+olmod 0.5.4 - Overload mod
 Community mods for Overload
 https://github.com/overload-development-community/olmod
 
@@ -31,7 +31,7 @@ What does it do
 
 - Puts a MP player in observer mode if it uses a pilot name starting with OBSERVER. The observer mode only works when the server and the observer client run olmod.
 
-- Reads projdata.txt / robotdata.txt with custom projectile (weapon) and robot settings. You can extract the stock data from the game with the included tool `olgetdata`. The txt files must be in the same directory as olmod.exe. You can run olgetdata on linux with `mono olgetdata.exe`. They can either go in the olmod directory, or map makers can add them to their map .zip files.
+- Reads `&lt;level name>-projdata.txt` / `&lt;level name>-robotdata.txt` for levels, `&lt;mission name>-projdata.txt` / `&lt;level name>-robotdata.txt` for missions, and `projdata.txt` / `robotdata.txt` in the olmod directory for testing.  These files can have custom projectile (weapon) and robot settings. You can extract the stock data from the game with the included tool `olgetdata`. The txt files must be in the same directory as olmod.exe. You can run olgetdata on linux with `mono olgetdata.exe`. They can either go in the olmod directory, or map makers can add them to their map .zip files.
 
 - Adds `frametime` non-cheat code
 
@@ -48,6 +48,8 @@ What does it do
 - Allows pasting in the MP password field
 
 - Allows joining in progress matches when enabled for the match
+
+- Allows switching teams for team games with join in progress enabled, by Tobias
 
 - Adds option to enable console with ` key
 
@@ -129,7 +131,7 @@ What does it do
 
 - Smashmouth Overload!
 
-- Updated weapon balance for multiplayer, by zero & roncli.
+- Updated weapon balance for multiplayer, by zero, roncli, & Tobias.
 
 - Nerf to reduced shader cloaks down to 30% opacity, by Tobias.
 
@@ -160,6 +162,12 @@ What does it do
 - Death summary that shows what killed you, by Tobias.
 
 - Increased UI opacity while cloaked, by Tobias.
+
+- Option to reset audio engine, by Tobias.
+
+- Option to move your missions to a directory of your choosing using the `-missionpath` parameter, by roncli
+
+- Option to have bigger and more colorful enemy names in anarchy, by luponix
 
 How does it work
 ----------------

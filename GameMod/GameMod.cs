@@ -26,7 +26,7 @@ namespace GameMod.Core {
             }
 
             Modded = FindArg("-modded");
-            VREnabled = FindArg("-vrmode");
+            VREnabled = FindArgVal("-vrmode", out var vrmode) && vrmode != "none";
 
             GameVersion = typeof(GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + OlmodVersion.FullVersionString + ", game " + GameVersion);
@@ -163,7 +163,7 @@ namespace GameMod.Core {
     {
         static bool Prefix(string s, ref bool __result)
         {
-            if ((new string[] { "shenanigans", "methinks" }).Contains(s.ToLower()))
+            if ((new string[] { "shenanigans", "methinks", "goodnight" }).Contains(s.ToLower()))
             {
                 __result = true;
                 return false;

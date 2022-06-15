@@ -98,11 +98,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AddOnLevelSort.cs" />
+    <Compile Include="AmbientUnload.cs" />
     <Compile Include="AxisCountFix.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="Controllers.cs" />
     <Compile Include="CrusherTrails.cs" />
+    <Compile Include="HUDVelocity.cs" />
+    <Compile Include="DisableProfanityFilter.cs" />
     <Compile Include="MatchModeCTF.cs" />
     <Compile Include="CustomDoorAutomap.cs" />
     <Compile Include="CustomLevelResources.cs" />
@@ -123,19 +126,25 @@
     <Compile Include="MPAutomap.cs" />
     <Compile Include="MPAutoSelection.cs" />
     <Compile Include="MPAutoSelectionUI.cs" />
+    <Compile Include="MPBanPlayers.cs" />
     <Compile Include="MPCeiling.cs" />
+    <Compile Include="MPChatCommands.cs" />
     <Compile Include="MPClassic.cs" />
     <Compile Include="MPClientExtrapolation.cs" />
     <Compile Include="MPCloak.cs" />
+    <Compile Include="MPColoredPlayerNames.cs" />
     <Compile Include="MPContinue.cs" />
     <Compile Include="MPCreeperSync.cs" />
     <Compile Include="MPCustomModeFile.cs" />
     <Compile Include="MPDamageEffects.cs" />
     <Compile Include="MPDeathExplosion.cs" />
     <Compile Include="MPDeathReview.cs" />
+    <Compile Include="MPDeathRollSync.cs" />
     <Compile Include="MPErrorSmoothingFix.cs" />
     <Compile Include="MPFixGhostProjectiles.cs" />
     <Compile Include="MPHUDMessage.cs" />
+    <Compile Include="MPIPLogging.cs" />
+    <Compile Include="MPItemSpawns.cs" />
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPMatchTimeLimits.cs" />
@@ -152,6 +161,7 @@
     <Compile Include="MPSmash.cs" />
     <Compile Include="MPSniperPackets.cs" />
     <Compile Include="MPSpawnInitialization.cs" />
+    <Compile Include="MPSpawnInvuln.cs" />
     <Compile Include="MPSpew.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
@@ -177,6 +187,7 @@
     <Compile Include="MPTeamsEnemyArrow.cs" />
     <Compile Include="MPTweaks.cs" />
     <Compile Include="MPUnlockAll.cs" />
+    <Compile Include="MPWeaponBehavior.cs" />
     <Compile Include="MusicCustom.cs" />
     <Compile Include="PrevWeaponFix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -190,6 +201,7 @@
     <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
+    <Compile Include="WarperOrientation.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />

@@ -223,6 +223,8 @@ namespace GameMod {
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
                 JoystickRotationFix.alt_turn_ramp_mode = ModPrefs.GetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
+                MPColoredPlayerNames.isActive = ModPrefs.GetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
+                DisableProfanityFilter.profanity_filter = ModPrefs.GetBool("MP_PROFANITY_FILTER", DisableProfanityFilter.profanity_filter);
                 Menus.mms_scale_respawn_time = ModPrefs.GetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
                 if (Core.GameMod.HasInternetMatch())
                     MPInternet.MenuIPAddress = ModPrefs.GetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
@@ -245,6 +247,8 @@ namespace GameMod {
                 Menus.mms_team_color_default = ModPrefs.GetBool("MP_PM_TEAM_COLOR_DEFAULT", Menus.mms_team_color_default);
                 Menus.mms_team_color_self = ModPrefs.GetInt("MP_PM_TEAM_COLOR_SELF", Menus.mms_team_color_self);
                 Menus.mms_team_color_enemy = ModPrefs.GetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
+                HUDVelocity.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
+                Menus.mms_show_framerate = ModPrefs.GetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -282,6 +286,8 @@ namespace GameMod {
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
             ModPrefs.SetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
+            ModPrefs.SetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
+            ModPrefs.SetBool("MP_PROFANITY_FILTER", DisableProfanityFilter.profanity_filter);
             ModPrefs.SetString("MP_PM_IP_ADDRESS", MPInternet.MenuIPAddress);
             ModPrefs.SetBool("MP_PM_SCALE_RESPAWN_TIME", Menus.mms_scale_respawn_time);
             ModPrefs.SetInt("MP_PM_LAG_COMPENSATION", Menus.mms_lag_compensation);
@@ -302,6 +308,8 @@ namespace GameMod {
             ModPrefs.SetBool("MP_PM_TEAM_COLOR_DEFAULT", Menus.mms_team_color_default);
             ModPrefs.SetInt("MP_PM_TEAM_COLOR_SELF", Menus.mms_team_color_self);
             ModPrefs.SetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
+            ModPrefs.SetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
+            ModPrefs.SetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
             ModPrefs.Flush(filename + "mod");
         }
 

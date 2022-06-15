@@ -48,10 +48,19 @@ namespace GameMod {
             public MpTeam? ScorerTeam;
         }
 
+        private struct TeamChange
+        {
+            public float Time;
+            public string PlayerName;
+            public MpTeam? PreviousTeam;
+            public MpTeam? CurrentTeam;
+        }
+
         private static Dictionary<PlayerPlayerWeaponDamage, float> DamageTable = new Dictionary<PlayerPlayerWeaponDamage, float>();
         private static List<Kill> Kills = new List<Kill>();
         private static List<Goal> Goals = new List<Goal>();
         private static List<FlagStat> FlagStats = new List<FlagStat>();
+        private static List<TeamChange> TeamChanges = new List<TeamChange>();
         public static bool GameStarted = false;
         private static string Attacker, Defender, Assisted;
         private static MpTeam AttackerTeam = (MpTeam)(-1), DefenderTeam = (MpTeam)(-1), AssistedTeam = (MpTeam)(-1);
@@ -63,6 +72,7 @@ namespace GameMod {
             Kills = new List<Kill>();
             Goals = new List<Goal>();
             FlagStats = new List<FlagStat>();
+            TeamChanges = new List<TeamChange>();
             GameStarted = false;
         }
 
@@ -76,6 +86,23 @@ namespace GameMod {
                     defender = d.Key.Defender.m_mp_name,
                     weapon = d.Key.Weapon.ToString(),
                     damage = d.Value
+                }, new JsonSerializer()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                })
+            );
+        }
+
+        public static JArray GetTeamChanges()
+        {
+            return new JArray(
+                from tc in TeamChanges
+                select JObject.FromObject(new
+                {
+                    time = tc.Time,
+                    playerName = tc.PlayerName,
+                    previousTeam = TeamName(tc.PreviousTeam),
+                    currentTeam = TeamName(tc.CurrentTeam)
                 }, new JsonSerializer()
                 {
                     NullValueHandling = NullValueHandling.Ignore
@@ -160,7 +187,8 @@ namespace GameMod {
                 damage = GetDamageTable(),
                 kills = GetKills(),
                 goals = GetGoals(),
-                flagStats = GetFlagStats()
+                flagStats = GetFlagStats(),
+                teamChanges = GetTeamChanges()
             }, new JsonSerializer()
             {
                 NullValueHandling = NullValueHandling.Ignore
@@ -280,7 +308,7 @@ namespace GameMod {
 
         private static string TeamName(MpTeam? team)
         {
-            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : MPTeams.TeamName((MpTeam)team);
+            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : MPTeams.TeamNameNotLocalized((MpTeam)team);
         }
 
         public static void AddGoal()
@@ -339,6 +367,35 @@ namespace GameMod {
             });
 
             Goals.Add(goal);
+
+            TrackerPostStats(obj);
+        }
+
+        public static void AddTeamChange(Player player, MpTeam newTeam)
+        {
+            if (NetworkMatch.m_postgame)
+                return;
+
+            TeamChanges.Add(new TeamChange
+            {
+                Time = NetworkMatch.m_match_elapsed_seconds,
+                PlayerName = player.m_mp_name,
+                PreviousTeam = player.m_mp_team,
+                CurrentTeam = newTeam
+            });
+
+            var obj = JObject.FromObject(new
+            {
+                name = "Stats",
+                type = "TeamChange",
+                time = NetworkMatch.m_match_elapsed_seconds,
+                playerName = player.m_mp_name,
+                previousTeam = TeamName(player.m_mp_team),
+                currentTeam = TeamName(newTeam)
+            }, new JsonSerializer()
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
 
             TrackerPostStats(obj);
         }
@@ -554,7 +611,8 @@ namespace GameMod {
                 hasPassword = MPModPrivateData.HasPassword,
                 matchNotes = MPModPrivateData.MatchNotes,
                 classicSpawnsEnabled = MPClassic.matchEnabled,
-                ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled
+                ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled,
+                suddenDeath = MPSuddenDeath.SuddenDeathMenuEnabled
             });
         }
 

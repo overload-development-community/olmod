@@ -452,6 +452,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	static WCHAR buf[256 + 64], *p;
 
+	// workaround for openssl 1.0.2j bug with newer intel CPUs, see github issue #182
+	// disable the broken code path for SHAEXT via OPENSSL_ia32cap environment variable,
+	// but only if the user has not set that variable already...
+	if ((GetEnvironmentVariable(L"OPENSSL_ia32cap", buf, sizeof(buf) / sizeof(buf[0])) < 1) && (GetLastError() == ERROR_ENVVAR_NOT_FOUND)) {
+		if (!SetEnvironmentVariable(L"OPENSSL_ia32cap", L":~0x20000000")) {
+			show_msg("failed to set OPENSSL_ia32cap environment variable for OpenSSL 1.0.2j SHAEXT bug workaround");
+		}
+	}
+
 	if (set_game_dir_from_args()) {
 		if (!is_game_dir_ok()) {
 			show_msg("Cannot find game in directory specified with -gamedir!");

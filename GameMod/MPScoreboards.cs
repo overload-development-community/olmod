@@ -84,7 +84,7 @@ namespace GameMod
                         UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 35f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod1, true));
                         UIManager.DrawSpriteUI(pos + Vector2.right * (col1 - 15f), 0.11f, 0.11f, c, m_alpha * num, Player.GetMpModifierIcon(player.m_mp_mod2, false));
                         float max_width = col2 - col1 - (float)((!NetworkMatch.m_head_to_head) ? 130 : 10);
-                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, max_width);
+                        uie.DrawPlayerNameBasic(pos + Vector2.right * col1, player.m_mp_name, MPColoredPlayerNames.isActive ? MPColoredPlayerNames.GetPlayerColor(player) * 0.7f : c, player.m_mp_rank_true, 0.6f, num, player.m_mp_platform, max_width);
                         if (!NetworkMatch.m_head_to_head)
                         {
                             if (score)
@@ -120,9 +120,6 @@ namespace GameMod
 
                 foreach (MpTeam team in MPTeams.TeamsByScore)
                 {
-                    if (!NetworkManager.m_PlayersForScoreboard.Any(x => x.m_mp_team == team))
-                        continue;
-
                     DrawTeamScore(uie, pos, team, NetworkMatch.GetTeamScore(team), 350f, GameManager.m_local_player.m_mp_team == myTeam);
                     pos.y += 35f;
                     DrawScoreHeader(uie, pos, col1, col2, col3, col4, col5);
@@ -242,9 +239,6 @@ namespace GameMod
                 MpTeam myTeam = GameManager.m_local_player.m_mp_team;
                 foreach (var team in MPTeams.TeamsByScore)
                 {
-                    if (!NetworkManager.m_PlayersForScoreboard.Any(x => x.m_mp_team == team))
-                        continue;
-
                     MPTeams.DrawTeamScoreSmall(uie, pos, team, NetworkMatch.GetTeamScore(team), 98f, team == myTeam);
                     pos.y += 28f;
                 }
@@ -380,8 +374,7 @@ namespace GameMod
                         if (MPModPrivateData.AssistScoring)
                             uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_assists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_deaths, 0.65f, StringOffset.CENTER, color, m_alpha * num);
-                        color = uie.GetPingColor(player.m_avg_ping_ms);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col9, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col9, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, uie.GetPingColor(player.m_avg_ping_ms), m_alpha * num);
                         pos.y += 25f;
                     }
                 }
@@ -664,8 +657,7 @@ namespace GameMod
                         if (MPModPrivateData.AssistScoring)
                             uie.DrawDigitsVariable(pos + Vector2.right * col6, player.m_assists, 0.65f, StringOffset.CENTER, color, m_alpha * num);
                         uie.DrawDigitsVariable(pos + Vector2.right * col7, player.m_deaths, 0.65f, StringOffset.CENTER, color, m_alpha * num);
-                        color = uie.GetPingColor(player.m_avg_ping_ms);
-                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, color, m_alpha * num);
+                        uie.DrawDigitsVariable(pos + Vector2.right * col8, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, uie.GetPingColor(player.m_avg_ping_ms), m_alpha * num);
                         pos.y += 25f;
                     }
                 }
