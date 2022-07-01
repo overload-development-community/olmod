@@ -674,9 +674,11 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIManager), "DrawMpPlayerName")]
     class MPObserver_UIManager_DrawMpPlayerName
     {
+        public static bool showHealthOfTeammates = false;
+
         static void Postfix(Player player, Vector2 offset)
         {
-            if (!MPObserver.Enabled)
+            if (GameplayManager.IsDedicatedServer() | (!MPObserver.Enabled & !(showHealthOfTeammates & player.m_mp_team == GameManager.m_local_player.m_mp_team & player.m_mp_team != MpTeam.ANARCHY)))
                 return;
 
             offset.y -= 3f;

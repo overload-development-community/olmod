@@ -214,6 +214,9 @@ namespace GameMod
 
         public static void UpdateList()
         {
+            if (!menuActive) 
+                return;
+
             MenuManager.m_list_items_total_count = Items.Count();
             MenuManager.m_list_items_max_per_page = Math.Min(MenuManager.m_list_items_total_count, 12);
             while (MenuManager.m_list_items_first > MenuManager.m_list_items_total_count) {

@@ -1241,6 +1241,11 @@ END_ENTRY
             get { return true; }
             set { JoystickRotationFix.server_support = value; }
         }
+        public static bool ThunderboltPassthrough
+        {
+            get { return MPThunderboltPassthrough.isAllowed; }
+            set { MPThunderboltPassthrough.isAllowed = value; }
+        }
 
         public static JObject Serialize()
         {
@@ -1264,6 +1269,7 @@ END_ENTRY
             jobject["matchtimelimit"] = MatchTimeLimit;
             jobject["assistscoring"] = AssistScoring;
             jobject["joystickrotationfixsupported"] = JoystickRotationFixSupported;
+            jobject["thunderboltpassthrough"] = ThunderboltPassthrough;
             return jobject;
         }
 
@@ -1292,6 +1298,7 @@ END_ENTRY
                 NetworkMatch.m_match_time_limit_seconds = MatchTimeLimit;
             AssistScoring = root["assistscoring"].GetBool(true);
             JoystickRotationFixSupported = root["joystickrotationfixsupported"].GetBool(false);
+            ThunderboltPassthrough = root["thunderboltpassthrough"].GetBool(false);
         }
 
         public static string GetModeString(MatchMode mode)
@@ -1582,6 +1589,7 @@ END_ENTRY
             MPModPrivateData.AllowSmash = Menus.mms_allow_smash;
             MPModPrivateData.MatchTimeLimit = Menus.mms_match_time_limit == 0 ? int.MaxValue : Menus.mms_match_time_limit;
             MPModPrivateData.AssistScoring = Menus.mms_assist_scoring;
+            MPModPrivateData.ThunderboltPassthrough = MPThunderboltPassthrough.isAllowed;
             if (Menus.mms_mp_projdata_fn == "STOCK") {
                 MPModPrivateData.CustomProjdata = string.Empty;
             } else {
