@@ -12,7 +12,7 @@ namespace GameMod
 	// Allows Thunderbolt projectiles to penetrate through ships
     class MPThunderboltPassthrough
     {
-
+		
 		public static bool isAllowed = false;
 		
 		[HarmonyPatch(typeof(Projectile), "Explode")]
@@ -79,5 +79,6 @@ namespace GameMod
 				}
 			}
 		}
+		
 	}
 }
