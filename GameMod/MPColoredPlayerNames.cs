@@ -56,12 +56,12 @@ namespace GameMod
         {
             public static Color MaybeReplaceVictimColor(Color original, int i)
             {
-                return !(isActive && NetworkMatch.GetMode() == MatchMode.ANARCHY) ? original : GetPlayerColorByName(GameplayManager.RecentKillNames[i]);
+                return !(isActive && NetworkMatch.GetMode() == MatchMode.ANARCHY) ? original : GetPlayerColorByName(GameplayManager.RecentKillNames[i]) * 0.8f;
             }
 
             public static Color MaybeReplaceKillerColor(Color original, int i)
             {
-                return !(isActive && NetworkMatch.GetMode() == MatchMode.ANARCHY) ? original : GetPlayerColorByName(GameplayManager.RecentKillerNames[i]);
+                return !(isActive && NetworkMatch.GetMode() == MatchMode.ANARCHY) ? original : GetPlayerColorByName(GameplayManager.RecentKillerNames[i]) * 0.8f;
             }
 
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
