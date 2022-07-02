@@ -863,10 +863,10 @@ namespace GameMod {
                                         MenuManager.PlaySelectSound(1f);
                                         MPTeams.UpdateClientColors();
                                         break;
-                                    case 4:
-                                        MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates = !MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates;
-                                        MenuManager.PlaySelectSound(1f);
-                                        break;
+                                    //case 4:
+                                    //    MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates = !MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates;
+                                    //    MenuManager.PlaySelectSound(1f);
+                                    //    break;
                                 }
                                 break;
                             case 2:
