@@ -14,7 +14,37 @@ namespace GameMod
     {
 		
 		public static bool isAllowed = false;
-		
+
+		[HarmonyPatch(typeof(Projectile), "OnTriggerEnter")]
+		internal class MPWeaponBehavior_Projectile_OnTriggerEnter
+		{
+			private void MaybeExplode(bool damaged_something, Projectile proj)
+			{
+				bool enablePassthrough = proj.m_type == ProjPrefab.proj_thunderbolt && (!GameplayManager.IsMultiplayer | isAllowed);
+
+				if (!enablePassthrough)
+					proj.Explode(damaged_something);
+			}
+
+			private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+			{
+				foreach (var code in codes)
+				{
+					if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Projectile), "Explode"))
+					{
+						yield return new CodeInstruction(OpCodes.Ldarg_0);
+						yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPWeaponBehavior_Projectile_OnTriggerEnter), "MaybeExplode"));
+						continue;
+					}
+
+					yield return code;
+				}
+			}
+		}
+
+
+
+		/*
 		[HarmonyPatch(typeof(Projectile), "Explode")]
 		internal class MPClassic_Projectile_Explode
 		{
@@ -79,6 +109,7 @@ namespace GameMod
 				}
 			}
 		}
-		
+		*/
+
 	}
 }
