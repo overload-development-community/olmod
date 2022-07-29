@@ -153,6 +153,7 @@
     <Compile Include="MPMonoDNSFix.cs" />
     <Compile Include="MPNoDupes.cs" />
     <Compile Include="MPNoPositionCompression.cs" />
+    <Compile Include="MPOpponentCockpits.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPRespawn.cs" />
