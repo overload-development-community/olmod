@@ -1354,9 +1354,8 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "RegisterHandlers")]
     class MPTeams_Server_RegisterHandlers
     {
-        private static void OnChangeTeam(NetworkMessage rawMsg)
+        public static void DoChangeTeam(MPTeams.ChangeTeamMessage msg)
         {
-            var msg = rawMsg.ReadMessage<MPTeams.ChangeTeamMessage>();
             var targetPlayer = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == msg.netId);
 
             ServerStatLog.AddTeamChange(targetPlayer, msg.newTeam);
@@ -1390,6 +1389,12 @@ namespace GameMod
                 if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "changeteam"))
                     NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgChangeTeam, msg);
             }
+        }
+
+        private static void OnChangeTeam(NetworkMessage rawMsg)
+        {
+            var msg = rawMsg.ReadMessage<MPTeams.ChangeTeamMessage>();
+            DoChangeTeam(msg);
         }
 
         static void Postfix()
