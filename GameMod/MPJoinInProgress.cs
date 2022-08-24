@@ -67,6 +67,7 @@ namespace GameMod {
             if (ready)
             {
                 player.c_player_ship.RestoreLights();
+                MPOpponentCockpits.SetOpponentCockpitVisibility(player,false);
             }
             else
             {
