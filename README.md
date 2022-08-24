@@ -179,7 +179,7 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Ability to join games by LAN hostname, by derhass.
 
-- Objects teleported by warpers are now oriented as expected, by D.Cent.
+- Objects teleported by warpers are now oriented as expected, by kevin.
 
 ##### Linux
 

@@ -33,7 +33,7 @@ v0.5.5 - 2022-08-23
 - You can now join by hostname on LAN, ie: server is not required to have dots in it anymore. (Thanks, derhass!)
 - Armor, energy, and ammo no longer despawn after 5 minutes in race mode. (Thanks, Tobias!)
 - Non-CM spawn items in multiplayer are now considered spew.  Translation: Those shield orbs in Ascent's basement will actually work as they're supposed to, and go away for everyone after picked up. (Thanks, Tobias!)
-- Objects teleported by warpers are now oriented as expected. (Thanks, D.Cent!)
+- Objects teleported by warpers are now oriented as expected. (Thanks, kevin!)
 - CM scores in olmod are now saved to local leaderboards. (Thanks, luponix!)
 - Improvements to the individual player colors in anarchy. (Thanks, luponix!)
 - Fixed black screen on joining an unreachable server. (Thanks, derhass!)
