@@ -203,6 +203,7 @@
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
     <Compile Include="WarperOrientation.cs" />
+    <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
