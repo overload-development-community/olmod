@@ -208,6 +208,7 @@
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
     <Compile Include="VRScale.cs" />
     <Compile Include="VSync.cs" />
+    <Compile Include="Boss2B.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
