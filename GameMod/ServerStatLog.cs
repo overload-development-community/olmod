@@ -666,6 +666,14 @@ namespace GameMod {
             var otherPlayer = di.owner?.GetComponent<Player>();
 
             float hitpoints = __instance.c_player.m_hitpoints;
+
+            // Increase hitpoints by ratio of damage reduction so that we report the correct value.
+            float reduction = Player.ARMOR_DAMAGE[__instance.c_player.m_upgrade_level[0]];
+            if (di.type == DamageType.EXPLOSIVE && __instance.c_player.m_unlock_blast_damage) {
+                reduction *= 0.8f;
+            }
+            hitpoints /= reduction;
+
             ProjPrefab weapon = di.weapon;
 
             float damage = di.damage;
