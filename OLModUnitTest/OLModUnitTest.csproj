@@ -63,6 +63,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DownloadLevelUnitTest.cs" />
+    <Compile Include="HelperClasses\FakeFileSystem.cs" />
+    <Compile Include="HelperClasses\FakeGameList.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
