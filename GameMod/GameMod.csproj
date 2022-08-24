@@ -145,6 +145,7 @@
     <Compile Include="MPHUDMessage.cs" />
     <Compile Include="MPIPLogging.cs" />
     <Compile Include="MPItemSpawns.cs" />
+    <Compile Include="MPDownloadLevelAlgorithm.cs" />
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPMatchTimeLimits.cs" />

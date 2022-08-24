@@ -18,6 +18,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLModUnitTest", "OLModUnitTest\OLModUnitTest.csproj", "{A3A1AFA7-6214-4624-80F6-B17B60B36916}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,14 @@ Global
 		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|x64.ActiveCfg = Release|Any CPU
 		{5F11C292-D523-4C7F-88FA-3414F62A001A}.Release|x64.Build.0 = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Debug|x64.Build.0 = Debug|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|x64.ActiveCfg = Release|Any CPU
+		{A3A1AFA7-6214-4624-80F6-B17B60B36916}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
