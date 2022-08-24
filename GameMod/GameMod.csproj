@@ -154,6 +154,7 @@
     <Compile Include="MPMonoDNSFix.cs" />
     <Compile Include="MPNoDupes.cs" />
     <Compile Include="MPNoPositionCompression.cs" />
+    <Compile Include="MPOpponentCockpits.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPRespawn.cs" />
@@ -203,11 +204,13 @@
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
     <Compile Include="WarperOrientation.cs" />
+    <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
     <Compile Include="VRScale.cs" />
     <Compile Include="VSync.cs" />
+    <Compile Include="Boss2B.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
