@@ -127,6 +127,7 @@ namespace GameMod {
             Status,
             Say,
             Test,
+            SwitchTeam,
         }
 
         // properties:
@@ -242,6 +243,8 @@ namespace GameMod {
                 cmd = Command.Say;
             } else if (cmdName == "T" || cmdName == "TEST") {
                 cmd = Command.Test;
+            } else if (cmdName == "ST" || cmdName == "SWITCHTEAM") {
+                cmd = Command.SwitchTeam;
             }
         }
 
@@ -327,6 +330,9 @@ namespace GameMod {
                     break;
                 case Command.Test:
                     result = DoTest();
+                    break;
+                case Command.SwitchTeam:
+                    result = DoSwitchTeam();
                     break;
                 default:
                     Debug.LogFormat("CHATCMD {0}: {1} {2} was not handled by server", cmd, cmdName, arg);
@@ -646,6 +652,56 @@ namespace GameMod {
             return false;
         }
 
+        // Execute SWITCHTEAM command
+        public bool DoSwitchTeam()
+        {
+            selectedPlayerEntry = null;
+            selectedPlayerConnectionId = -1;
+
+            if (String.IsNullOrEmpty(arg)) {
+                // without argument, the player can request a switch for himself...
+                if (!SelectSelf()) {
+                    ReturnToSender("SWITCHTEAM: did not find you");
+                    return false;
+                }
+            } else {
+                if (!SelectPlayer(arg)) {
+                    ReturnToSender(String.Format("SWITCHTEAM: did not find player {0}",arg));
+                    return false;
+                }
+            }
+
+            if (selectedPlayerEntry == null || selectedPlayerConnectionId < 0) {
+                ReturnToSender("SWITCHTEAM: could not find the target player");
+                return false;
+            }
+
+            if (senderEntry == null || String.IsNullOrEmpty(senderEntry.name) || String.IsNullOrEmpty(selectedPlayerEntry.name) || senderEntry.name != selectedPlayerEntry.name) {
+                // requesting a switch for another player requires permission
+                if (!CheckPermission(senderEntry)) {
+                    ReturnToSender(String.Format("You do not have the permission for command {0}!", cmd));
+                    Debug.LogFormat("CHATCMD {0}: client is not authenticated!", cmd);
+                    return false;
+                }
+            }
+
+            if (inLobby && (selectedPlayerLobbyData != null)) {
+                // requesting a team switch in the lobby
+                ReturnTo(String.Format("manual TEAM SWITCH request for {0} by {1}",selectedPlayerEntry.name, senderEntry.name));
+                NetworkMatch.OnRequestSwitchTeam(selectedPlayerConnectionId, MPTeams.NextTeam(selectedPlayerLobbyData.m_team));
+            } else if (!inLobby && (selectedPlayer != null)) {
+                // requesting a team switch in-game
+                ReturnTo(String.Format("manual TEAM SWITCH request for {0} by {1}",selectedPlayerEntry.name, senderEntry.name));
+                MPTeams.ChangeTeamMessage msg =  new MPTeams.ChangeTeamMessage { netId = selectedPlayer.netId, newTeam = MPTeams.NextTeam(selectedPlayer.m_mp_team) };
+                MPTeams_Server_RegisterHandlers.DoChangeTeam(msg);
+            } else {
+                ReturnToSender("SWITCHTEAM: did not find the player");
+                return false;
+            }
+
+            return false;
+        }
+
         // Send a chat message back to the sender of the command
         // HA: An Elvis reference!
         public bool ReturnToSender(string msg) {
@@ -682,6 +738,35 @@ namespace GameMod {
                         selectedPlayerConnectionId = -1;
                     }
                     return true;
+                }
+            }
+            return false;
+        }
+
+        // Select the player who sent the request
+        public bool SelectSelf() {
+            selectedPlayerEntry = null;
+            selectedPlayer = null;
+            selectedPlayerLobbyData = null;
+            selectedPlayerConnectionId = -1;
+
+            if (senderEntry != null) {
+                selectedPlayerEntry = senderEntry;
+                selectedPlayerConnectionId = sender_conn;
+                if (inLobby) {
+                    foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
+                        if (p.Value != null && p.Value.m_id == selectedPlayerConnectionId) {
+                            selectedPlayerLobbyData = p.Value;
+                            return true;
+                        }
+                    }
+                } else {
+                    foreach (var p in Overload.NetworkManager.m_Players) {
+                        if (p != null && p.connectionToClient != null && p.connectionToClient.connectionId == selectedPlayerConnectionId) {
+                            selectedPlayer = p;
+                            return true;
+                        }
+                    }
                 }
             }
             return false;
