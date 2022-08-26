@@ -1,4 +1,4 @@
-olmod 0.5.4 - Overload mod
+olmod 0.5.5 - Overload mod
 Community mods for Overload
 https://github.com/overload-development-community/olmod
 
@@ -165,9 +165,21 @@ What does it do
 
 - Option to reset audio engine, by Tobias.
 
-- Option to move your missions to a directory of your choosing using the `-missionpath` parameter, by roncli
+- Option to move your missions to a directory of your choosing using the `-missionpath` parameter, by roncli.
 
-- Option to have bigger and more colorful enemy names in anarchy, by luponix
+- Option to have bigger and more colorful enemy names in anarchy, by luponix.
+
+- Multiplayer chat commands, by derhass.
+
+- Corpse desync fix, by Tobias.
+
+- Option to disable profanity filter, by luponix.
+
+- Options for framerate and velocity on the HUD, by Tobias.
+
+- Ability to join games by LAN hostname, by derhass.
+
+- Objects teleported by warpers are now oriented as expected, by kevin.
 
 How does it work
 ----------------

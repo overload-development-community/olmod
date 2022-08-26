@@ -550,7 +550,7 @@ namespace GameMod {
             }
         }
 
-        private static void Posfix() {
+        private static void Postfix() {
             if (MPBanPlayers.JoiningPlayerIsBanned && MPBanPlayers.JoiningPlayerConnectionId >= 0 && MPBanPlayers.JoiningPlayerLobbyData != null) {
                 // Add back the PlayerLobbyData which we temporarily removed
                 NetworkMatch.m_players.Add(MPBanPlayers.JoiningPlayerConnectionId, MPBanPlayers.JoiningPlayerLobbyData);

@@ -14,3 +14,4 @@ UnityEngine*.xml
 *.o
 *.so
 *.user
+packages/

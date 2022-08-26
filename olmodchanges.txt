@@ -1,3 +1,45 @@
+v0.5.5 - 2022-08-23
+
+- Multiplayer chat commands.  For a detailed explanation, see https://github.com/overload-development-community/olmod/blob/master/ServerCommands.md (Thanks, derhass!)
+  - Admin commands are commands that the match creator and trusted admins ALWAYS has access to.
+    - /AUTH <password> - Authorize yourself as an admin on this server.
+    - /GIVEPERM <player> - Give a player permissions for these commands.
+    - /REVOKEPERM <player> - Remove a player's permissions for these commands.
+    - /KICK <player> - Removes a player from a game.
+    - /BAN <player> - Bans a player.  Does not also /KICK, you must use /KICKBAN for that.
+    - /KICKBAN <player> - Removes a player from a game, and also bans that player.
+    - /ANNOY <player> - Force a player into observer mode.  Also applies /BLOCKCHAT.
+    - /BLOCKCHAT <player> - Stops a player from sending or receiving chat messages.
+    - /UNBAN <player> - Unbans a player from the server.
+    - /UNANNOY <player> - Prevents a player from being annoyed in future games.
+    - /UNBLOCKCHAT <player> - Allows a player to send or receive chat messages.
+    - /END - Forces a match in progress to end.
+    - /START - Forces a match in the lobby to start, even if everyone hasn't readied up.
+  - Commands anyone can do.
+    - /STATUS - Shows who the creator is, whether you are authorized, and how many bans, annoys, chat blocks, authorized players, and trusted players there are currently on the server.
+    - /SAY <message> - Sends your message to unblocked players.
+    - /TEST <player> - Tests player name selection.
+  - Command line arguments related to multiplayer chat commands:
+    - -chatCommandPassword <password> - Sets the password users must use to /AUTH.
+    - -disableChatCommands - Never allow ANY chat commands on this server.
+    - -trustedPlayerIds <comma-separated list of player IDs> - A list of players who, when joining a game, are automatically authorized to use admin chat commands.  You can find your own player ID in your player log by searching for the text `Setting my player id`.
+
+- Client-side homing fix is now applied to homing projectiles other than just hunters and missile pods.  This should make creeper and time bomb sync slightly more smoother.  Oh, and watch out for nova blobs!
+- Sniper packets will no longer burst from pilots with bad connections or malintent.
+- Corpses now have proper hit detection.  Previously, a ship's hit box for weapons detection would desync with the ship's visible model upon death, and the hit box would not move after dying even though the physical model.  Now that desync no longer happens, which resolves two bugs: 1) Shots will no longer go through corpses 2) Shots won't fizzle out at where a ship died even if its corpse is no longer there. (Thanks, Tobias!)
+- Option to disable the ****ing profanity filter. (Thanks, luponix!)
+- Added a warning message for clients not using olmod when joining a game in progress that uses a custom map. (Thanks, derhass!)
+- Added options to view ship velocity and frame rate on the HUD. (Thanks, Tobias!)
+- You can now join by hostname on LAN, ie: server is not required to have dots in it anymore. (Thanks, derhass!)
+- Armor, energy, and ammo no longer despawn after 5 minutes in race mode. (Thanks, Tobias!)
+- Non-CM spawn items in multiplayer are now considered spew.  Translation: Those shield orbs in Ascent's basement will actually work as they're supposed to, and go away for everyone after picked up. (Thanks, Tobias!)
+- Objects teleported by warpers are now oriented as expected. (Thanks, kevin!)
+- CM scores in olmod are now saved to local leaderboards. (Thanks, luponix!)
+- Improvements to the individual player colors in anarchy. (Thanks, luponix!)
+- Fixed black screen on joining an unreachable server. (Thanks, derhass!)
+- Fixed bugs related to joystick curves resetting. (Thanks, luponix!)
+- Fixed CTF flags appearing in single player when loading saved games. (Thanks, Arne!)
+
 v0.5.4 - 2022-01-09
 
 - The Thunderbolt has been rebalanced:

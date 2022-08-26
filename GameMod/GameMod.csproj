@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -145,6 +145,7 @@
     <Compile Include="MPHUDMessage.cs" />
     <Compile Include="MPIPLogging.cs" />
     <Compile Include="MPItemSpawns.cs" />
+    <Compile Include="MPDownloadLevelAlgorithm.cs" />
     <Compile Include="MPLongPwd.cs" />
     <Compile Include="MPMatchPresets.cs" />
     <Compile Include="MPMatchTimeLimits.cs" />
@@ -153,6 +154,7 @@
     <Compile Include="MPMonoDNSFix.cs" />
     <Compile Include="MPNoDupes.cs" />
     <Compile Include="MPNoPositionCompression.cs" />
+    <Compile Include="MPOpponentCockpits.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPRespawn.cs" />
@@ -203,11 +205,13 @@
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
     <Compile Include="WarperOrientation.cs" />
+    <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
     <Compile Include="VRScale.cs" />
     <Compile Include="VSync.cs" />
+    <Compile Include="Boss2B.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />

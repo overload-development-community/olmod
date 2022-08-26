@@ -1,4 +1,4 @@
-## olmod 0.5.4 - Overload mod
+## olmod 0.5.5 - Overload mod
 
 **Community mods for Overload**
 
@@ -165,19 +165,21 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Option to reset audio engine, by Tobias.
 
-- Option to move your missions to a directory of your choosing using the `-missionpath` parameter, by roncli
+- Option to move your missions to a directory of your choosing using the `-missionpath` parameter, by roncli.
 
-- Option to have bigger and more colorful enemy names in anarchy, by luponix
+- Option to have bigger and more colorful enemy names in anarchy, by luponix.
 
-#### How to build
+- Multiplayer chat commands, by derhass.
 
-##### Windows
+- Corpse desync fix, by Tobias.
 
-- Open solution in Visual Studio 2017 or 2019
+- Option to disable profanity filter, by luponix.
 
-- In the GameMod project, find the file Directory.Build.targets and replace the OverloadDir variable with the path to Overload 1.1 on your machine.
+- Options for framerate and velocity on the HUD, by Tobias.
 
-- Run
+- Ability to join games by LAN hostname, by derhass.
+
+- Objects teleported by warpers are now oriented as expected, by kevin.
 
 ##### Linux
 
