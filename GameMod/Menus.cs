@@ -196,11 +196,11 @@ namespace GameMod {
             position.x += 600f;
             position.y = col_top - 250f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW REAR VIEW CAMERA"), position, 11, Menus.GetMMSRearViewPIP(), Loc.LS("CLIENTS CAN CHOOSE TO HAVE REAR VIEW"), 1f, false);
-            position.y += 62f;
+            position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALWAYS CLOAKED"), position, 15, Menus.GetMMSAlwaysCloaked(), Loc.LS("SHIPS ARE ALWAYS CLOAKED"), 1f, false);
-            position.y += 62f;
+            position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
-            position.y += 62f;
+            position.y += 55f;
             // We're out of space, and assists don't matter in CTF anyway...
             if (MenuManager.mms_mode == ExtMatchMode.CTF)
             {
@@ -210,14 +210,16 @@ namespace GameMod {
             {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ASSISTS"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("AWARD POINTS FOR ASSISTING WITH KILLS"), 1f, false);
             }
-            position.y += 62f;
+            position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
-            position.y += 62f;
-            if (DateTime.Now > new DateTime(2021, 4, 2))
-            {
-                uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
-                position.y += 62f;
-            }
+            position.y += 55f;
+
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
+            //uie.SelectAndDrawStringOptionItem(Loc.LS("THUNDERBOLT PENETRATION"), position, 17, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
+            position.y += 55f;
+
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
+            //position.y += 32f;
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -228,6 +230,7 @@ namespace GameMod {
 
         private static void DrawTeamSettings(UIElement uie, ref Vector2 position)
         {
+            position.y += 12f;
             uie.SelectAndDrawItem("TEAM SETTINGS", position, 19, false, 1f, 0.75f);
             position.y += 62f;
         }
@@ -435,6 +438,11 @@ namespace GameMod {
                         MenuManager.UIPulse(2f);
                         MenuManager.PlaySelectSound(1f);
                         break;
+                    case 20:
+                        MPThunderboltPassthrough.isAllowed = !MPThunderboltPassthrough.isAllowed;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+
                 }
             }
             else if (MenuManager.m_menu_micro_state == 10)
@@ -587,6 +595,8 @@ namespace GameMod {
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 2, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
                     position.y += 64f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 3, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
+                    //position.y += 64f;
+                    //__instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEAM HEALTH"), position, 4, MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates ? "ON" : "OFF", "SETS WETHER THE HEALTH OF TEAMMATES SHOULD GET DISPLAYED", 1.5f, false);
                     break;
                 case 2:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
@@ -853,6 +863,10 @@ namespace GameMod {
                                         MenuManager.PlaySelectSound(1f);
                                         MPTeams.UpdateClientColors();
                                         break;
+                                    //case 4:
+                                    //    MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates = !MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates;
+                                    //    MenuManager.PlaySelectSound(1f);
+                                    //    break;
                                 }
                                 break;
                             case 2:
@@ -917,6 +931,10 @@ namespace GameMod {
                 UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, UIElementType.MP_OPTIONS);
                 MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
                 MenuManager.SetDefaultSelection(0);
+            }
+            else
+            {
+                MenuManager.m_menu_micro_state = 0;
             }
 
             return false;
@@ -1261,6 +1279,10 @@ namespace GameMod {
                 UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, UIElementType.HUD_MENU);
                 MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
                 MenuManager.SetDefaultSelection(0);
+            }
+            else
+            {
+                MenuManager.m_menu_micro_state = 0;
             }
 
             return false;
