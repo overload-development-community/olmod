@@ -384,17 +384,11 @@ namespace GameMod
 
             static void DrawMpLoadoutSimple(UIElement uie, Vector2 pos, int idx, bool active)
             {
-                var player = GameManager.m_local_player;
-                MPLoadouts.CustomLoadout loadout = new MPLoadouts.CustomLoadout();
-                try
-                {
-                    loadout = MPLoadouts.NetworkLoadouts[NetworkMatch.m_my_lobby_id].loadouts[idx];
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.Log($"Unable to find {NetworkMatch.m_my_lobby_id}, {idx}");
+                if (!MPLoadouts.NetworkLoadouts.ContainsKey(NetworkMatch.m_my_lobby_id))
                     return;
-                }
+
+                var player = GameManager.m_local_player;
+                MPLoadouts.CustomLoadout loadout = MPLoadouts.NetworkLoadouts[NetworkMatch.m_my_lobby_id].loadouts[idx];
                 float num = 535f;
                 float middle_h = 35f;
                 Color c = (!active) ? UIManager.m_col_ub0 : UIManager.m_col_ui5;
