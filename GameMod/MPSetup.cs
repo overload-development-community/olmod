@@ -249,6 +249,24 @@ namespace GameMod {
                 Menus.mms_team_color_enemy = ModPrefs.GetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
                 HUDVelocity.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
                 Menus.mms_show_framerate = ModPrefs.GetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
+                MPLoadouts.loadoutSelection1 = ModPrefs.GetInt("MP_PM_LOADOUT_SELECTED1", MPLoadouts.loadoutSelection1);
+                MPLoadouts.loadoutSelection2 = ModPrefs.GetInt("MP_PM_LOADOUT_SELECTED2", MPLoadouts.loadoutSelection2);
+
+                MPLoadouts.Loadouts[0].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
+                MPLoadouts.Loadouts[0].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
+                MPLoadouts.Loadouts[0].missiles[1] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M2", (int)MPLoadouts.Loadouts[0].missiles[1]);
+
+                MPLoadouts.Loadouts[1].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER1_W1", (int)MPLoadouts.Loadouts[1].weapons[0]);
+                MPLoadouts.Loadouts[1].weapons[1] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER1_W2", (int)MPLoadouts.Loadouts[1].weapons[1]);
+                MPLoadouts.Loadouts[1].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER1_M1", (int)MPLoadouts.Loadouts[1].missiles[0]);
+
+                MPLoadouts.Loadouts[2].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER2_W1", (int)MPLoadouts.Loadouts[2].weapons[0]);
+                MPLoadouts.Loadouts[2].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER2_M1", (int)MPLoadouts.Loadouts[2].missiles[0]);
+                MPLoadouts.Loadouts[2].missiles[1] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER2_M2", (int)MPLoadouts.Loadouts[2].missiles[1]);
+
+                MPLoadouts.Loadouts[3].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_W1", (int)MPLoadouts.Loadouts[1].weapons[0]);
+                MPLoadouts.Loadouts[3].weapons[1] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_W2", (int)MPLoadouts.Loadouts[1].weapons[1]);
+                MPLoadouts.Loadouts[3].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[1].missiles[0]);
             }
             else // for compatability with old olmod, no need to add new settings
             {
@@ -310,6 +328,20 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
             ModPrefs.SetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
+            ModPrefs.SetInt("MP_PM_LOADOUT_SELECTED1", MPLoadouts.loadoutSelection1);
+            ModPrefs.SetInt("MP_PM_LOADOUT_SELECTED2", MPLoadouts.loadoutSelection2);
+            ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_M2", (int)MPLoadouts.Loadouts[0].missiles[1]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER1_W1", (int)MPLoadouts.Loadouts[1].weapons[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER1_W2", (int)MPLoadouts.Loadouts[1].weapons[1]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER1_M1", (int)MPLoadouts.Loadouts[1].missiles[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER2_W1", (int)MPLoadouts.Loadouts[2].weapons[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER2_M1", (int)MPLoadouts.Loadouts[2].missiles[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER2_M2", (int)MPLoadouts.Loadouts[2].missiles[1]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_W1", (int)MPLoadouts.Loadouts[3].weapons[0]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_W2", (int)MPLoadouts.Loadouts[3].weapons[1]);
+            ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[3].missiles[0]);
             ModPrefs.Flush(filename + "mod");
         }
 
