@@ -11,14 +11,14 @@ namespace GameMod
     public class MPLoadouts
     {
         public static Dictionary<int, LoadoutDataMessage> NetworkLoadouts = new Dictionary<int, LoadoutDataMessage>();
-        public static int loadoutSelection1 = 0;
+        public static int loadoutSelection1 = 0; // First selected checkbox
         public static int loadoutSelection2 = 1;
 
         public static CustomLoadout[] Loadouts = new CustomLoadout[4]
         {
-            new BomberLoadout(WeaponType.IMPULSE, MissileType.FALCON, MissileType.CREEPER),
+            new BomberLoadout(WeaponType.IMPULSE, MissileType.MISSILE_POD, MissileType.HUNTER),
             new GunnerLoadout(WeaponType.DRILLER, WeaponType.CYCLONE, MissileType.HUNTER),
-            new BomberLoadout(WeaponType.THUNDERBOLT, MissileType.FALCON, MissileType.CREEPER),
+            new BomberLoadout(WeaponType.THUNDERBOLT, MissileType.FALCON, MissileType.HUNTER),
             new GunnerLoadout(WeaponType.CRUSHER, WeaponType.CYCLONE, MissileType.HUNTER)
         };
 
@@ -355,18 +355,28 @@ namespace GameMod
                 return;
             }
 
+            static void SetMultiplayerLoadoutAndModifiers(Player player, LoadoutDataMessage loadout_data, bool use_loadout1, int lobby_id)
+            {
+                if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
+                {
+                    SetMultiplayerModifiers(player, loadout_data, use_loadout1);
+                    SetMultiplayerLoadout(player, lobby_id, use_loadout1);
+                }
+                else
+                {
+                    Debug.Log($"Didn't find custom loadout data for {player.m_mp_name}, {lobby_id}, using stock LoadoutDataMessage.  (Old client?)");
+                    NetworkSpawnPlayer.SetMultiplayerLoadout(player, loadout_data, use_loadout1);
+                }
+            }
+
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
             {
                 foreach (var code in codes)
                 {
                     if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkSpawnPlayer), "SetMultiplayerLoadout"))
                     {
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_Client_OnRespawnMsg), "SetMultiplayerModifiers"));
-                        yield return new CodeInstruction(OpCodes.Ldloc_1); // Player 
                         yield return new CodeInstruction(OpCodes.Ldloc_3); // int lobby_id
-                        yield return new CodeInstruction(OpCodes.Ldloc_0); // RespawnMessage
-                        yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(RespawnMessage), "use_loadout1"));
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_Client_OnRespawnMsg), "SetMultiplayerLoadout"));
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_Client_OnRespawnMsg), "SetMultiplayerLoadoutAndModifiers"));
                         continue;
                     }
                     yield return code;
