@@ -389,6 +389,10 @@ namespace GameMod {
             {
                 switch (UIManager.m_menu_selection)
                 {
+                    case 11:
+                        RearView.MPMenuManagerEnabled = !RearView.MPMenuManagerEnabled;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
                     case 13:
                         Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
