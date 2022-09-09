@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -124,6 +126,7 @@ namespace GameMod {
             UnblockChat,
             End,
             Start,
+            Extend,
             Status,
             Say,
             Test,
@@ -237,6 +240,9 @@ namespace GameMod {
             } else if (cmdName == "S" || cmdName == "START") {
                 cmd = Command.Start;
                 needAuth = true;
+            } else if (cmdName == "EX" || cmdName == "EXTEND") {
+                cmd = Command.Extend;
+                needAuth = true;
             } else if (cmdName == "STATUS") {
                 cmd = Command.Status;
             } else if (cmdName == "SAY" || cmdName == "CHAT") {
@@ -320,7 +326,10 @@ namespace GameMod {
                     result = DoEnd();
                     break;
                 case Command.Start:
-                    result = DoStart();
+                    result = DoStartExtend(true);
+                    break;
+                case Command.Extend:
+                    result = DoStartExtend(false);
                     break;
                 case Command.Status:
                     result = DoStatus();
@@ -616,17 +625,50 @@ namespace GameMod {
             return false;
         }
 
-        // Execute START commad
-        public bool DoStart()
+        // Execute Extend commad
+        public bool DoStartExtend(bool start)
         {
+            String op = (start)?"START":"EXTEND";
+
             if (!inLobby) {
-                Debug.LogFormat("START request via chat command ignored in non-LOBBY state");
-                ReturnToSender("START: not possible because I'm not in the Lobby");
+                Debug.LogFormat("{0} request via chat command ignored in non-LOBBY state",op);
+                ReturnToSender(String.Format("{0} rejected: not in Lobby",op));
                 return false;
             }
-            Debug.LogFormat("START request via chat command");
-            ReturnTo(String.Format("manual match START request by {0}",senderEntry.name));
-            MPChatCommands_ModifyLobbyStartTime.StartMatch = true;
+            int seconds;
+            if (!int.TryParse(arg, NumberStyles.Number, CultureInfo.InvariantCulture, out seconds)) {
+                seconds = (start)?5:180;
+            }
+            Debug.LogFormat("{0} request via chat command: {1} seconds",op, seconds);
+            FieldInfo haiInfo = AccessTools.Field(typeof(NetworkMatch),"m_host_active_info");
+            var hai = haiInfo.GetValue(null);
+            if (hai != null) {
+                FieldInfo startTimeInfo = AccessTools.Field(hai.GetType(), "m_time_absolute_match_start");
+                FieldInfo matchTimeOutInfo = AccessTools.Field(hai.GetType(), "m_absolute_match_timeout");
+                FieldInfo matchStartInfo = AccessTools.Field(hai.GetType(), "m_time_reached_first_can_start");
+
+                DateTime now = DateTime.Now;
+                DateTime startTime = (DateTime)startTimeInfo.GetValue(hai);
+                if (start) {
+                    startTime = now.AddSeconds((double)seconds);
+                } else {
+                    startTime = startTime.AddSeconds((double)seconds);
+                }
+                if (startTime < now) {
+                    startTime = now;
+                }
+                TimeSpan offset = startTime - now;
+
+                startTimeInfo.SetValue(hai, startTime);
+                matchTimeOutInfo.SetValue(hai, offset);
+                matchStartInfo.SetValue(hai, now);
+
+                ReturnTo(String.Format("manual {0} request by {1}: {2} seconds",op,senderEntry.name,offset.TotalSeconds));
+                //ReturnToSender(String.Format("Server's timeout is now {0}",startTime));
+            } else {
+                Debug.LogFormat("{0} request via chat command ignored: no HostActiveMatchInfo",op);
+                ReturnToSender(String.Format("{0} rejected: no HostActiveMatchInfo",op));
+            }
             return false;
         }
 
@@ -1040,17 +1082,6 @@ namespace GameMod {
         private static bool Prefix(int sender_connection_id, string sender_name, MpTeam sender_team, string msg) {
             MPChatCommand cmd = new MPChatCommand(msg, sender_connection_id, sender_name, sender_team, false);
             return cmd.Execute();
-        }
-    }
-
-    [HarmonyPatch(typeof(NetworkMatch), "NetSystemHostGetLobbyInformation")]
-    class MPChatCommands_ModifyLobbyStartTime {
-        public static bool StartMatch = false;
-        private static void Postfix(ref NetworkMatch.HostLobbyInformation __result, object hai) {
-            if (hai != null && StartMatch) {
-                __result.ForceMatchStartTime = DateTime.Now;
-                StartMatch = false;
-            }
         }
     }
 }
