@@ -14,8 +14,9 @@ see [the section on privilege management below](#privilege-management) for detai
  * `/UNANNOY [<player>]`: Remove the annoy-bans for a player or all annoy-banned players. Note that an annoy-banned player needs to re-join before the all of the effects are removed. This implies `/UNBLOCKCHAT`.
  * `/BLOCKCHAT <player>`: Block all chat messages from the specified player on the server, do not relay them to the other clients. This is a ban and will still apply if a player re-connects.
  * `/UNBLOCKCHAT [<player>]`: Remove the block-chat ban for a player or all players.
- * `/START`: Start the match immediately (when in lobby)
+ * `/START [seconds]`: Only in lobby: Set the lobby countdown to the specified number of seconds (default: 5).
  * `/END`: End the match immediately
+ * `/EXTEND [seconds]`: Only in lobby: Adjust the lobby countdown by the specified number of seconds (default: 180). Negative values are allowed to shorten the countdown.
  * `/GIVEPERM <player>`: grant a player the chat command permissions.
  * `/REVOKEPERM [<player>]`: revoke chat command permissions from a player or all players.
  * `/AUTH password`: a server operator can also start the server with the commandline argument `-chatCommandPassword serverPassword`. Any Player knowing this password can get to authenticated state with this command. If no `serverPassword` is set, this command always fails. Note that the password check is **not** case-sensitive.
