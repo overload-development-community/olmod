@@ -11,8 +11,8 @@ namespace GameMod
     public class MPLoadouts
     {
         public static Dictionary<int, LoadoutDataMessage> NetworkLoadouts = new Dictionary<int, LoadoutDataMessage>();
-        public static int loadoutSelection1 = 0; // First selected checkbox
-        public static int loadoutSelection2 = 1;
+        public static int loadoutSelection1 = 0; // First selected checkbox in UI
+        public static int loadoutSelection2 = 1; // Second selected checkbox in UI
 
         public static CustomLoadout[] Loadouts = new CustomLoadout[4]
         {
@@ -112,18 +112,22 @@ namespace GameMod
             public List<CustomLoadout> loadouts;
         }
 
+        // Process client's UI selection of cycling custom loadout weapon
         public static void MpCycleWeapon(int loadoutIndex, int weaponIndex)
         {
             MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] = (WeaponType)((((int)MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) + 1) % (int)WeaponType.LANCER);
 
+            // Skip to next if we've landed on an already selected weapon
             if (MPLoadouts.Loadouts[loadoutIndex].weapons.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) > 1)
                 MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] = (WeaponType)((((int)MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) + 1) % (int)WeaponType.LANCER);
         }
 
+        // Process client's UI selection of cycling custom loadout missile
         public static void MpCycleMissile(int loadoutIndex, int missileIndex)
         {
             MPLoadouts.Loadouts[loadoutIndex].missiles[missileIndex] = (MissileType)((((int)MPLoadouts.Loadouts[loadoutIndex].missiles[missileIndex]) + 1) % (int)MissileType.NOVA);
 
+            // Skip to next if we've landed on an already selected missile
             if (MPLoadouts.Loadouts[loadoutIndex].missiles.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].missiles[missileIndex]) > 1)
                 MPLoadouts.Loadouts[loadoutIndex].missiles[missileIndex] = (MissileType)((((int)MPLoadouts.Loadouts[loadoutIndex].missiles[missileIndex]) + 1) % (int)MissileType.NOVA);
         }
@@ -152,6 +156,7 @@ namespace GameMod
         }
     }
 
+    // Make sure to only send the custom loadout data to clients supporting 'customloadouts' tweak to not kill older clients
     [HarmonyPatch(typeof(Server), "SendLoadoutDataToClients")]
     internal class MPLoadouts_Server_SendLoadoutDataToClients
     {
@@ -216,9 +221,25 @@ namespace GameMod
             }
         }
 
+        // Break out NetworkSpawnPlayer.SetMultiplayerLoadout() call to instead go to new SetMultiplayerLoadoutAndModifiers(),
+        // which decides whether to use original NetworkSpawnPlayer.SetMultiplayerLoadout() or new custom loadout path
         [HarmonyPatch(typeof(Client), "OnRespawnMsg")]
         internal class MPLoadouts_Client_OnRespawnMsg
         {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            {
+                foreach (var code in codes)
+                {
+                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkSpawnPlayer), "SetMultiplayerLoadout"))
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldloc_3); // int lobby_id
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_Client_OnRespawnMsg), "SetMultiplayerLoadoutAndModifiers"));
+                        continue;
+                    }
+                    yield return code;
+                }
+            }
+
             static void SetMultiplayerLoadout(Player player, int lobby_id, bool use_loadout1)
             {
                 for (int i = 0; i < 8; i++)
@@ -368,22 +389,9 @@ namespace GameMod
                     NetworkSpawnPlayer.SetMultiplayerLoadout(player, loadout_data, use_loadout1);
                 }
             }
-
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-            {
-                foreach (var code in codes)
-                {
-                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkSpawnPlayer), "SetMultiplayerLoadout"))
-                    {
-                        yield return new CodeInstruction(OpCodes.Ldloc_3); // int lobby_id
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_Client_OnRespawnMsg), "SetMultiplayerLoadoutAndModifiers"));
-                        continue;
-                    }
-                    yield return code;
-                }
-            }
         }
 
+        // This handles the in-match simple overlay selection
         [HarmonyPatch(typeof(UIElement), "DrawMpOverlayLoadout")]
         internal class MPLoadouts_UIElement_DrawMpOverlayLoadout
         {
@@ -394,6 +402,7 @@ namespace GameMod
 
             static void DrawMpLoadoutSimple(UIElement uie, Vector2 pos, int idx, bool active)
             {
+                // This check needed as there can be brief moments where this data isn't populated client-side yet
                 if (!MPLoadouts.NetworkLoadouts.ContainsKey(NetworkMatch.m_my_lobby_id))
                     return;
 
