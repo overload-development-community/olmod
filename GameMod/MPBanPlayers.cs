@@ -92,30 +92,89 @@ namespace GameMod {
         }
 
         // check if the entry matches some player
-        public bool matches(MPBanEntry candidate, string prefix="") {
+        // checkFlags is a bit vector of each field which was present in both
+        // matchFlags is a bit vector of each fdield which matches between both
+        // the bit flags are: 1 name (ignored), 2 address, 4 id
+        // returns true if at least one field matches
+        public bool matches(MPBanEntry candidate, ref uint checkFlags, ref uint matchFlags, string prefix="") {
+            checkFlags = 0;
+            matchFlags = 0;
+
             /* name isn't a good criteria, so ignore it
             if (!String.IsNullOrEmpty(name) && !String.IsNullOrEmpty(candidate.name)) {
+                checkFlags |= 1;
                 if (name == candidate.name) {
-                    Debug.LogFormat("{0}player {1} matches ban list entry {1} by NAME", prefix, candidate.Describe(), Describe());
-                    return true;
+                    matchFlags |= 1;
                 }
 
             }*/
             if (!String.IsNullOrEmpty(address) && !String.IsNullOrEmpty(candidate.address)) {
+                checkFlags |= 2;
                 if (address == candidate.address) {
-                    Debug.LogFormat("{0}player {1} matches entry {2} by ADDRESS", prefix, candidate.Describe(), Describe());
-                    return true;
+                    matchFlags |= 2;
                 }
             }
             if (!String.IsNullOrEmpty(id) && !String.IsNullOrEmpty(candidate.id)) {
+                checkFlags |= 4;
                 if (id == candidate.id) {
-                    Debug.LogFormat("{0}player {1} matches entry {2} by ID", prefix, candidate.Describe(), Describe());
-                    return true;
+                    matchFlags |= 4;
                 }
+            }
+            if (matchFlags > 0) {
+                Debug.LogFormat("{0}player {1} matches entry {2} (flags: {3}, checked: {4})", prefix, candidate.Describe(), Describe(),matchFlags , checkFlags);
+                return true;
             }
 
             // does not match
             return false;
+        }
+
+        // check if the entry matches some player
+        public bool matches(MPBanEntry candidate, string prefix="") {
+            uint checkFlags = 0;
+            uint matchFlags = 0;
+            return matches(candidate, ref checkFlags, ref matchFlags , prefix);
+        }
+
+        // check if the entry matches some player, strictly means that both IP and ID must match (if present)
+        // this is meant to check for authenticated players, not for banned ones
+        public bool matchesStrict(MPBanEntry candidate, string prefix="") {
+            uint checkFlags = 0;
+            uint matchFlags = 0;
+            matches(candidate, ref checkFlags, ref matchFlags , prefix);
+            return ((matchFlags > 0) && (matchFlags == checkFlags));
+        }
+
+        // trim the information in our  entry so that it does _NOT_ match the candidate any more
+        // Return: 0: the candidate entry doesn't match us, nothing changed
+        //         1: the candidate entry did match us, we modified us, and there is still a valid criteria left
+        //        -1: the candidate entry did match us, and iwe are now invalid
+        //        -2: the candidate entry did match us, and we cannot find out why (should never happen)
+        public int trim(MPBanEntry candidate, string prefix="")
+        {
+            uint checkFlags = 0;
+            uint matchFlags = 0;
+            if (!matches(candidate, ref checkFlags, ref matchFlags, prefix)) {
+                return 0;
+            }
+            Debug.LogFormat("{0}{1} aliases entry {2}, attempting to trim", prefix, Describe(), candidate.Describe());
+            if ( (matchFlags & 1) != 0) {
+                name = null;
+            } else if ( (matchFlags & 2) != 0) {
+                address = null;
+            } else if ( (matchFlags & 4) != 0) {
+                id = null;
+            } else {
+                // some other bit flag is still set
+                Debug.LogFormat("{0}invalid matching field detected", prefix);
+                return -2;
+            }
+            if (!IsValid()) {
+                Debug.LogFormat("{0}ban entry invalidated to prevent aliasing {1}", prefix, candidate.Describe());
+                return -1;
+            }
+            // try again with the removed field...
+            return trim(candidate, prefix);
         }
 
         // Check wether a ban entry is valid
@@ -132,7 +191,9 @@ namespace GameMod {
         private static int totalBanCount=0; // Count of bans in all lists
 
         public static MPBanEntry MatchCreator = null; // description of the Game Creator
+        public static int MatchCreatorConnectionId = -1; // connection Id of the Game Creator
         public static MPBanEntry PlayerWithPrivateMatchData = null; // internal only: description of the player who's private match data was taken to create the game (id only)
+        public static string PlayerWithPrivateMatchDataUId = null; //// internal only: UId of the player with the private match data
         public static bool MatchCreatorIsInGame = false;
         public static string bannedName = " ** BANNED ** ";
         public static bool JoiningPlayerIsBanned = false;
@@ -371,6 +432,7 @@ namespace GameMod {
     class MPBanPlayers_InitBeforeEachMatch {
         private static void Postfix() {
             MPBanPlayers.MatchCreatorIsInGame = false;
+            MPBanPlayers.MatchCreatorConnectionId = -1;
         }
     }
 
@@ -382,10 +444,15 @@ namespace GameMod {
             MPBanPlayers.PlayerWithPrivateMatchData = new MPBanEntry(null, null, id);
             //Debug.LogFormat("MPBanPlayers: FindGameCreator: player with private match data is id {0}",id);
         }
+        static void SetCreatorUId(string uid) {
+            MPBanPlayers.PlayerWithPrivateMatchDataUId = uid;
+            //Debug.LogFormat("MPBanPlayers: FindGameCreator: player with private match data is uid {0}",uid);
+        }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var our_Method = AccessTools.Method(typeof(MPBanPlayers_FindGameCreator), "SetCreatorId");
+            var our_Method2 = AccessTools.Method(typeof(MPBanPlayers_FindGameCreator), "SetCreatorUId");
             LocalBuilder hpmi = null; // the Local variable storing the HostPlayerMatchmakerInfo
             Type hpmiType = null;
             int state = 0;
@@ -439,6 +506,12 @@ namespace GameMod {
                         yield return new CodeInstruction(OpCodes.Ldfld, hpmiPlayerID);
                         // feed it to our method
                         yield return new CodeInstruction(OpCodes.Call, our_Method);
+                        // Load field hpmi.m_uid onto stack
+                        var hpmiPlayerUID = AccessTools.Field(hpmiType, "m_uid");
+                        yield return new CodeInstruction(OpCodes.Ldloc_S, hpmi);
+                        yield return new CodeInstruction(OpCodes.Ldfld, hpmiPlayerUID);
+                        // feed it to our method
+                        yield return new CodeInstruction(OpCodes.Call, our_Method2);
                     }
                 }
                 yield return code;
@@ -471,12 +544,32 @@ namespace GameMod {
                 // the player has been accepted by the game's matchmaking
                 MPBanEntry candidate = new MPBanEntry(player_name, connection_id, player_id);
                 bool isCreator = false;
-                if (!MPBanPlayers.MatchCreatorIsInGame && MPBanPlayers.PlayerWithPrivateMatchData != null && !String.IsNullOrEmpty(MPBanPlayers.PlayerWithPrivateMatchData.id) && !String.IsNullOrEmpty(candidate.id)) {
-                    if (candidate.id == MPBanPlayers.PlayerWithPrivateMatchData.id) {
+                bool hasCreatorUID = false;
+                bool hasCreatorID = false;
+                bool isCreatorFirstJoin = false;
+                if (!String.IsNullOrEmpty(player_uid) && !String.IsNullOrEmpty(MPBanPlayers.PlayerWithPrivateMatchDataUId)) {
+                    hasCreatorUID = (player_uid == MPBanPlayers.PlayerWithPrivateMatchDataUId);
+
+                }
+                if (MPBanPlayers.PlayerWithPrivateMatchData != null && !String.IsNullOrEmpty(MPBanPlayers.PlayerWithPrivateMatchData.id) && !String.IsNullOrEmpty(candidate.id)) {
+                    hasCreatorID = (candidate.id == MPBanPlayers.PlayerWithPrivateMatchData.id);
+                }
+                if (hasCreatorID) {
+                    if (hasCreatorUID || String.IsNullOrEmpty(MPBanPlayers.PlayerWithPrivateMatchDataUId)) {
                         Debug.LogFormat("MPBanPlayers: Match creator entered the lobby: {0}",player_name);
+                        MPBanPlayers.MatchCreatorConnectionId = connection_id;
                         isCreator = true;
-                        MPBanPlayers.MatchCreatorIsInGame = true;
+                        if (!MPBanPlayers.MatchCreatorIsInGame) {
+                            isCreatorFirstJoin = true;
+                            MPBanPlayers.MatchCreatorIsInGame = true;
+                        }
                     }
+                }
+                if (!isCreator && connection_id >= 0 && MPBanPlayers.MatchCreatorConnectionId == connection_id) {
+                    // another player joined the connection id which was used for the match creator before
+                    // invalidate the ID, as there is no match creator in game now
+                    Debug.LogFormat("MPBanPlayers: non-creator {0} entered on the same connection previously used by the creator, invalidating",player_name);
+                    MPBanPlayers.MatchCreatorConnectionId = -1;
                 }
                 // check if player is banned
                 MPBanPlayers.JoiningPlayerIsBanned = MPBanPlayers.IsBanned(candidate);
@@ -495,10 +588,10 @@ namespace GameMod {
                     }
                 } else {
                     // unbanned player entered the lobby
-                    if (isCreator) {
+                    if (isCreatorFirstJoin) {
                         bool haveModifiedState = MPBanPlayers.HasModifiedState() || MPChatCommand.HasModifiedState();
                         bool doReset = true;
-                        if (MPChatCommand.CheckPermission(candidate)) {
+                        if (MPChatCommand.CheckPermission(candidate,-1)) {
                             Debug.Log("MPBanPlayers: same game creator as last match, or with permissions");
                             doReset = false;
                         }

@@ -76,7 +76,7 @@ namespace GameMod {
         private static FieldInfo _MenuManager_m_seconds_waiting_for_gi_covergence = typeof(MenuManager).GetField("m_seconds_waiting_for_gi_covergence", BindingFlags.Static | BindingFlags.NonPublic);
         private static MethodInfo _MenuManager_ResetBackStack = AccessTools.Method(typeof(MenuManager), "ResetBackStack");
         static bool Prefix(bool returning_from_secret) {
-            if (!NetworkManager.IsServer() || MenuManager.m_menu_sub_state != MenuSubState.INIT) {
+            if (!GameplayManager.IsDedicatedServer() || MenuManager.m_menu_sub_state != MenuSubState.INIT) {
                 return true;
             }
 

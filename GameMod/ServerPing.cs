@@ -77,4 +77,12 @@ namespace GameMod {
             }
         }
     }
+
+    // Don't update Gamelift pings anymore.
+    [HarmonyPatch(typeof(NetworkMatch), "UpdateGameliftPings")]
+    class DisableGameLiftPings {
+        private static bool Prefix() {
+            return false;
+        }
+    }
 }
