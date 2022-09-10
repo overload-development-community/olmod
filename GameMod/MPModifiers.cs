@@ -347,29 +347,5 @@ namespace GameMod
                 }
             }
         }
-
-        // Have client send updated loadout on modifier change
-        [HarmonyPatch(typeof(MenuManager), "MpCustomizeUpdate")]
-        class MPModifiers_MenuManager_MpCustomizeUpdate
-        {
-            static void SendPlayerLoadout()
-            {
-                Client.SendPlayerLoadoutToServer();
-            }
-
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-            {
-                foreach (var code in codes)
-                {
-                    if (code.opcode == OpCodes.Stsfld && (code.operand == AccessTools.Field(typeof(Player), "Mp_modifier1") || code.operand == AccessTools.Field(typeof(Player), "Mp_modifier2")))
-                    {
-                        yield return code;
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPModifiers_MenuManager_MpCustomizeUpdate), "SendPlayerLoadout"));
-                        continue;
-                    }
-                    yield return code;
-                }
-            }
-        }
     }
 }

@@ -1291,5 +1291,527 @@ namespace GameMod {
 
             return false;
         }
+
+        [HarmonyPatch(typeof(UIElement), "DrawMpCustomize")]
+        internal class Menus_UIElement_DrawMpCustomize
+        {
+            private static MethodInfo _UIElement_DrawXPTotalMedium_Method = AccessTools.Method(typeof(UIElement), "DrawXPTotalMedium");
+
+            static bool Prefix(UIElement __instance)
+            {
+                UIManager.X_SCALE = 0.2f;
+                UIManager.ui_bg_dark = true;
+                __instance.DrawMenuBG();
+                Vector2 position = __instance.m_position;
+                position.y = UIManager.UI_TOP + 60f;
+                __instance.DrawHeaderLarge(position, Loc.LS("CUSTOMIZATION"), 600f);
+                position.y += 50f;
+                __instance.DrawMpTabs(position, MenuManager.m_menu_micro_state);
+                position.y += 45f;
+                _UIElement_DrawXPTotalMedium_Method.Invoke(__instance, new object[] { position });
+                position.y += 95f;
+                __instance.DrawMenuSeparator(position - Vector2.up * 40f);
+                Player local_player = GameManager.m_local_player;
+                int menu_micro_state = MenuManager.m_menu_micro_state;
+                if (menu_micro_state != 0)
+                {
+                    if (menu_micro_state != 1)
+                    {
+                        if (menu_micro_state == 2)
+                        {
+                            position.x = -320f;
+                            position.y = -115f;
+                            __instance.SelectAndDrawStringOptionItem(Loc.LS("VERSION"), position, 0, MenuManager.GetMpTeamName(MenuManager.mpc_ship_version), string.Empty, 1.2f, false);
+                            position.y += 62f;
+                            __instance.SelectAndDrawStringOptionItem(Loc.LS("GLOW COLOR"), position, 1, MenuManager.GetMpGlowColor(), string.Empty, 1.2f, MenuManager.mpc_ship_version != MpTeam.ANARCHY);
+                            position.y += 62f;
+                            __instance.SelectAndDrawStringOptionItem(Loc.LS("DECAL COLOR"), position, 2, MenuManager.GetMpDecalColor(), string.Empty, 1.2f, MenuManager.mpc_ship_version != MpTeam.ANARCHY);
+                            position.y += 62f;
+                            __instance.SelectAndDrawStringOptionItem(Loc.LS("DECAL TYPE"), position, 3, MenuManager.GetMpDecalPattern(), string.Empty, 1.2f, false);
+                            position.y += 62f;
+                            __instance.SelectAndDrawStringOptionItem(Loc.LS("WINGS"), position, 4, MenuManager.GetMpCustomWings(), string.Empty, 1.2f, false);
+                            position.y += 62f;
+                            __instance.SelectAndDrawStringOptionItem(Loc.LS("BODY"), position, 5, MenuManager.GetMpCustomBody(), string.Empty, 1.2f, false);
+                            position.y = 40f;
+                            position.x = 340f;
+                            __instance.TestMouseInRectSlider(position, 300f, 150f, 10, false);
+                            Color c = (UIManager.m_menu_selection != 10) ? UIManager.m_col_ub0 : UIManager.m_col_ui2;
+                            c.a = __instance.m_alpha;
+                            UIManager.DrawFrameEmptyCenter(position, 14f, 14f, 524f, 254f, c, 8);
+                            UIManager.PauseMainDrawing();
+                            UIManager.StartDrawing(UIManager.url[1], true, 750f);
+                            c = HSBColor.ConvertToColor(0f, 0f, 0.8f);
+                            UIManager.DrawTileFull(position, 270f, 135f, c, __instance.m_alpha * UnityEngine.Random.Range(0.75f, 0.8f));
+                            UIManager.ResumeMainDrawing();
+                        }
+                    }
+                    else
+                    {
+                        position.y = -153f;
+                        __instance.DrawLabelSmall(position, Loc.LS("SELECT ONE MODIFIER FROM EACH COLUMN"), 400f, 20f, 1f);
+                        position.x = -310f;
+                        position.y = -90f;
+                        for (int i = 0; i < 4; i++)
+                        {
+                            __instance.DrawMpModifier(position, i, true, local_player);
+                            position.y += 95f;
+                        }
+                        position.x = 310f;
+                        position.y = -90f;
+                        for (int j = 0; j < 4; j++)
+                        {
+                            __instance.DrawMpModifier(position, j, false, local_player);
+                            position.y += 95f;
+                        }
+                    }
+                }
+                else
+                {
+                    position.y = -153f;
+                    __instance.DrawLabelSmall(position, Loc.LS("SELECT TWO LOADOUTS"), 400f, 20f, 1f);
+                    position.x = -310f;
+                    position.y = -90f;
+
+                    DrawMpLoadout(__instance, position, 0);
+                    position.y += 95f;
+                    DrawMpLoadout(__instance, position, 2);
+                    position.x = 310f;
+                    position.y = -90f;
+                    DrawMpLoadout(__instance, position, 1);
+                    position.y += 95f;
+                    DrawMpLoadout(__instance, position, 3);
+                }
+                position.x = 0f;
+                position.y = 280f;
+                __instance.DrawMenuSeparator(position - Vector2.up * 30f);
+                __instance.DrawPageControls(position - Vector2.up * 10f, string.Empty, true, true, false, false, 410, 544, false);
+                position.y = UIManager.UI_BOTTOM - 30f;
+                __instance.SelectAndDrawItem(Loc.LS("BACK"), position, 100, false, 1f, 0.75f);
+                __instance.MaybeShowMpStatus();
+
+                return false;
+            }
+
+            private static void DrawMpLoadout(UIElement __instance, Vector2 pos, int idx)
+            {
+                float num = 535f;
+                float middle_h = 55f;
+                Color col_ub = UIManager.m_col_ub0;
+                col_ub.a = __instance.m_alpha;
+                UIManager.DrawFrameEmptyCenter(pos, 17f, 17f, num, middle_h, col_ub, 7);
+                int loadoutMinXP = Player.GetLoadoutMinXP(idx);
+                bool check = MPLoadouts.loadoutSelection1 == idx || MPLoadouts.loadoutSelection2 == idx;
+                __instance.SelectAndDrawCheckboxItem(GetMpLoadoutName(idx), pos - Vector2.up * 10f, idx, check, false, 1f, -1);
+                pos.y += 28f;
+
+                __instance.DrawStringSmall(Loc.LS("CUSTOMIZABLE"), pos - Vector2.up * 38f + Vector2.right * 230f, 0.5f, StringOffset.RIGHT, UIManager.m_col_ui0, 0.5f, -1f);
+                num *= 0.345f;
+                pos.x -= num;
+
+                if (idx % 2 == 0)
+                {
+                    WeaponType weaponType = GetMpLoadoutWeapon(idx, 0);
+                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 10 + 3 * idx, false, (int)(26 + weaponType), 0.31f);
+                    pos.x += num;
+                    MissileType missileType = GetMpLoadoutMissile(idx, 0);
+                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 11 + 3 * idx, false, (int)(104 + missileType), 0.31f);
+                    pos.x += num;
+                    missileType = GetMpLoadoutMissile(idx, 1);
+                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 12 + 3 * idx, false, (int)(104 + missileType), 0.31f);
+                }
+                else
+                {
+                    WeaponType weaponType = GetMpLoadoutWeapon(idx, 0);
+                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 13 + 3 * (idx - 1), false, (int)(26 + weaponType), 0.31f);
+                    pos.x += num;
+                    weaponType = GetMpLoadoutWeapon(idx, 1);
+                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 14 + 3 * (idx - 1), false, (int)(26 + weaponType), 0.31f);
+                    pos.x += num;
+                    MissileType missileType = GetMpLoadoutMissile(idx, 0);
+                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 15 + 3 * (idx - 1), false, (int)(104 + missileType), 0.31f);
+                }
+            }
+
+            private static string GetMpLoadoutName(int idx)
+            {
+                switch (idx)
+                {
+                    case 0:
+                        return "BOMBER 1";
+                    case 1:
+                        return "GUNNER 1";
+                    case 2:
+                        return "BOMBER 2";
+                    case 3:
+                        return "GUNNER 2";
+                    default:
+                        return "UNKNOWN";
+                }
+            }
+
+            private static WeaponType GetMpLoadoutWeapon(int loadoutIndex, int weaponIndex)
+            {
+                return MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex];
+            }
+
+            private static MissileType GetMpLoadoutMissile(int loadoutIndex, int missileIndex)
+            {
+                return MPLoadouts.Loadouts[loadoutIndex].missiles[missileIndex];
+            }
+        }
+
+        [HarmonyPatch(typeof(MenuManager), "MpCustomizeUpdate")]
+        internal class Menus_MenuManager_MpCustomizeUpdate
+        {
+            private static MethodInfo _MenuManager_GoBack_Method = AccessTools.Method(typeof(MenuManager), "GoBack");
+            private static MethodInfo _MenuManager_PlayHighlightSound_Method = AccessTools.Method(typeof(MenuManager), "PlayHighlightSound");
+            private static FieldInfo _MenuManager_m_briefing_object_Field = AccessTools.Field(typeof(MenuManager), "m_briefing_object");
+            private static FieldInfo _MenuManager_m_briefing_object_ready_Field = AccessTools.Field(typeof(MenuManager), "m_briefing_object_ready");
+            private static FieldInfo _MenuManager_m_menu_state_timer_Field = AccessTools.Field(typeof(MenuManager), "m_menu_state_timer");
+            private static MethodInfo _MenuManager_SetBriefingObject_Method = AccessTools.Method(typeof(MenuManager), "SetBriefingObject");
+            private static MethodInfo _MenuManager_SetEntityBriefingVars_Method = AccessTools.Method(typeof(MenuManager), "SetEntityBriefingVars");
+
+
+            private static void PlayHighlightSound(float vol = 1f, float pitch = 0f)
+            {
+                _MenuManager_PlayHighlightSound_Method.Invoke(null, new object[] { vol, pitch });
+            }
+
+            private static void GoBack()
+            {
+                _MenuManager_GoBack_Method.Invoke(null, new object[] { });
+            }
+
+            private static GameObject m_briefing_object
+            {
+                get
+                {
+                    return (GameObject)_MenuManager_m_briefing_object_Field.GetValue(null);
+                }
+            }
+
+            private static float m_menu_state_timer
+            {
+                get
+                {
+                    return (float)_MenuManager_m_menu_state_timer_Field.GetValue(null);
+                }
+            }
+
+            private static bool m_briefing_object_ready
+            {
+                get
+                {
+                    return (bool)_MenuManager_m_briefing_object_ready_Field.GetValue(null);
+                }
+                set
+                {
+                    _MenuManager_m_briefing_object_ready_Field.SetValue(null, value);
+                }
+            }
+
+            private static void SetBriefingObject(MenuManager.EntityBriefingType entity_type, int entity_num)
+            {
+                _MenuManager_SetBriefingObject_Method.Invoke(null, new object[] { entity_type, entity_num });
+            }
+
+            private static void SetEntityBriefingVars()
+            {
+                _MenuManager_SetEntityBriefingVars_Method.Invoke(null, new object[] { });
+            }
+
+            static bool Prefix()
+            {
+                UIManager.MouseSelectUpdate();
+                MenuManager.UpdateMPStatus();
+                MenuSubState menu_sub_state = MenuManager.m_menu_sub_state;
+                if (menu_sub_state != MenuSubState.INIT)
+                {
+                    if (menu_sub_state == MenuSubState.ACTIVE)
+                    {
+                        UIManager.ControllerMenu();
+                        if (Controls.JustPressed(CCInput.MENU_PGUP) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 198))
+                        {
+                            MenuManager.m_menu_micro_state = (MenuManager.m_menu_micro_state + 2) % 3;
+                            MenuManager.UIPulse(1f);
+                            PlayHighlightSound(0.4f, 0.05f);
+                        }
+                        else if (Controls.JustPressed(CCInput.MENU_PGDN) || (UIManager.PushedSelect(-1) && UIManager.m_menu_selection == 199))
+                        {
+                            MenuManager.m_menu_micro_state = (MenuManager.m_menu_micro_state + 1) % 3;
+                            MenuManager.UIPulse(1f);
+                            PlayHighlightSound(0.4f, 0.07f);
+                        }
+                        else
+                        {
+                            Player local_player = GameManager.m_local_player;
+                            if (Controls.JustPressed(CCInput.MENU_SECONDARY))
+                            {
+                                MenuManager.m_mp_status_minimized = !MenuManager.m_mp_status_minimized;
+                                MenuManager.PlayCycleSound(1f, 1f);
+                            }
+                            if (MenuManager.m_menu_micro_state == 2)
+                            {
+                                if (m_briefing_object != null && !m_briefing_object_ready)
+                                {
+                                    m_briefing_object.SetActive(true);
+                                    m_briefing_object_ready = true;
+                                }
+                                if (!MenuManager.m_custom_rotation)
+                                {
+                                    MenuManager.m_custom_rot_amt = 45f * RUtility.FRAMETIME_UI;
+                                }
+                                if (Input.GetMouseButtonDown(1))
+                                {
+                                    MenuManager.m_custom_rotation = false;
+                                }
+                                if (Input.GetMouseButtonDown(0))
+                                {
+                                    UIElement.SliderDiff = 0f;
+                                    MenuManager.m_custom_rotation = true;
+                                }
+                                if (UIElement.SliderValid && Input.GetMouseButton(0))
+                                {
+                                    MenuManager.m_custom_rotation = true;
+                                    MenuManager.m_custom_rot_amt = UIElement.SliderDiff * -180f;
+                                }
+                                m_briefing_object.transform.Rotate(new Vector3(0f, MenuManager.m_custom_rot_amt, 0f));
+                            }
+                            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir()))
+                            {
+                                MenuManager.MaybeReverseOption();
+                                int menu_micro_state = MenuManager.m_menu_micro_state;
+                                if (menu_micro_state != 0)
+                                {
+                                    if (menu_micro_state != 1)
+                                    {
+                                        if (menu_micro_state == 2)
+                                        {
+                                            int menu_selection = UIManager.m_menu_selection;
+                                            switch (menu_selection)
+                                            {
+                                                case 0:
+                                                    MenuManager.mpc_ship_version = (MpTeam)(((int)MenuManager.mpc_ship_version + 3 + UIManager.m_select_dir) % (int)MpTeam.NUM_TEAMS);
+                                                    MenuManager.MpUpdateShipColors(m_briefing_object, MenuManager.mpc_ship_version, MenuManager.mpc_glow_color, MenuManager.mpc_decal_color, MenuManager.mpc_decal_pattern);
+                                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                    break;
+                                                case 1:
+                                                    MenuManager.mpc_glow_color = (MenuManager.mpc_glow_color + 9 + UIManager.m_select_dir) % 9;
+                                                    MenuManager.MpUpdateShipColors(m_briefing_object, MenuManager.mpc_ship_version, MenuManager.mpc_glow_color, MenuManager.mpc_decal_color, MenuManager.mpc_decal_pattern);
+                                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                    break;
+                                                case 2:
+                                                    MenuManager.mpc_decal_color = (MenuManager.mpc_decal_color + 11 + UIManager.m_select_dir) % 11;
+                                                    MenuManager.MpUpdateShipColors(m_briefing_object, MenuManager.mpc_ship_version, MenuManager.mpc_glow_color, MenuManager.mpc_decal_color, MenuManager.mpc_decal_pattern);
+                                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                    break;
+                                                case 3:
+                                                    {
+                                                        int num = GameManager.m_gm.m_mp_custom_decal.Length;
+                                                        MenuManager.mpc_decal_pattern = (MenuManager.mpc_decal_pattern + num + UIManager.m_select_dir) % num;
+                                                        MenuManager.MpUpdateShipDecal(m_briefing_object, MenuManager.mpc_decal_pattern);
+                                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                        break;
+                                                    }
+                                                case 4:
+                                                    {
+                                                        int num = GameManager.m_gm.m_mp_custom_mesh_wings.Length + 1;
+                                                        MenuManager.mpc_mesh_wings = (MenuManager.mpc_mesh_wings + num + UIManager.m_select_dir) % num;
+                                                        MenuManager.MpUpdateShipWings(MenuManager.mpc_mesh_wings);
+                                                        MenuManager.MpUpdateShipColors(m_briefing_object, MenuManager.mpc_ship_version, MenuManager.mpc_glow_color, MenuManager.mpc_decal_color, MenuManager.mpc_decal_pattern);
+                                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                        break;
+                                                    }
+                                                case 5:
+                                                    {
+                                                        int num = GameManager.m_gm.m_mp_custom_mesh_body.Length + 1;
+                                                        MenuManager.mpc_mesh_body = (MenuManager.mpc_mesh_body + num + UIManager.m_select_dir) % num;
+                                                        MenuManager.MpUpdateShipBody(MenuManager.mpc_mesh_body);
+                                                        MenuManager.MpUpdateShipColors(m_briefing_object, MenuManager.mpc_ship_version, MenuManager.mpc_glow_color, MenuManager.mpc_decal_color, MenuManager.mpc_decal_pattern);
+                                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                        break;
+                                                    }
+                                                default:
+                                                    switch (menu_selection)
+                                                    {
+                                                        case 200:
+                                                        case 201:
+                                                        case 202:
+                                                            MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
+                                                            MenuManager.UIPulse(1f);
+                                                            PlayHighlightSound(0.4f, 0.07f);
+                                                            break;
+                                                        default:
+                                                            if (menu_selection == 100)
+                                                            {
+                                                                GoBack();
+                                                                UIManager.DestroyAll(false);
+                                                                MenuManager.PlaySelectSound(1f);
+                                                            }
+                                                            break;
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        int menu_selection2 = UIManager.m_menu_selection;
+                                        switch (menu_selection2)
+                                        {
+                                            case 0:
+                                            case 1:
+                                            case 2:
+                                            case 3:
+                                                Player.Mp_modifier1 = UIManager.m_menu_selection;
+                                                Client.SendPlayerLoadoutToServer();
+                                                MenuManager.PlayCycleSound(1f, 1f);
+                                                break;
+                                            case 4:
+                                            case 5:
+                                            case 6:
+                                            case 7:
+                                                Player.Mp_modifier2 = UIManager.m_menu_selection - 4;
+                                                Client.SendPlayerLoadoutToServer();
+                                                MenuManager.PlayCycleSound(1f, 1f);
+                                                break;
+                                            default:
+                                                switch (menu_selection2)
+                                                {
+                                                    case 200:
+                                                    case 201:
+                                                    case 202:
+                                                        MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
+                                                        MenuManager.UIPulse(1f);
+                                                        PlayHighlightSound(0.4f, 0.07f);
+                                                        break;
+                                                    default:
+                                                        if (menu_selection2 == 100)
+                                                        {
+                                                            GoBack();
+                                                            UIManager.DestroyAll(false);
+                                                            MenuManager.PlaySelectSound(1f);
+                                                        }
+                                                        break;
+                                                }
+                                                break;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    int menu_selection3 = UIManager.m_menu_selection;
+                                    switch (menu_selection3)
+                                    {
+                                        case 10:
+                                            MPLoadouts.MpCycleWeapon(0, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 11:
+                                            MPLoadouts.MpCycleMissile(0, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 12:
+                                            MPLoadouts.MpCycleMissile(0, 1);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 13:
+                                            MPLoadouts.MpCycleWeapon(1, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 14:
+                                            MPLoadouts.MpCycleWeapon(1, 1);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 15:
+                                            MPLoadouts.MpCycleMissile(1, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 16:
+                                            MPLoadouts.MpCycleWeapon(2, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 17:
+                                            MPLoadouts.MpCycleMissile(2, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 18:
+                                            MPLoadouts.MpCycleMissile(2, 1);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 19:
+                                            MPLoadouts.MpCycleWeapon(3, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 20:
+                                            MPLoadouts.MpCycleWeapon(3, 1);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        case 21:
+                                            MPLoadouts.MpCycleMissile(3, 0);
+                                            MenuManager.PlayCycleSound(1f, 1f);
+                                            break;
+                                        default:
+                                            switch (menu_selection3)
+                                            {
+                                                case 200:
+                                                case 201:
+                                                case 202:
+                                                    MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
+                                                    MenuManager.UIPulse(1f);
+                                                    PlayHighlightSound(0.4f, 0.07f);
+                                                    break;
+                                                default:
+                                                    if (menu_selection3 != 100)
+                                                    {
+                                                        if (MPLoadouts.loadoutSelection1 != UIManager.m_menu_selection)
+                                                        {
+                                                            MPLoadouts.loadoutSelection2 = MPLoadouts.loadoutSelection1;
+                                                            MPLoadouts.loadoutSelection1 = UIManager.m_menu_selection;
+                                                            Debug.Log($"UI Changed Player.Mp_loadout to {MPLoadouts.loadoutSelection1}, {MPLoadouts.loadoutSelection2}");
+                                                            Client.SendPlayerLoadoutToServer();
+                                                        }
+                                                        MenuManager.PlayCycleSound(1f, 1f);
+                                                    }
+                                                    else
+                                                    {
+                                                        GoBack();
+                                                        UIManager.DestroyAll(false);
+                                                        MenuManager.PlaySelectSound(1f);
+                                                    }
+                                                    break;
+                                            }
+                                            break;
+                                    }
+                                }
+                                MenuManager.UnReverseOption();
+                            }
+                        }
+                    }
+                }
+                else if (m_menu_state_timer > 0.25f)
+                {
+                    MenuManager.m_custom_rotation = false;
+                    UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, UIElementType.MP_CUSTOMIZE);
+                    MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                    MenuManager.m_menu_micro_state = 0;
+                    MenuManager.SetDefaultSelection(0);
+                    MenuManager.m_entity_briefing_type = MenuManager.EntityBriefingType.PlayerShip;
+                    MenuManager.m_entity_num = 0;
+                    SetEntityBriefingVars();
+                    SetBriefingObject(MenuManager.m_entity_briefing_type, MenuManager.m_entity_num);
+                    GameManager.m_player_ship.c_viewer.SetLensFlares(false);
+                    UIManager.SetTexture(GameplayManager.m_gm.m_briefing_camera.targetTexture);
+                    MenuManager.mpc_mesh_body = Mathf.Clamp(MenuManager.mpc_mesh_body, 0, GameManager.m_gm.m_mp_custom_mesh_body.Length);
+                    MenuManager.mpc_mesh_wings = Mathf.Clamp(MenuManager.mpc_mesh_wings, 0, GameManager.m_gm.m_mp_custom_mesh_wings.Length);
+                    MenuManager.MpUpdateShipWings(MenuManager.mpc_mesh_wings);
+                    MenuManager.MpUpdateShipBody(MenuManager.mpc_mesh_body);
+                    MenuManager.MpUpdateShipColors(m_briefing_object, MenuManager.mpc_ship_version, MenuManager.mpc_glow_color, MenuManager.mpc_decal_color, MenuManager.mpc_decal_pattern);
+                    MenuManager.MpUpdateShipDecal(m_briefing_object, MenuManager.mpc_decal_pattern);
+                }
+
+                return false;
+            }
+        }
     }
 }

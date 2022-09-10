@@ -286,7 +286,7 @@ namespace GameMod {
             caps.Add("ModVersion", OlmodVersion.FullVersionString);
             caps.Add("Modded", Core.GameMod.Modded ? "1" : "0");
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
-            caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6");
+            caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts");
             caps.Add("ModPrivateData", "1");
             caps.Add("ClassicWeaponSpawns", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
@@ -306,7 +306,7 @@ namespace GameMod {
                 conn.Disconnect();
         }
 
-        private static bool ClientLoadoutValid(int connectionId)
+        private static bool ClientModifiersValid(int connectionId)
         {
             var conn = NetworkServer.connections[connectionId];
             if (conn != null)
@@ -336,7 +336,7 @@ namespace GameMod {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires OLMod to play."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
-            if ((NetworkMatch.GetMatchState() != MatchState.LOBBY && NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN) && !ClientLoadoutValid(connId)) {
+            if ((NetworkMatch.GetMatchState() != MatchState.LOBBY && NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN) && !ClientModifiersValid(connId)) {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers.  Please disable these modifiers and try again: " + MPModifiers.GetDisabledModifiers()));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
