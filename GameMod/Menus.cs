@@ -1369,7 +1369,7 @@ namespace GameMod {
                 else
                 {
                     position.y = -153f;
-                    __instance.DrawLabelSmall(position, Loc.LS("SELECT TWO LOADOUTS"), 400f, 20f, 1f);
+                    __instance.DrawLabelSmall(position, Loc.LS("SELECT TWO LOADOUTS (REFLEX SIDEARM INCLUDED)"), 400f, 20f, 1f);
                     position.x = -310f;
                     position.y = -90f;
 
