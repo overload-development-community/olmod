@@ -23,7 +23,7 @@ namespace GameMod
 
         static void Postfix(UIElement __instance)
         {
-            if (!HUDVelocity.MenuManagerEnabled)
+            if (!HUDVelocity.MenuManagerEnabled || GameManager.m_local_player.m_spectator || (GameplayManager.IsMultiplayerActive && NetworkMatch.m_match_state != MatchState.PLAYING))
                 return;
 
             Vector2 pos = default(Vector2);

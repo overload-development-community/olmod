@@ -249,8 +249,6 @@ namespace GameMod {
                 Menus.mms_team_color_enemy = ModPrefs.GetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
                 HUDVelocity.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
                 Menus.mms_show_framerate = ModPrefs.GetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
-                MPLoadouts.loadoutSelection1 = ModPrefs.GetInt("MP_PM_LOADOUT_SELECTED1", MPLoadouts.loadoutSelection1);
-                MPLoadouts.loadoutSelection2 = ModPrefs.GetInt("MP_PM_LOADOUT_SELECTED2", MPLoadouts.loadoutSelection2);
 
                 MPLoadouts.Loadouts[0].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
                 MPLoadouts.Loadouts[0].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
@@ -328,8 +326,6 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_TEAM_COLOR_ENEMY", Menus.mms_team_color_enemy);
             ModPrefs.SetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
-            ModPrefs.SetInt("MP_PM_LOADOUT_SELECTED1", MPLoadouts.loadoutSelection1);
-            ModPrefs.SetInt("MP_PM_LOADOUT_SELECTED2", MPLoadouts.loadoutSelection2);
             ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
             ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
             ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_M2", (int)MPLoadouts.Loadouts[0].missiles[1]);
