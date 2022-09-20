@@ -214,7 +214,7 @@
     <Compile Include="VRScale.cs" />
     <Compile Include="VSync.cs" />
     <Compile Include="Boss2B.cs" />
-    <Compile Include="MatcenHpCap.cs" />
+    <Compile Include="MatcenHp.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
