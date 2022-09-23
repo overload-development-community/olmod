@@ -41,16 +41,6 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Controls), "SetInputKB")]
-
-    internal class SetInputKB
-    {
-        private static bool Prefix(int idx, KeyCode kc)
-        {
-            return idx != 14 && idx != 15 || kc != KeyCode.Joystick8Button10 && kc != KeyCode.Joystick8Button11;
-        }
-    }
-
     [HarmonyPatch(typeof(Controls), "ReadControlData")]
     internal class ReadControlData
     {
