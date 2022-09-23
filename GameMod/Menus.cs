@@ -171,6 +171,7 @@ namespace GameMod {
         public static int mms_match_time_limit = 60;
         public static bool mms_reduced_ship_explosions = true;
         public static bool mms_show_framerate = false;
+        public static int mms_selected_loadout_idx = 0;
     }
 
 
@@ -1368,7 +1369,7 @@ namespace GameMod {
                 else
                 {
                     position.y = -153f;
-                    __instance.DrawLabelSmall(position, Loc.LS("SELECT TWO LOADOUTS"), 400f, 20f, 1f);
+                    __instance.DrawLabelSmall(position, Loc.LS("SELECT TWO LOADOUTS (REFLEX SIDEARM INCLUDED)"), 400f, 20f, 1f);
                     position.x = -310f;
                     position.y = -90f;
 
@@ -1400,8 +1401,7 @@ namespace GameMod {
                 col_ub.a = __instance.m_alpha;
                 UIManager.DrawFrameEmptyCenter(pos, 17f, 17f, num, middle_h, col_ub, 7);
                 int loadoutMinXP = Player.GetLoadoutMinXP(idx);
-                bool check = MPLoadouts.loadoutSelection1 == idx || MPLoadouts.loadoutSelection2 == idx;
-                __instance.SelectAndDrawCheckboxItem(GetMpLoadoutName(idx), pos - Vector2.up * 10f, idx, check, false, 1f, -1);
+                __instance.SelectAndDrawCheckboxItem(GetMpLoadoutName(idx), pos - Vector2.up * 10f, idx, true, false, 1f, -1);
                 pos.y += 28f;
 
                 __instance.DrawStringSmall(Loc.LS("CUSTOMIZABLE"), pos - Vector2.up * 38f + Vector2.right * 230f, 0.5f, StringOffset.RIGHT, UIManager.m_col_ui0, 0.5f, -1f);
@@ -1762,18 +1762,7 @@ namespace GameMod {
                                                     PlayHighlightSound(0.4f, 0.07f);
                                                     break;
                                                 default:
-                                                    if (menu_selection3 != 100)
-                                                    {
-                                                        if (MPLoadouts.loadoutSelection1 != UIManager.m_menu_selection)
-                                                        {
-                                                            MPLoadouts.loadoutSelection2 = MPLoadouts.loadoutSelection1;
-                                                            MPLoadouts.loadoutSelection1 = UIManager.m_menu_selection;
-                                                            Debug.Log($"UI Changed Player.Mp_loadout to {MPLoadouts.loadoutSelection1}, {MPLoadouts.loadoutSelection2}");
-                                                            Client.SendPlayerLoadoutToServer();
-                                                        }
-                                                        MenuManager.PlayCycleSound(1f, 1f);
-                                                    }
-                                                    else
+                                                    if (menu_selection3 == 100)
                                                     {
                                                         GoBack();
                                                         UIManager.DestroyAll(false);
