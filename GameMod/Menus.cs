@@ -1803,4 +1803,156 @@ namespace GameMod {
             }
         }
     }
+
+    /// <summary>
+    /// Draw additional CCInputExt bindings under Controls -> Additional Controls page under Re-center VR
+    /// </summary>
+    [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
+    internal class Menus_UIElement_DrawControlsMenu
+    {
+        static void DrawAdditionalBindings(UIElement uie, Vector2 position, bool joystick)
+        {
+            uie.SelectAndDrawControlOption("TOGGLE LOADOUT PRIMARY", position, (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY, joystick);
+            position.y += 48f;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int control_remap_page2_count = 0;
+            int state = 0;
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(MenuManager), "control_remap_page2"))
+                {
+                    control_remap_page2_count++;
+                    state = 0;
+                }
+
+                if ((control_remap_page2_count == 1 || control_remap_page2_count == 3) && code.opcode == OpCodes.Ldloca_S)
+                {
+                    state++;
+
+                    if (state == 4)
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldarg_0) { labels = code.labels };
+                        yield return new CodeInstruction(OpCodes.Ldloc_0);
+                        yield return new CodeInstruction(OpCodes.Ldc_I4, control_remap_page2_count);
+                        yield return new CodeInstruction(OpCodes.Ldc_I4_1);
+                        yield return new CodeInstruction(OpCodes.Ceq); // control_remap_page2_count == 1 is joystick branch, otherwise MKB
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawControlsMenu), "DrawAdditionalBindings"));
+                        code.labels = null;
+                    }
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Process changes to menu bindings. Most work focuses around sticking point of original code using CCInput + 50 value for the
+    /// "alt" representation and having to adjust to account for new higher CCInputExt values
+    /// </summary>
+    [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
+    internal class Menus_MenuManager_ControlsOptionsUpdate
+    {
+        static void AdjustRemapValues()
+        {
+            MenuManager.control_remap_alt = UIManager.m_menu_selection >= 1000;
+            MenuManager.control_remap_index = UIManager.m_menu_selection % 1000;
+            if ((UIManager.m_menu_selection >= (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY && UIManager.m_menu_selection < 1000)
+                || UIManager.m_menu_selection >= (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY + 1000)
+            {
+                MenuManager.control_remap_name = ControlsExt.GetInputName((CCInputExt)(UIManager.m_menu_selection % 1000));
+            }
+        }
+
+        static void SetInputKB(int idx, bool alt, KeyCode kc)
+        {
+            // Previously in MPAnticheat.cs Prefix
+            if (!(idx != 14 && idx != 15 || kc != KeyCode.Joystick8Button10 && kc != KeyCode.Joystick8Button11))
+                return;
+
+            int exclusionMask = ControlsExt.GetExclusionMask((CCInputExt)idx);
+            for (int i = 0; i < 45; i++)
+            {
+                if ((exclusionMask & ControlsExt.GetExclusionMask((CCInputExt)i)) != 0)
+                {
+                    if (Controls.m_input_kc[0, i] == kc)
+                    {
+                        Controls.m_input_kc[0, i] = KeyCode.None;
+                    }
+                    if (Controls.m_input_kc[1, i] == kc)
+                    {
+                        Controls.m_input_kc[1, i] = KeyCode.None;
+                    }
+                }
+            }
+            for (int i = (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY; i < ControlsExt.MAX_ARRAY_SIZE; i++)
+            {
+                if ((exclusionMask & ControlsExt.GetExclusionMask((CCInputExt)i)) != 0)
+                {
+                    if (Controls.m_input_kc[0, i] == kc)
+                    {
+                        Controls.m_input_kc[0, i] = KeyCode.None;
+                    }
+                    if (Controls.m_input_kc[1, i] == kc)
+                    {
+                        Controls.m_input_kc[1, i] = KeyCode.None;
+                    }
+                }
+            }
+            Controls.m_input_kc[(!alt) ? 0 : 1, idx] = kc;
+        }
+
+        private static void AdjustMenuSelection()
+        {
+            UIManager.m_menu_selection = MenuManager.control_remap_index + ((!MenuManager.control_remap_alt) ? 0 : 1000);
+        }
+
+        private static void ResetControlKB(int idx, int slot)
+        {
+            var _idx = UIManager.m_menu_selection % 1000;
+            var _slot = UIManager.m_menu_selection < 1000 ? 0 : 1;
+            Controls.ResetControlKB(_idx, _slot);
+        }
+
+        private static void ResetControlJoy(int idx, int slot)
+        {
+            var _idx = UIManager.m_menu_selection % 1000;
+            var _slot = UIManager.m_menu_selection < 1000 ? 0 : 1;
+            Controls.ResetControlJoy(_idx, _slot);
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(MenuManager), "control_remap_name"))
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "AdjustRemapValues"));
+                    continue;
+                }
+
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Controls), "SetInputKB"))
+                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "SetInputKB");
+
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(UIManager), "m_menu_selection"))
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "AdjustMenuSelection"));
+                    continue;
+                }
+
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Controls), "ResetControlKB"))
+                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "ResetControlKB");
+
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Controls), "ResetControlJoy"))
+                    code.operand = AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "ResetControlJoy");
+
+                yield return code;
+            }
+        }
+    }
 }

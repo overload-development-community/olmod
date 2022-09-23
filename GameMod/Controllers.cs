@@ -264,6 +264,8 @@ namespace GameMod
                 Debug.Log("olmod controls config save file has an incorrect key: " + text);
                 return;
             }
+            int num;
+            bool flag = int.TryParse(text.Substring(Controls.CONFIG_KEY.Length), out num);
             int numControllers = int.Parse(sr.ReadLine());
             int[] controllers = new int[numControllers];
             for (int i = 0; i < numControllers; i++)
@@ -276,6 +278,49 @@ namespace GameMod
                     Controllers.controllers[i].axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
                     Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
                     Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
+                }
+            }
+            // Read any new bindings that are past the original CCInput bounds in our pilot .xconfigmod 
+            while (!sr.EndOfStream)
+            {
+                text = sr.ReadLine();
+                if (sr.EndOfStream)
+                {
+                    break;
+                }
+                try
+                {
+                    CCInputExt ccinput = (CCInputExt)Enum.Parse(typeof(CCInputExt), text);
+                    if (ccinput != CCInputExt.NUM)
+                    {
+                        Controls.m_input_joy[0, (int)ccinput].Read(sr, num);
+                        Controls.m_input_joy[1, (int)ccinput].Read(sr, num);
+                        Controls.m_input_kc[0, (int)ccinput] = (KeyCode)int.Parse(sr.ReadLine());
+                        Controls.m_input_kc[1, (int)ccinput] = (KeyCode)int.Parse(sr.ReadLine());
+                        if (Controls.m_input_joy[0, (int)ccinput].m_controller_num >= numControllers)
+                        {
+                            Controls.m_input_joy[0, (int)ccinput].m_controller_num = numControllers - 1;
+                        }
+                        if (Controls.m_input_joy[1, (int)ccinput].m_controller_num >= numControllers)
+                        {
+                            Controls.m_input_joy[1, (int)ccinput].m_controller_num = numControllers - 1;
+                        }
+                    }
+                }
+                catch
+                {
+                    for (int l = 0; l < 10; l++)
+                    {
+                        sr.ReadLine();
+                    }
+                }
+            }
+            for (int m = (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY; m < ControlsExt.MAX_ARRAY_SIZE; m++)
+            {
+                for (int n = 0; n < 2; n++)
+                {
+                    if (Controls.m_input_joy[n, m].m_controller_num != -1)
+                        Controls.m_input_joy[n, m].m_controller_num = controllers[Controls.m_input_joy[n, m].m_controller_num];
                 }
             }
         }
@@ -349,6 +394,17 @@ namespace GameMod
                         w.WriteLine(Controllers.controllers[i].axes[j].sensitivity.ToStringInvariantCulture());
                     }
                 }
+            }
+            for (int k = (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY; k < ControlsExt.MAX_ARRAY_SIZE; k++)
+            {
+                CCInputExt ccinput = (CCInputExt)k;
+                w.WriteLine(ccinput.ToString());
+                Controls.m_input_joy[0, k].Write(w);
+                Controls.m_input_joy[1, k].Write(w);
+                int num = (int)Controls.m_input_kc[0, k];
+                w.WriteLine(num.ToString());
+                int num2 = (int)Controls.m_input_kc[1, k];
+                w.WriteLine(num2.ToString());
             }
         }
     }
