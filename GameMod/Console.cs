@@ -137,23 +137,27 @@ namespace GameMod {
             uConsole.Log("Segments dumped to debug log.");
         }
 
-        // Not working.  See VRScale.cs.
-        //static void CmdVRScale() {
-        //    if (!GameplayManager.VRActive) {
-        //        uConsole.Log("You must be in VR to use this command.");
-        //        return;
-        //    }
+        static void CmdVRScale() {
+            if (!GameplayManager.VRActive) {
+                uConsole.Log("You must be in VR to use this command.");
+                return;
+            }
 
-        //    string s = uConsole.GetString();
+            if (GameplayManager.m_gameplay_state != GameplayState.MENUS) {
+                uConsole.Log("You must set this in the menus first, this has no effect while playing.");
+                return;
+            }
 
-        //    if (float.TryParse(s, out float scale)) {
-        //        scale = Mathf.Clamp(scale, 0.1f, 10f);
+            string s = uConsole.GetString();
 
-        //        VRScale.VR_Scale = scale;
-        //    } else {
-        //        uConsole.Log("Invalid scale, must be a number between 0.1 and 10.");
-        //    }
-        //}
+            if (float.TryParse(s, out float scale)) {
+                scale = Mathf.Clamp(scale, 0.1f, 10f);
+
+                VRScale.VR_Scale = scale;
+            } else {
+                uConsole.Log("Invalid scale, must be a number between 0.1 and 10.");
+            }
+        }
 
         public static void RegisterCommands()
         {
@@ -162,8 +166,7 @@ namespace GameMod {
             uConsole.RegisterCommand("reload_missions", "Reload missions", new uConsole.DebugCommand(CmdReloadMissions));
             uConsole.RegisterCommand("toggle_debugging", "Toggle the display of debugging info", new uConsole.DebugCommand(CmdToggleDebugging));
             uConsole.RegisterCommand("ui_color", "Set UI color #aabbcc", new uConsole.DebugCommand(CmdUIColor));
-            // Not working.  See VRScale.cs.
-            // uConsole.RegisterCommand("vr_scale", "Set VR scale (0.1 to 10)", new uConsole.DebugCommand(CmdVRScale));
+            uConsole.RegisterCommand("vr_scale", "Set VR scale (0.1 to 10)", new uConsole.DebugCommand(CmdVRScale));
             uConsole.RegisterCommand("xp", "Set XP", new uConsole.DebugCommand(CmdXP));
         }
     }
