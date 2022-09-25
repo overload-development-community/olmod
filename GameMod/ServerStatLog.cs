@@ -224,6 +224,7 @@ namespace GameMod {
 
         public static void TrackerPostStats(JObject body)
         {
+            body.Add("port", Server.GetListenPort());
             TrackerPost("/api/stats", body);
         }
 
