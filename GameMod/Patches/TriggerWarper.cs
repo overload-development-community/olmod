@@ -1,51 +1,45 @@
 ﻿using UnityEngine;
 using HarmonyLib;
-using Overload;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
 
-namespace GameMod
-{
-    // Try to fix object rotation coming out of a warper
+namespace GameMod.Patches {
+    /// <summary>
+    /// Mod: WarperOrientation
+    /// Author: klmcdorm (kevin)
+    /// 
+    /// Fixes objection rotation coming out of a warper.
+    /// </summary>
     [HarmonyPatch(typeof(TriggerWarper), "TeleportObject")]
-    class TriggerWarper_RotationFix
-    {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
-        {
+    class TriggerWarper_TeleportObject {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) {
             const int BufferSize = 3;
             int state = 1;
             var buffer = new List<CodeInstruction>(BufferSize);
 
-            foreach (var i in code)
-            {
-                if (buffer.Count >= BufferSize)
-                {
-                    if (state != 2)
-                    {
+            foreach (var i in code) {
+                if (buffer.Count >= BufferSize) {
+                    if (state != 2) {
                         yield return buffer[0];
                     }
                     buffer.RemoveAt(0);
                 }
                 buffer.Add(i);
 
-                switch (state)
-                {
+                switch (state) {
                     case 1:
                         // 1. Find spot where Transform::get_rotation is called on arg 1
                         if (i.opcode == OpCodes.Callvirt
                             && ((MethodInfo)i.operand).DeclaringType == typeof(Transform)
-                            && ((MethodInfo)i.operand).Name == "get_rotation")
-                        {
+                            && ((MethodInfo)i.operand).Name == "get_rotation") {
                             var prev = buffer[BufferSize - 1 - 1];
-                            if (prev.opcode != OpCodes.Ldarg_1)
-                            {
+                            if (prev.opcode != OpCodes.Ldarg_1) {
                                 break;
                             }
 
                             // flush buffer
-                            foreach (var j in buffer)
-                            {
+                            foreach (var j in buffer) {
                                 yield return j;
                             }
                             buffer.Clear();
@@ -56,11 +50,9 @@ namespace GameMod
                         // 2. Delete old rotation code (continues until set_rotation with arg 1), then insert new rotation code
                         if (i.opcode == OpCodes.Callvirt
                             && ((MethodInfo)i.operand).DeclaringType == typeof(Transform)
-                            && ((MethodInfo)i.operand).Name == "set_rotation")
-                        {
+                            && ((MethodInfo)i.operand).Name == "set_rotation") {
                             var prev = buffer[BufferSize - 1 - 2];
-                            if (prev.opcode != OpCodes.Ldarg_1)
-                            {
+                            if (prev.opcode != OpCodes.Ldarg_1) {
                                 break;
                             }
 
@@ -119,11 +111,9 @@ namespace GameMod
                 }
             }
 
-            foreach (var i in buffer)
-            {
+            foreach (var i in buffer) {
                 yield return i;
             }
         }
     }
 }
-
