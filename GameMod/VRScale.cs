@@ -13,14 +13,14 @@ namespace GameMod {
                 return _VR_Scale;
             }
             set {
-                Camera.main.transform.localScale = Vector3.one * value;
+                GameManager.m_player_ship.c_camera_transform.localScale = Vector3.one * value;
 
                 _VR_Scale = value;
             }
         }
     }
 
-    [HarmonyPatch(typeof(PlayerShip), "Update")]
+    [HarmonyPatch(typeof(PlayerShip), "Awake")]
     public class VRScale_PlayerShip_Update {
         private static void Postfix(PlayerShip __instance) {
             __instance.c_camera_transform.localScale = Vector3.one * VRScale.VR_Scale;
