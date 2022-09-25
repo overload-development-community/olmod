@@ -212,13 +212,13 @@
     <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
-    <Compile Include="WarperOrientation.cs" />
+    <Compile Include="Patches\Overload\MenuManager.cs" />
+    <Compile Include="Patches\TriggerWarper.cs" />
     <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
     <Compile Include="VRScale.cs" />
-    <Compile Include="VSync.cs" />
     <Compile Include="Boss2B.cs" />
     <Compile Include="MatcenHp.cs" />
   </ItemGroup>
