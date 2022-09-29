@@ -39,10 +39,13 @@ namespace GameMod {
         public static bool mms_classic_spawns { get; set; }
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
+        public static bool mms_damage_numbers { get; set; }
         public static bool mms_assist_scoring { get; set; } = true;
         public static bool mms_team_color_default { get; set; } = true;
         public static int mms_team_color_self = 5;
         public static int mms_team_color_enemy = 6;
+
+        public static bool mms_team_health = true;
         public static MpTeam? mms_team_selection { get; set; } = null;
 
         public static string GetMMSRearViewPIP()
@@ -58,6 +61,11 @@ namespace GameMod {
         public static string GetMMSAllowSmash()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_allow_smash));
+        }
+
+        public static string GetMMSDamageNumbers()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_damage_numbers));
         }
 
         public static string GetMMSScaleRespawnTime()
@@ -202,7 +210,7 @@ namespace GameMod {
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
             position.y += 55f;
-            // We're out of space, and assists don't matter in CTF anyway...
+
             if (MenuManager.mms_mode == ExtMatchMode.CTF)
             {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("CTF CARRIER BOOSTING"), position, 14, Menus.GetMMSCtfCarrierBoost(), Loc.LS("FLAG CARRIER CAN USE BOOST IN CTF"), 1f, false);
@@ -211,6 +219,7 @@ namespace GameMod {
             {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ASSISTS"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("AWARD POINTS FOR ASSISTING WITH KILLS"), 1f, false);
             }
+
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
             position.y += 55f;
@@ -220,20 +229,26 @@ namespace GameMod {
             position.y += 55f;
 
             uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
-            //position.y += 32f;
+            position.y += 55f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
         {
-            position.x -= 300f;
+            position.x -= 600f;
             position.y = col_bot;
         }
 
         private static void DrawTeamSettings(UIElement uie, ref Vector2 position)
         {
             position.y += 12f;
-            uie.SelectAndDrawItem("TEAM SETTINGS", position, 19, false, 1f, 0.75f);
+            uie.SelectAndDrawItem(Loc.LS("TEAM SETTINGS"), position, 19, false, 1f, 0.75f);
             position.y += 62f;
+        }
+
+        private static void ResetCenter(UIElement uie, ref Vector2 position)
+        {
+            position.x += 300f;
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
@@ -271,6 +286,23 @@ namespace GameMod {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "DrawTeamSettings"));
+                }
+
+                // Reset center
+                if (state == 2 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "SelectAndDrawItem"))
+                {
+                    state = 3;
+                    yield return code;
+                    continue;
+                }
+                if (state == 3 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "SelectAndDrawItem"))
+                {
+                    state = 4;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "ResetCenter"));
+                    continue;
                 }
 
                 yield return code;
@@ -447,6 +479,10 @@ namespace GameMod {
                         MPThunderboltPassthrough.isAllowed = !MPThunderboltPassthrough.isAllowed;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
+                    case 21:
+                        MPObserver.DamageNumbersEnabled = !MPObserver.DamageNumbersEnabled;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
 
                 }
             }
@@ -600,8 +636,8 @@ namespace GameMod {
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("MY TEAM"), position, 2, Menus.GetMMSTeamColorSelf(), "", 1.5f, Menus.mms_team_color_default);
                     position.y += 64f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 3, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
-                    //position.y += 64f;
-                    //__instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEAM HEALTH"), position, 4, MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates ? "ON" : "OFF", "SETS WETHER THE HEALTH OF TEAMMATES SHOULD GET DISPLAYED", 1.5f, false);
+                    position.y += 64f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEAM HEALTH"), position, 4, Menus.mms_team_health ? "ON" : "OFF", "SETS WETHER THE HEALTH OF TEAMMATES SHOULD GET DISPLAYED", 1.5f, false);
                     break;
                 case 2:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
@@ -868,10 +904,10 @@ namespace GameMod {
                                         MenuManager.PlaySelectSound(1f);
                                         MPTeams.UpdateClientColors();
                                         break;
-                                    //case 4:
-                                    //    MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates = !MPObserver_UIManager_DrawMpPlayerName.showHealthOfTeammates;
-                                    //    MenuManager.PlaySelectSound(1f);
-                                    //    break;
+                                    case 4:
+                                        Menus.mms_team_health = !Menus.mms_team_health;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
                                 }
                                 break;
                             case 2:

@@ -1220,15 +1220,18 @@ END_ENTRY
             get { return CTF.CarrierBoostEnabled; }
             set { CTF.CarrierBoostEnabled = value; }
         }
-        public static bool AlwaysCloaked {
+        public static bool AlwaysCloaked
+        {
             get { return MPAlwaysCloaked.Enabled; }
             set { MPAlwaysCloaked.Enabled = value; }
         }
         public static string CustomProjdata { get; set; }
-        public static bool AllowSmash {
+        public static bool AllowSmash
+        {
             get { return MPSmash.Enabled; }
             set { MPSmash.Enabled = value; }
         }
+
         public static int MatchTimeLimit
         {
             get { return MPMatchTimeLimits.MatchTimeLimit; }
@@ -1245,6 +1248,12 @@ END_ENTRY
         {
             get { return MPThunderboltPassthrough.isAllowed; }
             set { MPThunderboltPassthrough.isAllowed = value; }
+        }
+
+        public static bool DamageNumbers
+        {
+            get { return MPObserver.DamageNumbersEnabled; }
+            set { MPObserver.DamageNumbersEnabled = value; }
         }
 
         public static JObject Serialize()
@@ -1270,6 +1279,7 @@ END_ENTRY
             jobject["assistscoring"] = AssistScoring;
             jobject["joystickrotationfixsupported"] = JoystickRotationFixSupported;
             jobject["thunderboltpassthrough"] = ThunderboltPassthrough;
+            jobject["damagenumbers"] = DamageNumbers;
             return jobject;
         }
 
@@ -1299,6 +1309,7 @@ END_ENTRY
             AssistScoring = root["assistscoring"].GetBool(true);
             JoystickRotationFixSupported = root["joystickrotationfixsupported"].GetBool(false);
             ThunderboltPassthrough = root["thunderboltpassthrough"].GetBool(false);
+            DamageNumbers = root["damagenumbers"].GetBool(false);
         }
 
         public static string GetModeString(MatchMode mode)
@@ -1587,6 +1598,7 @@ END_ENTRY
             MPModPrivateData.CtfCarrierBoostEnabled = Menus.mms_ctf_boost;
             MPModPrivateData.AlwaysCloaked = Menus.mms_always_cloaked;
             MPModPrivateData.AllowSmash = Menus.mms_allow_smash;
+            MPModPrivateData.DamageNumbers = Menus.mms_damage_numbers;
             MPModPrivateData.MatchTimeLimit = Menus.mms_match_time_limit == 0 ? int.MaxValue : Menus.mms_match_time_limit;
             MPModPrivateData.AssistScoring = Menus.mms_assist_scoring;
             MPModPrivateData.ThunderboltPassthrough = MPThunderboltPassthrough.isAllowed;

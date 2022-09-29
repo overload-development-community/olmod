@@ -62,6 +62,7 @@ namespace GameMod
                 classicSpawnsEnabled = Menus.mms_classic_spawns,
                 alwaysCloaked = Menus.mms_always_cloaked,
                 allowSmash = Menus.mms_allow_smash,
+                damageNumbers = Menus.mms_damage_numbers,
                 assistScoring = Menus.mms_assist_scoring,
                 teamCount = MPTeams.MenuManagerTeamCount
             });
@@ -141,6 +142,7 @@ namespace GameMod
             public bool ctfCarrierBoostEnabled;
             public bool alwaysCloaked;
             public bool allowSmash;
+            public bool damageNumbers;
             public bool assistScoring = true;
             public int teamCount = 2;
 
@@ -177,6 +179,7 @@ namespace GameMod
                 Menus.mms_ctf_boost = this.ctfCarrierBoostEnabled;
                 Menus.mms_always_cloaked = this.alwaysCloaked;
                 Menus.mms_allow_smash = this.allowSmash;
+                Menus.mms_damage_numbers = this.damageNumbers;
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
             }

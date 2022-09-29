@@ -20,6 +20,7 @@ namespace GameMod {
     public static class MPObserver
     {
         public static bool Enabled;
+        public static bool DamageNumbersEnabled;
         public static Player ObservedPlayer = null;
         public static bool ThirdPerson = false;
         public static Vector3 SavedPosition = Vector3.zero;
@@ -674,29 +675,31 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIManager), "DrawMpPlayerName")]
     class MPObserver_UIManager_DrawMpPlayerName
     {
-        //public static bool showHealthOfTeammates = false;
-
         static void Postfix(Player player, Vector2 offset)
         {
-            if(!MPObserver.Enabled)//if (GameplayManager.IsDedicatedServer() | (!MPObserver.Enabled & !(showHealthOfTeammates & player.m_mp_team == GameManager.m_local_player.m_mp_team & player.m_mp_team != MpTeam.ANARCHY)))
-                return;
-
-            offset.y -= 3f;
-            Color c1 = Color.Lerp(HSBColor.ConvertToColor(0.4f, 0.85f, 0.1f), HSBColor.ConvertToColor(0.4f, 0.8f, 0.15f), UnityEngine.Random.value * UIElement.FLICKER);
-            Color c3 = Color.Lerp(player.m_mp_data.color, UIManager.m_col_white2, player.c_player_ship.m_damage_flash_fast);
             float w = 3.5f;
             float h = 1f;
-            UIManager.DrawStringAlignCenter(player.m_hitpoints.ToString("n1"), offset + Vector2.up * -3f, 0.8f, c3);
-            UIManager.DrawQuadBarHorizontal(offset, w+0.25f, h+0.25f, 0f, HSBColor.ConvertToColor(0.4f, 0.1f, 0.1f), 7);
-            float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
-            offset.x = w - health;
-            UIManager.DrawQuadUIInner(offset, health, h, c1, 1f, 11, 1f);
-            if (MPObserverDamage.playerDamages.ContainsKey(player) && MPObserverDamage.playerDamages[player].Sum(x => x.dmg) > 0f)
+            if (MPObserver.Enabled || Menus.mms_team_health && player.m_mp_team == GameManager.m_local_player.m_mp_team && player.m_mp_team != MpTeam.ANARCHY)
             {
-                float dmg = System.Math.Max(0, System.Math.Min(100f - health, MPObserverDamage.playerDamages[player].Sum(x => x.dmg) / 100 * w));
-                Color c2 = Color.Lerp(HSBColor.ConvertToColor(0f, 1f, 0.90f), HSBColor.ConvertToColor(0f, 0.9f, 1f), UnityEngine.Random.value * UIElement.FLICKER);
-                offset.x -= health + dmg;
-                UIManager.DrawQuadUIInner(offset, dmg, h, c2, 1f, 11, 1f);
+                offset.y -= 3f;
+                Color c1 = Color.Lerp(HSBColor.ConvertToColor(0.4f, 0.85f, 0.1f), HSBColor.ConvertToColor(0.4f, 0.8f, 0.15f), UnityEngine.Random.value * UIElement.FLICKER);
+                Color c3 = Color.Lerp(player.m_mp_data.color, UIManager.m_col_white2, player.c_player_ship.m_damage_flash_fast);
+                UIManager.DrawStringAlignCenter(player.m_hitpoints.ToString("n1"), offset + Vector2.up * -3f, 0.8f, c3);
+                UIManager.DrawQuadBarHorizontal(offset, w + 0.25f, h + 0.25f, 0f, HSBColor.ConvertToColor(0.4f, 0.1f, 0.1f), 7);
+                float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
+                offset.x = w - health;
+                UIManager.DrawQuadUIInner(offset, health, h, c1, 1f, 11, 1f);
+            }
+            if (MPObserver.Enabled || MPObserver.DamageNumbersEnabled)
+            {
+                if (MPObserverDamage.playerDamages.ContainsKey(player) && MPObserverDamage.playerDamages[player].Sum(x => x.dmg) > 0f)
+                {
+                    float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
+                    float dmg = System.Math.Max(0, System.Math.Min(100f - health, MPObserverDamage.playerDamages[player].Sum(x => x.dmg) / 100 * w));
+                    Color c2 = Color.Lerp(HSBColor.ConvertToColor(0f, 1f, 0.90f), HSBColor.ConvertToColor(0f, 0.9f, 1f), UnityEngine.Random.value * UIElement.FLICKER);
+                    offset.x -= health + dmg;
+                    UIManager.DrawQuadUIInner(offset, dmg, h, c2, 1f, 11, 1f);
+                }
             }
         }
     }
