@@ -225,12 +225,11 @@ namespace GameMod {
             position.y += 55f;
 
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
-            //uie.SelectAndDrawStringOptionItem(Loc.LS("THUNDERBOLT PENETRATION"), position, 17, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
             position.y += 55f;
 
             uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
             position.y += 55f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
+            //uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -480,7 +479,7 @@ namespace GameMod {
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                     case 21:
-                        MPObserver.DamageNumbersEnabled = !MPObserver.DamageNumbersEnabled;
+                        Menus.mms_damage_numbers = !Menus.mms_damage_numbers;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
 

@@ -690,7 +690,7 @@ namespace GameMod {
                 offset.x = w - health;
                 UIManager.DrawQuadUIInner(offset, health, h, c1, 1f, 11, 1f);
             }
-            if (MPObserver.Enabled || MPObserver.DamageNumbersEnabled)
+            if (MPObserver.Enabled /* || MPObserver.DamageNumbersEnabled */)
             {
                 if (MPObserverDamage.playerDamages.ContainsKey(player) && MPObserverDamage.playerDamages[player].Sum(x => x.dmg) > 0f)
                 {
