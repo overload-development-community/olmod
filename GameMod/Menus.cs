@@ -53,6 +53,24 @@ namespace GameMod {
             return MenuManager.GetToggleSetting(Convert.ToInt32(RearView.MPMenuManagerEnabled));
         }
 
+        public static int mms_audio_occlusion_strength { get; set; } = 0;
+        public static string GetMMSAudioOcclusionStrength()
+        {
+            switch (mms_audio_occlusion_strength)
+            {
+                case 0:
+                    return "OFF";
+                case 1:
+                    return "WEAK";
+                case 2:
+                    return "MEDIUM";
+                case 3:
+                    return "STRONG";
+                default:
+                    return "UNKNOWN";
+            }
+        }
+
         public static string GetMMSAlwaysCloaked()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_always_cloaked));
@@ -1010,6 +1028,8 @@ namespace GameMod {
         private static void DrawSoundReload(UIElement uie, ref Vector2 position)
         {
             position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("AUDIO OCCLUSION STRENGTH"), position, 6, Menus.GetMMSAudioOcclusionStrength());
+            position.y += 62f;
             uie.SelectAndDrawItem("REINITIALIZE AUDIO DEVICE", position, 5, false);
         }
 
@@ -1042,12 +1062,18 @@ namespace GameMod {
     [HarmonyPatch(typeof(MenuManager), "SoundOptionsUpdate")]
     class Menus_MenuManager_SoundOptionsUpdate
     {
-        private static void HandleSoundReload(int menu_selection)
+        private static void AdditionalSoundOptions(int menu_selection)
         {
-            if (menu_selection == 5)
+            switch (menu_selection)
             {
-                AudioSettings.Reset(AudioSettings.GetConfiguration());
-                MenuManager.PlaySelectSound(1f);
+                case 5:
+                    AudioSettings.Reset(AudioSettings.GetConfiguration());
+                    MenuManager.PlaySelectSound(1f);
+                    break;
+                case 6:
+                    Menus.mms_audio_occlusion_strength = (Menus.mms_audio_occlusion_strength + UIManager.m_select_dir) % 4;
+                    MenuManager.PlaySelectSound(1f);
+                    break;
             }
         }
 
@@ -1059,7 +1085,7 @@ namespace GameMod {
                 if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "UnReverseOption"))
                 {
                     yield return new CodeInstruction(OpCodes.Ldloc_1) { labels = code.labels };
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_SoundOptionsUpdate), "HandleSoundReload"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_SoundOptionsUpdate), "AdditionalSoundOptions"));
                     code.labels = null;
                 }
                 yield return code;
