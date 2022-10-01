@@ -463,10 +463,10 @@ namespace GameMod
 
         static void SetMultiplayerLoadoutAndModifiers(Player player, LoadoutDataMessage loadout_data, bool use_loadout1, int lobby_id)
         {
-            var loadout_idx = GameplayManager.IsDedicatedServer() ? MPLoadouts.NetworkLoadouts[lobby_id].selected_idx : Menus.mms_selected_loadout_idx;
 
             if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
             {
+                var loadout_idx = GameplayManager.IsDedicatedServer() ? MPLoadouts.NetworkLoadouts[lobby_id].selected_idx : Menus.mms_selected_loadout_idx;
                 SetMultiplayerModifiers(player, loadout_data, use_loadout1);
                 SetMultiplayerLoadout(player, lobby_id, loadout_idx);
             }
