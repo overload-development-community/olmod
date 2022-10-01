@@ -41,6 +41,9 @@ namespace GameMod
         public const short MsgChangeTeam = 146;
         public const short MsgCustomLoadouts = 147;
         public const short MsgSetCustomLoadout = 148;
+
+        public const short MsgSendDamage = 149;
+
         // Do not use 400, it is in use by Mod-Projdata.dll.
     }
 }

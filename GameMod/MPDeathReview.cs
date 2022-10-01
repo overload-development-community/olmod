@@ -68,6 +68,7 @@ namespace GameMod {
                 return;
 
             Client.GetClient().RegisterHandler(MessageTypes.MsgDeathReview, OnDeathReview);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgSendDamage, MPObserverDamage.OnSendDamage);
         }
 
         private static void OnDeathReview(NetworkMessage rawMsg) {
@@ -304,14 +305,16 @@ namespace GameMod {
             }
         }
 
-        static void AddDamageEvent(PlayerShip playerShip, DamageInfo di, float damage_scaled) {
+        static void AddDamageEvent(PlayerShip playerShip, DamageInfo di, float damage_scaled)
+        {
             if (!Overload.NetworkManager.IsHeadless() || di.damage == 0f ||
                 playerShip.m_death_stats_recorded || playerShip.m_cannot_die || playerShip.c_player.m_invulnerable)
                 return;
 
             float hitpoints = playerShip.c_player.m_hitpoints;
             var weapon = di.weapon;
-            switch (weapon) {
+            switch (weapon)
+            {
                 case ProjPrefab.missile_devastator_mini:
                     weapon = ProjPrefab.missile_devastator;
                     break;
@@ -320,12 +323,31 @@ namespace GameMod {
                     break;
             }
 
-            var de = new DamageEvent {
+            var de = new DamageEvent
+            {
                 attacker = di.owner?.GetComponent<Player>(),
                 weapon = weapon,
                 damage = (hitpoints - damage_scaled <= 0f) ? hitpoints : damage_scaled
             };
             ServerDamageLog.AddDamage(playerShip.c_player.netId, de);
+
+            if (MPObserver.DamageNumbersEnabled)
+            {
+                if (di.owner != null)
+                {
+                    Player attacker = di.owner.GetComponent<Player>();
+
+                    if (attacker != null)
+                    {
+                        NetworkServer.SendToClient(attacker.connectionToClient.connectionId, MessageTypes.MsgSendDamage, new SendDamageMessage
+                        {
+                            m_attacker_id = attacker.netId,
+                            m_defender_id = playerShip.c_player.netId,
+                            m_damage = di.damage
+                        });
+                    }
+                }
+            }
         }
     }
 

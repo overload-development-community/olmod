@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod {
     // disable receiving server position on observer mode
@@ -592,7 +593,7 @@ namespace GameMod {
     }
 
     // Handle what happens when a player leaves.
-    [HarmonyPatch(typeof(NetworkManager), "RemovePlayer")]
+    [HarmonyPatch(typeof(Overload.NetworkManager), "RemovePlayer")]
     class MPObserverNetworkManagerRemovePlayer {
         static void Prefix(Player player)
         {
@@ -639,15 +640,57 @@ namespace GameMod {
         public static Dictionary<Player, List<MPObserverDamageLog>> playerDamages = new Dictionary<Player, List<MPObserverDamageLog>>();
         public static void AddDamage(Player player, float dmg, float timer = 2f)
         {
-            if (!MPObserverDamage.playerDamages.ContainsKey(player))
+            if (!MPObserver.Enabled)
             {
-                MPObserverDamage.playerDamages.Add(player, new List<MPObserverDamageLog> { new MPObserverDamageLog { dmg = dmg, timer = timer } });
+                return;
+            }
+
+            if (!playerDamages.ContainsKey(player))
+            {
+                playerDamages.Add(player, new List<MPObserverDamageLog> { new MPObserverDamageLog { dmg = dmg, timer = timer } });
             }
             else
             {
-                MPObserverDamage.playerDamages[player].Add(new MPObserverDamageLog { dmg = dmg, timer = timer });
+                playerDamages[player].Add(new MPObserverDamageLog { dmg = dmg, timer = timer });
             }
         }
+
+        public static void OnSendDamage(NetworkMessage rawMsg)
+        {
+            var dmg = rawMsg.ReadMessage<SendDamageMessage>();
+            var player = Overload.NetworkManager.m_Players.Find(p => p.netId == dmg.m_defender_id);
+            if (!playerDamages.ContainsKey(player))
+            {
+                playerDamages.Add(player, new List<MPObserverDamageLog> { new MPObserverDamageLog { dmg = dmg.m_damage, timer = 2f } });
+            }
+            else
+            {
+                playerDamages[player].Add(new MPObserverDamageLog { dmg = dmg.m_damage, timer = 2f });
+            }
+        }
+    }
+
+    public class SendDamageMessage : MessageBase
+    {
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write((byte)0); // version
+            writer.Write(m_attacker_id);
+            writer.Write(m_defender_id);
+            writer.Write(m_damage);
+        }
+
+        public override void Deserialize(NetworkReader reader)
+        {
+            var version = reader.ReadByte();
+            m_attacker_id = reader.ReadNetworkId();
+            m_defender_id = reader.ReadNetworkId();
+            m_damage = reader.ReadSingle();
+        }
+
+        public NetworkInstanceId m_attacker_id;
+        public NetworkInstanceId m_defender_id;
+        public float m_damage;
     }
 
     // Process damage log dropoffs
@@ -656,7 +699,7 @@ namespace GameMod {
     {
         static void Postfix(PlayerShip __instance)
         {
-            if (!MPObserver.Enabled)
+            if (!MPObserver.Enabled && !MPObserver.DamageNumbersEnabled)
                 return;
 
             if (MPObserverDamage.playerDamages.ContainsKey(__instance.c_player))
@@ -666,8 +709,52 @@ namespace GameMod {
                     dmg.timer -= RUtility.FRAMETIME_UI;
                 }
 
-                MPObserverDamage.playerDamages[__instance.c_player].RemoveAll(x => x.timer < 0f);
+                if (MPObserver.Enabled) {
+                    MPObserverDamage.playerDamages[__instance.c_player].RemoveAll(x => x.timer < 0f);
+                } else {
+                    if (MPObserverDamage.playerDamages[__instance.c_player].Where(x => x.timer >= 0f).Count() == 0) {
+                        MPObserverDamage.playerDamages[__instance.c_player].Clear();
+                    }
+                }
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIManager), "DrawMultiplayerNames")]
+    class MPObserver_UIManager_DrawMultiplayerName
+    {
+        static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> instructions)
+        {
+            int state = 0;
+            var codes = new List<CodeInstruction>(instructions);
+
+            foreach (var code in codes)
+            {
+                if (state < 26)
+                {
+                    if (code.opcode == OpCodes.Ldloc_S && ((LocalBuilder)code.operand).LocalIndex == 5)
+                    {
+                        state++;
+                    }
+                }
+                else if (state == 26)
+                {
+                    if (code.opcode == OpCodes.Ble_Un)
+                    {
+                        code.opcode = OpCodes.Blt_Un;
+                        state++;
+                    }
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIManager), "DrawMpPlayerArrow")]
+    class MPObserver_UIManager_DrawMpPlayerArrow
+    {
+        static bool Prefix(Player player) {
+            return player.m_mp_data.vis_fade != 0;
         }
     }
 
@@ -678,27 +765,38 @@ namespace GameMod {
         static void Postfix(Player player, Vector2 offset)
         {
             float w = 3.5f;
-            float h = 1f;
+            float h = MPObserver.Enabled ? 1f : 0.5f;
             if (MPObserver.Enabled || Menus.mms_team_health && player.m_mp_team == GameManager.m_local_player.m_mp_team && player.m_mp_team != MpTeam.ANARCHY)
             {
                 offset.y -= 3f;
                 Color c1 = Color.Lerp(HSBColor.ConvertToColor(0.4f, 0.85f, 0.1f), HSBColor.ConvertToColor(0.4f, 0.8f, 0.15f), UnityEngine.Random.value * UIElement.FLICKER);
                 Color c3 = Color.Lerp(player.m_mp_data.color, UIManager.m_col_white2, player.c_player_ship.m_damage_flash_fast);
-                UIManager.DrawStringAlignCenter(player.m_hitpoints.ToString("n1"), offset + Vector2.up * -3f, 0.8f, c3);
+                if (MPObserver.Enabled)
+                {
+                    UIManager.DrawStringAlignCenter(player.m_hitpoints.ToString("n1"), offset + Vector2.up * -3f, 0.8f, c3);
+                }
                 UIManager.DrawQuadBarHorizontal(offset, w + 0.25f, h + 0.25f, 0f, HSBColor.ConvertToColor(0.4f, 0.1f, 0.1f), 7);
                 float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
                 offset.x = w - health;
                 UIManager.DrawQuadUIInner(offset, health, h, c1, 1f, 11, 1f);
             }
-            if (MPObserver.Enabled /* || MPObserver.DamageNumbersEnabled */)
+            if (MPObserver.Enabled || MPObserver.DamageNumbersEnabled)
             {
                 if (MPObserverDamage.playerDamages.ContainsKey(player) && MPObserverDamage.playerDamages[player].Sum(x => x.dmg) > 0f)
                 {
-                    float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
-                    float dmg = System.Math.Max(0, System.Math.Min(100f - health, MPObserverDamage.playerDamages[player].Sum(x => x.dmg) / 100 * w));
+                    float dmg = MPObserverDamage.playerDamages[player].Sum(x => x.dmg);
                     Color c2 = Color.Lerp(HSBColor.ConvertToColor(0f, 1f, 0.90f), HSBColor.ConvertToColor(0f, 0.9f, 1f), UnityEngine.Random.value * UIElement.FLICKER);
-                    offset.x -= health + dmg;
-                    UIManager.DrawQuadUIInner(offset, dmg, h, c2, 1f, 11, 1f);
+                    if (MPObserver.Enabled)
+                    {
+                        float health = System.Math.Min(player.m_hitpoints, 100f) / 100f * w;
+                        float dmgbar = System.Math.Max(0, System.Math.Min(100f - health, dmg / 100 * w));
+                        offset.x -= health + dmgbar;
+                        UIManager.DrawQuadUIInner(offset, dmgbar, h, c2, 1f, 11, 1f);
+                    }
+                    else
+                    {
+                        UIManager.DrawStringAlignCenter(dmg.ToString("n0"), offset + Vector2.up * -3f, 1.5f, c2);
+                    }
                 }
             }
         }
