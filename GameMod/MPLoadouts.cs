@@ -318,7 +318,6 @@ namespace GameMod
                 if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkSpawnPlayer), "SetMultiplayerLoadout"))
                 {
                     yield return new CodeInstruction(OpCodes.Ldloc_3); // int lobby_id
-                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(Menus), "mms_selected_loadout_idx")); // int loadout_idx
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_Client_OnRespawnMsg), "SetMultiplayerLoadoutAndModifiers"));
                     continue;
                 }
@@ -462,10 +461,12 @@ namespace GameMod
             return;
         }
 
-        static void SetMultiplayerLoadoutAndModifiers(Player player, LoadoutDataMessage loadout_data, bool use_loadout1, int lobby_id, int loadout_idx)
+        static void SetMultiplayerLoadoutAndModifiers(Player player, LoadoutDataMessage loadout_data, bool use_loadout1, int lobby_id)
         {
+
             if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
             {
+                var loadout_idx = GameplayManager.IsDedicatedServer() ? MPLoadouts.NetworkLoadouts[lobby_id].selected_idx : Menus.mms_selected_loadout_idx;
                 SetMultiplayerModifiers(player, loadout_data, use_loadout1);
                 SetMultiplayerLoadout(player, lobby_id, loadout_idx);
             }
@@ -516,7 +517,7 @@ namespace GameMod
                 pos.x -= num;
                 pos.y += 11f;
 
-                uie.DrawStringSmall((idx+1).ToString(), pos - Vector2.right * 90f, 0.6f, StringOffset.LEFT, c, uie.m_alpha);
+                uie.DrawStringSmall((idx + 1).ToString(), pos - Vector2.right * 90f, 0.6f, StringOffset.LEFT, c, uie.m_alpha);
 
                 pos.x += 30f;
                 if (loadout.loadoutType == MPLoadouts.LoadoutType.GUNNER)
