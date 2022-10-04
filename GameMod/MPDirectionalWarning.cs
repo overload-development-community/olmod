@@ -26,7 +26,7 @@ namespace GameMod
         static void Postfix(Player ___m_cur_target_player, Transform ___c_transform)
         {
 
-            if (___m_cur_target_player.isLocalPlayer)
+            if (___m_cur_target_player != null && ___m_cur_target_player.isLocalPlayer)
             {
                 MPDirectionalWarning.homingDir = Vector3.MoveTowards(___m_cur_target_player.c_player_ship.transform.localPosition, ___c_transform.localPosition, 0.7f);
             }
@@ -38,7 +38,7 @@ namespace GameMod
     {
         static void Postfix(Player ___m_cur_target_player, Transform ___c_transform)
         {
-            if (___m_cur_target_player.isLocalPlayer)
+            if (___m_cur_target_player != null && ___m_cur_target_player.isLocalPlayer)
             {
                 MPDirectionalWarning.homingDir = Vector3.MoveTowards(___m_cur_target_player.c_player_ship.transform.localPosition, ___c_transform.localPosition, 0.7f);
             }
