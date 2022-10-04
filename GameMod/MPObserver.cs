@@ -795,6 +795,7 @@ namespace GameMod {
                     }
                     else
                     {
+                        c2.a = player.m_mp_data.vis_fade;
                         UIManager.DrawStringAlignCenter(dmg.ToString("n0"), offset + Vector2.up * -3f, 1.5f, c2);
                     }
                 }
