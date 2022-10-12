@@ -79,48 +79,59 @@ namespace GameMod
 		{	
 			if (__result != -1)
 			{
-				if ((Menus.mms_audio_occlusion_strength != 0) && (!MPObserver.Enabled || MPObserver.ObservedPlayer != null) && !GameplayManager.IsDedicatedServer()) // last check probably not necessary but whatever
+				if (Menus.mms_audio_occlusion_strength != 0)
 				{
-					RaycastHit ray1;
-
-					Vector3 shipPos = GameManager.m_player_ship.transform.localPosition;
-
-					// If pos3d = Vector3.zero, then it's almost without a doubt a 2D cue on the local client. It's beyond infeasible that sound could accidentally come from *exactly* this point.
-					// If it ever does, well then you get 1 glitched cue and you should have bought a lottery ticket.
-					if (pos3d != Vector3.zero && Physics.Linecast(pos3d, shipPos, out ray1, 67256320)) // check line-of-sight to sound source.
+					if ((!MPObserver.Enabled || MPObserver.ObservedPlayer != null) && !GameplayManager.IsDedicatedServer()) // last check probably not necessary but whatever
 					{
-						// we don't have line-of-sight
-						// This is the "Tier 3" approach, taking both distance to target and thickness of obstruction into account
+						RaycastHit ray1;
 
-						float maxdist = MPSoundOcclusion.MAXDISTS[Menus.mms_audio_occlusion_strength];
-						float cutoff = MPSoundOcclusion.CUTOFFS[Menus.mms_audio_occlusion_strength];
-						float lowfreq = MPSoundOcclusion.LOWFREQS[Menus.mms_audio_occlusion_strength];
-						float boost = MPSoundOcclusion.BOOSTS[Menus.mms_audio_occlusion_strength];
+						Vector3 shipPos = GameManager.m_player_ship.transform.localPosition;
 
-						float p2pDist = Vector3.Distance(pos3d, shipPos); // point to point distance
-						RaycastHit ray2;
-						Physics.Linecast(shipPos, pos3d, out ray2, 67256320);
-						float thick = Mathf.Clamp(p2pDist - ray1.distance - ray2.distance, 1f, maxdist); // how thick the obstruction is, clamped
-						p2pDist = Mathf.Clamp(p2pDist, MPSoundOcclusion.MINDIST, maxdist); // clamp the p2pDist value
-						float factor = (maxdist - (0.6f * thick + 0.4f * p2pDist)) / (maxdist);
+						// If pos3d = Vector3.zero, then it's almost without a doubt a 2D cue on the local client. It's beyond infeasible that sound could accidentally come from *exactly* this point.
+						// If it ever does, well then you get 1 glitched cue and you should have bought a lottery ticket.
+						if (pos3d != Vector3.zero && Physics.Linecast(pos3d, shipPos, out ray1, 67256320)) // check line-of-sight to sound source.
+						{
+							// we don't have line-of-sight
+							// This is the "Tier 3" approach, taking both distance to target and thickness of obstruction into account
 
-						MPSoundExt.m_a_filter[__result].cutoffFrequency = lowfreq + (cutoff * factor * factor); // exponential curve
+							//Debug.Log("CCC occlusion factor " + Menus.mms_audio_occlusion_strength);
 
-						//Debug.Log("CCC playing occluded, factor " + factor);
-						//Debug.Log("CCC playing occluded, original volume " + MPSoundOcclusion.m_a_source[__result].volume);
+							float maxdist = MPSoundOcclusion.MAXDISTS[Menus.mms_audio_occlusion_strength];
+							float cutoff = MPSoundOcclusion.CUTOFFS[Menus.mms_audio_occlusion_strength];
+							float lowfreq = MPSoundOcclusion.LOWFREQS[Menus.mms_audio_occlusion_strength];
+							float boost = MPSoundOcclusion.BOOSTS[Menus.mms_audio_occlusion_strength];
 
-						MPSoundExt.m_a_source[__result].volume = MPSoundExt.m_a_source[__result].volume + boost * (0.85f - factor); // slight boost to volume as range increases to counter the HF rolloff
-						MPSoundExt.m_a_filter[__result].enabled = true;
+							float p2pDist = Vector3.Distance(pos3d, shipPos); // point to point distance
+							RaycastHit ray2;
+							Physics.Linecast(shipPos, pos3d, out ray2, 67256320);
+							float thick = Mathf.Clamp(p2pDist - ray1.distance - ray2.distance, 1f, maxdist); // how thick the obstruction is, clamped
+							p2pDist = Mathf.Clamp(p2pDist, MPSoundOcclusion.MINDIST, maxdist); // clamp the p2pDist value
+							float factor = (maxdist - (0.6f * thick + 0.4f * p2pDist)) / (maxdist);
 
-						//Debug.Log("CCC playing occluded, new volume " + MPSoundOcclusion.m_a_source[__result].volume);
-						//Debug.Log("CCC playing occluded, distance " + p2pDist +", thickness " + thick + ", factor is " + factor + ", cutoff frequency is " + MPSoundOcclusion.m_a_filter[__result].cutoffFrequency);
+							MPSoundExt.m_a_filter[__result].cutoffFrequency = lowfreq + (cutoff * factor * factor); // exponential curve
+
+							//Debug.Log("CCC playing occluded, factor " + factor);
+							//Debug.Log("CCC playing occluded, original volume " + MPSoundOcclusion.m_a_source[__result].volume);
+
+							MPSoundExt.m_a_source[__result].volume = MPSoundExt.m_a_source[__result].volume + boost * (0.85f - factor); // slight boost to volume as range increases to counter the HF rolloff
+							MPSoundExt.m_a_filter[__result].enabled = true;
+
+							//Debug.Log("CCC playing occluded, new volume " + MPSoundOcclusion.m_a_source[__result].volume);
+							//Debug.Log("CCC playing occluded, distance " + p2pDist +", thickness " + thick + ", factor is " + factor + ", cutoff frequency is " + MPSoundOcclusion.m_a_filter[__result].cutoffFrequency);
+						}
+						else
+						{
+							// we have line-of-sight, restore the normal filter
+							MPSoundExt.m_a_filter[__result].cutoffFrequency = 22000f;
+							MPSoundExt.m_a_filter[__result].enabled = false;
+						}
 					}
-					else
-					{
-						// we have line-of-sight, restore the normal filter
-						MPSoundExt.m_a_filter[__result].cutoffFrequency = 22000f;
-						MPSoundExt.m_a_filter[__result].enabled = false;
-					}
+				}
+				else
+                {
+					// restore the filter since we're disabled and they may have been set previously
+					MPSoundExt.m_a_filter[__result].cutoffFrequency = 22000f;
+					MPSoundExt.m_a_filter[__result].enabled = false;
 				}
 
 				MPSoundExt.m_a_source[__result].Play();  // Nop'd out in the transpiler
