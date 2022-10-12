@@ -1071,6 +1071,10 @@ namespace GameMod {
                     break;
                 case 6:
                     Menus.mms_audio_occlusion_strength = (Menus.mms_audio_occlusion_strength + UIManager.m_select_dir) % 4;
+                    if (Menus.mms_audio_occlusion_strength < 0)
+                    {
+                        Menus.mms_audio_occlusion_strength = 3;
+                    }
                     MenuManager.PlaySelectSound(1f);
                     break;
             }
