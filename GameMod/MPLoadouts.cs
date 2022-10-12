@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Overload;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -136,10 +137,24 @@ namespace GameMod
         {
             MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] = (WeaponType)((((int)MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) + 1) % (int)WeaponType.LANCER);
 
-            // Skip to next if we've landed on reflex or an already selected weapon
-            if (MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] == WeaponType.REFLEX
-                || MPLoadouts.Loadouts[loadoutIndex].weapons.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) > 1)
+            Func<bool> IsValidPrimary = () =>
+            {
+                return MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] != WeaponType.REFLEX
+                    && MPLoadouts.Loadouts[loadoutIndex].weapons.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) <= 1;
+            };
+
+            if (IsValidPrimary())
+                return;
+
+            // A little bit awkward - we need to ensure that we didn't land on reflex and keep trying to
+            // increment until we find a valid combo.  Bunch of extra code to avoid a simple 'while (!success)' or recursion
+            // if we get wild with modifying things in the future :).
+            for (int i = 0; i < (int)WeaponType.LANCER; i++)
+            {
                 MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] = (WeaponType)((((int)MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) + 1) % (int)WeaponType.LANCER);
+                if (IsValidPrimary())
+                    break;
+            }
         }
 
         // Process client's UI selection of cycling custom loadout missile
