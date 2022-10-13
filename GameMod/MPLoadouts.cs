@@ -213,6 +213,22 @@ namespace GameMod
             loadoutDataMessage.loadouts = MPLoadouts.Loadouts.ToList();
             Client.GetClient().Send(MessageTypes.MsgCustomLoadouts, loadoutDataMessage);
         }
+
+        public static void SendCustomLoadoutToServer(int idx)
+        {
+            if (Client.GetClient() == null)
+            {
+                Debug.LogErrorFormat("Null client in MPLoadouts.CallCmdToggleLoadout for player", new object[0]);
+                return;
+            }
+
+            Menus.mms_selected_loadout_idx = idx;
+
+            MPLoadouts.SetCustomLoadoutMessage clm = new MPLoadouts.SetCustomLoadoutMessage();
+            clm.lobby_id = NetworkMatch.m_my_lobby_id;
+            clm.selected_idx = idx;
+            Client.GetClient().Send(MessageTypes.MsgSetCustomLoadout, clm);
+        }
     }
 
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
@@ -649,18 +665,66 @@ namespace GameMod
         {
             static void Postfix(Player __instance)
             {
-                if (Client.GetClient() == null)
+                MPLoadouts.SendCustomLoadoutToServer((Menus.mms_selected_loadout_idx + 1) % 4);
+            }
+        }
+    }
+
+    // process the loadout selection -- uses hotkeys for selecting primary weapon slots 1-4
+    [HarmonyPatch(typeof(PlayerShip), "Update")]
+    internal class MPLoadouts_PlayerShip_Update
+    {
+        public static void LoadoutSelect(PlayerShip ps)
+        {
+            if (!PlayerShip.m_typing_in_chat)
+            {
+                if (NetworkMatch.m_force_loadout == 0 && (float)ps.m_dying_timer < 2.5f)
                 {
-                    Debug.LogErrorFormat("Null client in MPLoadouts.CallCmdToggleLoadout for player", new object[0]);
-                    return;
+                    if (Controls.JustPressed(CCInput.WEAPON_1x2))
+                    {
+                        MPLoadouts.SendCustomLoadoutToServer(0);
+                    }
+                    else if (Controls.JustPressed(CCInput.WEAPON_3x4))
+                    {
+                        MPLoadouts.SendCustomLoadoutToServer(1);
+                    }
+                    else if (Controls.JustPressed(CCInput.WEAPON_5x6))
+                    {
+                        MPLoadouts.SendCustomLoadoutToServer(2);
+                    }
+                    else if (Controls.JustPressed(CCInput.WEAPON_7x8))
+                    {
+                        MPLoadouts.SendCustomLoadoutToServer(3);
+                    }
                 }
+            }
+        }
 
-                Menus.mms_selected_loadout_idx = (Menus.mms_selected_loadout_idx + 1) % 4;
+        // catches the selection hotkeys while respawning
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                yield return code;
 
-                MPLoadouts.SetCustomLoadoutMessage clm = new MPLoadouts.SetCustomLoadoutMessage();
-                clm.lobby_id = NetworkMatch.m_my_lobby_id;
-                clm.selected_idx = Menus.mms_selected_loadout_idx;
-                Client.GetClient().Send(MessageTypes.MsgSetCustomLoadout, clm);
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(GameplayManager), "ShowMpScoreboard"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPLoadouts_PlayerShip_Update), "LoadoutSelect"));
+                }
+            }
+        }
+    }
+
+    // catches the selection hotkeys at round start
+    [HarmonyPatch(typeof(PlayerShip), "UpdateReadImmediateControls")]
+    internal class MPLoadouts_PlayerShip_UpdateReadImmediateControls
+    {
+        public static void Prefix(PlayerShip __instance)
+        {
+            if (GameplayManager.IsMultiplayer && __instance.c_player.m_pregame)
+            {
+                MPLoadouts_PlayerShip_Update.LoadoutSelect(__instance);
             }
         }
     }
