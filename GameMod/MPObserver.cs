@@ -43,7 +43,7 @@ namespace GameMod {
             {
                 NetworkMatch.m_show_enemy_names = MatchShowEnemyNames.ALWAYS;
                 GameplayManager.AddHUDMessage("Observer mode - Use switch weapon to select player, fire missle for third person view");
-        }
+            }
             else
             {
                 GameManager.m_local_player.SetCheaterFlag(true);
@@ -723,6 +723,29 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIManager), "DrawMultiplayerNames")]
     class MPObserver_UIManager_DrawMultiplayerName
     {
+
+        // Preserve arrow display for teammates while they're in death roll/prior to respawn
+        static void Postfix()
+        {
+            Vector2 zero = Vector2.zero;
+            int count = Overload.NetworkManager.m_Players.Count;
+            for (int i = 0; i < count; i++)
+            {
+                Player player = Overload.NetworkManager.m_Players[i];
+                if (!player.m_spectator)
+                {
+                    if (player.m_mp_data.vis_fade == 0f && player.m_mp_team == GameManager.m_local_player.m_mp_team && player.m_mp_team != MpTeam.ANARCHY)
+                    {
+                        int quad_index2 = UIManager.m_quad_index;
+                        zero.y = -80f / player.m_mp_data.dist;
+                        UIManager.DrawMpPlayerName(player, zero);
+                        UIManager.DrawMpPlayerArrow(player, zero);
+                        UIManager.PreviousQuadsTransformPlayer(player, quad_index2);
+                    }
+                }
+            }
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(ILGenerator ilGen, IEnumerable<CodeInstruction> instructions)
         {
             int state = 0;
@@ -753,8 +776,10 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIManager), "DrawMpPlayerArrow")]
     class MPObserver_UIManager_DrawMpPlayerArrow
     {
-        static bool Prefix(Player player) {
-            return player.m_mp_data.vis_fade != 0;
+        static bool Prefix(Player player)
+        {
+            return player.m_mp_data.vis_fade != 0
+                || (player.m_hitpoints <= 0f && player.m_mp_team == GameManager.m_local_player.m_mp_team && player.m_mp_team != MpTeam.ANARCHY);
         }
     }
 
