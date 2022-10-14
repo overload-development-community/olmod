@@ -339,12 +339,15 @@ namespace GameMod {
 
                     if (attacker != null)
                     {
-                        NetworkServer.SendToClient(attacker.connectionToClient.connectionId, MessageTypes.MsgSendDamage, new SendDamageMessage
+                        if (MPTweaks.ClientHasTweak(attacker.connectionToClient.connectionId, "damagenumbers"))
                         {
-                            m_attacker_id = attacker.netId,
-                            m_defender_id = playerShip.c_player.netId,
-                            m_damage = di.damage
-                        });
+                            NetworkServer.SendToClient(attacker.connectionToClient.connectionId, MessageTypes.MsgSendDamage, new SendDamageMessage
+                            {
+                                m_attacker_id = attacker.netId,
+                                m_defender_id = playerShip.c_player.netId,
+                                m_damage = di.damage
+                            });
+                        }
                     }
                 }
             }
