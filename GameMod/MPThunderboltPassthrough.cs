@@ -10,9 +10,9 @@ namespace GameMod
 {
 	// Original Author: Tobias
 	// Allows Thunderbolt projectiles to penetrate through ships
-    class MPThunderboltPassthrough
-    {
-		
+	class MPThunderboltPassthrough
+	{
+
 		public static bool isAllowed = false;
 
 		[HarmonyPatch(typeof(Projectile), "OnTriggerEnter")]
@@ -20,7 +20,7 @@ namespace GameMod
 		{
 			private void MaybeExplode(bool damaged_something, Projectile proj)
 			{
-				bool enablePassthrough = proj.m_type == ProjPrefab.proj_thunderbolt && (!GameplayManager.IsMultiplayer | isAllowed);
+				bool enablePassthrough = proj.m_type == ProjPrefab.proj_thunderbolt && GameplayManager.IsMultiplayer && isAllowed;
 
 				if (!enablePassthrough)
 					proj.Explode(damaged_something);
