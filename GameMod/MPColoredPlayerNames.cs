@@ -24,7 +24,7 @@ namespace GameMod
         class MPPlayerDistinction_UIManager_DrawMpPlayerName
         {
 
-            static bool Prefix(Player player, Vector2 offset)
+            static bool Prefix(Player player, ref Vector2 offset)
             {
                 if (NetworkMatch.GetMode() == MatchMode.ANARCHY && isActive)
                 {
