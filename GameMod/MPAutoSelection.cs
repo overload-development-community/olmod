@@ -275,7 +275,7 @@ namespace GameMod
             if (!(GameManager.m_local_player.m_weapon_type.Equals(stringToWeaponType(weaponName))))
             {
                 GameManager.m_local_player.Networkm_weapon_type = stringToWeaponType(weaponName);
-                GameManager.m_local_player.CallCmdSetCurrentWeapon(stringToWeaponType(weaponName));
+                GameManager.m_local_player.CallCmdSetCurrentWeapon(GameManager.m_local_player.m_weapon_type);
 
 
                 if (GameManager.m_game_state != GameManager.GameState.GAMEPLAY)
@@ -550,7 +550,7 @@ namespace GameMod
             if (GameManager.m_local_player.m_missile_type != (MissileType)weapon_num)
             {
                 GameManager.m_local_player.Networkm_missile_type = (MissileType)weapon_num;
-                GameManager.m_local_player.CallCmdSetCurrentMissile((MissileType)weapon_num);
+                GameManager.m_local_player.CallCmdSetCurrentMissile(GameManager.m_local_player.Networkm_missile_type);
 
                 if (GameManager.m_game_state != GameManager.GameState.GAMEPLAY)
                 {
@@ -782,7 +782,7 @@ namespace GameMod
                 if (GameManager.m_local_player.m_missile_type != (MissileType)weapon_num && (GameManager.m_local_player.NumUnlockedMissilesWithAmmo() > 1 || (GameManager.m_local_player.NumUnlockedMissilesWithAmmo() == 1 && GameManager.m_local_player.m_missile_ammo[(int)GameManager.m_local_player.m_missile_type] == 0)))
                 {
                     GameManager.m_local_player.Networkm_missile_type = (MissileType)weapon_num;
-                    GameManager.m_local_player.CallCmdSetCurrentMissile((MissileType)weapon_num);
+                    GameManager.m_local_player.CallCmdSetCurrentMissile(GameManager.m_local_player.m_missile_type);
                     GameManager.m_local_player.UpdateCurrentMissileName();
                 }
             }
