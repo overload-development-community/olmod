@@ -1,10 +1,12 @@
 ﻿using HarmonyLib;
 using Overload;
+using Rewired;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using UnityEngine;
@@ -176,7 +178,7 @@ namespace GameMod
             int state = 0;
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Controller), "SetAxisSensitivity"))
+                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Overload.Controller), "SetAxisSensitivity"))
                 {
                     state++;
                     if (state == 2)
@@ -190,7 +192,7 @@ namespace GameMod
                     }
                 }
 
-                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Controller), "SetAxisDeadzone"))
+                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Overload.Controller), "SetAxisDeadzone"))
                 {
                     state++;
                     if (state == 4)
@@ -426,7 +428,7 @@ namespace GameMod
         {
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Controller), "SetAxisDeadzone"))
+                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Overload.Controller), "SetAxisDeadzone"))
                 {
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldloc_3); // Current controller
@@ -435,7 +437,7 @@ namespace GameMod
                     continue;
                 }
 
-                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Controller), "SetAxisSensitivity"))
+                if (code.opcode == OpCodes.Callvirt && code.operand == AccessTools.Method(typeof(Overload.Controller), "SetAxisSensitivity"))
                 {
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldloc_3); // Current controller
@@ -449,4 +451,95 @@ namespace GameMod
         }
     }
 
+    // Generic utility class for controller name remapping
+    public class ControllerNameRemapper {
+        private static bool configLoaded = false;
+        private static Dictionary<string, string> remapValues = new Dictionary<string,string>();
+
+
+        private static void AddRemap(string origName, string newName)
+        {
+            if (String.IsNullOrEmpty(origName)) {
+                    Debug.LogFormat("ControllerNameRemapper: invalid remap request with empty origName ignored");
+                    return;
+            }
+            if (String.IsNullOrEmpty(newName)) {
+                // Delete the existing mapping
+                if (remapValues.ContainsKey(origName)) {
+                    Debug.LogFormat("ControllerNameRemapper: REMOVING config {0}->{1}", origName, remapValues[origName]);
+                    remapValues.Remove(origName);
+                }
+            } else {
+                // Add the mapping
+                remapValues[origName] = newName;
+                Debug.LogFormat("ControllerNameRemapper: will remap '{0}' -> '{1}'", origName, newName);
+            }
+        }
+
+        private static void AddRemap(string line)
+        {
+            if (!String.IsNullOrEmpty(line)) {
+                if (line[0] == '#') {
+                    // ignore comments
+                    return;
+                }
+                int idx = line.IndexOf("->");
+                if (idx < 1 || idx > line.Length-3 ) {
+                    Debug.LogFormat("ControllerNameRemapper: config option '{0}' is invalid!", line);
+                    return;
+                }
+                string origName = line.Substring(0, idx);
+                string newName = line.Substring(idx +2, line.Length - idx - 2);
+                AddRemap(origName, newName);
+            }
+        }
+
+        private static void LoadConfig()
+        {
+            if (configLoaded) {
+                return;
+            }
+
+            configLoaded = true;
+            try {
+                string fn = Path.Combine(Application.persistentDataPath, "controllers.remapmod");
+                //Debug.LogFormat("ControllerNameRemapper: looking for config file '{0}'", fn);
+                if (File.Exists(fn)) {
+                    Debug.LogFormat("ControllerNameRemapper: found config file '{0}'", fn);
+                    StreamReader sr = new StreamReader(fn, new System.Text.UTF8Encoding());
+                    string line;
+                    while( (line = sr.ReadLine()) != null) {
+                        AddRemap(line);
+                    }
+                }
+            } catch (Exception ex) {
+                Debug.LogFormat("ControllerNameRemapper: exception during loading config: {0}", ex.Message);
+            }
+        }
+
+        public static bool RenameController(string origName, ref string newName)
+        {
+            LoadConfig();
+            //Debug.LogFormat("ControllerNameRemapper: got '{0}'", origName);
+            if (remapValues.ContainsKey(origName)) {
+                newName = remapValues[origName];
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /// Patch to apply controller name remapping
+    [HarmonyPatch(typeof(Overload.Controller), MethodType.Constructor, new [] { typeof(Joystick) })]
+    class ControllerNameRemapper_ControllerCtorRenamePatch {
+        private static FieldInfo field_m_name = AccessTools.Field(typeof(Overload.Controller), "m_name");
+        private static void Postfix(Overload.Controller __instance) {
+            string origName = (string)field_m_name.GetValue(__instance);
+            string newName = origName;
+            if (ControllerNameRemapper.RenameController(origName, ref newName)) {
+                Debug.LogFormat("ControllerNameRemapper: mapping '{0}' -> '{1}'", origName, newName);
+                field_m_name.SetValue(__instance, newName);
+            }
+        }
+    }
 }
