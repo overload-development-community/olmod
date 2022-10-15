@@ -179,6 +179,22 @@ What does it do
 
 - Objects teleported by warpers are now oriented as expected, by kevin.
 
+- 4 customizable multiplayer loadouts, with a reflex sidearm, by Tobias.
+
+- Multiplayer option for team health bars, by roncli.
+
+- Match option for thunderbolt ship penetration, by luponix.
+
+- Match option for floating damage numbers, by roncli.
+
+- Audio occlusion and stereo homing alerts, by Fireball.
+
+- vr_scale console command to set the VR camera size, by roncli.
+
+- New matcen HP cap calculation for level designers, by Kevin.
+
+- Boss 2B available for use in single player campaigns, by Kevin.
+
 How does it work
 ----------------
 

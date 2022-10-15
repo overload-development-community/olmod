@@ -20,7 +20,7 @@ namespace GameMod.VersionHandling {
         private static string _fullVersionString;
 
         public static string FullVersionString
-        { 
+        {
             get
             {
                 if (_fullVersionString == null)

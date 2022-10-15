@@ -1,3 +1,30 @@
+v0.5.6 - 2022-10-14
+
+- There are now 4 loadouts available, all of them are customizable, and all 4 are available in the game at all times.  You can use the hot keys to select the 4 sets of primary weapons (by default, keys are 1, 2, 3, and 4) to select the loadout to use.  (Thanks, Tobias!)
+- The reflex is given for free for all loadouts.  Note that this is an experimental feature, and may change in the future depending on feedback.  (Thanks, Tobias!)
+- New multiplayer option for team health bars.
+- New match option for thunderbolt ship penetration.  (Thanks, luponix!)
+- New match option for floating damage numbers.  Currently damage numbers are before tank mods are applied.  (Note, we will also add this as a multiplayer option in the future, similar to rear view.)
+- New audio options for audio occlusion.  This means sounds that have to go through a wall to reach you can be made to sound muffled.  (Thanks, Fireball!)
+- Homing alerts are now in stereo.  (Thanks, Fireball!)
+- New vr_scale console command.  Use it when outside of a game to change the vr_scale of the world.  Think of it as adjusting the size of the camera, 10 makes the camera really big and things seem tiny, 0.1 makes it really small and things seem huge.
+- New matcen HP cap calculation.  Does not affect existing campaigns, only maps that take advantage of a parameter from the editor. (Thanks, kevin!)
+- Multiplayer chat command updates: (Thanks, derhass!)
+  - Admin commands.
+    - /EXTEND <seconds> - Extend the match time by the specified amount of seconds.
+  - Commands anyone can do.
+    - /SWITCHTEAM - Switches you to the next team.
+- Fix for missing levels from .zip files when downloading maps. (Thanks, Sirius!)
+- Fix for reporting incorrect damage to the tracker when the target is using tank mods and the damage would have killed them without the tank mods but did not actually kill them.  Does not change the actual damage done in game.
+- Fix for in-game FPS measure. (Thanks, derhass!)
+- Boss 2B is now useable in single player campaigns. (Thanks, kevin!)
+- Ships no longer disappear during the cutscene exit. (Thanks, kevin!)
+- Opponent cockpits are no longer rendered. (Thanks, derhass!)
+- Load screen for single player is back.
+- Gamelift pings are now disabled.  You'll still see them in the log as all 0 or -1.
+- Allow Rear View Camera menu navigation is now fixed. (Thanks, Tobias!)
+- Harmony updated to v2.2.2.
+
 v0.5.5 - 2022-08-23
 
 - Multiplayer chat commands.  For a detailed explanation, see https://github.com/overload-development-community/olmod/blob/master/ServerCommands.md (Thanks, derhass!)
