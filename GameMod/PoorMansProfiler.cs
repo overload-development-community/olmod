@@ -83,9 +83,24 @@ namespace GameMod {
             List<MethodBase> origMethods = harmony.GetPatchedMethods().ToList();
             UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: will apply to {0} patched methods", origMethods.Count);
 
+            // Get all olmod methods which look like a Message Handler (!)
+            Assembly ourAsm = Assembly.GetExecutingAssembly();
+            foreach (var t in ourAsm.GetTypes()) {
+                foreach(var m in t.GetMethods(AccessTools.all)) {
+                    if (m != null && !String.IsNullOrEmpty(m.Name)) {
+                        var p = m.GetParameters();
+                        if (p.Length == 1 && (p[0].ParameterType.Name == "NetworkMessage")) {
+                            if (m.Name.Length > 3 && m.Name[0] == 'O' && m.Name[1] == 'n' &&
+                                m.Name != "OnSerialize" && m.Name != "OnDeserialize" && m.Name != "OnNetworkDestroy") {
+                                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} (appears as message handler)", m);
+                            }
+                        }
+                    }
+                }
+            }
             // NOTE: we could add other functions of interest here as well, up to iterating through the full assembly(!)
             
-            // Patch the mothods with the profiler prefix and postfix
+            // Patch the methods with the profiler prefix and postfix
             MethodInfo mPrefix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPrefix");
             MethodInfo mPostfix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPostfix");
             var hmPrefix = new HarmonyMethod(mPrefix, Priority.First);
@@ -144,7 +159,7 @@ namespace GameMod {
             sw.Write("+++ OLMOD - Poor Man's Profiler v1\n");
             sw.Write("+++ run at {0}\n",timestamp);
             foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
-                UnityEngine.Debug.LogFormat("XXX {0}", pair.Value.method);
+                //UnityEngine.Debug.LogFormat("XXX {0}", pair.Value.method);
                 pair.Value.WriteResults(sw);
             }
             sw.Write("+++ Dump ends here\n");
