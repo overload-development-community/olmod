@@ -8,11 +8,11 @@ namespace GameMod
 {
 	public static class MPSoundOcclusion
     {	
-		//									N/A		LOW		MED		STRONG			
-		public static float[] MAXDISTS =	{ 0f,	100f,	95f,	85f };
-		public static float[] BOOSTS =		{ 0f,	0.15f,	0.20f,	0.25f };
-		public static float[] LOWFREQS =	{ 0f,	800f,	500f ,	500f };
-		public static float[] CUTOFFS =		{ 0f,	9500f,	10000f,	10500f };
+		//                                    N/A   LOW     MED     STRONG			
+		public static float[] MAXDISTS =    { 0f,   110f,   100f,   95f };    // xtra strong 85f
+		public static float[] BOOSTS =      { 0f,   0.10f,  0.15f,  0.20f };  // xtra strong 0.25f
+		public static float[] LOWFREQS =    { 0f,   950f,   800f,   500f };   // xtra strong 500f
+		public static float[] CUTOFFS =     { 0f,   9000f,  9500f,  10000f }; // xtra strong 10500f
 		// actual cutoff starting point is currently targetted at ~7khz since we are clamping to 15 units minimum distance below
 
 		// Change this at your peril, gotta recalculate the curves if you do
