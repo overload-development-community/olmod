@@ -93,6 +93,7 @@ namespace GameMod {
                             if (m.Name.Length > 3 && m.Name[0] == 'O' && m.Name[1] == 'n' &&
                                 m.Name != "OnSerialize" && m.Name != "OnDeserialize" && m.Name != "OnNetworkDestroy") {
                                 UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} (appears as message handler)", m);
+                                origMethods.Add(m);
                             }
                         }
                     }
