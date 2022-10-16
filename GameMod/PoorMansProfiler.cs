@@ -14,11 +14,21 @@ namespace GameMod {
     public class MethodProfile
     {
         public MethodBase method = null;
-        public ulong count;
+        public ulong count = 0;
         public long ticksTotal;
         public long ticksMin;
         public long ticksMax;
         public Stopwatch watch = null;
+
+        public MethodProfile()
+        {
+            method = null;
+            watch = null;
+            count = 0;
+            ticksTotal = 0;
+            ticksMin = 0;
+            ticksMax = 0;
+        }
 
         public MethodProfile(MethodBase mb)
         {
@@ -72,9 +82,26 @@ namespace GameMod {
     }
 
 
+    public class MethodProfileCollector
+    {
+        public const int MaxEntryCount = 10000;
+        public MethodProfile[] entry; //  = new MethodProfileEntry[MaxEntryCount];
+
+        public MethodProfileCollector() {
+            entry = new MethodProfile[MaxEntryCount];
+        }
+    }
+
+
     public class PoorMansProfiler
     {
         private static Dictionary<MethodBase,MethodProfile> profileData = new Dictionary<MethodBase, MethodProfile>();
+        private static Dictionary<MethodBase,MethodProfileCollector> profileDataCollector = new Dictionary<MethodBase, MethodProfileCollector>();
+
+        private static int curIdx = 0;
+        private static int curFixedTick = 0;
+        private static DateTime startTime = DateTime.UtcNow;
+        private static int fixedTickCount = 180; // 3 second interval by default
 
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
@@ -113,6 +140,7 @@ namespace GameMod {
             // Additional Patches for management of the Profiler itself
             harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnMatchEnd"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
+            harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "FixedUpdate"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("FixedUpdatePostfix"), Priority.Last));
         }
 
         // The Prefix run at the start of every target method
@@ -147,6 +175,44 @@ namespace GameMod {
             Cycle();
         }
 
+        // This is an additional Postfix to Overload.GameManager.FixedUpdate() to cycle the internal profiler data
+        public static void FixedUpdatePostfix()
+        {
+            if (++curFixedTick >= fixedTickCount) {
+                CycleInterval();
+                curFixedTick = 0;
+            }
+        }
+
+        // Collect the current profile Data into the collector
+        public static void Collect(Dictionary<MethodBase,MethodProfileCollector> pdc, Dictionary<MethodBase,MethodProfile> data, int idx)
+        {
+            if (idx > MethodProfileCollector.MaxEntryCount) {
+                return;
+            }
+
+            if (pdc.Count < 1) {
+                foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
+                    MethodProfileCollector coll = new MethodProfileCollector();
+                    coll.entry[idx] = pair.Value;
+                    pdc[pair.Key] = coll;
+                }
+            } else {
+                foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
+                    MethodProfileCollector coll = null;
+                    UnityEngine.Debug.LogFormat("CXXXXXX {0} {1} {2} {3} {4}",pdc,data,coll,pair.Key,pair.Value);
+                    try {
+                        coll = pdc[pair.Key];
+                    } catch (KeyNotFoundException) {
+                        coll = new MethodProfileCollector();
+                        pdc[pair.Key] = coll;
+                    }
+                    UnityEngine.Debug.LogFormat("XXXXXX {0} {1} {2} {3} {4}",pdc,data,coll,pair.Key,pair.Value);
+                    coll.entry[idx] = pair.Value;
+                }
+            }
+        }
+
         // Console command pmpcycle
         static void CmdCycle()
         {
@@ -167,20 +233,72 @@ namespace GameMod {
             sw.Dispose();
         }
 
+
+        // Function to write the statistics to a file
+        public static void WriteResults(Dictionary<MethodBase,MethodProfileCollector> pdc, string filename, string timestamp, int cnt)
+        {
+            var sw = new StreamWriter(filename, false);
+            sw.Write("+++ OLMOD - Poor Man's Profiler v1\n");
+            sw.Write("+++ run at {0}\n",timestamp);
+            int i;
+
+            MethodProfile dummy = new MethodProfile();
+            dummy.ticksTotal = 0;
+            dummy.ticksMin = 0;
+            dummy.ticksMax = 0;
+            dummy.count = 0;
+
+            for (i=0; i<cnt; i++) {
+              sw.Write("{0}", i);
+              foreach( KeyValuePair<MethodBase,MethodProfileCollector> pair in pdc) {
+                  MethodProfile mp = pair.Value.entry[i];
+                  if (mp == null) {
+                      mp = dummy;
+                  }
+                  sw.Write("\t{0}", mp.ticksTotal);
+              }
+              sw.Write("\n");
+            }
+            sw.Write("+++ Dump ends here\n");
+            sw.Dispose();
+        }
+
         // Reset all profile data
-        public static void Reset()
+        public static void ResetInterval()
         {
             // create a new Dict so in-fly operations are still well-defined
             profileData = new Dictionary<MethodBase,MethodProfile>();
         }
 
-        public static void Cycle() {
+        /*
+        public static void CycleInterval() {
             Dictionary<MethodBase,MethodProfile> data = profileData;
 			string curDateTime = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
             string ftemplate = String.Format("olmod_pmp_{0}.csv", curDateTime);
             string fn = Path.Combine(Application.persistentDataPath, ftemplate);
             WriteResults(data, fn, curDateTime);
-            Reset();
+            ResetInterval();
         }
+        */
+
+        public static void CycleInterval() {
+            Dictionary<MethodBase,MethodProfile> data = profileData;
+            Collect(profileDataCollector, data, curIdx);
+            curIdx++;
+            ResetInterval();
+        }
+
+        public static void Cycle()
+        {
+            Dictionary<MethodBase,MethodProfileCollector> pdc = profileDataCollector;
+            profileDataCollector = new Dictionary<MethodBase,MethodProfileCollector>();
+			string curDateTime = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            string ftemplate = String.Format("olmod_pmp_{0}.csv", curDateTime);
+            string fn = Path.Combine(Application.persistentDataPath, ftemplate);
+            WriteResults(pdc, fn, curDateTime, curIdx);
+            startTime = DateTime.UtcNow;
+            curIdx = 0;
+        }
+
     }
 }
