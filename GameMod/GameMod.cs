@@ -78,6 +78,10 @@ namespace GameMod.Core {
             {
                 OlmodVersion.Modded = true; // Only display modded tag if you're playing modded.
             }
+
+            if (FindArg("-poor-mans-profiler")) {
+                PoorMansProfiler.Initialize(harmony);
+            }
         }
 
         public static bool FindArg(string arg)
