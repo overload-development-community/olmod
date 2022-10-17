@@ -14,15 +14,19 @@ namespace GameMod {
     public class MethodProfile
     {
         public MethodBase method = null;
+        public string overrideName = null;
+        public int overrideHash = 0;
         public ulong count = 0;
         public long ticksTotal;
         public long ticksMin;
         public long ticksMax;
         public Stopwatch watch = null;
+        public double scaleFactor = 1.0;
 
         public MethodProfile()
         {
             method = null;
+            overrideName = null;
             watch = null;
             count = 0;
             ticksTotal = 0;
@@ -34,13 +38,23 @@ namespace GameMod {
         {
             method = mb;
             watch = new Stopwatch();
+            scaleFactor = 1000.0 / (double)Stopwatch.Frequency;
+            Reset();
+        }
+
+        public MethodProfile(string ovName, int ovHash)
+        {
+            method = null;
+            watch = null;
+            overrideName = ovName;
+            overrideHash = ovHash;
+            scaleFactor = 1000.0 / (double)Stopwatch.Frequency;
             Reset();
         }
 
         public void Reset()
         {
             count = 0;
-            watch.Reset();
             ticksTotal = 0;
             ticksMin = 0;
             ticksMax = 0;
@@ -57,8 +71,7 @@ namespace GameMod {
         {
             watch.Stop();
             long ticks = watch.ElapsedTicks;
-            count++;
-            if (count == 1) {
+            if (count == 0) {
                 ticksMin = ticks;
                 ticksMax = ticks;
             } else {
@@ -69,26 +82,106 @@ namespace GameMod {
                 }
             }
             ticksTotal += ticks;
+            count++;
             //UnityEngine.Debug.LogFormat("Postfix called {0} {1} {2} {3}", method, count, ticksTotal, ticksTotal/(double)count);
+        }
+
+        public void ImportTicks(long ticks)
+        {
+            if (count == 0) {
+                ticksMin = ticks;
+                ticksMax = ticks;
+            } else {
+                if (ticks < ticksMin) {
+                    ticksMin = ticks;
+                } else if (ticks > ticksMax) {
+                    ticksMax = ticks;
+                }
+            }
+            ticksTotal += ticks;
+            count++;
+        }
+
+        public void ImportFrametime(float f)
+        {
+            long ticks = (long)(f * Stopwatch.Frequency);
+            ImportTicks(ticks);
+        }
+
+        public enum Info {
+            Name,
+            AvgTime,
+            TotalTime,
+            MinTime,
+            MaxTime,
+            Count
+        }
+
+        public int GetHash()
+        {
+            if (String.IsNullOrEmpty(overrideName)) {
+                return method.GetHashCode();
+            }
+            return overrideHash;
+        }
+
+        public double GetValueD(Info inf)
+        {
+            double cnt = (count > 0)?(double)count:1.0;
+            double res = -1.0;
+            switch(inf) {
+                case Info.AvgTime:
+                    res = ((double)ticksTotal * scaleFactor)/cnt;
+                    break;
+                case Info.TotalTime:
+                    res = ((double)ticksTotal * scaleFactor);
+                    break;
+                case Info.MinTime:
+                    res = ((double)ticksMin * scaleFactor);
+                    break;
+                case Info.MaxTime:
+                    res = ((double)ticksMax * scaleFactor);
+                    break;
+                case Info.Count:
+                    res = count;
+                    break;
+            }
+            return res;
+        }
+
+        public string GetInfo(Info inf)
+        {
+            string result;
+
+            if (inf == Info.Name) {
+                if (String.IsNullOrEmpty(overrideName)) {
+                    result = method.DeclaringType.Name + " " + method.ToString();
+                } else {
+                    result = overrideName;
+                }
+            } else if (inf == Info.Count) {
+                result = count.ToString();
+            } else {
+                double val = GetValueD(inf);
+                result = val.ToString();
+            }
+            return result;
         }
 
         public void WriteResults(StreamWriter sw)
         {
-            double s = 1000.0/(double)Stopwatch.Frequency; 
-            double cnt = (count > 0)?(double)count:1.0;
-
-            sw.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\n", (ticksTotal * s)/cnt, count, (ticksTotal*s), (ticksMin *s), (ticksMax *s), method.DeclaringType.Name, method);
+            sw.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n", GetValueD(Info.AvgTime), GetInfo(Info.Count), GetValueD(Info.TotalTime), GetValueD(Info.MinTime), GetValueD(Info.MaxTime), GetInfo(Info.Name));
         }
     }
 
 
     public class MethodProfileCollector
     {
-        public const int MaxEntryCount = 10000;
-        public MethodProfile[] entry; //  = new MethodProfileEntry[MaxEntryCount];
+        public const int MaxEntryCount = 1500;
+        public MethodProfile[] entry;
 
         public MethodProfileCollector() {
-            entry = new MethodProfile[MaxEntryCount];
+            entry = new MethodProfile[MaxEntryCount+1];
         }
     }
 
@@ -97,18 +190,34 @@ namespace GameMod {
     {
         private static Dictionary<MethodBase,MethodProfile> profileData = new Dictionary<MethodBase, MethodProfile>();
         private static Dictionary<MethodBase,MethodProfileCollector> profileDataCollector = new Dictionary<MethodBase, MethodProfileCollector>();
+        private static Stopwatch IntervalWatch = new Stopwatch();
 
         private static int curIdx = 0;
         private static int curFixedTick = 0;
         private static DateTime startTime = DateTime.UtcNow;
         private static int fixedTickCount = 180; // 3 second interval by default
 
+        private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
+        private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
+
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
         {
+            string intervalLength;
+            if (GameMod.Core.GameMod.FindArgVal("-pmp-interval", out intervalLength) && !String.IsNullOrEmpty(intervalLength)) {
+                fixedTickCount = Int32.Parse(intervalLength);
+            }
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, using intervals of {0} tixed Ticks", fixedTickCount);
+
+            // Dictionary of all methods we want to profile
+            Dictionary<MethodBase,bool> targetMethods = new Dictionary<MethodBase,bool>();
+
             // Get the list of all methods which were patched so far
-            List<MethodBase> origMethods = harmony.GetPatchedMethods().ToList();
-            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: will apply to {0} patched methods", origMethods.Count);
+            foreach(var m in harmony.GetPatchedMethods()) {
+                targetMethods[m] = true;
+            }
+
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: found {0} patched methods", targetMethods.Count);
 
             // Get all olmod methods which look like a Message Handler (!)
             Assembly ourAsm = Assembly.GetExecutingAssembly();
@@ -120,7 +229,7 @@ namespace GameMod {
                             if (m.Name.Length > 3 && m.Name[0] == 'O' && m.Name[1] == 'n' &&
                                 m.Name != "OnSerialize" && m.Name != "OnDeserialize" && m.Name != "OnNetworkDestroy") {
                                 UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} (appears as message handler)", m);
-                                origMethods.Add(m);
+                                targetMethods[m] = true;
                             }
                         }
                     }
@@ -129,24 +238,32 @@ namespace GameMod {
             // NOTE: we could add other functions of interest here as well, up to iterating through the full assembly(!)
             
             // Patch the methods with the profiler prefix and postfix
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: applying to {0} methods", targetMethods.Count);
             MethodInfo mPrefix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPrefix");
             MethodInfo mPostfix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPostfix");
             var hmPrefix = new HarmonyMethod(mPrefix, Priority.First);
             var hmPostfix = new HarmonyMethod(mPostfix, Priority.Last);
-            foreach (var m in origMethods) {
-                harmony.Patch(m, hmPrefix, hmPostfix);
+            foreach (KeyValuePair<MethodBase,bool> pair in targetMethods) {
+                if (pair.Value) {
+                    harmony.Patch(pair.Key, hmPrefix, hmPostfix);
+                }
             }
 
             // Additional Patches for management of the Profiler itself
             harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnMatchEnd"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "FixedUpdate"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("FixedUpdatePostfix"), Priority.Last));
+            harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfix"), Priority.Last));
+
+            startTime = DateTime.UtcNow;
+            IntervalWatch.Reset();
+            IntervalWatch.Start();
         }
 
         // The Prefix run at the start of every target method
         public static void PoorMansProfilerPrefix(MethodBase __originalMethod, out MethodProfile __state)
         {
-            MethodProfile mp = null;
+            MethodProfile mp;
             try {
                 mp = profileData[__originalMethod];
             } catch (KeyNotFoundException) {
@@ -184,6 +301,29 @@ namespace GameMod {
             }
         }
 
+        // This is an additional Postfix to Overload.GameManager.Update() to gather frame statistics
+        public static void UpdatePostfix()
+        {
+            MethodProfile mp;
+            try {
+                mp = profileData[pmpFrametimeDummy];
+            } catch (KeyNotFoundException) {
+                mp = new MethodProfile("+++PMP-Frametime",-7777);
+                profileData[pmpFrametimeDummy] = mp;
+            }
+            mp.ImportFrametime(Time.unscaledDeltaTime);
+        }
+
+        // This is a dummy method only used for FPS statistic as key in the Dictionaries...
+        public static void PoorMansFrametimeDummy()
+        {
+        }
+
+        // This is a dummy method only used for FPS statistic as key in the Dictionaries...
+        public static void PoorMansIntervalTimeDummy()
+        {
+        }
+
         // Collect the current profile Data into the collector
         public static void Collect(Dictionary<MethodBase,MethodProfileCollector> pdc, Dictionary<MethodBase,MethodProfile> data, int idx)
         {
@@ -194,20 +334,20 @@ namespace GameMod {
             if (pdc.Count < 1) {
                 foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
                     MethodProfileCollector coll = new MethodProfileCollector();
+                    coll.entry[MethodProfileCollector.MaxEntryCount] = pair.Value;
                     coll.entry[idx] = pair.Value;
                     pdc[pair.Key] = coll;
                 }
             } else {
                 foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
                     MethodProfileCollector coll = null;
-                    UnityEngine.Debug.LogFormat("CXXXXXX {0} {1} {2} {3} {4}",pdc,data,coll,pair.Key,pair.Value);
                     try {
                         coll = pdc[pair.Key];
                     } catch (KeyNotFoundException) {
                         coll = new MethodProfileCollector();
+                        coll.entry[MethodProfileCollector.MaxEntryCount] = pair.Value;
                         pdc[pair.Key] = coll;
                     }
-                    UnityEngine.Debug.LogFormat("XXXXXX {0} {1} {2} {3} {4}",pdc,data,coll,pair.Key,pair.Value);
                     coll.entry[idx] = pair.Value;
                 }
             }
@@ -217,6 +357,11 @@ namespace GameMod {
         static void CmdCycle()
         {
             Cycle();
+        }
+
+        public static string GetTimestamp(DateTime ts)
+        {
+			return ts.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         // Function to write the statistics to a file
@@ -234,40 +379,62 @@ namespace GameMod {
         }
 
 
-        // Function to write the statistics to a file
-        public static void WriteResults(Dictionary<MethodBase,MethodProfileCollector> pdc, string filename, string timestamp, int cnt)
+        // Function to write the statistics info file
+        public static void WriteResultsInfo(Dictionary<MethodBase,MethodProfileCollector> pdc, string baseFilename, int cnt, DateTime tsBegin, DateTime tsEnd)
         {
-            var sw = new StreamWriter(filename, false);
+            var sw = new StreamWriter(baseFilename + "info.csv", false);
             sw.Write("+++ OLMOD - Poor Man's Profiler v1\n");
-            sw.Write("+++ run at {0}\n",timestamp);
-            int i;
+            sw.Write("+++ run {0} to {1}, {2} intervals, {3} methods\n",GetTimestamp(tsBegin), GetTimestamp(tsEnd), cnt, pdc.Count);
 
-            MethodProfile dummy = new MethodProfile();
-            dummy.ticksTotal = 0;
-            dummy.ticksMin = 0;
-            dummy.ticksMax = 0;
-            dummy.count = 0;
-
-            for (i=0; i<cnt; i++) {
-              sw.Write("{0}", i);
-              foreach( KeyValuePair<MethodBase,MethodProfileCollector> pair in pdc) {
-                  MethodProfile mp = pair.Value.entry[i];
-                  if (mp == null) {
-                      mp = dummy;
-                  }
-                  sw.Write("\t{0}", mp.ticksTotal);
-              }
-              sw.Write("\n");
+            foreach( KeyValuePair<MethodBase,MethodProfileCollector> pair in pdc) {
+                MethodProfile lmp = pair.Value.entry[MethodProfileCollector.MaxEntryCount];
+                sw.Write("{0}\t{1}\n",lmp.GetHash(),lmp.GetInfo(MethodProfile.Info.Name));
             }
-            sw.Write("+++ Dump ends here\n");
             sw.Dispose();
         }
 
-        // Reset all profile data
+
+        // Function to write one result channel
+        public static void WriteResultsValue(Dictionary<MethodBase,MethodProfileCollector> pdc, string baseFilename, int cnt, MethodProfile.Info inf)
+        {
+            MethodProfile dummy = new MethodProfile();
+            dummy.Reset();
+
+            var sw = new StreamWriter(baseFilename + inf.ToString() + ".csv", false);
+            foreach( KeyValuePair<MethodBase,MethodProfileCollector> pair in pdc) {
+                MethodProfile lmp = pair.Value.entry[MethodProfileCollector.MaxEntryCount];
+                sw.Write("{0}",lmp.GetHash());
+                for (int i=0; i<cnt; i++) {
+                    MethodProfile mp = pair.Value.entry[i];
+                    if (mp == null) {
+                        mp = dummy;
+                    }
+                    sw.Write("\t{0}", mp.GetInfo(inf));
+                }
+                sw.Write("\t{0}\n",lmp.GetInfo(MethodProfile.Info.Name));
+            }
+            sw.Dispose();
+        }
+
+        // Function to write the statistics to a files
+        public static void WriteResults(Dictionary<MethodBase,MethodProfileCollector> pdc, string baseFilename, int cnt, DateTime tsBegin, DateTime tsEnd)
+        {
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: cycle: {0} intervals, {1} methods to {2}*.csv",cnt,pdc.Count,baseFilename);
+            WriteResultsInfo(pdc, baseFilename, cnt, tsBegin, tsEnd);
+            WriteResultsValue(pdc, baseFilename, cnt, MethodProfile.Info.Count);
+            WriteResultsValue(pdc, baseFilename, cnt, MethodProfile.Info.AvgTime);
+            WriteResultsValue(pdc, baseFilename, cnt, MethodProfile.Info.MinTime);
+            WriteResultsValue(pdc, baseFilename, cnt, MethodProfile.Info.MaxTime);
+            WriteResultsValue(pdc, baseFilename, cnt, MethodProfile.Info.TotalTime);
+        }
+
+        // Reset the current interval Data
         public static void ResetInterval()
         {
             // create a new Dict so in-fly operations are still well-defined
             profileData = new Dictionary<MethodBase,MethodProfile>();
+            IntervalWatch.Reset();
+            IntervalWatch.Start();
         }
 
         /*
@@ -281,21 +448,31 @@ namespace GameMod {
         }
         */
 
+        // Cycle a single profiler interval
         public static void CycleInterval() {
+            IntervalWatch.Stop();
             Dictionary<MethodBase,MethodProfile> data = profileData;
+            MethodProfile intervalTime = new MethodProfile("+++PMP-Interval", -7778);
+            intervalTime.ImportTicks(IntervalWatch.ElapsedTicks);
+            data[pmpIntervalTimeDummy] = intervalTime;
             Collect(profileDataCollector, data, curIdx);
             curIdx++;
+            if (curIdx >= MethodProfileCollector.MaxEntryCount) {
+                Cycle();
+            }
             ResetInterval();
         }
 
+        // Cycle Profile Data Collection: flush to disk and start new
         public static void Cycle()
         {
             Dictionary<MethodBase,MethodProfileCollector> pdc = profileDataCollector;
             profileDataCollector = new Dictionary<MethodBase,MethodProfileCollector>();
-			string curDateTime = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
-            string ftemplate = String.Format("olmod_pmp_{0}.csv", curDateTime);
+            DateTime tsEnd = DateTime.UtcNow;
+			string curDateTime = GetTimestamp(tsEnd);
+            string ftemplate = String.Format("olmod_pmp_{0}_", curDateTime);
             string fn = Path.Combine(Application.persistentDataPath, ftemplate);
-            WriteResults(pdc, fn, curDateTime, curIdx);
+            WriteResults(pdc, fn, curIdx, startTime, tsEnd);
             startTime = DateTime.UtcNow;
             curIdx = 0;
         }
