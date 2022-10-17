@@ -214,7 +214,9 @@ process_matrix(const char *fname, double *matrix, long *funcs, size_t functions,
 			}
 		}
      		stbi_write_png(fname, (int)intervals, (int)functions, 4, rgba, (int)(4*intervals));
-        }
+        } else {
+		printf("out of memory\n");
+	}
 	free(rgba);
 	free(scales);
 }
@@ -237,6 +239,16 @@ process_data(const char *fname, char *data, size_t size)
 		intervals ++;
 		pos = findEndField(data, pos, line)+1;
 	}
+	if (intervals == 1 && line >= 9) {
+		if (!memcmp(data,"+++ OLMOD",9)) {
+			printf("ignoring info file\n");
+			return;
+		}
+	}
+	if (intervals < 3) {
+		printf("no data\n");
+		return;
+	}
 	intervals-=2; // first and last column isn't an interval
 
 	pos = 0;
@@ -247,6 +259,7 @@ process_data(const char *fname, char *data, size_t size)
 
 	fnameOut = calloc(1,fnameLen+7);
 	if (!fnameOut) {
+		printf("out of memory\n");
 		return;
 	}
 	memcpy(fnameOut,fname, fnameLen);
@@ -255,6 +268,7 @@ process_data(const char *fname, char *data, size_t size)
 	memcpy(fnameOut + fnameLen+2, ".png", 5);
 	funcs = calloc(sizeof(long),functions);
 	if (!funcs) {
+		printf("out of memory\n");
 		return;
 	}
 	matrix = calloc(sizeof(double),intervals * functions);
@@ -297,6 +311,8 @@ process_data(const char *fname, char *data, size_t size)
 		}
 		free(matrix);
 		free(funcs);
+	} else {
+		printf("out of memory\n");
 	}
 }
 
@@ -319,6 +335,8 @@ process(const char *fname)
 			}
 		}
 		fclose(f);
+	} else {
+		printf("file %s not found\n",fname);
 	}
 	if (data) {
 		free(data);
@@ -351,7 +369,7 @@ main(int argc, char **argv)
 	}
 	for (i=1; i<argc; i++) {
 		if (i+1 >= argc || argv[i][0] != '-') {
-			process(argv[1]);
+			process(argv[i]);
 		}
 	}
 	return 0;
