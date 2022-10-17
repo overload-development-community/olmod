@@ -196,6 +196,7 @@ namespace GameMod {
         private static int curFixedTick = 0;
         private static DateTime startTime = DateTime.UtcNow;
         private static int fixedTickCount = 180; // 3 second interval by default
+        private static long cycleLongIntervals = 60000; // >= 60 seconds long intervals force a full cycle
 
         private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
         private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
@@ -252,6 +253,7 @@ namespace GameMod {
             // Additional Patches for management of the Profiler itself
             harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnMatchEnd"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
+            harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnStartPregameCountdown"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPregamePostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "FixedUpdate"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("FixedUpdatePostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfix"), Priority.Last));
 
@@ -289,12 +291,22 @@ namespace GameMod {
         // This is an additional Postfix to Overload.Client.OnMatchEnd() to cycle the profiler data
         public static void MatchEndPostfix()
         {
-            Cycle();
+            Cycle("match");
+        }
+
+        // This is an additional Postfix to Overload.Client.OnStartPregameCountdown() to cycle the profiler data
+        public static void StartPregamePostfix()
+        {
+            Cycle("pregame");
         }
 
         // This is an additional Postfix to Overload.GameManager.FixedUpdate() to cycle the internal profiler data
         public static void FixedUpdatePostfix()
         {
+            if (cycleLongIntervals > 0 && (IntervalWatch.ElapsedMilliseconds > cycleLongIntervals )) {
+                Cycle("long");
+                return;
+            }
             if (++curFixedTick >= fixedTickCount) {
                 CycleInterval();
                 curFixedTick = 0;
@@ -356,7 +368,7 @@ namespace GameMod {
         // Console command pmpcycle
         static void CmdCycle()
         {
-            Cycle();
+            Cycle("manual");
         }
 
         public static string GetTimestamp(DateTime ts)
@@ -458,22 +470,23 @@ namespace GameMod {
             Collect(profileDataCollector, data, curIdx);
             curIdx++;
             if (curIdx >= MethodProfileCollector.MaxEntryCount) {
-                Cycle();
+                Cycle("flush");
             }
             ResetInterval();
         }
 
         // Cycle Profile Data Collection: flush to disk and start new
-        public static void Cycle()
+        public static void Cycle(string reason)
         {
             Dictionary<MethodBase,MethodProfileCollector> pdc = profileDataCollector;
             profileDataCollector = new Dictionary<MethodBase,MethodProfileCollector>();
             DateTime tsEnd = DateTime.UtcNow;
 			string curDateTime = GetTimestamp(tsEnd);
-            string ftemplate = String.Format("olmod_pmp_{0}_", curDateTime);
+            string ftemplate = String.Format("olmod_pmp_{0}_{1}_", curDateTime, reason);
             string fn = Path.Combine(Application.persistentDataPath, ftemplate);
             WriteResults(pdc, fn, curIdx, startTime, tsEnd);
             startTime = DateTime.UtcNow;
+            ResetInterval();
             curIdx = 0;
         }
 
