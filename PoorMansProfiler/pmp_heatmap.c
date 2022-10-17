@@ -50,18 +50,36 @@ findEndField(const char *data, size_t start, size_t end)
 }
 
 static double
-scan_matrix(const double *matrix, const long *funcs, size_t functions, size_t intervals, int mode)
+scan_matrix(const double *matrix, const long *funcs, size_t functions, size_t intervals, int mode, size_t func, size_t interval)
 {
 	double max = -1.0;
 	double max2 = -1.0;
 	size_t x,y;
-	for (y=0; y<functions; y++) {
+	size_t yStart = 0;
+	size_t yEnd = functions;
+	size_t xStart = startInterval;
+	size_t xEnd = intervals;
+	if (endInterval > xEnd) {
+		xEnd = 0;
+	} else {
+		xEnd = xEnd-endInterval;
+	}
+	if (func != (size_t)-1) {
+		yStart = func;
+		yEnd = yStart+1;
+	}
+	if (interval != (size_t)-1) {
+		xStart = interval;
+		xEnd = interval+1;
+	}
+
+	for (y=yStart; y<yEnd; y++) {
 		if (mode == 1) {
-			if (funcs[y] == -7777) {
+			if (func == (size_t)-1 && funcs[y] == -7777) {
 				continue;
 			}
 		}
-		for (x=startInterval; x + endInterval <intervals; x++) {
+		for (x=xStart; x < xEnd; x++) {
 			double val = matrix[y*intervals + x];
 			if (offset != 0.0) {
 				val -= offset;
@@ -76,6 +94,64 @@ scan_matrix(const double *matrix, const long *funcs, size_t functions, size_t in
 	}
 
 	return (secondToMax)?max2:max;
+}
+
+static double
+get_scale(double max)
+{
+	double scale;
+
+	if (forceMax > 0.0) {
+		max = forceMax;
+	}
+       
+	scale = (max > 0.0)?1.0/max:1.0;
+	if (forceScale > 0.0) {
+		scale = forceScale;
+	}
+	scale = scale * extraScale;
+	return scale;
+}
+
+static double*
+get_scale_matrix(const double *matrix, const long *funcs, const char *fname, size_t functions, size_t intervals, int mode, int norm)
+{
+	double *scales = calloc(sizeof(double), functions*intervals);
+	size_t x,y;
+	
+	if (!scales) {
+		return NULL;
+	}
+
+	if (norm == 1) {
+		for (y=0; y<functions; y++) {
+			double max = scan_matrix(matrix, funcs, functions, intervals, 0, y, (size_t)-1);
+			double scale = get_scale(max);
+			printf("%s: func %ld: scale=%f, max=%f\n",fname,funcs[y],scale,max);
+			for (x=0; x < intervals; x++) {
+				scales[y*intervals + x] = scale;
+			}
+		}	
+	} else if (norm == 2) {
+		for (x=0; x < intervals; x++) {
+			double max = scan_matrix(matrix, funcs, functions, intervals, 0, (size_t)-1, x);
+			double scale = get_scale(max);
+			printf("%s: interval %d: scale=%f, max=%f\n",fname,(int)x,scale,max);
+			for (y=0; y<functions; y++) {
+				scales[y*intervals + x] = scale;
+			}
+		}	
+	} else {
+		double max = scan_matrix(matrix, funcs, functions, intervals, mode, (size_t)-1, (size_t)-1);
+		double scale = get_scale(max);
+		printf("%s: scale=%f, max=%f\n",fname,scale,max);
+		for (y=0; y<functions; y++) {
+			for (x=0; x < intervals; x++) {
+				scales[y*intervals + x] = scale;
+			}
+		}	
+	}
+	return scales;
 }
 
 static void
@@ -119,22 +195,12 @@ to_heat(const double val, unsigned char* rgba)
 }
 
 static void
-process_matrix(const char *fname, double *matrix, long *funcs, size_t functions, size_t intervals, int mode)
+process_matrix(const char *fname, double *matrix, long *funcs, size_t functions, size_t intervals, int mode,int norm)
 {
-	unsigned char *rgba = calloc(4, functions*intervals);
-	double max = scan_matrix(matrix, funcs, functions, intervals, mode);
-	double scale;
-
-	if (forceMax > 0.0) {
-		max = forceMax;
-	}
-       
-	scale = (max > 0.0)?1.0/max:1.0;
-	if (forceScale > 0.0) {
-		scale = forceScale;
-	}
-	scale = scale * extraScale;
-	if (rgba) {
+	unsigned char *rgba;
+	double *scales = get_scale_matrix(matrix, funcs, fname, functions, intervals, mode, norm);
+       	rgba = calloc(4, functions*intervals);
+	if (rgba && scales) {
 		size_t x,y;
 		unsigned char *pixel = rgba;
 		for (y=0; y<functions; y++) {
@@ -143,14 +209,14 @@ process_matrix(const char *fname, double *matrix, long *funcs, size_t functions,
 				if (offset != 0.0) {
 					val -= offset;
 				}
-				to_heat(val*scale, pixel);
+				to_heat(val*scales[y*intervals+x], pixel);
 			 	pixel+=4;
 			}
 		}
-		printf("%s: scale=%f, max=%f\n", fname, scale, max);
      		stbi_write_png(fname, (int)intervals, (int)functions, 4, rgba, (int)(4*intervals));
-		free(rgba);
         }
+	free(rgba);
+	free(scales);
 }
 
 
@@ -179,13 +245,14 @@ process_data(const char *fname, char *data, size_t size)
 		pos = findStartLine(data,findEndLine(data,pos,size),size);
 	}
 
-	fnameOut = calloc(1,fnameLen+5);
+	fnameOut = calloc(1,fnameLen+7);
 	if (!fnameOut) {
 		return;
 	}
 	memcpy(fnameOut,fname, fnameLen);
 	fnameOut[fnameLen]='x';
-	memcpy(fnameOut + fnameLen+1, ".png", 5);
+	fnameOut[fnameLen+1]='x';
+	memcpy(fnameOut + fnameLen+2, ".png", 5);
 	funcs = calloc(sizeof(long),functions);
 	if (!funcs) {
 		return;
@@ -194,6 +261,7 @@ process_data(const char *fname, char *data, size_t size)
 	if (matrix) {
 		size_t function = 0;
 		int mode;
+		int norm;
 		pos = 0;
 		while (pos < size) {
 			size_t interval = 0;
@@ -221,8 +289,11 @@ process_data(const char *fname, char *data, size_t size)
 			pos = findStartLine(data,line,size);
 		}
 		for (mode = 0; mode < ((haveForced)?1:2); mode++) {
-			fnameOut[fnameLen] = '0'+mode;
-			process_matrix(fnameOut,matrix,funcs, functions, intervals, mode);
+			for (norm = 0; norm < ((haveForced)?1:3); norm++) {
+				fnameOut[fnameLen] = '0'+mode;
+				fnameOut[fnameLen+1] = '0'+norm;
+				process_matrix(fnameOut,matrix,funcs, functions, intervals, mode, norm);
+			}
 		}
 		free(matrix);
 		free(funcs);
