@@ -22,6 +22,7 @@ namespace GameMod {
         public long ticksMax;
         public Stopwatch watch = null;
         public double scaleFactor = 1.0;
+        public int depth = 0;
 
         public MethodProfile()
         {
@@ -32,6 +33,7 @@ namespace GameMod {
             ticksTotal = 0;
             ticksMin = 0;
             ticksMax = 0;
+            depth = 0;
         }
 
         public MethodProfile(MethodBase mb)
@@ -63,26 +65,33 @@ namespace GameMod {
         public void Start()
         {
             //UnityEngine.Debug.LogFormat("Prefix called {0}", method );
-            watch.Reset();
-            watch.Start();
+            depth++;
+            if (depth == 1) {
+              watch.Reset();
+              watch.Start();
+            }
         }
 
         public void End()
         {
-            watch.Stop();
-            long ticks = watch.ElapsedTicks;
-            if (count == 0) {
-                ticksMin = ticks;
-                ticksMax = ticks;
-            } else {
-                if (ticks < ticksMin) {
+            depth--;
+            if (depth <= 0) {
+                watch.Stop();
+                long ticks = watch.ElapsedTicks;
+                if (count == 0) {
                     ticksMin = ticks;
-                } else if (ticks > ticksMax) {
                     ticksMax = ticks;
+                } else {
+                    if (ticks < ticksMin) {
+                        ticksMin = ticks;
+                    } else if (ticks > ticksMax) {
+                        ticksMax = ticks;
+                    }
                 }
+                ticksTotal += ticks;
+                count++;
+                depth = 0;
             }
-            ticksTotal += ticks;
-            count++;
             //UnityEngine.Debug.LogFormat("Postfix called {0} {1} {2} {3}", method, count, ticksTotal, ticksTotal/(double)count);
         }
 
@@ -201,6 +210,43 @@ namespace GameMod {
         private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
         private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
 
+        public static bool LooksLikeMessageHander(MethodInfo m)
+        {
+            if (m != null && !String.IsNullOrEmpty(m.Name)) {
+                var p = m.GetParameters();
+                if (p.Length == 1 && (p[0].ParameterType.Name == "NetworkMessage")) {
+                    if (m.Name.Length > 3 && m.Name[0] == 'O' && m.Name[1] == 'n' &&
+                        m.Name != "OnSerialize" && m.Name != "OnDeserialize" && m.Name != "OnNetworkDestroy") {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public static bool LooksLikeUpdateFunc(MethodInfo m)
+        {
+            if (m != null && !String.IsNullOrEmpty(m.Name) && m.Name == "Update") {
+                var p = m.GetParameters();
+                if (p.Length == 0 && m.ReturnType == typeof(void)) {
+                    // ignore uninteresting or problematic functions...
+                    if (m.DeclaringType.FullName.IndexOf("Rewired.") < 0 &&
+                        m.DeclaringType.FullName.IndexOf("Smooth.") < 0 && 
+                        m.DeclaringType.FullName.IndexOf("Window") < 0 && 
+                        m.DeclaringType.FullName.IndexOf("Xbox") < 0 && 
+                        m.DeclaringType.FullName.IndexOf("DonetwoSimpleCamera") < 0 && 
+                        m.DeclaringType.FullName.IndexOf("SteamManager") < 0 && 
+                        m.DeclaringType.FullName.IndexOf("uConsole") < 0 &&
+                        m.DeclaringType.FullName.IndexOf("TrackIRComponent") < 0 &&
+                        m.DeclaringType.FullName.IndexOf("Overload.SFXCueManager") < 0 &&
+                        m.DeclaringType.FullName.IndexOf("UnityEngine.") < 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
         {
@@ -222,17 +268,26 @@ namespace GameMod {
 
             // Get all olmod methods which look like a Message Handler (!)
             Assembly ourAsm = Assembly.GetExecutingAssembly();
+            Assembly overloadAsm = Assembly.GetAssembly(typeof(Overload.GameManager));
+
             foreach (var t in ourAsm.GetTypes()) {
                 foreach(var m in t.GetMethods(AccessTools.all)) {
-                    if (m != null && !String.IsNullOrEmpty(m.Name)) {
-                        var p = m.GetParameters();
-                        if (p.Length == 1 && (p[0].ParameterType.Name == "NetworkMessage")) {
-                            if (m.Name.Length > 3 && m.Name[0] == 'O' && m.Name[1] == 'n' &&
-                                m.Name != "OnSerialize" && m.Name != "OnDeserialize" && m.Name != "OnNetworkDestroy") {
-                                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} (appears as message handler)", m);
-                                targetMethods[m] = true;
-                            }
-                        }
+                    if (LooksLikeMessageHander(m)) {
+                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as message handler)", m.DeclaringType.Name, m);
+                        targetMethods[m] = true;
+                    }
+                }
+            }
+
+            foreach (var t in overloadAsm.GetTypes()) {
+                foreach(var m in t.GetMethods(AccessTools.all)) {
+                    if (LooksLikeMessageHander(m)) {
+                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as message handler)", m.DeclaringType.Name, m);
+                        targetMethods[m] = true;
+                    }
+                    if (LooksLikeUpdateFunc(m)) {
+                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as Update method)", m.DeclaringType, m);
+                        targetMethods[m] = true;
                     }
                 }
             }
