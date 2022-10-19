@@ -186,7 +186,7 @@ namespace GameMod {
 
     public class MethodProfileCollector
     {
-        public const int MaxEntryCount = 1500;
+        public const int MaxEntryCount = 5000;
         public MethodProfile[] entry;
 
         public MethodProfileCollector() {
@@ -198,13 +198,13 @@ namespace GameMod {
     public class PoorMansProfiler
     {
         private static Dictionary<MethodBase,MethodProfile> profileData = new Dictionary<MethodBase, MethodProfile>();
-        private static Dictionary<MethodBase,MethodProfileCollector> profileDataCollector = new Dictionary<MethodBase, MethodProfileCollector>();
+        private static Dictionary<MethodBase,MethodProfile>[] intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
         private static Stopwatch IntervalWatch = new Stopwatch();
 
         private static int curIdx = 0;
         private static int curFixedTick = 0;
         private static DateTime startTime = DateTime.UtcNow;
-        private static int fixedTickCount = 180; // 3 second interval by default
+        private static int fixedTickCount = 60; // 1 second interval by default (during MP at least)
         private static long cycleLongIntervals = 60000; // >= 60 seconds long intervals force a full cycle
 
         private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
@@ -453,9 +453,11 @@ namespace GameMod {
             sw.Write("+++ OLMOD - Poor Man's Profiler v1\n");
             sw.Write("+++ run {0} to {1}, {2} intervals, {3} methods\n",GetTimestamp(tsBegin), GetTimestamp(tsEnd), cnt, pdc.Count);
 
+            int idx = 0;
             foreach( KeyValuePair<MethodBase,MethodProfileCollector> pair in pdc) {
                 MethodProfile lmp = pair.Value.entry[MethodProfileCollector.MaxEntryCount];
-                sw.Write("{0}\t{1}\n",lmp.GetHash(),lmp.GetInfo(MethodProfile.Info.Name));
+                sw.Write("{0}\t{1}\t{2}\n",idx, lmp.GetHash(),lmp.GetInfo(MethodProfile.Info.Name));
+                idx++;
             }
             sw.Dispose();
         }
@@ -522,7 +524,8 @@ namespace GameMod {
             MethodProfile intervalTime = new MethodProfile("+++PMP-Interval", -7778);
             intervalTime.ImportTicks(IntervalWatch.ElapsedTicks);
             data[pmpIntervalTimeDummy] = intervalTime;
-            Collect(profileDataCollector, data, curIdx);
+            intervalData[curIdx] = data;
+            //Collect(profileDataCollector, data, curIdx);
             curIdx++;
             if (curIdx >= MethodProfileCollector.MaxEntryCount) {
                 Cycle("flush");
@@ -533,10 +536,13 @@ namespace GameMod {
         // Cycle Profile Data Collection: flush to disk and start new
         public static void Cycle(string reason)
         {
-            Dictionary<MethodBase,MethodProfileCollector> pdc = profileDataCollector;
-            profileDataCollector = new Dictionary<MethodBase,MethodProfileCollector>();
             DateTime tsEnd = DateTime.UtcNow;
-			string curDateTime = GetTimestamp(tsEnd);
+            Dictionary<MethodBase,MethodProfileCollector> pdc = new Dictionary<MethodBase, MethodProfileCollector>();
+            for (int i=0; i<curIdx; i++) {
+                Collect(pdc, intervalData[i], i);
+            }
+            intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
+            string curDateTime = GetTimestamp(tsEnd);
             string ftemplate = String.Format("olmod_pmp_{0}_{1}_", curDateTime, reason);
             string fn = Path.Combine(Application.persistentDataPath, ftemplate);
             WriteResults(pdc, fn, curIdx, startTime, tsEnd);
