@@ -74,6 +74,10 @@ scan_matrix(const double *matrix, const long *funcs, size_t functions, size_t in
 	}
 
 	for (y=yStart; y<yEnd; y++) {
+		if (funcs[y] == -7778) {
+			// generally ignore per-Interval data as this will screw up the scale
+			continue;
+		}
 		if (mode == 1) {
 			if (func == (size_t)-1 && funcs[y] == -7777) {
 				continue;
@@ -221,6 +225,40 @@ process_matrix(const char *fname, double *matrix, long *funcs, size_t functions,
 	free(scales);
 }
 
+static void
+process_csv(const char *fname, double *matrix, long *funcs, char** funcNames, size_t functions, size_t intervals)
+{
+	FILE *f = fopen(fname,"wt");
+	if (f) {
+		size_t x,y;
+		for (x=0; x<functions; x++) {
+			if (x > 0) {
+				fputc('\t',f);
+			}
+			fprintf(f,"%ld",funcs[x]);
+		}
+		fputc('\n',f);
+		for (y=0; y<intervals; y++) {
+			for (x=0; x<functions; x++) {
+				if (x > 0) {
+					fputc('\t',f);
+				}
+				fprintf(f,"%.6f",matrix[x*intervals + y]);
+			}
+			fputc('\n',f);
+		}
+		for (x=0; x<functions; x++) {
+			if (x > 0) {
+				fputc('\t',f);
+			}
+			if (funcNames[x]) {
+				fprintf(f,"%s",funcNames[x]);
+			}
+		}
+		fputc('\n',f);
+		fclose(f);
+	}
+}
 
 static void
 process_data(const char *fname, char *data, size_t size)
@@ -233,6 +271,7 @@ process_data(const char *fname, char *data, size_t size)
 	char *fnameOut = NULL;
 	size_t fnameLen = strlen(fname);
 	long *funcs = NULL;
+	char **funcNames = NULL;
 	int haveForced = (forceScale > 0.0 || forceMax > 0.0);
 
 	while(pos < line) {
@@ -265,9 +304,16 @@ process_data(const char *fname, char *data, size_t size)
 	memcpy(fnameOut,fname, fnameLen);
 	fnameOut[fnameLen]='x';
 	fnameOut[fnameLen+1]='x';
-	memcpy(fnameOut + fnameLen+2, ".png", 5);
 	funcs = calloc(sizeof(long),functions);
 	if (!funcs) {
+		free(fnameOut);
+		printf("out of memory\n");
+		return;
+	}
+	funcNames = (char**)calloc(sizeof(char*),functions);
+	if (!funcNames) {
+		free(fnameOut);
+		free(funcs);
 		printf("out of memory\n");
 		return;
 	}
@@ -287,13 +333,11 @@ process_data(const char *fname, char *data, size_t size)
 				if (!interval) {
 					funcId = strtol(data+pos, NULL, 10);
 					funcs[function] = funcId;
-					if (funcId == -7778) {
-						// ignore per-Interval data as this will screw up the scale
-						break;
-					}
 				} else {
 					if (interval-1 < intervals && function < functions) {
 						matrix[function*intervals + interval-1] = strtod(data+pos, NULL);
+					} else {
+						funcNames[function] = data+pos;
 					}
 				}
 				interval++;
@@ -302,6 +346,7 @@ process_data(const char *fname, char *data, size_t size)
 			function++;
 			pos = findStartLine(data,line,size);
 		}
+		memcpy(fnameOut + fnameLen+2, ".png", 5);
 		for (mode = 0; mode < ((haveForced)?1:2); mode++) {
 			for (norm = 0; norm < ((haveForced)?1:3); norm++) {
 				fnameOut[fnameLen] = '0'+mode;
@@ -309,11 +354,17 @@ process_data(const char *fname, char *data, size_t size)
 				process_matrix(fnameOut,matrix,funcs, functions, intervals, mode, norm);
 			}
 		}
+		fnameOut[fnameLen] = '_';
+		fnameOut[fnameLen+1] = '_';
+		memcpy(fnameOut + fnameLen+2, ".ctr", 5);
+		process_csv(fnameOut, matrix, funcs, funcNames, functions, intervals);
 		free(matrix);
 		free(funcs);
 	} else {
 		printf("out of memory\n");
 	}
+	free(fnameOut);
+	free(funcNames);
 }
 
 static void
