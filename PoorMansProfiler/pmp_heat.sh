@@ -2,7 +2,7 @@
 
 # HARDCODED FOR MY SYSTEM
 DATADIR="${HOME}/.config/unity3d/Revival/Overload"
-OUTDIR="${HOME}/tmp/DONTBACKUP/olmod-experiments/pmp/"
+OUTDIR="${HOME}/tmp/DONTBACKUP/olmod-experiments/pmp/$(date '+%Y-%m-%d')"
 OLMODSRC="${HOME}/development/olmod"
 
 
