@@ -247,6 +247,21 @@ namespace GameMod {
             return false;
         }
 
+        public static bool LooksLikeInterestingFunc(MethodInfo m)
+        {
+            if (m  == null || String.IsNullOrEmpty(m.Name)) {
+                return false;
+            }
+
+            if (m.DeclaringType.FullName.IndexOf("Physics") >= 0) {
+                if (m.Name.IndexOf("SphereCast") == 0 ||
+                    m.Name.IndexOf("Linecast") == 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
         {
@@ -269,6 +284,8 @@ namespace GameMod {
             // Get all olmod methods which look like a Message Handler (!)
             Assembly ourAsm = Assembly.GetExecutingAssembly();
             Assembly overloadAsm = Assembly.GetAssembly(typeof(Overload.GameManager));
+            Assembly unityAsm = Assembly.GetAssembly(typeof(Physics));
+
 
             foreach (var t in ourAsm.GetTypes()) {
                 foreach(var m in t.GetMethods(AccessTools.all)) {
@@ -287,6 +304,18 @@ namespace GameMod {
                     }
                     if (LooksLikeUpdateFunc(m)) {
                         UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as Update method)", m.DeclaringType, m);
+                        targetMethods[m] = true;
+                    }
+                    if (LooksLikeInterestingFunc(m)) {
+                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as interesting)", m.DeclaringType, m);
+                        targetMethods[m] = true;
+                    }
+                }
+            }
+            foreach (var t in unityAsm.GetTypes()) {
+                foreach(var m in t.GetMethods(AccessTools.all)) {
+                    if (LooksLikeInterestingFunc(m)) {
+                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as interesting)", m.DeclaringType, m);
                         targetMethods[m] = true;
                     }
                 }
