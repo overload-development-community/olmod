@@ -20,15 +20,13 @@ namespace GameMod {
         public long ticksTotal;
         public long ticksMin;
         public long ticksMax;
-        public Stopwatch watch = null;
-        public double scaleFactor = 1.0;
+        public long ticksStart;
         public int depth = 0;
 
         public MethodProfile()
         {
             method = null;
             overrideName = null;
-            watch = null;
             count = 0;
             ticksTotal = 0;
             ticksMin = 0;
@@ -39,18 +37,14 @@ namespace GameMod {
         public MethodProfile(MethodBase mb)
         {
             method = mb;
-            watch = new Stopwatch();
-            scaleFactor = 1000.0 / (double)Stopwatch.Frequency;
             Reset();
         }
 
         public MethodProfile(string ovName, int ovHash)
         {
             method = null;
-            watch = null;
             overrideName = ovName;
             overrideHash = ovHash;
-            scaleFactor = 1000.0 / (double)Stopwatch.Frequency;
             Reset();
         }
 
@@ -67,8 +61,7 @@ namespace GameMod {
             //UnityEngine.Debug.LogFormat("Prefix called {0}", method );
             depth++;
             if (depth == 1) {
-              watch.Reset();
-              watch.Start();
+                ticksStart = PoorMansProfiler.timerBase.ElapsedTicks;
             }
         }
 
@@ -76,8 +69,7 @@ namespace GameMod {
         {
             depth--;
             if (depth <= 0) {
-                watch.Stop();
-                long ticks = watch.ElapsedTicks;
+                long ticks = PoorMansProfiler.timerBase.ElapsedTicks - ticksStart;
                 if (count == 0) {
                     ticksMin = ticks;
                     ticksMax = ticks;
@@ -140,16 +132,16 @@ namespace GameMod {
             double res = -1.0;
             switch(inf) {
                 case Info.AvgTime:
-                    res = ((double)ticksTotal * scaleFactor)/cnt;
+                    res = ((double)ticksTotal * PoorMansProfiler.timerBaseToMS)/cnt;
                     break;
                 case Info.TotalTime:
-                    res = ((double)ticksTotal * scaleFactor);
+                    res = ((double)ticksTotal * PoorMansProfiler.timerBaseToMS);
                     break;
                 case Info.MinTime:
-                    res = ((double)ticksMin * scaleFactor);
+                    res = ((double)ticksMin * PoorMansProfiler.timerBaseToMS);
                     break;
                 case Info.MaxTime:
-                    res = ((double)ticksMax * scaleFactor);
+                    res = ((double)ticksMax * PoorMansProfiler.timerBaseToMS);
                     break;
                 case Info.Count:
                     res = count;
@@ -199,7 +191,11 @@ namespace GameMod {
     {
         private static Dictionary<MethodBase,MethodProfile> profileData = new Dictionary<MethodBase, MethodProfile>();
         private static Dictionary<MethodBase,MethodProfile>[] intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
-        private static Stopwatch IntervalWatch = new Stopwatch();
+
+        public static Stopwatch timerBase = new Stopwatch();
+        public static  double timerBaseToMS = -1.0;
+        private static long intervalStart = 0;
+        private static long intervalEnd = 0;
 
         private static int curIdx = 0;
         private static int curFixedTick = 0;
@@ -342,8 +338,10 @@ namespace GameMod {
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfix"), Priority.Last));
 
             startTime = DateTime.UtcNow;
-            IntervalWatch.Reset();
-            IntervalWatch.Start();
+            timerBaseToMS = 1000.0 / (double)Stopwatch.Frequency;
+            timerBase.Reset();
+            timerBase.Start();
+            intervalStart = timerBase.ElapsedTicks;
         }
 
         // The Prefix run at the start of every target method
@@ -387,7 +385,7 @@ namespace GameMod {
         // This is an additional Postfix to Overload.GameManager.FixedUpdate() to cycle the internal profiler data
         public static void FixedUpdatePostfix()
         {
-            if (cycleLongIntervals > 0 && (IntervalWatch.ElapsedMilliseconds > cycleLongIntervals )) {
+            if (cycleLongIntervals > 0 && (timerBase.ElapsedMilliseconds - intervalStart > cycleLongIntervals )) {
                 Cycle("long");
                 return;
             }
@@ -531,8 +529,7 @@ namespace GameMod {
         {
             // create a new Dict so in-fly operations are still well-defined
             profileData = new Dictionary<MethodBase,MethodProfile>();
-            IntervalWatch.Reset();
-            IntervalWatch.Start();
+            intervalStart = timerBase.ElapsedTicks;
         }
 
         /*
@@ -548,10 +545,10 @@ namespace GameMod {
 
         // Cycle a single profiler interval
         public static void CycleInterval() {
-            IntervalWatch.Stop();
+            intervalEnd = timerBase.ElapsedTicks;
             Dictionary<MethodBase,MethodProfile> data = profileData;
             MethodProfile intervalTime = new MethodProfile("+++PMP-Interval", -7778);
-            intervalTime.ImportTicks(IntervalWatch.ElapsedTicks);
+            intervalTime.ImportTicks(intervalEnd - intervalStart);
             data[pmpIntervalTimeDummy] = intervalTime;
             intervalData[curIdx] = data;
             //Collect(profileDataCollector, data, curIdx);
