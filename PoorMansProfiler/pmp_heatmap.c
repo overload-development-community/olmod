@@ -12,6 +12,8 @@ static double forceScale = -1.0;
 static double forceMax = -1.0;
 static double offset = 0.0;
 static int secondToMax = 1;
+static int showMode = 0;
+static double showThreshold = 0.0;
 
 static size_t
 findEndLine(const char *data, size_t start, size_t end)
@@ -74,7 +76,7 @@ scan_matrix(const double *matrix, const long *funcs, size_t functions, size_t in
 	}
 
 	for (y=yStart; y<yEnd; y++) {
-		if (funcs[y] == -7778) {
+		if (funcs[y] == -7778 && func != y) {
 			// generally ignore per-Interval data as this will screw up the scale
 			continue;
 		}
@@ -261,6 +263,21 @@ process_csv(const char *fname, double *matrix, long *funcs, char** funcNames, si
 }
 
 static void
+show_threshold_only(const char *fname, double *matrix, long *funcs, char** funcNames, size_t functions, size_t intervals)
+{
+	size_t y;
+	double th = fabs(showThreshold);
+
+	for (y=0; y<functions; y++) {
+		double max = scan_matrix(matrix, funcs, functions, intervals, 0, y, (size_t)-1);
+		int show = (showThreshold<0.0)?(max <= th):(max >= th);
+		if (show) {
+			printf("%s\t%ld\t%.6f\n",funcNames[y],funcs[y],max);
+		}
+	}
+}
+
+static void
 process_data(const char *fname, char *data, size_t size)
 {
 	size_t pos=0;
@@ -346,18 +363,22 @@ process_data(const char *fname, char *data, size_t size)
 			function++;
 			pos = findStartLine(data,line,size);
 		}
-		memcpy(fnameOut + fnameLen+2, ".png", 5);
-		for (mode = 0; mode < ((haveForced)?1:2); mode++) {
-			for (norm = 0; norm < ((haveForced)?1:3); norm++) {
-				fnameOut[fnameLen] = '0'+mode;
-				fnameOut[fnameLen+1] = '0'+norm;
-				process_matrix(fnameOut,matrix,funcs, functions, intervals, mode, norm);
+		if (showMode > 0) {
+			show_threshold_only(fnameOut, matrix, funcs, funcNames, functions, intervals);
+		} else {
+			memcpy(fnameOut + fnameLen+2, ".png", 5);
+			for (mode = 0; mode < ((haveForced)?1:2); mode++) {
+				for (norm = 0; norm < ((haveForced)?1:3); norm++) {
+					fnameOut[fnameLen] = '0'+mode;
+					fnameOut[fnameLen+1] = '0'+norm;
+					process_matrix(fnameOut,matrix,funcs, functions, intervals, mode, norm);
+				}
 			}
+			fnameOut[fnameLen] = '_';
+			fnameOut[fnameLen+1] = '_';
+			memcpy(fnameOut + fnameLen+2, ".ctr", 5);
+			process_csv(fnameOut, matrix, funcs, funcNames, functions, intervals);
 		}
-		fnameOut[fnameLen] = '_';
-		fnameOut[fnameLen+1] = '_';
-		memcpy(fnameOut + fnameLen+2, ".ctr", 5);
-		process_csv(fnameOut, matrix, funcs, funcNames, functions, intervals);
 		free(matrix);
 		free(funcs);
 	} else {
@@ -415,12 +436,17 @@ main(int argc, char **argv)
 				endInterval = strtoul(argv[i+1],NULL,0);
 			} else if (!strcmp(argv[i],"-second")) {
 				secondToMax = (int)strtol(argv[i+1],NULL,0);
+			} else if (!strcmp(argv[i],"-show")) {
+				showThreshold = strtod(argv[i+1],NULL);
+				showMode = 1;
 			}
 		}
 	}
 	for (i=1; i<argc; i++) {
 		if (i+1 >= argc || argv[i][0] != '-') {
 			process(argv[i]);
+		} else {
+			i++;
 		}
 	}
 	return 0;
