@@ -55,36 +55,36 @@ namespace GameMod {
             ticksTotal = 0;
             ticksMin = 0;
             ticksMax = 0;
+            depth = 0;
         }
 
-        public void Start()
+        public MethodProfile Start()
         {
             //UnityEngine.Debug.LogFormat("Prefix called {0}", method );
-            depth++;
-            if (depth == 1) {
-                ticksStart = PoorMansProfiler.timerBase.ElapsedTicks;
+            if (depth != 0) {
+                return null;
             }
+            depth = 1;
+            ticksStart = PoorMansProfiler.timerBase.ElapsedTicks;
+            return this;
         }
 
         public void End()
         {
-            depth--;
-            if (depth <= 0) {
-                long ticks = PoorMansProfiler.timerBase.ElapsedTicks - ticksStart;
-                if (count == 0) {
+            long ticks = PoorMansProfiler.timerBase.ElapsedTicks - ticksStart;
+            if (count == 0) {
+                ticksMin = ticks;
+                ticksMax = ticks;
+            } else {
+                if (ticks < ticksMin) {
                     ticksMin = ticks;
+                } else if (ticks > ticksMax) {
                     ticksMax = ticks;
-                } else {
-                    if (ticks < ticksMin) {
-                        ticksMin = ticks;
-                    } else if (ticks > ticksMax) {
-                        ticksMax = ticks;
-                    }
                 }
-                ticksTotal += ticks;
-                count++;
-                depth = 0;
             }
+            ticksTotal += ticks;
+            count++;
+            depth = 0;
             //UnityEngine.Debug.LogFormat("Postfix called {0} {1} {2} {3}", method, count, ticksTotal, ticksTotal/(double)count);
         }
 
@@ -683,14 +683,15 @@ namespace GameMod {
                 mp = new MethodProfile(__originalMethod);
                 profileData[__originalMethod] = mp;
             }
-            __state = mp;
-            __state.Start();
+            __state = mp.Start();
         }
 
         // The Postfix run at the end of every target method
         public static void PoorMansProfilerPostfix(MethodProfile __state)
         {
-            __state.End();
+            if (__state != null) {
+                __state.End();
+            }
         }
 
         // This is an additional Postfix to GameManager.Start() to registe our console commands
