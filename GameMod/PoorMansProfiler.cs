@@ -519,6 +519,8 @@ namespace GameMod {
 
     public class PoorMansProfiler
     {
+        private static int initMode = 0;
+        private static Harmony lazyHarmony = null;
         private static Dictionary<MethodBase,MethodProfile> profileData = new Dictionary<MethodBase, MethodProfile>();
         private static Dictionary<MethodBase,MethodProfile>[] intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
 
@@ -591,11 +593,25 @@ namespace GameMod {
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
         {
+            if (initMode >= 2) {
+                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: already initialized");
+                return;
+            }
+
+            if (initMode == 0 && GameMod.Core.GameMod.FindArg("-pmp-lazy")) {
+                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: lazy init");
+                // only initialize the console command Patch
+                harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
+                lazyHarmony = harmony;
+                initMode = 1;
+                return;
+            }
+
             string intervalLength;
             if (GameMod.Core.GameMod.FindArgVal("-pmp-interval", out intervalLength) && !String.IsNullOrEmpty(intervalLength)) {
                 fixedTickCount = Int32.Parse(intervalLength);
             }
-            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, using intervals of {0} tixed Ticks", fixedTickCount);
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, using intervals of {0} fixed Ticks", fixedTickCount);
 
             // Dictionary of all previously patched methods
             Dictionary<MethodBase,bool> patchedMethods = new Dictionary<MethodBase,bool>();
@@ -660,7 +676,9 @@ namespace GameMod {
             }
 
             // Additional Patches for management of the Profiler itself
-            harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
+            if (initMode < 1) {
+                harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
+            }
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnMatchEnd"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnStartPregameCountdown"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPregamePostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "FixedUpdate"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("FixedUpdatePostfix"), Priority.Last));
@@ -671,6 +689,7 @@ namespace GameMod {
             timerBase.Reset();
             timerBase.Start();
             intervalStart = timerBase.ElapsedTicks;
+            initMode = 2;
         }
 
         // The Prefix run at the start of every target method
@@ -697,7 +716,9 @@ namespace GameMod {
         // This is an additional Postfix to GameManager.Start() to registe our console commands
         public static void StartPostfix()
         {
+            uConsole.RegisterCommand("pmpinit", "Initialize Poor Man's Profiler", CmdInit);
             uConsole.RegisterCommand("pmpcycle", "Cycle Poor Man's Profiler data", CmdCycle);
+            uConsole.RegisterCommand("pmpinterval", "Set Poor Man's Profiler interval", CmdInterval);
         }
 
         // This is an additional Postfix to Overload.Client.OnMatchEnd() to cycle the profiler data
@@ -781,6 +802,27 @@ namespace GameMod {
         static void CmdCycle()
         {
             Cycle("manual");
+        }
+
+        // Console command pmpinit
+        static void CmdInit()
+        {
+            if (lazyHarmony != null) {
+                Initialize(lazyHarmony);
+            }
+        }
+
+        // Console command pmpinterval
+        static void CmdInterval()
+        {
+            if (!uConsole.NextParameterIsInt())
+            {
+                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: interval is {0} fixed ticks", fixedTickCount);
+                return;
+            }
+            int val = uConsole.GetInt();
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: setting interval from {0} to {1} fixed ticks", fixedTickCount, val);
+            fixedTickCount = val;
         }
 
         public static string GetTimestamp(DateTime ts)
