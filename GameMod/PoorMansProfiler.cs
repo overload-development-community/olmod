@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.RegularExpressions;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -156,7 +157,7 @@ namespace GameMod {
 
             if (inf == Info.Name) {
                 if (String.IsNullOrEmpty(overrideName)) {
-                    result = method.DeclaringType.Name + " " + method.ToString();
+                    result = method.DeclaringType.FullName + " " + method.ToString();
                 } else {
                     result = overrideName;
                 }
@@ -183,6 +184,335 @@ namespace GameMod {
 
         public MethodProfileCollector() {
             entry = new MethodProfile[MaxEntryCount+1];
+        }
+    }
+
+    public class PoorMansFilter
+    {
+        public enum Operation {
+            None,
+            Include,
+            Exclude,
+        }
+
+        public enum Select {
+            Exact,
+            Contains,
+            RegEx,
+            Always,
+        }
+
+        public enum Mode {
+            All,
+            PreviouslyPatched,
+        }
+
+        public enum Flags : uint {
+            ShortTypeName = 0x1,
+        }
+
+        public Operation op;
+        public Select sel;
+        public Mode   mode;
+        public string typeFilter;
+        public string methodFilter;
+        public uint flags;
+
+        public PoorMansFilter(Operation o, Select s, Mode m, uint f, string typeF, string methodF)
+        {
+            Set(o,s,m,f,typeF,methodF);
+        }
+
+        public PoorMansFilter(String lineDesc)
+        {
+            if (!Set(lineDesc)) {
+                Set(Operation.None, Select.Contains, Mode.All, 0, null, null);
+            }
+        }
+
+        public void Set(Operation o, Select s, Mode m, uint f, string typeF, string methodF)
+        {
+            op = o;
+            sel = s;
+            mode = m;
+            flags = f;
+            typeFilter = typeF;
+            methodFilter = methodF;
+        }
+
+        public bool Set(string lineDesc)
+        {
+            Operation o = Operation.Include;
+            Select s = Select.Contains;
+            Mode m = Mode.All;
+            uint f = 0;
+            string typeF = null;
+            string methodF = null;
+
+            if (!String.IsNullOrEmpty(lineDesc)) {
+                string[] parts = lineDesc.Split('\t');
+                if (parts.Length < 2) {
+                    methodF = lineDesc;
+                }  else {
+                    o = GetOp(parts[0]);
+                    s = GetSel(parts[0]);
+                    m = GetMode(parts[0]);
+                    f = GetFlags(parts[0]);
+                    if (parts.Length > 2) {
+                        typeF = parts[1];
+                        methodF = parts[2];
+                    } else {
+                        methodF = parts[1];
+                    }
+                }
+                Set(o,s,m,f,typeF,methodF);
+                return true;
+            }
+            return false;
+        }
+
+        private static Operation GetOp(string opts)
+        {
+            Operation o = Operation.Include;
+
+            for (var i=0; i<opts.Length; i++) {
+                switch(opts[i]) {
+                    case '+':
+                        o = Operation.Include;
+                        break;
+                    case '-':
+                        o = Operation.Exclude;
+                        break;
+                    case 'N':
+                        o = Operation.None;
+                        break;
+                }
+            }
+            return o;
+        }
+
+        private static Select GetSel(string opts)
+        {
+            Select s = Select.Contains;
+
+            for (var i=0; i<opts.Length; i++) {
+                switch(opts[i]) {
+                    case '=':
+                        s = Select.Exact;
+                        break;
+                    case 'R':
+                        s = Select.RegEx;
+                        break;
+                    case 'C':
+                        s = Select.Contains;
+                        break;
+                    case '*':
+                        s = Select.Always;
+                        break;
+                }
+            }
+            return s;
+        }
+
+        private static Mode GetMode(string opts)
+        {
+            Mode m = Mode.All;
+
+            for (var i=0; i<opts.Length; i++) {
+                switch(opts[i]) {
+                    case 'a':
+                        m = Mode.All;
+                        break;
+                    case 'p':
+                        m = Mode.PreviouslyPatched;
+                        break;
+                }
+            }
+            return m;
+        }
+
+        private static uint GetFlags(string opts)
+        {
+            uint f = 0;
+
+            for (var i=0; i<opts.Length; i++) {
+                switch(opts[i]) {
+                    case '_':
+                        f |= (uint)Flags.ShortTypeName;
+                        break;
+                }
+            }
+            return f;
+        }
+
+        public void Write(StreamWriter sw)
+        {
+            string o;
+            string s;
+            string m;
+            string f="";
+
+            switch (op) {
+                case Operation.Include:
+                    o = "+";
+                    break;
+                case Operation.Exclude:
+                    o = "-";
+                    break;
+                default:
+                    o = "N";
+                    break;
+            }
+
+            switch(sel) {
+                case Select.Exact:
+                    s = "=";
+                    break;
+                case Select.RegEx:
+                    s = "R";
+                    break;
+                case Select.Always:
+                    s = "*";
+                    break;
+                default:
+                    s = "C";
+                    break;
+            }
+
+            switch (mode) {
+                case Mode.PreviouslyPatched:
+                    m = "p";
+                    break;
+                default:
+                    m = "a";
+                    break;
+            }
+
+            if ( (flags & (uint)Flags.ShortTypeName) != 0) {
+                f += "_";
+            }
+            sw.Write("{0}{1}{2}\t{3}\t{4}\n",o,s,m,f,typeFilter, methodFilter);
+        }
+
+        public Operation Apply(MethodBase m, bool isPreviouslyPatched)
+        {
+            if (op == Operation.None) {
+                return op;
+            }
+
+            if (mode == Mode.PreviouslyPatched && !isPreviouslyPatched) {
+                return Operation.None;
+            }
+
+            string tname = ((flags & (uint)Flags.ShortTypeName) != 0)?m.DeclaringType.Name:m.DeclaringType.FullName;
+            if (Matches(tname, typeFilter) && Matches(m.ToString(), methodFilter)) {
+                return op;
+            }
+            return Operation.None;
+        }
+
+        private bool Matches(string str, string filter)
+        {
+            if (String.IsNullOrEmpty(filter)) {
+                return true;
+            }
+            switch (sel) {
+                case Select.Exact:
+                    if (str == filter) {
+                        return true;
+                    }
+                    break;
+                case Select.Contains:
+                    if (str.IndexOf(filter)>=0) {
+                        return true;
+                    }
+                    break;
+                case Select.RegEx:
+                    Regex rgx = new Regex(filter);
+                    return rgx.IsMatch(str);
+                case Select.Always:
+                    return true;
+            }
+            return false;
+        }
+    }
+
+    public class PoorMansFilterList
+    {
+        public List<PoorMansFilter> filters = new List<PoorMansFilter>();
+
+        public bool Load(string filename)
+        {
+            if (File.Exists(filename)) {
+                StreamReader sr = new StreamReader(filename, new System.Text.UTF8Encoding());
+                string line;
+                int cnt = 0;
+                while( (line = sr.ReadLine()) != null) {
+                    if (line[0] != '#') {
+                        PoorMansFilter f = new PoorMansFilter(line);
+                        if (f.op != PoorMansFilter.Operation.None) {
+                          Add(f);
+                          cnt ++;
+                        }
+                    }
+                }
+                sr.Dispose();
+                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: added {0} filters from list {1}", cnt, filename);
+                return true;
+            }
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: can't find filter list file {0}", filename);
+            return false;
+        }
+
+        public void Save(string filename)
+        {
+            var sw = new StreamWriter(filename, false);
+            sw.Write("# POOR MAN's PROFILER Filter File v1\n");
+            foreach (var f in filters) {
+                f.Write(sw);
+            }
+
+            sw.Dispose();
+        }
+
+        public void Add(PoorMansFilter f)
+        {
+            filters.Add(f);
+        }
+
+        public void Add(MethodBase m, bool isPreviouslyPatched)
+        {
+            Add (new PoorMansFilter(PoorMansFilter.Operation.Include,
+                                    PoorMansFilter.Select.Exact,
+                                    (isPreviouslyPatched)?PoorMansFilter.Mode.PreviouslyPatched:PoorMansFilter.Mode.All,
+                                    0,
+                                    m.DeclaringType.FullName,
+                                    m.ToString()));
+        }
+
+        public void AddDefaults()
+        {
+            // Add all previously patched Methods
+            Add (new PoorMansFilter(PoorMansFilter.Operation.Include,
+                                    PoorMansFilter.Select.Always,
+                                    PoorMansFilter.Mode.PreviouslyPatched,
+                                    0,
+                                    null,
+                                    null));
+        }
+
+        public bool Apply(MethodBase m, bool isPreviouslyPatched)
+        {
+            foreach(var f in filters) {
+                PoorMansFilter.Operation op = f.Apply(m, isPreviouslyPatched);
+                if (op == PoorMansFilter.Operation.Include) {
+                    return true;
+                }
+                if (op == PoorMansFilter.Operation.Exclude) {
+                    return false;
+                }
+            }
+            return false;
         }
     }
 
@@ -267,56 +597,55 @@ namespace GameMod {
             }
             UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, using intervals of {0} tixed Ticks", fixedTickCount);
 
-            // Dictionary of all methods we want to profile
+            // Dictionary of all previously patched methods
+            Dictionary<MethodBase,bool> patchedMethods = new Dictionary<MethodBase,bool>();
+            // List of all methods we want to profile
             Dictionary<MethodBase,bool> targetMethods = new Dictionary<MethodBase,bool>();
 
-            // Get the list of all methods which were patched so far
-            foreach(var m in harmony.GetPatchedMethods()) {
-                targetMethods[m] = true;
+            // Get the list of all fiters
+            string filterFileArg = null;
+            PoorMansFilterList filters = new PoorMansFilterList();
+            if (GameMod.Core.GameMod.FindArgVal("-pmp-filter", out filterFileArg) && !String.IsNullOrEmpty(filterFileArg)) {
+                foreach (var f in filterFileArg.Split(';',',',':')) {
+                    filters.Load(Path.Combine(Application.persistentDataPath, f));
+                }
+            } else {
+                filters.Load(Path.Combine(Application.persistentDataPath, "pmp-filters.txt"));
             }
+            if (filters.filters.Count < 1) {
+                filters.AddDefaults();
+                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: using default filters");
+            }
+            //filters.Save("/tmp/pmpa");
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: using filter with {0} entries", filters.filters.Count);
 
-            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: found {0} patched methods", targetMethods.Count);
+            // apply to the previously patched methods
+            foreach(var m in harmony.GetPatchedMethods()) {
+                patchedMethods[m] = true;
+                if (filters.Apply(m,true)) {
+                    targetMethods[m] = true;
+                    UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: selected {0} {1} (previously patched)", m.DeclaringType.FullName, m.ToString());
+                }
+            }
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: found {0} previously patched methods", patchedMethods.Count);
 
-            // Get all olmod methods which look like a Message Handler (!)
+
             Assembly ourAsm = Assembly.GetExecutingAssembly();
             Assembly overloadAsm = Assembly.GetAssembly(typeof(Overload.GameManager));
             Assembly unityAsm = Assembly.GetAssembly(typeof(Physics));
 
-
-            foreach (var t in ourAsm.GetTypes()) {
-                foreach(var m in t.GetMethods(AccessTools.all)) {
-                    if (LooksLikeMessageHander(m)) {
-                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as message handler)", m.DeclaringType.Name, m);
-                        targetMethods[m] = true;
+            Assembly[] assemblies=new Assembly[]{ourAsm, overloadAsm, unityAsm};
+            foreach (var asm in assemblies) {
+                foreach (var t in asm.GetTypes()) {
+                    foreach(var m in t.GetMethods(AccessTools.all)) {
+                        //UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: XXX {0} {1}", m.DeclaringType.FullName, m.ToString());
+                        if (!patchedMethods.ContainsKey(m) && filters.Apply(m, false)) {
+                            targetMethods[m] = true;
+                            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: selected {0} {1}", m.DeclaringType.FullName, m.ToString());
+                        }
                     }
                 }
             }
-
-            foreach (var t in overloadAsm.GetTypes()) {
-                foreach(var m in t.GetMethods(AccessTools.all)) {
-                    if (LooksLikeMessageHander(m)) {
-                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as message handler)", m.DeclaringType.Name, m);
-                        targetMethods[m] = true;
-                    }
-                    if (LooksLikeUpdateFunc(m)) {
-                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as Update method)", m.DeclaringType, m);
-                        targetMethods[m] = true;
-                    }
-                    if (LooksLikeInterestingFunc(m)) {
-                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as interesting)", m.DeclaringType, m);
-                        targetMethods[m] = true;
-                    }
-                }
-            }
-            foreach (var t in unityAsm.GetTypes()) {
-                foreach(var m in t.GetMethods(AccessTools.all)) {
-                    if (LooksLikeInterestingFunc(m)) {
-                        UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: additionally hooking {0} {1} (appears as interesting)", m.DeclaringType, m);
-                        targetMethods[m] = true;
-                    }
-                }
-            }
-            // NOTE: we could add other functions of interest here as well, up to iterating through the full assembly(!)
             
             // Patch the methods with the profiler prefix and postfix
             UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: applying to {0} methods", targetMethods.Count);
