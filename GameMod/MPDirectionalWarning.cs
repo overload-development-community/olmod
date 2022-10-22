@@ -13,22 +13,45 @@ namespace GameMod
     {
         public static Vector3 homingDir = Vector3.zero;
 
+        public static void SetDirection(Player p, Transform t)
+        {
+            if (Menus.mms_directional_warnings)
+            {
+                homingDir = Vector3.MoveTowards(p.c_player_ship.transform.localPosition, t.localPosition, 0.7f);
+            }
+        }
+
         public static void PlayCueWarning(SFXCue sfx_type, float vol_mod = 1f, float pitch_mod = 0f, float delay = 0f, bool reverb = false)
         {
             //Debug.Log("CCC playing homing cue at position " + homingDir + ", ship position is " + GameManager.m_player_ship.transform.localPosition);
-            SFXCueManager.PlayCuePos(sfx_type, homingDir, vol_mod, pitch_mod, false, delay, 1f);
+            if (Menus.mms_directional_warnings)
+            {
+                SFXCueManager.PlayCuePos(sfx_type, homingDir, vol_mod, pitch_mod, false, delay, 1f);
+            }
+            else
+            {
+                SFXCueManager.PlayCue2D(sfx_type, vol_mod, pitch_mod, delay, reverb);
+            }
         }
     }
 
     [HarmonyPatch(typeof(Projectile), "SteerTowardsTarget")]
     internal class MPDirectionalWarning_Projectile_SteerTowardsTarget
     {
-        static void Postfix(Player ___m_cur_target_player, Transform ___c_transform)
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-
-            if (___m_cur_target_player != null && ___m_cur_target_player.isLocalPlayer)
+            foreach (var code in codes)
             {
-                MPDirectionalWarning.homingDir = Vector3.MoveTowards(___m_cur_target_player.c_player_ship.transform.localPosition, ___c_transform.localPosition, 0.7f);
+                yield return code;
+
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(Projectile), "PlayerLockOnMinDistanceSq"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "c_transform"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDirectionalWarning), "SetDirection"));
+                }
             }
         }
     }
@@ -36,11 +59,20 @@ namespace GameMod
     [HarmonyPatch(typeof(Projectile), "MoveTowardsTarget")]
     internal class MPDirectionalWarning_Projectile_MoveTowardsTarget
     {
-        static void Postfix(Player ___m_cur_target_player, Transform ___c_transform)
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            if (___m_cur_target_player != null && ___m_cur_target_player.isLocalPlayer)
+            foreach (var code in codes)
             {
-                MPDirectionalWarning.homingDir = Vector3.MoveTowards(___m_cur_target_player.c_player_ship.transform.localPosition, ___c_transform.localPosition, 0.7f);
+                yield return code;
+
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(Projectile), "PlayerLockOnMinDistanceSq"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "c_transform"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDirectionalWarning), "SetDirection"));
+                }
             }
         }
     }
