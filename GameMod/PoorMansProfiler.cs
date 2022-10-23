@@ -179,7 +179,7 @@ namespace GameMod {
 
     public class MethodProfileCollector
     {
-        public const int MaxEntryCount = 5000;
+        public const int MaxEntryCount = 7500;
         public MethodProfile[] entry;
 
         public MethodProfileCollector() {
