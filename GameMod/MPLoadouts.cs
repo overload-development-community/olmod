@@ -299,7 +299,17 @@ namespace GameMod
             {
                 var msg = rawMsg.ReadMessage<MPLoadouts.SetCustomLoadoutMessage>();
                 if (MPLoadouts.NetworkLoadouts.ContainsKey(msg.lobby_id))
+                {
                     MPLoadouts.NetworkLoadouts[msg.lobby_id].selected_idx = msg.selected_idx;
+
+                    foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
+                    {
+                        if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
+                        {
+                                NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetCustomLoadout, msg);
+                        }
+                    }
+                }
             }
         }
     }
@@ -494,10 +504,10 @@ namespace GameMod
 
         static void SetMultiplayerLoadoutAndModifiers(Player player, LoadoutDataMessage loadout_data, bool use_loadout1, int lobby_id)
         {
-
             if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
             {
-                var loadout_idx = GameplayManager.IsDedicatedServer() ? MPLoadouts.NetworkLoadouts[lobby_id].selected_idx : Menus.mms_selected_loadout_idx;
+                //var loadout_idx = GameplayManager.IsDedicatedServer() ? MPLoadouts.NetworkLoadouts[lobby_id].selected_idx : Menus.mms_selected_loadout_idx;
+                var loadout_idx = player.isLocalPlayer ? Menus.mms_selected_loadout_idx : MPLoadouts.NetworkLoadouts[lobby_id].selected_idx;
                 SetMultiplayerModifiers(player, loadout_data, use_loadout1);
                 SetMultiplayerLoadout(player, lobby_id, loadout_idx);
             }
