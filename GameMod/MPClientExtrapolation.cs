@@ -510,14 +510,15 @@ namespace GameMod {
                     const int layerMask = (1<<(int)UnityObjectLayers.LEVEL) | (1<<(int)UnityObjectLayers.LAVA);
                     RaycastHit hitInfo;
                     Vector3 direction = (1.0f/dist) * deltaPos;
+                    dist += radius; // we're doing a basic RayCast, so the distance to check must be increased by the ship's radius`
 
-                    if (Physics.SphereCast(basePos, radius, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore)) {
+                    if (Physics.Raycast(basePos, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore)) {
                         // how far the ship's enclosing shpere dives into the collider
                         float diveIn = dist - hitInfo.distance;
                         if (diveIn > maxDive) {
                             // limit the ship position
                             diveIn = maxDive;
-                            newPos = basePos + (hitInfo.distance + diveIn) * direction;
+                            newPos = basePos + (hitInfo.distance - radius + diveIn) * direction;
                         }
                     }
                 }
