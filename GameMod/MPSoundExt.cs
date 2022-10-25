@@ -168,7 +168,7 @@ namespace GameMod
             {
                 if (code.opcode == OpCodes.Ldc_R4 && ((float)code.operand == 0.025f || (float)code.operand == 0.04f))
                 {
-                    code.operand = 0.08f;   // *** THIS NEEDS TO BE FINE-TUNED AND TESTED THOROUGHLY
+                    code.operand = 0.08f;   // *** THIS NEEDS TO BE FINE-TUNED AND TESTED THOROUGHLY to make sure there are still enough damage cues available that no one gets blindsided
                 }
                 yield return code;
             }

@@ -685,26 +685,95 @@ namespace GameMod
     {
         public static void LoadoutSelect(PlayerShip ps)
         {
-            if (!PlayerShip.m_typing_in_chat)
+            if (!PlayerShip.m_typing_in_chat && NetworkMatch.m_force_loadout == 0 && (float)ps.m_dying_timer < 2.5f)
             {
-                if (NetworkMatch.m_force_loadout == 0 && (float)ps.m_dying_timer < 2.5f)
+                switch (Menus.mms_loadout_hotkeys)
                 {
-                    if (Controls.JustPressed(CCInput.WEAPON_1x2))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(0);
-                    }
-                    else if (Controls.JustPressed(CCInput.WEAPON_3x4))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(1);
-                    }
-                    else if (Controls.JustPressed(CCInput.WEAPON_5x6))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(2);
-                    }
-                    else if (Controls.JustPressed(CCInput.WEAPON_7x8))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(3);
-                    }
+                    // weapon selection using Primary 1/2, 3/4, 5/6, 7/8
+                    case 1:
+                        if (Controls.JustPressed(CCInput.WEAPON_1x2))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(0);
+                            MenuManager.PlayCycleSound();
+                        }
+                        else if (Controls.JustPressed(CCInput.WEAPON_3x4))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(1);
+                            MenuManager.PlayCycleSound();
+                        }
+                        else if (Controls.JustPressed(CCInput.WEAPON_5x6))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(2);
+                            MenuManager.PlayCycleSound();
+                        }
+                        else if (Controls.JustPressed(CCInput.WEAPON_7x8))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(3);
+                            MenuManager.PlayCycleSound();
+                        }
+                        break;
+
+                    // weapon selection using Primary 1, 2, 3, 4
+                    case 2:
+                        if (Controls.JustPressed(CCInput.WEAPON_1x2))
+                        {
+                            if (Controls.BothAssigned(CCInput.WEAPON_1x2))
+                            {
+                                if (Controls.PressedSlot(CCInput.WEAPON_1x2, 0))
+                                {
+                                    MPLoadouts.SendCustomLoadoutToServer(0);
+                                }
+                                else
+                                {
+                                    MPLoadouts.SendCustomLoadoutToServer(1);
+                                }
+                                MenuManager.PlayCycleSound();
+                            }
+                        }
+                        else if (Controls.JustPressed(CCInput.WEAPON_3x4))
+                        {
+                            if (Controls.BothAssigned(CCInput.WEAPON_3x4))
+                            {
+                                if (Controls.PressedSlot(CCInput.WEAPON_3x4, 0))
+                                {
+                                    MPLoadouts.SendCustomLoadoutToServer(2);
+                                }
+                                else
+                                {
+                                    MPLoadouts.SendCustomLoadoutToServer(3);
+                                }
+                                MenuManager.PlayCycleSound();
+                            }
+                        }
+                        break;
+
+                    // weapon selection using number & numpad keys 1-4 on the keyboard only
+                    case 3:
+                        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(0);
+                            MenuManager.PlayCycleSound();
+                        }
+                        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(1);
+                            MenuManager.PlayCycleSound();
+                        }
+                        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(2);
+                            MenuManager.PlayCycleSound();
+                        }
+                        else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4))
+                        {
+                            MPLoadouts.SendCustomLoadoutToServer(3);
+                            MenuManager.PlayCycleSound();
+                        }
+                        break;
+
+                    // disabled
+                    default:
+                        break;
                 }
             }
         }
