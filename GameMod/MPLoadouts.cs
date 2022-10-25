@@ -266,48 +266,48 @@ namespace GameMod
                 }
             }
         }
+    }
 
-        [HarmonyPatch(typeof(Server), "RegisterHandlers")]
-        internal class MPLoadouts_Server_RegisterHandlers
+    [HarmonyPatch(typeof(Server), "RegisterHandlers")]
+    internal class MPLoadouts_Server_RegisterHandlers
+    {
+        static void Postfix()
         {
-            static void Postfix()
+            NetworkServer.RegisterHandler(MessageTypes.MsgCustomLoadouts, OnCustomLoadoutDataMessage);
+            NetworkServer.RegisterHandler(MessageTypes.MsgSetCustomLoadout, OnSetCustomLoadoutMessage);
+        }
+
+        private static void OnCustomLoadoutDataMessage(NetworkMessage rawMsg)
+        {
+            var msg = rawMsg.ReadMessage<MPLoadouts.LoadoutDataMessage>();
+            if (!MPLoadouts.NetworkLoadouts.ContainsKey(msg.lobby_id))
             {
-                NetworkServer.RegisterHandler(MessageTypes.MsgCustomLoadouts, OnCustomLoadoutDataMessage);
-                NetworkServer.RegisterHandler(MessageTypes.MsgSetCustomLoadout, OnSetCustomLoadoutMessage);
+                MPLoadouts.NetworkLoadouts.Add(msg.lobby_id, msg);
+            }
+            else
+            {
+                MPLoadouts.NetworkLoadouts[msg.lobby_id] = msg;
             }
 
-            private static void OnCustomLoadoutDataMessage(NetworkMessage rawMsg)
+            // Add free Reflex sidearm
+            MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts
+                .Where(x => !x.weapons.Contains(WeaponType.REFLEX))
+                .ToList()
+                .ForEach(x => x.weapons.Add(WeaponType.REFLEX));
+        }
+
+        private static void OnSetCustomLoadoutMessage(NetworkMessage rawMsg)
+        {
+            var msg = rawMsg.ReadMessage<MPLoadouts.SetCustomLoadoutMessage>();
+            if (MPLoadouts.NetworkLoadouts.ContainsKey(msg.lobby_id))
             {
-                var msg = rawMsg.ReadMessage<MPLoadouts.LoadoutDataMessage>();
-                if (!MPLoadouts.NetworkLoadouts.ContainsKey(msg.lobby_id))
-                {
-                    MPLoadouts.NetworkLoadouts.Add(msg.lobby_id, msg);
-                }
-                else
-                {
-                    MPLoadouts.NetworkLoadouts[msg.lobby_id] = msg;
-                }
+                MPLoadouts.NetworkLoadouts[msg.lobby_id].selected_idx = msg.selected_idx;
 
-                // Add free Reflex sidearm
-                MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts
-                    .Where(x => !x.weapons.Contains(WeaponType.REFLEX))
-                    .ToList()
-                    .ForEach(x => x.weapons.Add(WeaponType.REFLEX));
-            }
-
-            private static void OnSetCustomLoadoutMessage(NetworkMessage rawMsg)
-            {
-                var msg = rawMsg.ReadMessage<MPLoadouts.SetCustomLoadoutMessage>();
-                if (MPLoadouts.NetworkLoadouts.ContainsKey(msg.lobby_id))
+                foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
                 {
-                    MPLoadouts.NetworkLoadouts[msg.lobby_id].selected_idx = msg.selected_idx;
-
-                    foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
+                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
                     {
-                        if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
-                        {
-                                NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetCustomLoadout, msg);
-                        }
+                            NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetCustomLoadout, msg);
                     }
                 }
             }
@@ -506,7 +506,6 @@ namespace GameMod
         {
             if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
             {
-                //var loadout_idx = GameplayManager.IsDedicatedServer() ? MPLoadouts.NetworkLoadouts[lobby_id].selected_idx : Menus.mms_selected_loadout_idx;
                 var loadout_idx = player.isLocalPlayer ? Menus.mms_selected_loadout_idx : MPLoadouts.NetworkLoadouts[lobby_id].selected_idx;
                 SetMultiplayerModifiers(player, loadout_data, use_loadout1);
                 SetMultiplayerLoadout(player, lobby_id, loadout_idx);
@@ -517,166 +516,166 @@ namespace GameMod
                 NetworkSpawnPlayer.SetMultiplayerLoadout(player, loadout_data, use_loadout1);
             }
         }
+    }
 
-        // Pregame overlay position needs adjusted for 4x loadouts
-        [HarmonyPatch(typeof(UIElement), "DrawMpPreGameOverlay")]
-        internal class MPLoadouts_UIElement_DrawMpPreGameOverlay
+    // Pregame overlay position needs adjusted for 4x loadouts
+    [HarmonyPatch(typeof(UIElement), "DrawMpPreGameOverlay")]
+    internal class MPLoadouts_UIElement_DrawMpPreGameOverlay
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            foreach (var code in codes)
             {
-                foreach (var code in codes)
-                {
-                    if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 150f)
-                        code.operand = 250f;
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 150f)
+                    code.operand = 250f;
 
-                    if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 185f)
-                        code.operand = 165f;
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 185f)
+                    code.operand = 165f;
 
-                    yield return code;
-                }
+                yield return code;
+            }
+        }
+    }
+
+    // This handles the in-match simple overlay selection
+    [HarmonyPatch(typeof(UIElement), "DrawMpOverlayLoadout")]
+    internal class MPLoadouts_UIElement_DrawMpOverlayLoadout
+    {
+        static void DrawMpLoadoutSimple(UIElement uie, Vector2 pos, int idx, bool active)
+        {
+            // This check needed as there can be brief moments where this data isn't populated client-side yet
+            if (!MPLoadouts.NetworkLoadouts.ContainsKey(NetworkMatch.m_my_lobby_id))
+                return;
+
+            var player = GameManager.m_local_player;
+            MPLoadouts.CustomLoadout loadout = MPLoadouts.NetworkLoadouts[NetworkMatch.m_my_lobby_id].loadouts[idx];
+            float num = 535f;
+            float middle_h = 2f;
+            Color c = (!active) ? UIManager.m_col_ub0 : UIManager.m_col_ui5;
+            c.a = uie.m_alpha;
+            UIManager.DrawFrameEmptyCenter(pos + Vector2.up * 11f, 17f, 17f, num, middle_h, c, 7);
+            num *= 0.345f;
+            pos.x -= num;
+            pos.y += 11f;
+
+            uie.DrawStringSmall((idx + 1).ToString(), pos - Vector2.right * 90f, 0.6f, StringOffset.LEFT, c, uie.m_alpha);
+
+            pos.x += 30f;
+            if (loadout.loadoutType == MPLoadouts.LoadoutType.GUNNER)
+            {
+                DrawMpWeaponSimple(uie, pos, loadout.weapons[0], active);
+                pos.x += num - 12f;
+                DrawMpWeaponSimple(uie, pos, loadout.weapons[1], active);
+                pos.x += num - 12f;
+                DrawMpMissileSimple(uie, pos, loadout.missiles[0], active);
+            }
+            else
+            {
+                DrawMpWeaponSimple(uie, pos, loadout.weapons[0], active);
+                pos.x += num - 12f;
+                DrawMpMissileSimple(uie, pos, loadout.missiles[0], active);
+                pos.x += num - 12f;
+                DrawMpMissileSimple(uie, pos, loadout.missiles[1], active);
             }
         }
 
-        // This handles the in-match simple overlay selection
-        [HarmonyPatch(typeof(UIElement), "DrawMpOverlayLoadout")]
-        internal class MPLoadouts_UIElement_DrawMpOverlayLoadout
+        private static void DrawMpWeaponSimple(UIElement uie, Vector2 pos, WeaponType wt, bool highlight)
         {
-            static void DrawMpLoadoutSimple(UIElement uie, Vector2 pos, int idx, bool active)
-            {
-                // This check needed as there can be brief moments where this data isn't populated client-side yet
-                if (!MPLoadouts.NetworkLoadouts.ContainsKey(NetworkMatch.m_my_lobby_id))
-                    return;
-
-                var player = GameManager.m_local_player;
-                MPLoadouts.CustomLoadout loadout = MPLoadouts.NetworkLoadouts[NetworkMatch.m_my_lobby_id].loadouts[idx];
-                float num = 535f;
-                float middle_h = 2f;
-                Color c = (!active) ? UIManager.m_col_ub0 : UIManager.m_col_ui5;
-                c.a = uie.m_alpha;
-                UIManager.DrawFrameEmptyCenter(pos + Vector2.up * 11f, 17f, 17f, num, middle_h, c, 7);
-                num *= 0.345f;
-                pos.x -= num;
-                pos.y += 11f;
-
-                uie.DrawStringSmall((idx + 1).ToString(), pos - Vector2.right * 90f, 0.6f, StringOffset.LEFT, c, uie.m_alpha);
-
-                pos.x += 30f;
-                if (loadout.loadoutType == MPLoadouts.LoadoutType.GUNNER)
-                {
-                    DrawMpWeaponSimple(uie, pos, loadout.weapons[0], active);
-                    pos.x += num - 12f;
-                    DrawMpWeaponSimple(uie, pos, loadout.weapons[1], active);
-                    pos.x += num - 12f;
-                    DrawMpMissileSimple(uie, pos, loadout.missiles[0], active);
-                }
-                else
-                {
-                    DrawMpWeaponSimple(uie, pos, loadout.weapons[0], active);
-                    pos.x += num - 12f;
-                    DrawMpMissileSimple(uie, pos, loadout.missiles[0], active);
-                    pos.x += num - 12f;
-                    DrawMpMissileSimple(uie, pos, loadout.missiles[1], active);
-                }
-            }
-
-            private static void DrawMpWeaponSimple(UIElement uie, Vector2 pos, WeaponType wt, bool highlight)
-            {
-                float num = 140f;
-                Color color = (!highlight) ? UIManager.m_col_ub1 : UIManager.m_col_ui2;
-                color.a = uie.m_alpha;
-                UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
-                color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-                UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(26 + wt));
-                uie.DrawStringSmall(Player.GetWeaponNameNoDefault(wt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
-            }
-
-            private static void DrawMpMissileSimple(UIElement uie, Vector2 pos, MissileType mt, bool highlight)
-            {
-                float num = 140f;
-                Color color = (!highlight) ? UIManager.m_col_ub1 : UIManager.m_col_ui2;
-                color.a = uie.m_alpha;
-                UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
-                color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-                UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(104 + mt));
-                uie.DrawStringSmall(Player.GetMissileNameNoDefault(mt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
-            }
-
-            static bool Prefix(UIElement __instance, Vector2 pos, bool dead, bool show_loadout, bool show_respawn_timer, bool showing_auto_timer)
-            {
-                if (show_loadout)
-                {
-                    //pos.y -= 80f;
-                    pos.x = -300f;
-                    DrawMpLoadoutSimple(__instance, pos, 0, Menus.mms_selected_loadout_idx == 0);
-                    pos.x = 300f;
-                    DrawMpLoadoutSimple(__instance, pos, 1, Menus.mms_selected_loadout_idx == 1);
-                    pos.y += 45f;
-                    pos.x = -300f;
-                    DrawMpLoadoutSimple(__instance, pos, 2, Menus.mms_selected_loadout_idx == 2);
-                    pos.x = 300f;
-                    DrawMpLoadoutSimple(__instance, pos, 3, Menus.mms_selected_loadout_idx == 3);
-                    pos.y += 60f;
-                    pos.x = 0f;
-                    float alpha_mod = (GameManager.m_local_player.c_player_ship.m_dying_timer >= 2.5f) ? 0.25f : 1f;
-                    __instance.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.FIRE_MISSILE) + " - " + Loc.LS("TOGGLE LOADOUT"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_ui2, alpha_mod, -1f);
-                }
-                else
-                {
-                    pos.y += 60f;
-                }
-                if (dead)
-                {
-                    pos.y += 20f;
-                    if (UIElement.ReadyToRespawn)
-                    {
-                        string text = Loc.LS("TOGGLE AUTO-RESPAWN (STATUS: READY!)");
-                        __instance.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.FIRE_FLARE) + " - " + text, pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi5, 1f, -1f);
-                        if (showing_auto_timer && !GameplayManager.ShowMpScoreboard)
-                        {
-                            pos.y = -45f;
-                            __instance.DrawStringSmall(Loc.LS("AUTO-RESPAWN TIMER"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_ui3, 1f, 250f);
-                            __instance.DrawWideBox(pos, 120f, 12f, UIManager.m_col_ui3, __instance.m_alpha, 7);
-                        }
-                    }
-                    else if (show_respawn_timer)
-                    {
-                        string text = ScriptTutorialMessage.ControlString(CCInput.FIRE_FLARE) + " - " + Loc.LS("RESPAWN NOW");
-                        __instance.DrawStringSmall(text, pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi5, 1f, -1f);
-                        float stringWidth = UIManager.GetStringWidth(text, 8f, 0, -1);
-                        float a = __instance.m_alpha * __instance.m_anim_state2;
-                        __instance.DrawWideBox(pos, stringWidth * 0.5f, 10f, UIManager.m_col_hi5, a, 7);
-                        if (!GameplayManager.ShowMpScoreboard)
-                        {
-                            pos.y = -45f;
-                            __instance.DrawStringSmall(Loc.LS("RESPAWN TIMER"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi3, 1f, 250f);
-                            __instance.DrawWideBox(pos, 120f, 12f, UIManager.m_col_hi3, __instance.m_alpha, 7);
-                        }
-                    }
-                    else
-                    {
-                        string text = Loc.LS("TOGGLE AUTO-RESPAWN (STATUS: DISABLED)");
-                        __instance.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.FIRE_FLARE) + " - " + text, pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi5, 1f, -1f);
-                        if (showing_auto_timer && !GameplayManager.ShowMpScoreboard)
-                        {
-                            pos.y = -45f;
-                            __instance.DrawStringSmall(Loc.LS("AUTO-RESPAWN TIMER"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_ui3, 0.2f, 250f);
-                            __instance.DrawWideBox(pos, 120f, 12f, UIManager.m_col_ui3, __instance.m_alpha * 0.2f, 7);
-                        }
-                    }
-                }
-
-                return false;
-            }
+            float num = 140f;
+            Color color = (!highlight) ? UIManager.m_col_ub1 : UIManager.m_col_ui2;
+            color.a = uie.m_alpha;
+            UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
+            color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
+            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(26 + wt));
+            uie.DrawStringSmall(Player.GetWeaponNameNoDefault(wt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
         }
 
-        // Entry point for client changing loadout selection in active match (pregame or after death)
-        [HarmonyPatch(typeof(Player), "CallCmdToggleLoadout")]
-        internal class MPLoadouts_Player_CallCmdToggleLoadout
+        private static void DrawMpMissileSimple(UIElement uie, Vector2 pos, MissileType mt, bool highlight)
         {
-            static void Postfix(Player __instance)
+            float num = 140f;
+            Color color = (!highlight) ? UIManager.m_col_ub1 : UIManager.m_col_ui2;
+            color.a = uie.m_alpha;
+            UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
+            color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
+            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(104 + mt));
+            uie.DrawStringSmall(Player.GetMissileNameNoDefault(mt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
+        }
+
+        static bool Prefix(UIElement __instance, Vector2 pos, bool dead, bool show_loadout, bool show_respawn_timer, bool showing_auto_timer)
+        {
+            if (show_loadout)
             {
-                MPLoadouts.SendCustomLoadoutToServer((Menus.mms_selected_loadout_idx + 1) % 4);
+                //pos.y -= 80f;
+                pos.x = -300f;
+                DrawMpLoadoutSimple(__instance, pos, 0, Menus.mms_selected_loadout_idx == 0);
+                pos.x = 300f;
+                DrawMpLoadoutSimple(__instance, pos, 1, Menus.mms_selected_loadout_idx == 1);
+                pos.y += 45f;
+                pos.x = -300f;
+                DrawMpLoadoutSimple(__instance, pos, 2, Menus.mms_selected_loadout_idx == 2);
+                pos.x = 300f;
+                DrawMpLoadoutSimple(__instance, pos, 3, Menus.mms_selected_loadout_idx == 3);
+                pos.y += 60f;
+                pos.x = 0f;
+                float alpha_mod = (GameManager.m_local_player.c_player_ship.m_dying_timer >= 2.5f) ? 0.25f : 1f;
+                __instance.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.FIRE_MISSILE) + " - " + Loc.LS("TOGGLE LOADOUT"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_ui2, alpha_mod, -1f);
             }
+            else
+            {
+                pos.y += 60f;
+            }
+            if (dead)
+            {
+                pos.y += 20f;
+                if (UIElement.ReadyToRespawn)
+                {
+                    string text = Loc.LS("TOGGLE AUTO-RESPAWN (STATUS: READY!)");
+                    __instance.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.FIRE_FLARE) + " - " + text, pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi5, 1f, -1f);
+                    if (showing_auto_timer && !GameplayManager.ShowMpScoreboard)
+                    {
+                        pos.y = -45f;
+                        __instance.DrawStringSmall(Loc.LS("AUTO-RESPAWN TIMER"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_ui3, 1f, 250f);
+                        __instance.DrawWideBox(pos, 120f, 12f, UIManager.m_col_ui3, __instance.m_alpha, 7);
+                    }
+                }
+                else if (show_respawn_timer)
+                {
+                    string text = ScriptTutorialMessage.ControlString(CCInput.FIRE_FLARE) + " - " + Loc.LS("RESPAWN NOW");
+                    __instance.DrawStringSmall(text, pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi5, 1f, -1f);
+                    float stringWidth = UIManager.GetStringWidth(text, 8f, 0, -1);
+                    float a = __instance.m_alpha * __instance.m_anim_state2;
+                    __instance.DrawWideBox(pos, stringWidth * 0.5f, 10f, UIManager.m_col_hi5, a, 7);
+                    if (!GameplayManager.ShowMpScoreboard)
+                    {
+                        pos.y = -45f;
+                        __instance.DrawStringSmall(Loc.LS("RESPAWN TIMER"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi3, 1f, 250f);
+                        __instance.DrawWideBox(pos, 120f, 12f, UIManager.m_col_hi3, __instance.m_alpha, 7);
+                    }
+                }
+                else
+                {
+                    string text = Loc.LS("TOGGLE AUTO-RESPAWN (STATUS: DISABLED)");
+                    __instance.DrawStringSmall(ScriptTutorialMessage.ControlString(CCInput.FIRE_FLARE) + " - " + text, pos, 0.4f, StringOffset.CENTER, UIManager.m_col_hi5, 1f, -1f);
+                    if (showing_auto_timer && !GameplayManager.ShowMpScoreboard)
+                    {
+                        pos.y = -45f;
+                        __instance.DrawStringSmall(Loc.LS("AUTO-RESPAWN TIMER"), pos, 0.4f, StringOffset.CENTER, UIManager.m_col_ui3, 0.2f, 250f);
+                        __instance.DrawWideBox(pos, 120f, 12f, UIManager.m_col_ui3, __instance.m_alpha * 0.2f, 7);
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
+    // Entry point for client changing loadout selection in active match (pregame or after death)
+    [HarmonyPatch(typeof(Player), "CallCmdToggleLoadout")]
+    internal class MPLoadouts_Player_CallCmdToggleLoadout
+    {
+        static void Postfix(Player __instance)
+        {
+            MPLoadouts.SendCustomLoadoutToServer((Menus.mms_selected_loadout_idx + 1) % 4);
         }
     }
 
