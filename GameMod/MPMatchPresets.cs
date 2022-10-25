@@ -64,7 +64,8 @@ namespace GameMod
                 allowSmash = Menus.mms_allow_smash,
                 damageNumbers = Menus.mms_damage_numbers,
                 assistScoring = Menus.mms_assist_scoring,
-                teamCount = MPTeams.MenuManagerTeamCount
+                teamCount = MPTeams.MenuManagerTeamCount,
+                thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
             });
 
             presets.Add(new MPMatchPreset
@@ -103,7 +104,8 @@ namespace GameMod
                 allowSmash = false,
                 damageNumbers = true,
                 assistScoring = true,
-                teamCount = 2
+                teamCount = 2,
+                thunderboltPassthrough = false
             });
 
             presets.Add(new MPMatchPreset
@@ -143,6 +145,7 @@ namespace GameMod
                 assistScoring = true,
                 teamCount = 2,
                 damageNumbers = true,
+                thunderboltPassthrough = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -185,6 +188,7 @@ namespace GameMod
             public bool damageNumbers;
             public bool assistScoring = true;
             public int teamCount = 2;
+            public bool thunderboltPassthrough;
 
             public void Apply()
             {
@@ -222,6 +226,7 @@ namespace GameMod
                 Menus.mms_damage_numbers = this.damageNumbers;
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
+                MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }
 
