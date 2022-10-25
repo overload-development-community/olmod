@@ -11,21 +11,22 @@ namespace GameMod
 {
     public static class MPDirectionalWarning
     {
-        public static Vector3 homingDir = Vector3.zero;
+        public static Vector3 homingPos = Vector3.zero;
 
-        public static void SetDirection(Player p, Transform t)
+        /*public static void SetDirection(Player p, Transform t)
         {
             if (Menus.mms_directional_warnings)
             {
                 homingDir = Vector3.MoveTowards(p.c_player_ship.transform.localPosition, t.localPosition, 0.7f);
             }
-        }
+        }*/
 
         public static void PlayCueWarning(SFXCue sfx_type, float vol_mod = 1f, float pitch_mod = 0f, float delay = 0f, bool reverb = false)
         {
             //Debug.Log("CCC playing homing cue at position " + homingDir + ", ship position is " + GameManager.m_player_ship.transform.localPosition);
             if (Menus.mms_directional_warnings)
             {
+                Vector3 homingDir = Vector3.MoveTowards(GameManager.m_player_ship.c_transform_position, homingPos, 0.7f);
                 SFXCueManager.PlayCuePos(sfx_type, homingDir, vol_mod, pitch_mod, false, delay, 1f);
             }
             else
@@ -46,11 +47,12 @@ namespace GameMod
 
                 if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(Projectile), "PlayerLockOnMinDistanceSq"))
                 {
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
+                    //yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "c_transform"));
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDirectionalWarning), "SetDirection"));
+                    yield return new CodeInstruction(OpCodes.Stsfld, AccessTools.Field(typeof(MPDirectionalWarning), "homingPos"));
+                    //yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDirectionalWarning), "SetDirection"));
                 }
             }
         }
@@ -67,11 +69,12 @@ namespace GameMod
 
                 if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(Projectile), "PlayerLockOnMinDistanceSq"))
                 {
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
+                    //yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "c_transform"));
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDirectionalWarning), "SetDirection"));
+                    yield return new CodeInstruction(OpCodes.Stsfld, AccessTools.Field(typeof(MPDirectionalWarning), "homingPos"));
+                    //yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPDirectionalWarning), "SetDirection"));
                 }
             }
         }
