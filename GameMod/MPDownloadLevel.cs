@@ -45,6 +45,11 @@ namespace GameMod
 
         private static bool ZipContainsLevel(string zipFilename, string levelIdHash)
         {
+            if (!File.Exists(zipFilename))
+            {
+                Debug.Log($"ZipContainsLevel: File \"{zipFilename}\" not found");
+                return false;
+            }
             string[] parts = levelIdHash.Split(new[] { ':' });
             string levelFile = parts[0];
             if (!int.TryParse(parts[1], NumberStyles.HexNumber, null, out int hash))
@@ -154,6 +159,7 @@ namespace GameMod
 
         private static void OnDownloadFailed()
         {
+            Debug.Log("MPDownloadLevel.OnDownloadFailed");
             DownloadBusy = false;
             if (Overload.NetworkManager.IsServer())
             {
@@ -165,6 +171,7 @@ namespace GameMod
         private static FieldInfo _NetworkMatch_m_match_force_playlist_level_idx_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", BindingFlags.NonPublic | BindingFlags.Static);
         private static void OnDownloadCompleted(int newLevelIndex)
         {
+            Debug.Log($"MPDownloadLevel.OnDownloadCompleted (newLevelIndex={newLevelIndex})");
             if (Overload.NetworkManager.IsServer())
             {
                 _NetworkMatch_m_match_force_playlist_level_idx_Field.SetValue(null, newLevelIndex);

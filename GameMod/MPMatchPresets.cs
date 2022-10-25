@@ -64,7 +64,8 @@ namespace GameMod
                 allowSmash = Menus.mms_allow_smash,
                 damageNumbers = Menus.mms_damage_numbers,
                 assistScoring = Menus.mms_assist_scoring,
-                teamCount = MPTeams.MenuManagerTeamCount
+                teamCount = MPTeams.MenuManagerTeamCount,
+                thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
             });
 
             presets.Add(new MPMatchPreset
@@ -101,8 +102,50 @@ namespace GameMod
                 classicSpawnsEnabled = false,
                 alwaysCloaked = false,
                 allowSmash = false,
+                damageNumbers = true,
                 assistScoring = true,
-                teamCount = 2
+                teamCount = 2,
+                thunderboltPassthrough = false
+            });
+
+            presets.Add(new MPMatchPreset
+            {
+                title = "PUBLIC TEAM ANARCHY",
+                matchMode = MatchMode.TEAM_ANARCHY,
+                maxPlayers = 16,
+                friendlyFire = 0,
+                timeLimit = 15 * 60,
+                scoreLimit = 0,
+                respawnTime = 2,
+                respawnInvuln = 2,
+                showNames = MatchShowEnemyNames.NORMAL,
+                turnSpeedLimit = 2,
+                forceLoadout = 0,
+                forcePrimary1 = WeaponType.IMPULSE,
+                forcePrimary2 = WeaponType.NUM,
+                forceSecondary1 = MissileType.FALCON,
+                forceSecondary2 = MissileType.NUM,
+                forceModifier1 = 4,
+                forceModifier2 = 4,
+                powerupSpawn = 2,
+                powerupInitial = 2,
+                powerupBigSpawn = 1,
+                powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
+                jipEnabled = true,
+                suddenDeathOvertime = false,
+                lapLimit = 0,
+                sniperPackets = true,
+                noCompression = true,
+                allowRearView = true,
+                scaleRespawnTime = false,
+                ctfCarrierBoostEnabled = false,
+                classicSpawnsEnabled = false,
+                alwaysCloaked = false,
+                allowSmash = false,
+                assistScoring = true,
+                teamCount = 2,
+                damageNumbers = true,
+                thunderboltPassthrough = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -145,6 +188,7 @@ namespace GameMod
             public bool damageNumbers;
             public bool assistScoring = true;
             public int teamCount = 2;
+            public bool thunderboltPassthrough;
 
             public void Apply()
             {
@@ -182,6 +226,7 @@ namespace GameMod
                 Menus.mms_damage_numbers = this.damageNumbers;
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
+                MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }
 
