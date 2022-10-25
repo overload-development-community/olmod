@@ -101,6 +101,7 @@ namespace GameMod
                 classicSpawnsEnabled = false,
                 alwaysCloaked = false,
                 allowSmash = false,
+                damageNumbers = true,
                 assistScoring = true,
                 teamCount = 2
             });
@@ -141,7 +142,7 @@ namespace GameMod
                 allowSmash = false,
                 assistScoring = true,
                 teamCount = 2,
-                damageNumbers = false
+                damageNumbers = true,
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
