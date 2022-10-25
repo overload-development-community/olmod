@@ -1,3 +1,10 @@
+v0.5.7 - 2022-10-24
+
+- Thunderbolt Penetration and Damage Numbers settings are now read from presets.  Public games have damage numbers on by default!
+- New public team game option.  (Thanks, Tobias!)
+- Extra logging for auto downloader.  (Thanks, Sirius!)
+- Loadouts are now synchronized with other players on spawn.  (Thanks, Fireball!)
+
 v0.5.6 - 2022-10-14
 
 - There are now 4 loadouts available, all of them are customizable, and all 4 are available in the game at all times.  You can use the hot keys to select the 4 sets of primary weapons (by default, keys are 1, 2, 3, and 4) to select the loadout to use.  (Thanks, Tobias!)

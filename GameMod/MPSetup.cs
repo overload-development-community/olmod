@@ -222,6 +222,9 @@ namespace GameMod {
                 ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
+                Menus.mms_damage_numbers = MenuManager.LocalGetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
+                MPThunderboltPassthrough.isAllowed = MenuManager.LocalGetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
+
                 JoystickRotationFix.alt_turn_ramp_mode = ModPrefs.GetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
                 MPColoredPlayerNames.isActive = ModPrefs.GetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
                 DisableProfanityFilter.profanity_filter = ModPrefs.GetBool("MP_PROFANITY_FILTER", DisableProfanityFilter.profanity_filter);
@@ -346,6 +349,8 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_W1", (int)MPLoadouts.Loadouts[3].weapons[0]);
             ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_W2", (int)MPLoadouts.Loadouts[3].weapons[1]);
             ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[3].missiles[0]);
+            ModPrefs.SetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
+            ModPrefs.SetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
             ModPrefs.Flush(filename + "mod");
         }
 
