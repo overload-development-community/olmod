@@ -14,6 +14,7 @@
 +=		Void Update()
 +=		Void FixedUpdate()
 +=		Void FixedUpdateAll()
++=		Void LateUpdate()
 # add interesting physics funtcions
 +=R	^UnityEngine.Physics$	^[^()]* Linecast\(
 +=R	^UnityEngine.Physics$	^[^()]* SphereCast\(
