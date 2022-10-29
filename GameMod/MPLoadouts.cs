@@ -507,8 +507,8 @@ namespace GameMod
             if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
             {
                 var loadout_idx = player.isLocalPlayer ? Menus.mms_selected_loadout_idx : MPLoadouts.NetworkLoadouts[lobby_id].selected_idx;
-                SetMultiplayerModifiers(player, loadout_data, use_loadout1);
                 SetMultiplayerLoadout(player, lobby_id, loadout_idx);
+                SetMultiplayerModifiers(player, loadout_data, use_loadout1);
             }
             else
             {
@@ -685,26 +685,27 @@ namespace GameMod
     {
         public static void LoadoutSelect(PlayerShip ps)
         {
-            if (!PlayerShip.m_typing_in_chat)
+            if (Menus.mms_loadout_hotkeys && !PlayerShip.m_typing_in_chat && NetworkMatch.m_force_loadout == 0 && (float)ps.m_dying_timer < 2.5f)
             {
-                if (NetworkMatch.m_force_loadout == 0 && (float)ps.m_dying_timer < 2.5f)
+                if (Controls.JustPressed(CCInput.WEAPON_1x2))
                 {
-                    if (Controls.JustPressed(CCInput.WEAPON_1x2))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(0);
-                    }
-                    else if (Controls.JustPressed(CCInput.WEAPON_3x4))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(1);
-                    }
-                    else if (Controls.JustPressed(CCInput.WEAPON_5x6))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(2);
-                    }
-                    else if (Controls.JustPressed(CCInput.WEAPON_7x8))
-                    {
-                        MPLoadouts.SendCustomLoadoutToServer(3);
-                    }
+                    MPLoadouts.SendCustomLoadoutToServer(0);
+                    MenuManager.PlayCycleSound();
+                }
+                else if (Controls.JustPressed(CCInput.WEAPON_3x4))
+                {
+                    MPLoadouts.SendCustomLoadoutToServer(1);
+                    MenuManager.PlayCycleSound();
+                }
+                else if (Controls.JustPressed(CCInput.WEAPON_5x6))
+                {
+                    MPLoadouts.SendCustomLoadoutToServer(2);
+                    MenuManager.PlayCycleSound();
+                }
+                else if (Controls.JustPressed(CCInput.WEAPON_7x8))
+                {
+                    MPLoadouts.SendCustomLoadoutToServer(3);
+                    MenuManager.PlayCycleSound();
                 }
             }
         }
