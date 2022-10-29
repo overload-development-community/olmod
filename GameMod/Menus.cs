@@ -70,7 +70,6 @@ namespace GameMod {
                 {
                     MPSoundOcclusion.AddFilters();
                 }
-                Debug.Log("CCC setting to " + value);
                 mms_audio_occlusion_strength_internal = value;
             }
         }

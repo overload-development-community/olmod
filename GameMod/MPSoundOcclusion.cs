@@ -157,7 +157,6 @@ namespace GameMod
 
         static void Postfix(int __result, Vector3 pos3d)
         {
-            Debug.Log("CCC setting is " + Menus.mms_audio_occlusion_strength);
             if (__result != -1) // if -1 then we ran out of audio slots, skip the whole thing
             {
                 // If pos3d == Vector3.zero, then it's almost without a doubt a 2D cue on the local client. It's beyond infeasible that sound could accidentally come from *exactly* this point.
