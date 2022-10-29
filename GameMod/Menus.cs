@@ -53,7 +53,27 @@ namespace GameMod {
             return MenuManager.GetToggleSetting(Convert.ToInt32(RearView.MPMenuManagerEnabled));
         }
 
-        public static int mms_audio_occlusion_strength { get; set; } = 0;
+        private static int mms_audio_occlusion_strength_internal = 0;
+        public static int mms_audio_occlusion_strength
+        {
+            get
+            {
+                return mms_audio_occlusion_strength_internal;
+            }
+            set
+            {
+                if (value == 0)
+                {
+                    MPSoundOcclusion.RemoveFilters();
+                }
+                else if (mms_audio_occlusion_strength_internal == 0)
+                {
+                    MPSoundOcclusion.AddFilters();
+                }
+                Debug.Log("CCC setting to " + value);
+                mms_audio_occlusion_strength_internal = value;
+            }
+        }
         public static string GetMMSAudioOcclusionStrength()
         {
             switch (mms_audio_occlusion_strength)

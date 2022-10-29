@@ -24,6 +24,7 @@ namespace GameMod
     public static class MPSoundExt
     {
         //public static AssetBundle ab;
+        public static GameObject[] m_a_object = new GameObject[512];
         public static AudioSource[] m_a_source = new AudioSource[512];
         public static AudioLowPassFilter[] m_a_filter = new AudioLowPassFilter[512];
     }
@@ -91,7 +92,7 @@ namespace GameMod
      * *************************************************
      */
 
-    /* I think this one is single player only? May re-enable. It's a copy of the one for AddEnergyDefault
+    /* I think this one is single player only? May re-enable. It was a copy of the one for AddEnergyDefault
     // Increases the loop wait time for the energy center sounds. There is a noticeable performance hit when charging.
     [HarmonyPatch(typeof(Player), "AddWeakEnergy")]
     internal class MPSoundExt_Player_AddWeakEnergy
@@ -156,8 +157,10 @@ namespace GameMod
         }
     }
 
-    // reduces the maximum number of player damage sound effects happening per second from 25-40 *per type* down to ~10.
-    // Lightens the load caused by extra physics linecasts in heavy games when something like Flak is pelting multiple
+    /* ====== This needs to be tested properly and re-enabled in a future version - right now it works, but has not been run through the wringer, so it's commented out for now
+    
+    // slightly reduces the maximum number of player damage sound effects happening per second from 25-40 *per type* down to ~20.
+    // Lightens the load a bit caused by extra physics linecasts in heavy games when something like Flak is pelting multiple
     // targets simultaneously.
     [HarmonyPatch(typeof(PlayerShip), "RpcApplyDamageEffects")]
     internal class MPSoundExt_PlayerShip_RpcApplyDamageEffects
@@ -168,10 +171,11 @@ namespace GameMod
             {
                 if (code.opcode == OpCodes.Ldc_R4 && ((float)code.operand == 0.025f || (float)code.operand == 0.04f))
                 {
-                    code.operand = 0.08f;   // *** THIS NEEDS TO BE FINE-TUNED AND TESTED THOROUGHLY to make sure there are still enough damage cues available that no one gets blindsided
+                    code.operand = 0.05f;   // *** THIS NEEDS TO BE FINE-TUNED AND TESTED THOROUGHLY to make sure there are still enough damage cues available that no one gets blindsided
                 }
                 yield return code;
             }
         }
     }
+    */
 }

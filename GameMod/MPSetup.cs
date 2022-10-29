@@ -273,7 +273,7 @@ namespace GameMod {
                 MPLoadouts.Loadouts[3].weapons[1] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_W2", (int)MPLoadouts.Loadouts[1].weapons[1]);
                 MPLoadouts.Loadouts[3].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[1].missiles[0]);
             }
-            else // for compatability with old olmod, no need to add new settings
+            else // for compatibility with old olmod, no need to add new settings
             {
                 MPTeams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
