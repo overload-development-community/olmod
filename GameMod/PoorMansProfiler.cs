@@ -520,6 +520,7 @@ namespace GameMod {
     public class PoorMansProfiler
     {
         private static int initMode = 0;
+        private static bool isServer = false;
         private static Harmony lazyHarmony = null;
         private static Dictionary<MethodBase,MethodProfile> profileData = new Dictionary<MethodBase, MethodProfile>();
         private static Dictionary<MethodBase,MethodProfile>[] intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
@@ -679,7 +680,12 @@ namespace GameMod {
             if (initMode < 1) {
                 harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
             }
-            harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnMatchEnd"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
+            if (GameMod.Core.GameMod.FindArg("-batchmode")) {
+                isServer = true;
+                harmony.Patch(AccessTools.Method(typeof(NetworkMatch), "ExitMatch"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
+            } else {
+                harmony.Patch(AccessTools.Method(typeof(Overload.GameplayManager), "DoneLevel"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
+            }
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnStartPregameCountdown"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPregamePostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "FixedUpdate"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("FixedUpdatePostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfix"), Priority.Last));
@@ -721,7 +727,7 @@ namespace GameMod {
             uConsole.RegisterCommand("pmpinterval", "Set Poor Man's Profiler interval", CmdInterval);
         }
 
-        // This is an additional Postfix to Overload.Client.OnMatchEnd() to cycle the profiler data
+        // This is an additional Postfix to cycle the profiler data at match end
         public static void MatchEndPostfix()
         {
             Cycle("match");
@@ -835,7 +841,7 @@ namespace GameMod {
         {
             var sw = new StreamWriter(filename, false);
             sw.Write("+++ OLMOD - Poor Man's Profiler v1\n");
-            sw.Write("+++ run at {0}\n",timestamp);
+            sw.Write("+++ run at {0}, server: {1}\n",timestamp, isServer);
             foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
                 //UnityEngine.Debug.LogFormat("XXX {0}", pair.Value.method);
                 pair.Value.WriteResults(sw);
@@ -850,7 +856,7 @@ namespace GameMod {
         {
             var sw = new StreamWriter(baseFilename + "info.csv", false);
             sw.Write("+++ OLMOD - Poor Man's Profiler v1\n");
-            sw.Write("+++ run {0} to {1}, {2} intervals, {3} methods\n",GetTimestamp(tsBegin), GetTimestamp(tsEnd), cnt, pdc.Count);
+            sw.Write("+++ run {0} to {1}, {2} intervals, {3} methods, server: {4}\n",GetTimestamp(tsBegin), GetTimestamp(tsEnd), cnt, pdc.Count, isServer);
 
             int idx = 0;
             foreach( KeyValuePair<MethodBase,MethodProfileCollector> pair in pdc) {
@@ -941,7 +947,7 @@ namespace GameMod {
             }
             intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
             string curDateTime = GetTimestamp(tsEnd);
-            string ftemplate = String.Format("olmod_pmp_{0}_{1}_", curDateTime, reason);
+            string ftemplate = String.Format("olmod_pmp{0}_{1}_{2}_", ((isServer)?"_srv":""),curDateTime, reason);
             string fn = Path.Combine(Application.persistentDataPath, ftemplate);
             WriteResults(pdc, fn, curIdx, startTime, tsEnd);
             startTime = DateTime.UtcNow;
