@@ -507,8 +507,8 @@ namespace GameMod
             if (MPLoadouts.NetworkLoadouts.ContainsKey(lobby_id))
             {
                 var loadout_idx = player.isLocalPlayer ? Menus.mms_selected_loadout_idx : MPLoadouts.NetworkLoadouts[lobby_id].selected_idx;
-                SetMultiplayerModifiers(player, loadout_data, use_loadout1);
                 SetMultiplayerLoadout(player, lobby_id, loadout_idx);
+                SetMultiplayerModifiers(player, loadout_data, use_loadout1);
             }
             else
             {
