@@ -53,7 +53,27 @@ namespace GameMod {
             return MenuManager.GetToggleSetting(Convert.ToInt32(RearView.MPMenuManagerEnabled));
         }
 
-        public static int mms_audio_occlusion_strength { get; set; } = 0;
+        private static int mms_audio_occlusion_strength_internal = 0;
+        public static int mms_audio_occlusion_strength
+        {
+            get
+            {
+                return mms_audio_occlusion_strength_internal;
+            }
+            set
+            {
+                if (value == 0)
+                {
+                    MPSoundOcclusion.RemoveFilters();
+                }
+                else if (mms_audio_occlusion_strength_internal == 0)
+                {
+                    MPSoundOcclusion.AddFilters();
+                }
+                Debug.Log("CCC setting to " + value);
+                mms_audio_occlusion_strength_internal = value;
+            }
+        }
         public static string GetMMSAudioOcclusionStrength()
         {
             switch (mms_audio_occlusion_strength)
@@ -77,10 +97,22 @@ namespace GameMod {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_directional_warnings));
         }
 
-        public static bool mms_loadout_hotkeys { get; set; } = true;
+        public static int mms_loadout_hotkeys { get; set; } = 1;
         public static string GetMMSLoadoutHotkeys()
         {
-            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_loadout_hotkeys));
+            switch (mms_loadout_hotkeys)
+            {
+                case 0:
+                    return "OFF";
+                case 1:
+                    return "PRIMARY SELECT KEYS";
+                case 2:
+                    return "SEPARATE PRIMARIES";
+                case 3:
+                    return "NUMBER KEYS 1-4";
+                default:
+                    return "UNKNOWN";
+            }
         }
 
         public static string GetMMSAlwaysCloaked()
@@ -655,7 +687,7 @@ namespace GameMod {
                     position.y += 52f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("PROFANITY FILTER"), position, 8, DisableProfanityFilter.profanity_filter ? "ON" : "OFF", Loc.LS(""));
                     position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("ENABLE LOADOUT SELECTION HOTKEYS"), position, 9, Menus.GetMMSLoadoutHotkeys(), Loc.LS("WEAPON SELECTION HOTKEYS WILL QUICK-SWAP BETWEEN LOADOUTS"));
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("LOADOUT SELECTION HOTKEYS"), position, 9, Menus.GetMMSLoadoutHotkeys(), Loc.LS("WEAPON SELECTION HOTKEYS WILL QUICK-SWAP BETWEEN LOADOUTS"));
                     position.y += 68f;
                     __instance.SelectAndDrawItem(Loc.LS("QUICK CHAT"), position, 1, false, 1f, 0.75f);
                     break;
@@ -908,7 +940,11 @@ namespace GameMod {
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                     case 9:
-                                        Menus.mms_loadout_hotkeys = !Menus.mms_loadout_hotkeys;
+                                        Menus.mms_loadout_hotkeys = (Menus.mms_loadout_hotkeys + UIManager.m_select_dir) % 4;
+                                        if (Menus.mms_loadout_hotkeys < 0)
+                                        {
+                                            Menus.mms_loadout_hotkeys = 3;
+                                        }
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                 }
