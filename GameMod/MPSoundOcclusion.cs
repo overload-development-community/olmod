@@ -27,15 +27,18 @@ namespace GameMod
         // an attempt to optimize the "disabled" setting for occlusion - AddFilters re-adds a new set of filters if re-enabled
         public static void AddFilters()
         {
-            for (int i = 0; i < 512; i++)
+            if (!GameplayManager.IsDedicatedServer())
             {
-                AddFilter(i);
+                for (int i = 0; i < 512; i++)
+                {
+                    AddFilter(i);
+                }
             }
         }
 
         public static void AddFilter(int i)
         {
-            if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() == null  || !GameplayManager.IsDedicatedServer())
+            if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() == null)
             {
                 //Debug.Log("CCC creating filter " + i);
                 MPSoundExt.m_a_filter[i] = MPSoundExt.m_a_object[i].AddComponent<AudioLowPassFilter>();
@@ -53,7 +56,7 @@ namespace GameMod
         {
             for (int i = 0; i < 512; i++)
             {
-                if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() != null || !GameplayManager.IsDedicatedServer())
+                if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() != null)
                 {
                     //Debug.Log("CCC removing filter " + i);
                     Object.Destroy(MPSoundExt.m_a_filter[i]);
@@ -74,7 +77,7 @@ namespace GameMod
                 MPSoundExt.m_a_object[i] = ___m_a_object[i];
                 MPSoundExt.m_a_source[i] = ___m_a_object[i].GetComponent<AudioSource>();
 
-                if (Menus.mms_audio_occlusion_strength != 0 || !GameplayManager.IsDedicatedServer())
+                if (Menus.mms_audio_occlusion_strength != 0 && !GameplayManager.IsDedicatedServer())
                 {
                     MPSoundOcclusion.AddFilter(i);
                 }
@@ -87,7 +90,7 @@ namespace GameMod
     {
         static void Postfix()
         {
-            if (Menus.mms_audio_occlusion_strength != 0 || !GameplayManager.IsDedicatedServer())
+            if (Menus.mms_audio_occlusion_strength != 0 && !GameplayManager.IsDedicatedServer())
             {
                 foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter)
                 {
