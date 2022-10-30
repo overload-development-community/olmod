@@ -35,7 +35,7 @@ namespace GameMod
 
         public static void AddFilter(int i)
         {
-            if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() == null)
+            if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() == null  || !GameplayManager.IsDedicatedServer())
             {
                 //Debug.Log("CCC creating filter " + i);
                 MPSoundExt.m_a_filter[i] = MPSoundExt.m_a_object[i].AddComponent<AudioLowPassFilter>();
@@ -53,7 +53,7 @@ namespace GameMod
         {
             for (int i = 0; i < 512; i++)
             {
-                if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() != null)
+                if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() != null || !GameplayManager.IsDedicatedServer())
                 {
                     //Debug.Log("CCC removing filter " + i);
                     Object.Destroy(MPSoundExt.m_a_filter[i]);
@@ -74,7 +74,7 @@ namespace GameMod
                 MPSoundExt.m_a_object[i] = ___m_a_object[i];
                 MPSoundExt.m_a_source[i] = ___m_a_object[i].GetComponent<AudioSource>();
 
-                if (Menus.mms_audio_occlusion_strength != 0)
+                if (Menus.mms_audio_occlusion_strength != 0 || !GameplayManager.IsDedicatedServer())
                 {
                     MPSoundOcclusion.AddFilter(i);
                 }
@@ -87,10 +87,13 @@ namespace GameMod
     {
         static void Postfix()
         {
-            foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter)
+            if (Menus.mms_audio_occlusion_strength != 0 || !GameplayManager.IsDedicatedServer())
             {
-                f.cutoffFrequency = 22000f;
-                f.enabled = false;
+                foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter)
+                {
+                    f.cutoffFrequency = 22000f;
+                    f.enabled = false;
+                }
             }
         }
     }
