@@ -27,9 +27,12 @@ namespace GameMod
         // an attempt to optimize the "disabled" setting for occlusion - AddFilters re-adds a new set of filters if re-enabled
         public static void AddFilters()
         {
-            for (int i = 0; i < 512; i++)
+            if (!GameplayManager.IsDedicatedServer())
             {
-                AddFilter(i);
+                for (int i = 0; i < 512; i++)
+                {
+                    AddFilter(i);
+                }
             }
         }
 
@@ -74,7 +77,7 @@ namespace GameMod
                 MPSoundExt.m_a_object[i] = ___m_a_object[i];
                 MPSoundExt.m_a_source[i] = ___m_a_object[i].GetComponent<AudioSource>();
 
-                if (Menus.mms_audio_occlusion_strength != 0)
+                if (Menus.mms_audio_occlusion_strength != 0 && !GameplayManager.IsDedicatedServer())
                 {
                     MPSoundOcclusion.AddFilter(i);
                 }
@@ -87,10 +90,13 @@ namespace GameMod
     {
         static void Postfix()
         {
-            foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter)
+            if (Menus.mms_audio_occlusion_strength != 0 && !GameplayManager.IsDedicatedServer())
             {
-                f.cutoffFrequency = 22000f;
-                f.enabled = false;
+                foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter)
+                {
+                    f.cutoffFrequency = 22000f;
+                    f.enabled = false;
+                }
             }
         }
     }
