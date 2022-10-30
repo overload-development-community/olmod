@@ -40,12 +40,13 @@ namespace GameMod {
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
         public static bool mms_damage_numbers { get; set; }
+        public static bool mms_client_damage_numbers { get; set; } = true;
         public static bool mms_assist_scoring { get; set; } = true;
         public static bool mms_team_color_default { get; set; } = true;
         public static int mms_team_color_self = 5;
         public static int mms_team_color_enemy = 6;
 
-        public static bool mms_team_health = true;
+        public static bool mms_team_health { get; set; } = true;
         public static MpTeam? mms_team_selection { get; set; } = null;
 
         public static string GetMMSRearViewPIP()
@@ -700,6 +701,8 @@ namespace GameMod {
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("ENEMY TEAM"), position, 3, Menus.GetMMSTeamColorEnemy(), "", 1.5f, Menus.mms_team_color_default);
                     position.y += 64f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEAM HEALTH"), position, 4, Menus.mms_team_health ? "ON" : "OFF", "SETS WHETHER THE HEALTH OF TEAMMATES SHOULD GET DISPLAYED", 1.5f, false);
+                    position.y += 64;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW DAMAGE NUMBERS"), position, 5, Menus.mms_client_damage_numbers ? "ON" : "OFF", "SETS WHETHER DAMAGE NUMBERS ARE SHOWN IN GAMES WITH THEM ENABLED", 1.5f, false);
                     break;
                 case 2:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
@@ -976,6 +979,10 @@ namespace GameMod {
                                         break;
                                     case 4:
                                         Menus.mms_team_health = !Menus.mms_team_health;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 5:
+                                        Menus.mms_client_damage_numbers = !Menus.mms_client_damage_numbers;
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                 }
