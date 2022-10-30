@@ -1,4 +1,4 @@
-## olmod 0.5.7 - Overload mod
+## olmod 0.5.8 - Overload mod
 
 **Community mods for Overload**
 

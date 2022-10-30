@@ -1,3 +1,13 @@
+v0.5.8 - 2022-10-30
+
+- Restore functionality of Armor Toughness, Move Speed, and Energy Efficiency mods that were broken as of v0.5.6.
+- New multiplayer option under "General" for loadout hotkeys.  (Thanks, Fireball!)
+- New multiplayer option under "Team" for damage numbers.  Yes, we know it doesn't belong there, it'll move to a better spot when we do a menu overhaul, we just wanted to get something in quick for this version.
+- Additional sound occlusion optimizations, especially in energy centers.  (Thanks, Fireball!)
+- Improved performance around lag compensation's "Limit Ships Diving Into Walls" option.  (Thanks, derhass!)
+- Improved performance around client physics resimulations that were done every frame.  (Thanks, derhass!)
+- Removed creepers and time bombs from the homing fix, should help smooth them out in game play.
+
 v0.5.7 - 2022-10-24
 
 - Thunderbolt Penetration and Damage Numbers settings are now read from presets.  Public games have damage numbers on by default!
