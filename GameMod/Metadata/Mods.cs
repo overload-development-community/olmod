@@ -1,6 +1,12 @@
 ﻿namespace GameMod.Metadata {
     internal enum Mods {
         /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Allows specifying a server port.
+        /// </summary>
+        ServerPort,
+
+        /// <summary>
         /// Authors: luponix, roncli
         /// Sends multiplayer game data to a game tracker.
         /// </summary>

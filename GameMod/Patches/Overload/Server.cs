@@ -22,6 +22,26 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Sets the server port.
+    /// </summary>
+    [HarmonyPatch(typeof(Server), "Listen")]
+    public class Server_Listen {
+        private static int PortArg = 0;
+
+        public static bool Prepare() {
+            if (!int.TryParse(Switches.Port, out int val))
+                return false;
+            PortArg = val;
+            return true;
+        }
+
+        public static void Prefix(ref int port) {
+            if (port == 0)
+                port = PortArg;
+        }
+    }
+
+    /// <summary>
     /// Reports the lobby status to the tracker.
     /// </summary>
     [Mod(Mods.Tracker)]
