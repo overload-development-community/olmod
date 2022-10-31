@@ -24,6 +24,7 @@ namespace GameMod.Patches.Overload {
     /// <summary>
     /// Sets the server port.
     /// </summary>
+    [Mod(Mods.ServerPort)]
     [HarmonyPatch(typeof(Server), "Listen")]
     public class Server_Listen {
         private static int PortArg = 0;
