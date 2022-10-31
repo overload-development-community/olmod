@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
+using GameMod.Objects;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using Overload;
@@ -90,7 +90,7 @@ namespace GameMod {
         }
         public static void CheckInternetServer()
         {
-            if (Core.GameMod.FindArg("-internet") && GameplayManager.IsDedicatedServer())
+            if (Switches.Internet && GameplayManager.IsDedicatedServer())
             {
                 Enabled = ServerEnabled = true;
                 ServerAddress = IPAddress.Any;
@@ -606,16 +606,14 @@ namespace GameMod {
     [HarmonyPatch(typeof(NetworkMatch), "TryLocalMatchmaking")]
     class MPServerHostFilter
     {
-        static string HostArg;
-
         private static bool Prepare()
         {
-            return Core.GameMod.FindArgVal("-host", out HostArg);
+            return !string.IsNullOrEmpty(Switches.Host);
         }
 
         private static void Prefix(List<DistributedMatchUp.Match> candidates, DistributedMatchUp.Match backfillSeedMatch)
         {
-            if (HostArg == null || backfillSeedMatch != null)
+            if (Switches.Host == null || backfillSeedMatch != null)
                 return;
             List<DistributedMatchUp.Match> delReqs = new List<DistributedMatchUp.Match>();
             foreach (var req in candidates)
@@ -633,9 +631,9 @@ namespace GameMod {
                         continue;
                     var i = password.IndexOf('_'); // allow password suffix with '_'
                     string name = i == -1 ? password : password.Substring(0, i);
-                    if (!name.Equals(HostArg, StringComparison.InvariantCultureIgnoreCase))
+                    if (!name.Equals(Switches.Host, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        Debug.LogFormat("{0}: {1}: Match with wrong host ignored: {2}", DateTime.Now.ToString(), HostArg, name);
+                        Debug.LogFormat("{0}: {1}: Match with wrong host ignored: {2}", DateTime.Now.ToString(), Switches.Host, name);
                         delReqs.Add(req);
                         break;
                     }

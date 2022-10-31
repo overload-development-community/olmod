@@ -1,15 +1,18 @@
 ﻿using System.Reflection;
+using GameMod.Metadata;
+using GameMod.Objects;
 using HarmonyLib;
 using UnityEngine;
 
-namespace GameMod {
+namespace GameMod.Patches {
+    [Mod(Mods.VRFlashingFix)]
     [HarmonyPatch(typeof(ProFlareBatch), "CreateMat")]
-    class Shaders_CreateMat {
-        public static bool Prefix(ProFlareBatch __instance) {
-            if (!Core.GameMod.VREnabled) {
-                return true;
-            }
+    public class ProFlareBatch_CreateMat {
+        public static bool Prepare() {
+            return Switches.VREnabled;
+        }
 
+        public static bool Prefix(ProFlareBatch __instance) {
             __instance.mat = new Material((Shader)null);
             __instance.meshRender.material = __instance.mat;
             if (__instance._atlas && __instance._atlas.texture) {
@@ -20,15 +23,16 @@ namespace GameMod {
         }
     }
 
+    [Mod(Mods.VRFlashingFix)]
     [HarmonyPatch(typeof(ProFlareBatch), "Reset")]
-    class Shaders_Reset {
+    public class ProFlareBatch_Reset {
         private static MethodInfo _ProFlareBatch_CreateHelperTransform_Method = AccessTools.Method(typeof(ProFlareBatch), "CreateHelperTransform");
         private static MethodInfo _ProFlareBatch_SetupMeshes_Method = AccessTools.Method(typeof(ProFlareBatch), "SetupMeshes");
-        public static bool Prefix(ProFlareBatch __instance) {
-            if (!Core.GameMod.VREnabled) {
-                return true;
-            }
+        public static bool Prepare() {
+            return Switches.VREnabled;
+        }
 
+        public static bool Prefix(ProFlareBatch __instance) {
             if (__instance.helperTransform == null) {
                 _ProFlareBatch_CreateHelperTransform_Method.Invoke(__instance, null);
             }

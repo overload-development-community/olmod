@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using GameMod.Objects;
 using HarmonyLib;
 using Ionic.Zip;
 using Newtonsoft.Json.Linq;
@@ -216,7 +217,7 @@ namespace GameMod
     {
         static void Postfix()
         {
-            if (Config.NoDownload)
+            if (Switches.NoDownload)
                 return;
             string level = NetworkMatch.m_last_lobby_status.m_match_playlist_addon_idstringhash;
             if (level != null && level != "" && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(level) < 0)
@@ -247,7 +248,7 @@ namespace GameMod
 
         static bool Prefix(string name)
         {
-            if (!name.Contains(":") || Config.NoDownload)
+            if (!name.Contains(":") || Switches.NoDownload)
                 return true;
             if (!MPDownloadLevel.DownloadBusy && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) < 0)
                 MPDownloadLevel.StartGetLevel(name);

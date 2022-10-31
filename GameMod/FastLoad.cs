@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -11,11 +12,11 @@ namespace GameMod {
     {
         private static bool Prepare()
         {
-            var enabled = Core.GameMod.FindArg("-fastload");
-            if (enabled)
+            if (Switches.FastLoad)
                 Debug.Log("fastload enabled");
-            return enabled;
+            return Switches.FastLoad;
         }
+
         private static void Prefix(GameManager __instance, IEnumerator<float> ___m_initialization_enumerator, ref float ___m_initialization_progress)
         {
             var yieldTime = Time.realtimeSinceStartup + 0.1f;
@@ -32,10 +33,9 @@ namespace GameMod {
     {
         private static bool Prepare()
         {
-            var enabled = Core.GameMod.FindArg("-nosound");
-            if (enabled)
+            if (Switches.NoSound)
                 Debug.Log("nosound enabled");
-            return enabled;
+            return Switches.NoSound;
         }
 
         private static MethodInfo _UnityAudio_CreateAudioSourceAndObject_Method = typeof(UnityAudio).GetMethod("CreateAudioSourceAndObject", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -65,11 +65,11 @@ namespace GameMod {
     {
         private static bool Prepare()
         {
-            var enabled = Core.GameMod.FindArg("-norobot");
-            if (enabled)
+            if (Switches.NoRobot)
                 Debug.Log("norobot enabled");
-            return enabled;
+            return Switches.NoRobot;
         }
+
         private static bool Prefix(ref IEnumerable<float> __result, ref GameObject[] ___m_enemy_prefab)
         {
             ___m_enemy_prefab = new GameObject[26];
@@ -91,14 +91,14 @@ namespace GameMod {
     {
         private static bool Prepare()
         {
-            var enabled = Core.GameMod.FindArg("-texreslow");
-            if (enabled)
+            if (Switches.TexResLow)
                 Debug.Log("texreslow enabled");
-            return enabled;
+            return Switches.TexResLow;
         }
+
         private static void Prefix()
         {
-            QualitySettings.masterTextureLimit = 2 - 0;
+            QualitySettings.masterTextureLimit = 2;
         }
     }
 }

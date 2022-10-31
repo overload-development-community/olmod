@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -48,7 +49,7 @@ namespace GameMod {
             ApplyMatchOLModData();
             if (___m_num_players_to_start_match == 2) // always allow start with 1
                 ___m_num_players_to_start_match = 1;
-            if (!__result && !Config.NoDownload && !string.IsNullOrEmpty(pmd.m_addon_level_name_hash)) // unknown level?
+            if (!__result && !Switches.NoDownload && !string.IsNullOrEmpty(pmd.m_addon_level_name_hash)) // unknown level?
             {
                 MPDownloadLevel.StartGetLevel(pmd.m_addon_level_name_hash);
                 __result = true;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using GameMod.Objects;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -8,7 +9,6 @@ namespace GameMod {
     static class Config
     {
         public static string OLModDir;
-        public static bool NoDownload;
         public static JObject Settings;
 
         private static void LoadSettings()
@@ -19,8 +19,8 @@ namespace GameMod {
                 return;
             }
             string settingsFilename = "olmodsettings.json";
-            if (Core.GameMod.FindArgVal("-config", out string configArg))
-                settingsFilename = configArg;
+            if (Switches.ConfigFile != null)
+                settingsFilename = Switches.ConfigFile;
             if (!settingsFilename.Contains(Path.DirectorySeparatorChar) && !settingsFilename.Contains(Path.AltDirectorySeparatorChar))
                 settingsFilename = Path.Combine(OLModDir, settingsFilename);
             try
@@ -43,7 +43,6 @@ namespace GameMod {
                 //    OLModDir = Path.GetDirectoryName(Path.GetDirectoryName(OLModDir));
             }
             Debug.Log("olmod directory " + OLModDir);
-            NoDownload = Core.GameMod.FindArg("-nodownload");
             Settings = new JObject();
             LoadSettings();
         }

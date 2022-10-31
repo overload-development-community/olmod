@@ -8,6 +8,12 @@
 
         /// <summary>
         /// Author: roncli
+        /// Fixes annoying flashing in VR.
+        /// </summary>
+        VRFlashingFix,
+
+        /// <summary>
+        /// Author: roncli
         /// Adds VRScale option.  Based on https://github.com/Raicuparta/unity-scale-adjuster.
         /// </summary>
         VRScale,

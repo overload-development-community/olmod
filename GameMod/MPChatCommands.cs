@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -160,7 +161,7 @@ namespace GameMod {
         public static bool IsEnabled()
         {
             if (chatCommandsEnabled < 0) {
-                chatCommandsEnabled = GameMod.Core.GameMod.FindArg("-disableChatCommands")?0:1;
+                chatCommandsEnabled = Switches.DisableChatCommands ? 0 : 1;
             }
             return (chatCommandsEnabled != 0);
         }
@@ -357,11 +358,11 @@ namespace GameMod {
                 return; // already set
             }
             trustedPlayers = new List<MPBanEntry>();
-            string idstring = null;
-            if (!GameMod.Core.GameMod.FindArgVal("-trustedPlayerIds", out idstring) || String.IsNullOrEmpty(idstring)) {
+
+            if (String.IsNullOrEmpty(Switches.TrustedPlayerIds)) {
                 return; // no trustedPlayerIds specified;
             }
-            string[] ids = idstring.Split(',',';',':','|');
+            string[] ids = Switches.TrustedPlayerIds.Split(',',';',':','|');
             foreach (string id in ids) {
                 MPBanEntry entry = new MPBanEntry(null, null, id);
                 if (entry.IsValid()) {
@@ -416,12 +417,12 @@ namespace GameMod {
                 Debug.Log("SETAUTH Password check called without password");
                 return false;
             }
-            string serverPassword = null;
-            if (!GameMod.Core.GameMod.FindArgVal("-chatCommandPassword", out serverPassword) || String.IsNullOrEmpty(serverPassword)) {
+
+            if (String.IsNullOrEmpty(Switches.ChatCommandPassword)) {
                 Debug.Log("SETAUTH Password is DISABLED on this server");
                 return false;
             }
-            if (password.ToUpper() == serverPassword.ToUpper()) {
+            if (password.ToUpper() == Switches.ChatCommandPassword.ToUpper()) {
                 Debug.Log("SETAUTH Password CORRECT");
                 return true;
             }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Objects;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -13,8 +14,6 @@ namespace GameMod.Core {
     public class GameMod
     {
         private static Version GameVersion;
-        public static bool Modded = false;
-        public static bool VREnabled = false;
         public static string ModsLoaded = "";
 
         public static void Initialize()
@@ -25,15 +24,13 @@ namespace GameMod.Core {
                 return;
             }
 
-            Modded = FindArg("-modded");
-            VREnabled = FindArgVal("-vrmode", out var vrmode) && vrmode != "none";
+            Switches.Init();
 
             GameVersion = typeof(GameManager).Assembly.GetName().Version;
             Debug.Log("Initializing " + OlmodVersion.FullVersionString + ", game " + GameVersion);
             Debug.Log("Command line " + String.Join(" ", Environment.GetCommandLineArgs()));
             Config.Init();
             MPInternet.CheckInternetServer();
-            Harmony.DEBUG = FindArg("-harmonydebug");
             var harmony = new Harmony("olmod.olmod");
             try
             {
@@ -45,9 +42,8 @@ namespace GameMod.Core {
             }
             Debug.Log("Done initializing " + OlmodVersion.FullVersionString);
 
-            if (Modded && Config.OLModDir != null && Config.OLModDir != "")
+            if (Switches.Modded && Config.OLModDir != null && Config.OLModDir != "")
             {
-                Modded = false; // Modded mode was on, we turn it off here because we don't want to have it on if there aren't actually any mods.
                 try
                 {
                     var files = Directory.GetFiles(Config.OLModDir, "Mod-*.dll");
@@ -60,7 +56,7 @@ namespace GameMod.Core {
                         try
                         {
                             harmony.PatchAll(asm);
-                            Modded = true; // At this point we're sure we're modded, so set to true.
+                            OlmodVersion.Modded = true;
                         }
                         catch (Exception ex)
                         {
@@ -74,30 +70,9 @@ namespace GameMod.Core {
                 }
             }
 
-            if (Modded)
-            {
-                OlmodVersion.Modded = true; // Only display modded tag if you're playing modded.
-            }
-
             if (FindArg("-poor-mans-profiler")) {
                 PoorMansProfiler.Initialize(harmony);
             }
-        }
-
-        public static bool FindArg(string arg)
-        {
-            return Array.IndexOf<string>(Environment.GetCommandLineArgs(), arg) >= 0;
-        }
-
-        public static bool FindArgVal(string arg, out string val)
-        {
-            var args = Environment.GetCommandLineArgs();
-            int i = Array.IndexOf<string>(args, arg);
-            val = null;
-            if (i < 0 || i + 1 >= args.Length)
-                return false;
-            val = args[i + 1];
-            return true;
         }
 
         public static bool HasInternetMatch()

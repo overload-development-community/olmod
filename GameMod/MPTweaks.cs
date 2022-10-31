@@ -284,7 +284,7 @@ namespace GameMod {
             Debug.Log("MPTweaks: sending client capabilites");
             var caps = new Dictionary<string, string>();
             caps.Add("ModVersion", OlmodVersion.FullVersionString);
-            caps.Add("Modded", Core.GameMod.Modded ? "1" : "0");
+            caps.Add("Modded", OlmodVersion.Modded ? "1" : "0");
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
             caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,damagenumbers");
             caps.Add("ModPrivateData", "1");

@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GameMod.Objects;
+using HarmonyLib;
 using Overload;
 
 namespace GameMod
@@ -9,7 +10,7 @@ namespace GameMod
         static int PortArg = 0;
 
         private static bool Prepare(){
-            if (!Core.GameMod.FindArgVal("-port", out string arg) || !int.TryParse(arg, out int val))
+            if (!int.TryParse(Switches.Port, out int val))
                 return false;
             PortArg = val;
             return true;

@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using GameMod.Objects;
 using Overload;
 using System;
 using System.Collections.Generic;
@@ -28,7 +29,7 @@ namespace GameMod
             try
             {
                 // Scan for levels in -missionpath directory
-                if (Core.GameMod.FindArgVal("-missionpath", out var path) && Directory.Exists(path)) {
+                if (Switches.MissionPath != null && Directory.Exists(Switches.MissionPath)) {
                     var lastMission = ((List<Mission>)_GameManager_m_mission_list_Field.GetValue(null)).LastOrDefault();
 
                     int index = 0;
@@ -37,7 +38,7 @@ namespace GameMod
                         index = lastMission.MissionIndex + 1;
                     }
 
-                    var args = new object[] { path, index };
+                    var args = new object[] { Switches.MissionPath, index };
                     _GameManager_ScanForLevels_Method.Invoke(__instance, args);
                 }
 
