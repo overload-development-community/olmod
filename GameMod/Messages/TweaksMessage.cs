@@ -13,7 +13,7 @@ namespace GameMod.Messages {
         public Dictionary<string, string> m_settings;
 
         public override void Serialize(NetworkWriter writer) {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.WritePackedUInt32((uint)m_settings.Count);
             foreach (var x in m_settings) {
                 writer.Write(x.Key);

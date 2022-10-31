@@ -1346,7 +1346,7 @@ END_ENTRY
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.WritePackedUInt32((uint)TeamCount);
             writer.Write(RearViewEnabled);
             writer.Write(JIPEnabled);

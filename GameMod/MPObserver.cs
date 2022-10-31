@@ -674,7 +674,7 @@ namespace GameMod {
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.Write(m_attacker_id);
             writer.Write(m_defender_id);
             writer.Write(m_damage);

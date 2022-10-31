@@ -10,8 +10,6 @@ namespace GameMod
 {
     public class MPCreeperSync
     {
-        public const int NET_VERSION_CREEPER_SYNC = 1;
-
         public static Projectile FindSyncedProjectile(int proj_id, ProjPrefab[] types)
         {
             foreach (var type in types)
@@ -119,7 +117,7 @@ namespace GameMod
 
             msg.m_num_proj_info = count;
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
+                if (conn != null && MPTweaks.ClientHasMod(conn.connectionId))
                     conn.SendByChannel(MessageTypes.MsgCreeperSync, msg, 3); // channel 3 has QosType.StateUpdate
         }
     }
@@ -219,7 +217,7 @@ namespace GameMod
             msg.m_pos = __instance.c_transform.position;
             msg.m_damaged_something = damaged_something;
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
+                if (conn != null && MPTweaks.MPTweaks(conn.connectionId))
                 {
                     NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
                 }

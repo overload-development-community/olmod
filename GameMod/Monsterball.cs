@@ -47,7 +47,7 @@ namespace GameMod
         {
             public override void Serialize(NetworkWriter writer)
             {
-                writer.Write((byte)0); // version
+                writer.Write((byte)1); // version
                 writer.WritePackedUInt32((uint)m_player_states.Count);
                 foreach (var pl_state in m_player_states)
                 {

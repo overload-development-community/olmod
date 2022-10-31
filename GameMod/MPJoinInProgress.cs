@@ -15,8 +15,6 @@ using UnityEngine.Networking.NetworkSystem;
 namespace GameMod {
     class MPJoinInProgress
     {
-        public const int NET_VERSION_JIP = 1;
-
         public static bool NetworkMatchEnabled = true;
         public static bool MenuManagerEnabled = true;
         public static bool SingleMatchEnable = false;
@@ -82,7 +80,7 @@ namespace GameMod {
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPJoinInProgress.NET_VERSION_JIP);
+            writer.Write((byte)1);
             writer.Write(playerId);
             writer.Write(ready);
         }
@@ -740,7 +738,7 @@ namespace GameMod {
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.Write(m_match_elapsed_seconds);
             writer.WritePackedUInt32((uint)m_player_states.Length);
             foreach (var pl_state in m_player_states)
@@ -774,7 +772,7 @@ namespace GameMod {
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.WritePackedUInt32((uint)m_player_states.Length);
             foreach (var pl_state in m_player_states)
             {

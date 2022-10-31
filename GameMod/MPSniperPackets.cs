@@ -16,8 +16,6 @@ namespace GameMod
     /// </summary>
     internal class MPSniperPackets
     {
-        public const int NET_VERSION_SNIPER_PACKETS = 1;
-
         /// <summary>
         /// Determines whether sniper packets are enabled for the current game.
         /// </summary>
@@ -143,7 +141,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
+            writer.Write((byte)1);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_pos.x);
@@ -206,7 +204,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
+            writer.Write((byte)1);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -250,7 +248,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
+            writer.Write((byte)1);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -301,7 +299,7 @@ namespace GameMod
 
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
+            writer.Write((byte)1);
             writer.Write(m_player_id);
             writer.Write((byte)m_type);
             writer.Write(m_value);
@@ -327,7 +325,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
+            writer.Write((byte)1);
             writer.Write(m_player_id);
             writer.Write(m_missile_ammo[0]);
             writer.Write(m_missile_ammo[1]);
@@ -367,7 +365,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)MPSniperPackets.NET_VERSION_SNIPER_PACKETS);
+            writer.Write((byte)1);
             writer.Write(m_player_id);
         }
 

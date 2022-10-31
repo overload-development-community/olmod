@@ -80,7 +80,7 @@ namespace GameMod {
 
     public class DeathReviewMessage : MessageBase {
         public override void Serialize(NetworkWriter writer) {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.Write(m_killer_id); // Killer
             writer.Write(m_assister_id); // Assister
             writer.WritePackedUInt32((uint)players.Count);

@@ -365,7 +365,7 @@ namespace GameMod
     {
         public override void Serialize(NetworkWriter writer)
         {
-            writer.Write((byte)0); // version
+            writer.Write((byte)1); // version
             writer.Write(m_match_elapsed_seconds);
             writer.WritePackedUInt32((uint)Race.Players.Count);
             foreach (var rp in Race.Players)
