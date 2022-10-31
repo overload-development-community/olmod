@@ -49,6 +49,12 @@
         ServerPort,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Balance changes made to the thunderbolt.
+        /// </summary>
+        ThunderboltBalance,
+
+        /// <summary>
         /// Authors: luponix, roncli
         /// Sends multiplayer game data to a game tracker.
         /// </summary>
