@@ -11,40 +11,64 @@ namespace GameMod
 {
     public static class MPDirectionalWarning
     {
-        public static Vector3 homingDir = Vector3.zero;
+        public static Transform homingPos;
 
+        // calculates direction and plays cues in 3D if it's enabled in the menu setting, otherwise use the 2D cue call
         public static void PlayCueWarning(SFXCue sfx_type, float vol_mod = 1f, float pitch_mod = 0f, float delay = 0f, bool reverb = false)
         {
-            //Debug.Log("CCC playing homing cue at position " + homingDir + ", ship position is " + GameManager.m_player_ship.transform.localPosition);
-            SFXCueManager.PlayCuePos(sfx_type, homingDir, vol_mod, pitch_mod, false, delay, 1f);
+            if (Menus.mms_directional_warnings)
+            {
+                Vector3 homingDir = Vector3.MoveTowards(GameManager.m_player_ship.c_transform_position, homingPos.localPosition, 0.7f);
+                SFXCueManager.PlayCuePos(sfx_type, homingDir, vol_mod, pitch_mod, false, delay, 1f);
+            }
+            else
+            {
+                SFXCueManager.PlayCue2D(sfx_type, vol_mod, pitch_mod, delay, reverb);
+            }
         }
     }
 
+    // stores the Transform of the homing projectile in MPDirectionalWarning for use during 3D cue playback
     [HarmonyPatch(typeof(Projectile), "SteerTowardsTarget")]
     internal class MPDirectionalWarning_Projectile_SteerTowardsTarget
     {
-        static void Postfix(Player ___m_cur_target_player, Transform ___c_transform)
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-
-            if (___m_cur_target_player != null && ___m_cur_target_player.isLocalPlayer)
+            foreach (var code in codes)
             {
-                MPDirectionalWarning.homingDir = Vector3.MoveTowards(___m_cur_target_player.c_player_ship.transform.localPosition, ___c_transform.localPosition, 0.7f);
+                yield return code;
+
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(Projectile), "PlayerLockOnMinDistanceSq"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "c_transform"));
+                    yield return new CodeInstruction(OpCodes.Stsfld, AccessTools.Field(typeof(MPDirectionalWarning), "homingPos"));
+                }
             }
         }
     }
 
+    // same as above for creepers
     [HarmonyPatch(typeof(Projectile), "MoveTowardsTarget")]
     internal class MPDirectionalWarning_Projectile_MoveTowardsTarget
     {
-        static void Postfix(Player ___m_cur_target_player, Transform ___c_transform)
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            if (___m_cur_target_player != null && ___m_cur_target_player.isLocalPlayer)
+            foreach (var code in codes)
             {
-                MPDirectionalWarning.homingDir = Vector3.MoveTowards(___m_cur_target_player.c_player_ship.transform.localPosition, ___c_transform.localPosition, 0.7f);
+                yield return code;
+
+                if (code.opcode == OpCodes.Stsfld && code.operand == AccessTools.Field(typeof(Projectile), "PlayerLockOnMinDistanceSq"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "c_transform"));
+                    yield return new CodeInstruction(OpCodes.Stsfld, AccessTools.Field(typeof(MPDirectionalWarning), "homingPos"));
+                }
             }
         }
     }
 
+    // swaps out the call for the homing cues to the new method that determines which one should be used
     [HarmonyPatch(typeof(PlayerShip), "Update")]
     internal class MPDirectionalWarning_PlayerShip_Update
     {

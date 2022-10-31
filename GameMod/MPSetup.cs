@@ -163,9 +163,12 @@ namespace GameMod {
 
         public static int GetInt(string key, int defaultValue)
         {
-            if (m_prefs_hashtable.ContainsKey(key))
-            {
-                return (int)m_prefs_hashtable[key];
+            try {
+                if (m_prefs_hashtable.ContainsKey(key)) {
+                    return (int)m_prefs_hashtable[key];
+                }
+            } catch (Exception) {
+                Debug.Log($"MPSetup: Could not convert key {key} value {m_prefs_hashtable[key]} to an int, resetting to default {defaultValue}.");
             }
             m_prefs_hashtable.Add(key, defaultValue);
             return defaultValue;
@@ -173,9 +176,12 @@ namespace GameMod {
 
         public static bool GetBool(string key, bool defaultValue)
         {
-            if (m_prefs_hashtable.ContainsKey(key))
-            {
-                return (bool)m_prefs_hashtable[key];
+            try {
+                if (m_prefs_hashtable.ContainsKey(key)) {
+                    return (bool)m_prefs_hashtable[key];
+                }
+            } catch (Exception) {
+                Debug.Log($"MPSetup: Could not convert key {key} value {m_prefs_hashtable[key]} to a bool, resetting to default {defaultValue}.");
             }
             m_prefs_hashtable.Add(key, defaultValue);
             return defaultValue;
@@ -222,8 +228,13 @@ namespace GameMod {
                 ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
-                Menus.mms_damage_numbers = MenuManager.LocalGetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
-                MPThunderboltPassthrough.isAllowed = MenuManager.LocalGetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
+                Menus.mms_damage_numbers = ModPrefs.GetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
+                Menus.mms_client_damage_numbers = ModPrefs.GetBool("MP_CLIENT_DAMAGE_NUMBERS", Menus.mms_client_damage_numbers);
+                MPThunderboltPassthrough.isAllowed = ModPrefs.GetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
+                Menus.mms_always_cloaked = ModPrefs.GetBool("MP_ALWAYS_CLOAKED", Menus.mms_always_cloaked);
+                Menus.mms_classic_spawns = ModPrefs.GetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
+                Menus.mms_assist_scoring = ModPrefs.GetBool("MP_ASSIST_SCORING", Menus.mms_assist_scoring);
+                Menus.mms_allow_smash = ModPrefs.GetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
 
                 JoystickRotationFix.alt_turn_ramp_mode = ModPrefs.GetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
                 MPColoredPlayerNames.isActive = ModPrefs.GetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
@@ -254,6 +265,8 @@ namespace GameMod {
                 HUDVelocity.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
                 Menus.mms_show_framerate = ModPrefs.GetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
                 Menus.mms_audio_occlusion_strength = ModPrefs.GetInt("MP_PM_AUDIO_OCCLUSION_STRENGTH", Menus.mms_audio_occlusion_strength);
+                Menus.mms_directional_warnings = ModPrefs.GetBool("MP_PM_DIRECTIONAL_WARNINGS", Menus.mms_directional_warnings);
+                Menus.mms_loadout_hotkeys = ModPrefs.GetInt("MP_PM_LOADOUT_HOTKEYS2", Menus.mms_loadout_hotkeys);
 
                 MPLoadouts.Loadouts[0].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
                 MPLoadouts.Loadouts[0].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
@@ -271,7 +284,7 @@ namespace GameMod {
                 MPLoadouts.Loadouts[3].weapons[1] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_W2", (int)MPLoadouts.Loadouts[1].weapons[1]);
                 MPLoadouts.Loadouts[3].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[1].missiles[0]);
             }
-            else // for compatability with old olmod, no need to add new settings
+            else // for compatibility with old olmod, no need to add new settings
             {
                 MPTeams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
@@ -333,6 +346,8 @@ namespace GameMod {
             ModPrefs.SetBool("MP_PM_SHOWHUDVELOCITY", HUDVelocity.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_SHOWFRAMERATE", Menus.mms_show_framerate);
             ModPrefs.SetInt("MP_PM_AUDIO_OCCLUSION_STRENGTH", Menus.mms_audio_occlusion_strength);
+            ModPrefs.SetBool("MP_PM_DIRECTIONAL_WARNINGS", Menus.mms_directional_warnings);
+            ModPrefs.SetInt("MP_PM_LOADOUT_HOTKEYS2", Menus.mms_loadout_hotkeys);
             ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
             ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
             ModPrefs.SetInt("MP_PM_LOADOUT_BOMBER1_M2", (int)MPLoadouts.Loadouts[0].missiles[1]);
@@ -346,7 +361,13 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_W2", (int)MPLoadouts.Loadouts[3].weapons[1]);
             ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[3].missiles[0]);
             ModPrefs.SetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
+            ModPrefs.SetBool("MP_CLIENT_DAMAGE_NUMBERS", Menus.mms_client_damage_numbers);
             ModPrefs.SetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
+            ModPrefs.SetBool("MP_ALWAYS_CLOAKED", Menus.mms_always_cloaked);
+            ModPrefs.SetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
+            ModPrefs.SetBool("MP_ASSIST_SCORING", Menus.mms_assist_scoring);
+            ModPrefs.SetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
+
             ModPrefs.Flush(filename + "mod");
         }
 
