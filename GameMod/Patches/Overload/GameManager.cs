@@ -10,11 +10,13 @@ namespace GameMod.Patches.Overload {
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(GameManager), "SetupDedicatedServer")]
     public class GameManager_SetupDedicatedServer {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         public static void Postfix() {
-            if (GameplayManager.IsDedicatedServer()) {
-                AudioListener.pause = true;
-                Debug.Log("Dedicated Server: paused AudioListener");
-            }
+            AudioListener.pause = true;
+            Debug.Log("Dedicated Server: paused AudioListener");
         }
     }
 
@@ -22,19 +24,19 @@ namespace GameMod.Patches.Overload {
     /// Enables or disables the ability to hear the server's audio.
     /// </summary>
     /// <remarks>
-    /// Change the return of Prepare() to true to hear the server's audio.
+    /// Change the value of enableAudio to true to hear the server's audio.
     /// </remarks>
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(GameManager), "Update")]
     public class GameManager_Update {
+        private const bool enableAudio = false;
+
         public static bool Prepare() {
-            return false;
+            return enableAudio && GameplayManager.IsDedicatedServer();
         }
 
         public static void Postfix() {
-            if (GameplayManager.IsDedicatedServer()) {
-                AudioListener.volume = 1.0f;
-            }
+            AudioListener.volume = 1.0f;
         }
     }
 }

@@ -12,6 +12,10 @@ namespace GameMod.Patches.Overload {
     [Mod(Mods.RearView)]
     [HarmonyPatch(typeof(GameplayManager), "ChangeGameplayState")]
     public class GameplayManager_ChangeGameplayState {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
         public static void Prefix(GameplayState new_state) {
             if (new_state != GameplayState.PLAYING) {
                 RearView.Pause();

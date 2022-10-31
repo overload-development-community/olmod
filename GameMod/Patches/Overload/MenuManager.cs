@@ -14,6 +14,10 @@ namespace GameMod.Patches {
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GetVSyncSetting")]
     public class MenuManager_GetVSyncSetting {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             foreach (var code in codes) {
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "60 HZ")
@@ -37,6 +41,10 @@ namespace GameMod.Patches {
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GraphicsOptionsUpdate")]
     public class MenuManager_GraphicsOptionsUpdate {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             int state = 0;
             foreach (var code in codes) {
@@ -78,10 +86,14 @@ namespace GameMod.Patches {
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(MenuManager), "PlayGameUpdate")]
     public class MenuManager_PlayGameUpdate {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         private static FieldInfo _MenuManager_m_seconds_waiting_for_gi_covergence = typeof(MenuManager).GetField("m_seconds_waiting_for_gi_covergence", BindingFlags.Static | BindingFlags.NonPublic);
         private static MethodInfo _MenuManager_ResetBackStack = AccessTools.Method(typeof(MenuManager), "ResetBackStack");
         public static bool Prefix(bool returning_from_secret) {
-            if (!GameplayManager.IsDedicatedServer() || MenuManager.m_menu_sub_state != MenuSubState.INIT) {
+            if (MenuManager.m_menu_sub_state != MenuSubState.INIT) {
                 return true;
             }
 

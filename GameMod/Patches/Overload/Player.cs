@@ -13,6 +13,10 @@ namespace GameMod.Patches.Overload {
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(Player), "OnKilledByPlayer")]
     public class Player_OnKilledByPlayer {
+        public static bool Prepare() {
+            return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
+        }
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
             bool lastTryGetValue = false;
             object lastLocVar = null;

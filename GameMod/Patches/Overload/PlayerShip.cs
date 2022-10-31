@@ -47,6 +47,10 @@ namespace GameMod.Patches.Overload {
     [Mod(Mods.VRScale)]
     [HarmonyPatch(typeof(PlayerShip), "Awake")]
     public class PlayerShip_Awake {
+        public static bool Prepare() {
+            return Switches.VREnabled;
+        }
+
         public static void Postfix(PlayerShip __instance) {
             __instance.c_camera_transform.localScale = Vector3.one * VRScale.VR_Scale;
         }
@@ -132,7 +136,6 @@ namespace GameMod.Patches.Overload {
     [Mod(Mods.ThunderboltBalance)]
     [HarmonyPatch(typeof(PlayerShip), "ThunderCharge")]
     public class PlayerShip_ThunderCharge {
-
         public static void Prefix(PlayerShip __instance) {
             if (__instance.m_refire_time <= 0f && __instance.m_thunder_power == 0f)
                 ThunderboltBalance.StopThunderboltSelfDamageLoop();
@@ -162,7 +165,6 @@ namespace GameMod.Patches.Overload {
                 yield return code;
             }
         }
-
     }
 
     /// <summary>
@@ -184,6 +186,10 @@ namespace GameMod.Patches.Overload {
     [Mod(Mods.PreviousWeaponFix)]
     [HarmonyPatch(typeof(PlayerShip), "UpdateReadImmediateControls")]
     public class PlayerShip_UpdateReadImmediateControls {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             foreach (var code in codes) {
                 // Before if (Controls.IsPressed(CCInput.SWITCH_MISSILE))

@@ -9,6 +9,9 @@ using HarmonyLib;
 using Overload;
 
 namespace GameMod.Patches.Overload {
+    /// <summary>
+    /// Handles ping for Internet servers.
+    /// </summary>
     [Mod(Mods.ServerPing)]
     [HarmonyPatch(typeof(BroadcastState), "Tick")]
     public class BroadcastState_Tick {

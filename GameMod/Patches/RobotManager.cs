@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
+using Overload;
 
 namespace GameMod.Patches {
     /// <summary>
@@ -12,6 +13,10 @@ namespace GameMod.Patches {
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(RobotManager), "ReadPresetData")]
     public class RobotManager_ReadPresetData {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
             var dataReader_GetRobotData_Method = typeof(PresetData).GetMethod("GetRobotData");
             foreach (var code in instructions)

@@ -11,13 +11,14 @@ namespace GameMod.Patches {
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(UnityAudio), "FindNextOpenAudioSlot")]
     public class UnityAudio_FindNextOpenAudioSlot {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         public static bool Prefix(ref int __result) {
             // tell the server we are sorry, but we don't have any audio channels left...
-            if (GameplayManager.IsDedicatedServer()) {
-                __result = -1;
-                return false;
-            }
-            return true;
+            __result = -1;
+            return false;
         }
     }
 
@@ -78,12 +79,13 @@ namespace GameMod.Patches {
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(UnityAudio), "PlayMusic")]
     public class ServerCleanup_NoPlayMusic {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         public static bool Prefix() {
             // suppress PlayMusic requests on the server...
-            if (GameplayManager.IsDedicatedServer()) {
-                return false;
-            }
-            return true;
+            return false;
         }
     }
 }
