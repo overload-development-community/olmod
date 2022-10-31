@@ -1,16 +1,12 @@
-﻿using UnityEngine;
-using HarmonyLib;
-using System.Collections.Generic;
-using System.Reflection.Emit;
+﻿using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
+using GameMod.Metadata;
+using HarmonyLib;
+using UnityEngine;
 
 namespace GameMod.Patches {
-    /// <summary>
-    /// Mod: WarperOrientation
-    /// Author: klmcdorm (kevin)
-    /// 
-    /// Fixes objection rotation coming out of a warper.
-    /// </summary>
+    [Mod(Mods.WarperOrientation)]
     [HarmonyPatch(typeof(TriggerWarper), "TeleportObject")]
     class TriggerWarper_TeleportObject {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) {
