@@ -553,6 +553,7 @@ namespace GameMod {
         private static DateTime startTime = DateTime.UtcNow;
         private static int fixedTickCount = 60; // 1 second interval by default (during MP at least)
         private static long cycleLongIntervals = 60000; // >= 60 seconds long intervals force a full cycle
+        private static string outputPath = null;
 
         private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
         private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
@@ -578,7 +579,14 @@ namespace GameMod {
             if (GameMod.Core.GameMod.FindArgVal("-pmp-interval", out intervalLength) && !String.IsNullOrEmpty(intervalLength)) {
                 fixedTickCount = Int32.Parse(intervalLength);
             }
-            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, using intervals of {0} fixed Ticks", fixedTickCount);
+            string outPath = null;
+            if (GameMod.Core.GameMod.FindArgVal("-pmp-output-path", out outPath) && !String.IsNullOrEmpty(outPath)) {
+                outputPath = Path.Combine(Application.persistentDataPath, outPath);
+            } else {
+                outputPath = Application.persistentDataPath;
+            }
+
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, interval: {0}, output path:  {1}", fixedTickCount, outputPath);
 
             // Dictionary of all previously patched methods
             Dictionary<MethodBase,bool> patchedMethods = new Dictionary<MethodBase,bool>();
@@ -881,7 +889,7 @@ namespace GameMod {
             Dictionary<MethodBase,MethodProfile> data = profileData;
 			string curDateTime = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
             string ftemplate = String.Format("olmod_pmp_{0}.csv", curDateTime);
-            string fn = Path.Combine(Application.persistentDataPath, ftemplate);
+            string fn = Path.Combine(outputPath, ftemplate);
             WriteResults(data, fn, curDateTime);
             ResetInterval();
         }
@@ -914,7 +922,7 @@ namespace GameMod {
             intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
             string curDateTime = GetTimestamp(tsEnd);
             string ftemplate = String.Format("olmod_pmp{0}_{1}_{2}_", ((isServer)?"_srv":""),curDateTime, reason);
-            string fn = Path.Combine(Application.persistentDataPath, ftemplate);
+            string fn = Path.Combine(outputPath, ftemplate);
             WriteResults(pdc, fn, curIdx, startTime, tsEnd);
             startTime = DateTime.UtcNow;
             ResetInterval();
