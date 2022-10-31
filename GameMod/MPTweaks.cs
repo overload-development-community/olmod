@@ -62,14 +62,6 @@ namespace GameMod {
 
         public static string ApplySetting(string key, string value)
         {
-            string[] keyParts = key.Split('.');
-            if (key == "ctf.returntimer" && float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float valFloat))
-            {
-                var oldValue = CTF.ReturnTimeAmount.ToStringInvariantCulture();
-                CTF.ReturnTimeAmount = valFloat;
-                CTF.ShowReturnTimer = true;
-                return oldValue;
-            }
             if (key == "item.pickupcheck" && bool.TryParse(value, out bool valBool))
             {
                 MPPickupCheck.PickupCheck = valBool;
@@ -154,8 +146,6 @@ namespace GameMod {
             RobotManager.ReadMultiplayerModeFile();
             Debug.Log("MPTweaks loaded mode file");
             var tweaks = new Dictionary<string, string>() { };
-            if (NetworkMatch.GetMode() == CTF.MatchModeCTF)
-                tweaks.Add("ctf.returntimer", CTF.ReturnTimeAmountDefault.ToStringInvariantCulture());
             if (!MPCustomModeFile.PickupCheck)
                 tweaks.Add("item.pickupcheck", Boolean.FalseString);
             tweaks.Add("nocompress.reliable_timestamps", Boolean.TrueString);

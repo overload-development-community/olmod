@@ -34,7 +34,7 @@ namespace GameMod {
         public static IEnumerator[] FlagReturnTimer = new IEnumerator[TeamCount];
         public const float ReturnTimeAmountDefault = 30;
         public static float ReturnTimeAmount = ReturnTimeAmountDefault;
-        public static bool ShowReturnTimer = false;
+        public static bool ShowReturnTimer = true;
         public static bool CarrierBoostEnabled = true;
         public static object FlagLock = new object();
         private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
