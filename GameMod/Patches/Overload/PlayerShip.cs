@@ -1,4 +1,6 @@
-﻿using GameMod.Metadata;
+﻿using System.Collections.Generic;
+using System.Reflection.Emit;
+using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
@@ -47,6 +49,29 @@ namespace GameMod.Patches.Overload {
     public class PlayerShip_Awake {
         public static void Postfix(PlayerShip __instance) {
             __instance.c_camera_transform.localScale = Vector3.one * VRScale.VR_Scale;
+        }
+    }
+
+    /// <summary>
+    /// Enables the keybind for the previous weapon.
+    /// </summary>
+    [Mod(Mods.PreviousWeaponFix)]
+    [HarmonyPatch(typeof(PlayerShip), "UpdateReadImmediateControls")]
+    public class PlayerShip_UpdateReadImmediateControls {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                // Before if (Controls.IsPressed(CCInput.SWITCH_MISSILE))
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 17) {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(PlayerShip_UpdateReadImmediateControls), "PrevWeaponUpdate"));
+                }
+
+                yield return code;
+            }
+        }
+
+        public static void PrevWeaponUpdate(PlayerShip player) {
+            player.c_player.CallCmdSetCurrentWeapon(player.c_player.m_weapon_type);
         }
     }
 }

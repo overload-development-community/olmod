@@ -7,6 +7,12 @@
         DisableGamelift,
 
         /// <summary>
+        /// Authors: luponix, Tobias
+        /// Fixes the previous weapon keybind.
+        /// </summary>
+        PreviousWeaponFix,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Adds a picture-in-picture rear view.
         /// </summary>
