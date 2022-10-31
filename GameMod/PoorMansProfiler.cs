@@ -441,7 +441,7 @@ namespace GameMod {
     {
         public List<PoorMansFilter> filters = new List<PoorMansFilter>();
 
-        public bool Load(string filename)
+        public bool Load(string filename, bool warnIfNotFound = true)
         {
             if (File.Exists(filename)) {
                 StreamReader sr = new StreamReader(filename, new System.Text.UTF8Encoding());
@@ -459,6 +459,24 @@ namespace GameMod {
                 sr.Dispose();
                 UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: added {0} filters from list {1}", cnt, filename);
                 return true;
+            }
+            if (warnIfNotFound) {
+                UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: can't find filter list file {0}", filename);
+            }
+            return false;
+        }
+
+        public bool LoadStandardLocation(string filename)
+        {
+            if (Path.IsPathRooted(filename)) {
+                return Load(filename);
+            }
+            string[] paths = new string[]{Application.persistentDataPath, Config.OLModDir};
+            foreach (var path in paths) {
+                string fn = Path.Combine(path, filename);
+                if (Load(fn, false)) {
+                    return true;
+                }
             }
             UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: can't find filter list file {0}", filename);
             return false;
@@ -624,10 +642,10 @@ namespace GameMod {
             PoorMansFilterList filters = new PoorMansFilterList();
             if (GameMod.Core.GameMod.FindArgVal("-pmp-filter", out filterFileArg) && !String.IsNullOrEmpty(filterFileArg)) {
                 foreach (var f in filterFileArg.Split(';',',',':')) {
-                    filters.Load(Path.Combine(Application.persistentDataPath, f));
+                    filters.LoadStandardLocation(f);
                 }
             } else {
-                filters.Load(Path.Combine(Application.persistentDataPath, "pmp-filters.txt"));
+                filters.LoadStandardLocation("pmp-filters.txt");
             }
             if (filters.filters.Count < 1) {
                 filters.AddDefaults();
