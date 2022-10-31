@@ -1,6 +1,12 @@
 ﻿namespace GameMod.Metadata {
     internal enum Mods {
         /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Adds custom music support.
+        /// </summary>
+        CustomMusic,
+
+        /// <summary>
         /// Author: roncli
         /// Disables updating of Gamelift pings.
         /// </summary>
