@@ -557,58 +557,6 @@ namespace GameMod {
         private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
         private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
 
-        public static bool LooksLikeMessageHander(MethodInfo m)
-        {
-            if (m != null && !String.IsNullOrEmpty(m.Name)) {
-                var p = m.GetParameters();
-                if (p.Length == 1 && (p[0].ParameterType.Name == "NetworkMessage")) {
-                    if (m.Name.Length > 3 && m.Name[0] == 'O' && m.Name[1] == 'n' &&
-                        m.Name != "OnSerialize" && m.Name != "OnDeserialize" && m.Name != "OnNetworkDestroy") {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        public static bool LooksLikeUpdateFunc(MethodInfo m)
-        {
-            if (m != null && !String.IsNullOrEmpty(m.Name) && m.Name == "Update") {
-                var p = m.GetParameters();
-                if (p.Length == 0 && m.ReturnType == typeof(void)) {
-                    // ignore uninteresting or problematic functions...
-                    if (m.DeclaringType.FullName.IndexOf("Rewired.") < 0 &&
-                        m.DeclaringType.FullName.IndexOf("Smooth.") < 0 && 
-                        m.DeclaringType.FullName.IndexOf("Window") < 0 && 
-                        m.DeclaringType.FullName.IndexOf("Xbox") < 0 && 
-                        m.DeclaringType.FullName.IndexOf("DonetwoSimpleCamera") < 0 && 
-                        m.DeclaringType.FullName.IndexOf("SteamManager") < 0 && 
-                        m.DeclaringType.FullName.IndexOf("uConsole") < 0 &&
-                        m.DeclaringType.FullName.IndexOf("TrackIRComponent") < 0 &&
-                        m.DeclaringType.FullName.IndexOf("Overload.SFXCueManager") < 0 &&
-                        m.DeclaringType.FullName.IndexOf("UnityEngine.") < 0) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        public static bool LooksLikeInterestingFunc(MethodInfo m)
-        {
-            if (m  == null || String.IsNullOrEmpty(m.Name)) {
-                return false;
-            }
-
-            if (m.DeclaringType.FullName.IndexOf("Physics") >= 0) {
-                if (m.Name.IndexOf("SphereCast") == 0 ||
-                    m.Name.IndexOf("Linecast") == 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
         {
