@@ -217,7 +217,7 @@ namespace GameMod
             msg.m_pos = __instance.c_transform.position;
             msg.m_damaged_something = damaged_something;
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.MPTweaks(conn.connectionId))
+                if (conn != null && MPTweaks.ClientHasMod(conn.connectionId))
                 {
                     NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
                 }
