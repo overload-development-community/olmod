@@ -5,6 +5,9 @@ using HarmonyLib;
 using UnityEngine;
 
 namespace GameMod.Patches {
+    /// <summary>
+    /// Disable ProFlare in VR.
+    /// </summary>
     [Mod(Mods.VRFlashingFix)]
     [HarmonyPatch(typeof(ProFlareBatch), "CreateMat")]
     public class ProFlareBatch_CreateMat {
@@ -23,6 +26,9 @@ namespace GameMod.Patches {
         }
     }
 
+    /// <summary>
+    /// Disable ProFlare in VR.
+    /// </summary>
     [Mod(Mods.VRFlashingFix)]
     [HarmonyPatch(typeof(ProFlareBatch), "Reset")]
     public class ProFlareBatch_Reset {

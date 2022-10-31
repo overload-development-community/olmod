@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -374,13 +375,13 @@ namespace GameMod {
             switch (evt)
             {
                 case CTFEvent.RETURN:
-                    ServerStatLog.AddFlagEvent(player, "Return", flag);
+                    Tracker.AddFlagEvent(player, "Return", flag);
                     break;
                 case CTFEvent.PICKUP:
-                    ServerStatLog.AddFlagEvent(player, "Pickup", flag);
+                    Tracker.AddFlagEvent(player, "Pickup", flag);
                     break;
                 case CTFEvent.SCORE:
-                    ServerStatLog.AddFlagEvent(player, "Capture", flag);
+                    Tracker.AddFlagEvent(player, "Capture", flag);
                     break;
             }
         }
@@ -795,7 +796,7 @@ namespace GameMod {
                 return;
 
             CTF.PlayerStats[attacker.netId].CarrierKills++;
-            ServerStatLog.AddFlagEvent(attacker, "CarrierKill", MPTeams.AllTeams[flag]);
+            Tracker.AddFlagEvent(attacker, "CarrierKill", MPTeams.AllTeams[flag]);
             NetworkServer.SendToAll(MessageTypes.MsgCTFPlayerStats, new CTF.PlayerStatesMessage() { m_player_states = CTF.PlayerStats });
         }
     }

@@ -1,6 +1,12 @@
 ﻿namespace GameMod.Metadata {
     internal enum Mods {
         /// <summary>
+        /// Authors: luponix, roncli
+        /// Sends multiplayer game data to a game tracker.
+        /// </summary>
+        Tracker,
+
+        /// <summary>
         /// Author: derhass
         /// Removes rendering of the UI collision mesh.
         /// </summary>

@@ -6,9 +6,12 @@ using Overload;
 using UnityEngine;
 
 namespace GameMod.Patches.Overload {
+    /// <summary>
+    /// Disables the UI collision mesh.
+    /// </summary>
     [Mod(Mods.UIMeshCollider)]
     [HarmonyPatch(typeof(UIManager), "GenerateUICollisionMesh")]
-    public class UIMeshColliderNoRender_GenerateUICollisionMesh {
+    public class UIManager_GenerateUICollisionMesh {
         /// <remarks>
         /// url[4] seems to be the ui collision layer, it is never _meant_
         /// to be rendered at all, but only (mis?-)used by the game as a

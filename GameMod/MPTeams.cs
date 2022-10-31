@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GameMod.Objects;
+using HarmonyLib;
 using Overload;
 using System;
 using System.Collections.Generic;
@@ -1358,7 +1359,7 @@ namespace GameMod
         {
             var targetPlayer = Overload.NetworkManager.m_Players.FirstOrDefault(x => x.netId == msg.netId);
 
-            ServerStatLog.AddTeamChange(targetPlayer, msg.newTeam);
+            Tracker.AddTeamChange(targetPlayer, msg.newTeam);
             targetPlayer.Networkm_mp_team = msg.newTeam;
 
             // Also need to set the Lobby data as it gets used for things like tracker stats

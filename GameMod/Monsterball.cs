@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GameMod.Objects;
+using HarmonyLib;
 using Overload;
 using System.Collections.Generic;
 using System.Reflection;
@@ -336,14 +337,14 @@ namespace GameMod
 
                 if (mpTeam == MonsterballAddon.CurrentPlayer.m_mp_team)
                 {
-                    ServerStatLog.AddGoal();
+                    Tracker.AddGoal();
                     MonsterballAddon.PlayerStats[MonsterballAddon.CurrentPlayer.netId].Goals++;
                     if (MonsterballAddon.LastPlayer != null)
                         MonsterballAddon.PlayerStats[MonsterballAddon.LastPlayer.netId].GoalAssists++;
                 }
                 else
                 {
-                    ServerStatLog.AddBlunder();
+                    Tracker.AddBlunder();
                     MonsterballAddon.PlayerStats[MonsterballAddon.CurrentPlayer.netId].Blunders++;
                 }
                 NetworkServer.SendToAll(MessageTypes.MsgMonsterballPlayerStats, new MonsterballAddon.PlayerStatesMessage() { m_player_states = MonsterballAddon.PlayerStats });

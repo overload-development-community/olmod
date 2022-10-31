@@ -6,6 +6,9 @@ using HarmonyLib;
 using UnityEngine;
 
 namespace GameMod.Patches {
+    /// <summary>
+    /// Corrects orientation of objects that go through a teleporter.
+    /// </summary>
     [Mod(Mods.WarperOrientation)]
     [HarmonyPatch(typeof(TriggerWarper), "TeleportObject")]
     public class TriggerWarper_TeleportObject {

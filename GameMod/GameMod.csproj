@@ -124,6 +124,7 @@
     <Compile Include="Metadata\Mods.cs" />
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\Switches.cs" />
+    <Compile Include="Objects\Tracker.cs" />
     <Compile Include="Objects\VRScale.cs" />
     <Compile Include="MoreAudio.cs" />
     <Compile Include="MPAlwaysCloaked.cs" />
@@ -203,7 +204,9 @@
     <Compile Include="MPUnlockAll.cs" />
     <Compile Include="MPWeaponBehavior.cs" />
     <Compile Include="MusicCustom.cs" />
+    <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\Overload\PlayerShip.cs" />
+    <Compile Include="Patches\Overload\Server.cs" />
     <Compile Include="Patches\Overload\UIManager.cs" />
     <Compile Include="Patches\ProFlareBatch.cs" />
     <Compile Include="PoorMansProfiler.cs" />
@@ -216,7 +219,6 @@
     <Compile Include="ServerPing.cs" />
     <Compile Include="ServerPort.cs" />
     <Compile Include="ServerStatLog.cs" />
-    <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Patches\Overload\MenuManager.cs" />
     <Compile Include="Patches\TriggerWarper.cs" />

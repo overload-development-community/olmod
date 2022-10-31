@@ -33,7 +33,7 @@ namespace GameMod.Patches {
     /// </remarks>
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GraphicsOptionsUpdate")]
-    public class VSync_MenuManager_GraphicsOptionsUpdate {
+    public class MenuManager_GraphicsOptionsUpdate {
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             int state = 0;
             foreach (var code in codes) {

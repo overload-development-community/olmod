@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -514,7 +515,7 @@ namespace GameMod {
                     use_loadout1 = player.m_use_loadout1
                 });
             }
-            ServerStatLog.Connected(newPlayer.m_mp_name);
+            Tracker.Connected(newPlayer.m_mp_name);
             MPBanPlayers.ApplyAllBans(); // make sure the newly connected player gets proper treatment if he is BANNED
         }
 
