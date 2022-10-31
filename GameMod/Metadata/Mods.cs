@@ -7,6 +7,12 @@
         DisableGamelift,
 
         /// <summary>
+        /// Authors: derhass, roncli
+        /// Disables unnecessary game elements when running as a server.
+        /// </summary>
+        ServerCleanup,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Allows pinging of Internet servers.
         /// </summary>
