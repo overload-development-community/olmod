@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Metadata;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -52,6 +53,21 @@ namespace GameMod.Patches {
                 }
 
                 yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update lobby status display.
+    /// </summary>
+    [Mod(Mods.PresetData)]
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    public class MenuManager_MpMatchSetup {
+        public static void Postfix() {
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE) {
+                if (MenuManager.m_menu_micro_state != 2) {
+                    PresetData.UpdateLobbyStatus();
+                }
             }
         }
     }

@@ -13,7 +13,13 @@
         DisableGamelift,
 
         /// <summary>
-        /// Authors: luponix, Tobias
+        /// Authors: arbruijn (Arne), tobiasksu (Tobias)
+        /// Allows for custom projdata and robotdata.
+        /// </summary>
+        PresetData,
+
+        /// <summary>
+        /// Authors: luponix, tobiasksu (Tobias)
         /// Fixes the previous weapon keybind.
         /// </summary>
         PreviousWeaponFix,
@@ -67,7 +73,7 @@
         VRScale,
 
         /// <summary>
-        /// Author: Tobias
+        /// Author: tobiasksu (Tobias)
         /// Fixes VSync implementation.
         /// </summary>
         VSync,

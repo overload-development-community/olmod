@@ -24,6 +24,17 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Update lobby status display.
+    /// </summary>
+    [Mod(Mods.PresetData)]
+    [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
+    public class NetworkMatch_OnAcceptedToLobby {
+        public static void Postfix() {
+            PresetData.UpdateLobbyStatus();
+        }
+    }
+
+    /// <summary>
     /// Starts pinging the tracker every 5 minutes.
     /// </summary>
     [Mod(Mods.Tracker)]

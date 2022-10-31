@@ -1,4 +1,6 @@
-﻿using GameMod.Metadata;
+﻿using System.Collections.Generic;
+using System.Reflection.Emit;
+using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
@@ -18,6 +20,26 @@ namespace GameMod.Patches.Overload {
                     RearView.Init();
                 else
                     RearView.Pause();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Heavy-handed, re-init projdatas & robotdatas on scene loaded.
+    /// </summary>
+    [Mod(Mods.PresetData)]
+    [HarmonyPatch(typeof(GameplayManager), "OnSceneLoaded")]
+    public class GameplayManager_OnSceneLoaded {
+        public static void LoadCustomPresets() {
+            ProjectileManager.ReadProjPresetData(ProjectileManager.proj_prefabs);
+            RobotManager.ReadPresetData(RobotManager.m_enemy_prefab);
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(GameplayManager), "StartLevel"))
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(GameplayManager_OnSceneLoaded), "LoadCustomPresets"));
+                yield return code;
             }
         }
     }
