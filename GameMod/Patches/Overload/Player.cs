@@ -8,6 +8,22 @@ using Overload;
 
 namespace GameMod.Patches.Overload {
     /// <summary>
+    /// Sets the minimium XP required for modifiers to 0.
+    /// </summary>
+    [Mod(Mods.UnlockModifiers)]
+    [HarmonyPatch(typeof(Player), "GetModifierMinXP")]
+    public class MPUnlockAllModifiers {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(ref int __result) {
+            __result = 0;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Allows us to keep track of who killed/assisted/died for reporting to the tracker.
     /// </summary>
     [Mod(Mods.Tracker)]

@@ -67,6 +67,12 @@
         UIMeshCollider,
 
         /// <summary>
+        /// Author: terminal
+        /// Unlocks all modifiers, regardless of player XP.
+        /// </summary>
+        UnlockModifiers,
+
+        /// <summary>
         /// Author: roncli
         /// Fixes annoying flashing in VR.
         /// </summary>
