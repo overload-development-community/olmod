@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace GameMod.Metadata {
     internal class ModAttribute : Attribute {

@@ -121,6 +121,7 @@
     <Compile Include="LevelError.cs" />
     <Compile Include="MatchModeRace.cs" />
     <Compile Include="MessageTypes.cs" />
+    <Compile Include="Objects\VRScale.cs" />
     <Compile Include="MoreAudio.cs" />
     <Compile Include="MPAlwaysCloaked.cs" />
     <Compile Include="MPAnticheat.cs" />
@@ -218,7 +219,6 @@
     <Compile Include="UIMeshColliderNoRender.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
-    <Compile Include="VRScale.cs" />
     <Compile Include="Boss2B.cs" />
     <Compile Include="MatcenHp.cs" />
   </ItemGroup>
