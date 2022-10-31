@@ -14,6 +14,9 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 namespace GameMod.Objects {
+    /// <summary>
+    /// Functions that support posting data to the tracker.
+    /// </summary>
     [Mod(Mods.Tracker)]
     public static class Tracker {
         private struct PlayerPlayerWeaponDamage {

@@ -3,6 +3,9 @@ using Overload;
 using UnityEngine;
 
 namespace GameMod.Objects {
+    /// <summary>
+    /// Gets and sets the VR scale.
+    /// </summary>
     [Mod(Mods.VRScale)]
     public class VRScale {
         private static float _VR_Scale = 1f;

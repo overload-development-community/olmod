@@ -7,6 +7,12 @@
         DisableGamelift,
 
         /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Adds a picture-in-picture rear view.
+        /// </summary>
+        RearView,
+
+        /// <summary>
         /// Authors: derhass, roncli
         /// Disables unnecessary game elements when running as a server.
         /// </summary>
