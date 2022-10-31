@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection.Emit;
+using GameMod.Messages;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -116,7 +117,7 @@ namespace GameMod {
                         conn.Send(MessageTypes.MsgMPTweaksSet, msg);
             }
             else if (ClientHasMod(conn_id))
-               NetworkServer.SendToClient(conn_id, MessageTypes.MsgMPTweaksSet, msg);
+                NetworkServer.SendToClient(conn_id, MessageTypes.MsgMPTweaksSet, msg);
         }
 
         public static ClientInfo ClientCapabilitiesSet(int connectionId, Dictionary<string, string> capabilities)
@@ -189,67 +190,6 @@ namespace GameMod {
             if (!GameplayManager.IsMultiplayerActive)
                 MPTweaks.Reset();
             MPTweaks.Apply();
-        }
-    }
-
-    public class TweaksMessage : MessageBase
-    {
-        public override void Serialize(NetworkWriter writer)
-        {
-            writer.Write((byte)0); // version
-            writer.WritePackedUInt32((uint)m_settings.Count);
-            foreach (var x in m_settings)
-            {
-                writer.Write(x.Key);
-                writer.Write(x.Value);
-            }
-        }
-        public override void Deserialize(NetworkReader reader)
-        {
-            var version = reader.ReadByte();
-            int count = (int)reader.ReadPackedUInt32();
-            if (m_settings == null)
-                m_settings = new Dictionary<string, string>();
-            m_settings.Clear();
-            for (int i = 0; i < count; i++) {
-                string key = reader.ReadString();
-                string value = reader.ReadString();
-                m_settings[key] = value;
-            }
-        }
-        public Dictionary<string, string> m_settings;
-    }
-
-    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
-    class MPTweaksClientHandlers
-    {
-        private static void OnMPTweaksSet(NetworkMessage rawMsg)
-        {
-            var msg = rawMsg.ReadMessage<TweaksMessage>();
-            MPTweaks.Set(msg.m_settings);
-        }
-
-        static void Postfix()
-        {
-            if (Client.GetClient() == null)
-                return;
-            Client.GetClient().RegisterHandler(MessageTypes.MsgMPTweaksSet, OnMPTweaksSet);
-        }
-    }
-
-    [HarmonyPatch(typeof(Server), "RegisterHandlers")]
-    class MPTweaksServerHandlers
-    {
-        private static void OnClientCapabilities(NetworkMessage rawMsg)
-        {
-            var msg = rawMsg.ReadMessage<TweaksMessage>();
-            Debug.LogFormat("MPTweaks: received client capabilities {0}: {1}", rawMsg.conn.connectionId, msg.m_settings.Join());
-            MPTweaks.ClientCapabilitiesSet(rawMsg.conn.connectionId, msg.m_settings);
-        }
-
-        static void Postfix()
-        {
-            NetworkServer.RegisterHandler(MessageTypes.MsgClientCapabilities, OnClientCapabilities);
         }
     }
 

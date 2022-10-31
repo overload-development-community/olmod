@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using GameMod.Metadata;
 
-namespace GameMod
-{
+namespace GameMod.Messages {
+    /// <summary>
+    /// The customer message types for olmod.
+    /// </summary>
+    [Mod(Mods.MessageHandlers)]
     public class MessageTypes
     {
         public const short MsgSetMatchState = 101;

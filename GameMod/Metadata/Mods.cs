@@ -13,6 +13,12 @@
         DisableGamelift,
 
         /// <summary>
+        /// Author: roncli
+        /// Provides common functionality for custom messages and message handlers for olmod.
+        /// </summary>
+        MessageHandlers,
+
+        /// <summary>
         /// Authors: arbruijn (Arne), tobiasksu (Tobias)
         /// Allows for custom projdata and robotdata.
         /// </summary>
@@ -59,6 +65,12 @@
         /// Sends multiplayer game data to a game tracker.
         /// </summary>
         Tracker,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Provides a mechanism to communicate what tweaks are available for a multiplayer game.
+        /// </summary>
+        Tweaks,
 
         /// <summary>
         /// Author: derhass

@@ -6,6 +6,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.Networking;
 using System;
+using GameMod.Messages;
 
 namespace GameMod
 {

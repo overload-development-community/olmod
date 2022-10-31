@@ -1,4 +1,5 @@
-﻿using GameMod.Metadata;
+﻿using GameMod.Messages;
+using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
@@ -39,6 +40,17 @@ namespace GameMod.Patches.Overload {
         public static void Prefix(ref int port) {
             if (port == 0)
                 port = PortArg;
+        }
+    }
+
+    /// <summary>
+    /// Registers all of olmod's server handlers.
+    /// </summary>
+    [Mod(Mods.MessageHandlers)]
+    [HarmonyPatch(typeof(Server), "RegisterHandlers")]
+    public class Server_RegisterHandlers {
+        public static void Postfix() {
+            RegisterHandlers.RegisterServerHandlers();
         }
     }
 

@@ -120,7 +120,9 @@
     <Compile Include="JoystickRotationFix.cs" />
     <Compile Include="LevelError.cs" />
     <Compile Include="MatchModeRace.cs" />
-    <Compile Include="MessageTypes.cs" />
+    <Compile Include="Messages\MessageTypes.cs" />
+    <Compile Include="Messages\RegisterHandlers.cs" />
+    <Compile Include="Messages\TweaksMessage.cs" />
     <Compile Include="Metadata\Mods.cs" />
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\PresetData.cs" />
@@ -206,6 +208,7 @@
     <Compile Include="MPTweaks.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\Overload\BroadcastState.cs" />
+    <Compile Include="Patches\Overload\Client.cs" />
     <Compile Include="Patches\Overload\GameManager.cs" />
     <Compile Include="Patches\Overload\GameplayManager.cs" />
     <Compile Include="Patches\Overload\Player.cs" />

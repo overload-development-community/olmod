@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Messages;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
