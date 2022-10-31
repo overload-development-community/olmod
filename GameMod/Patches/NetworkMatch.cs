@@ -66,4 +66,15 @@ namespace GameMod.Patches {
             Tracker.StartGame();
         }
     }
+
+    /// <summary>
+    /// Disables updating of Gamelift pings.
+    /// </summary>
+    [Mod(Mods.DisableGamelift)]
+    [HarmonyPatch(typeof(NetworkMatch), "UpdateGameliftPings")]
+    public class NetworkMatch_UpdateGameliftPings {
+        public static bool Prefix() {
+            return false;
+        }
+    }
 }

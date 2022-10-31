@@ -1,6 +1,18 @@
 ﻿namespace GameMod.Metadata {
     internal enum Mods {
         /// <summary>
+        /// Author: roncli
+        /// Disables updating of Gamelift pings.
+        /// </summary>
+        DisableGamelift,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Allows pinging of Internet servers.
+        /// </summary>
+        ServerPing,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Allows specifying a server port.
         /// </summary>

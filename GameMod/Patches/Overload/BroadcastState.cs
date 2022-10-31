@@ -4,15 +4,15 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Metadata;
 using HarmonyLib;
 using Overload;
 
-namespace GameMod {
+namespace GameMod.Patches.Overload {
+    [Mod(Mods.ServerPing)]
     [HarmonyPatch(typeof(BroadcastState), "Tick")]
-    class ServerPingTick
-    {
-        private static void ProcessPing(byte[] packetData, IPEndPoint senderEndPoint, UdpClient client)
-        {
+    public class BroadcastState_Tick {
+        private static void ProcessPing(byte[] packetData, IPEndPoint senderEndPoint, UdpClient client) {
             byte[] outBuf = new byte[packetData.Length];
             Array.Copy(packetData, outBuf, packetData.Length);
 
@@ -47,23 +47,19 @@ namespace GameMod {
             return packetType;
         }
 
-        private static bool Prepare()
-        {
+        public static bool Prepare() {
             return MPInternet.ServerEnabled;
         }
 
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-        {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             var broadcastState_m_receiveClient_Field = typeof(BroadcastState).GetField("m_receiveClient", BindingFlags.NonPublic | BindingFlags.Instance);
-            var serverPingTick_CheckPing_Method = AccessTools.Method(typeof(ServerPingTick), "CheckPing");
+            var serverPingTick_CheckPing_Method = AccessTools.Method(typeof(BroadcastState_Tick), "CheckPing");
 
             object lastLdloc = 0;
-            foreach (var code in codes)
-            {
+            foreach (var code in codes) {
                 if (code.opcode == OpCodes.Ldloc_S)
                     lastLdloc = code.operand;
-                else if (code.opcode == OpCodes.Call && ((MemberInfo)code.operand).Name == "ClassifyPacket")
-                {
+                else if (code.opcode == OpCodes.Call && ((MemberInfo)code.operand).Name == "ClassifyPacket") {
                     yield return code; // call ClassifyPacket
                     // returned packetType still on stack
                     yield return new CodeInstruction(OpCodes.Ldloc_S, lastLdloc); // this is byte[] packet, since also passed to ClassifyPacket
@@ -75,14 +71,6 @@ namespace GameMod {
                 }
                 yield return code;
             }
-        }
-    }
-
-    // Don't update Gamelift pings anymore.
-    [HarmonyPatch(typeof(NetworkMatch), "UpdateGameliftPings")]
-    class DisableGameLiftPings {
-        private static bool Prefix() {
-            return false;
         }
     }
 }

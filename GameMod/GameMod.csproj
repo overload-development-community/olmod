@@ -205,6 +205,8 @@
     <Compile Include="MPWeaponBehavior.cs" />
     <Compile Include="MusicCustom.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
+    <Compile Include="Patches\Overload\BroadcastState.cs" />
+    <Compile Include="Patches\Overload\Player.cs" />
     <Compile Include="Patches\Overload\PlayerShip.cs" />
     <Compile Include="Patches\Overload\Server.cs" />
     <Compile Include="Patches\Overload\UIManager.cs" />
@@ -217,8 +219,6 @@
     <Compile Include="Debugging.cs" />
     <Compile Include="ServerCleanup.cs" />
     <Compile Include="ServerPing.cs" />
-    <Compile Include="ServerPort.cs" />
-    <Compile Include="ServerStatLog.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Patches\Overload\MenuManager.cs" />
     <Compile Include="Patches\TriggerWarper.cs" />
