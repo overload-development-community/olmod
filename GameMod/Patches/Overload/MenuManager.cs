@@ -10,8 +10,8 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GetVSyncSetting")]
-    class MenuManager_GetVSyncSetting {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+    public class MenuManager_GetVSyncSetting {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             foreach (var code in codes) {
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "60 HZ")
                     code.operand = "100% MONITOR RATE";
@@ -33,8 +33,8 @@ namespace GameMod.Patches {
     /// </remarks>
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GraphicsOptionsUpdate")]
-    class VSync_MenuManager_GraphicsOptionsUpdate {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+    public class VSync_MenuManager_GraphicsOptionsUpdate {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             int state = 0;
             foreach (var code in codes) {
 

@@ -8,8 +8,8 @@ using UnityEngine;
 namespace GameMod.Patches {
     [Mod(Mods.WarperOrientation)]
     [HarmonyPatch(typeof(TriggerWarper), "TeleportObject")]
-    class TriggerWarper_TeleportObject {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) {
+    public class TriggerWarper_TeleportObject {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) {
             const int BufferSize = 3;
             int state = 1;
             var buffer = new List<CodeInstruction>(BufferSize);
