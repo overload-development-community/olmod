@@ -80,6 +80,12 @@
 
         /// <summary>
         /// Author: arbruijn (Arne)
+        /// Prevents teleporters from disappearing in multiplayer.
+        /// </summary>
+        Triggers,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
         /// Provides a mechanism to communicate what tweaks are available for a multiplayer game.
         /// </summary>
         Tweaks,

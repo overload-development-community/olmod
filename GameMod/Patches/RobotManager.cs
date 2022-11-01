@@ -26,4 +26,17 @@ namespace GameMod.Patches {
                     yield return code;
         }
     }
+
+    /// <summary>
+    /// Prevent RobotManager from removing triggers in multiplayer.
+    /// </summary>
+    [Mod(Mods.Triggers)]
+    [HarmonyPatch(typeof(RobotManager), "TriggerInRelevantSegment")]
+    public class RobotManager_TriggerInRelevantSegment {
+        public static void Postfix(ref bool __result) {
+            if (GameplayManager.IsMultiplayerActive) {
+                __result = true;
+            }
+        }
+    }
 }
