@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
 using GameMod.Messages;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -340,7 +341,7 @@ namespace GameMod {
 
                     if (attacker != null)
                     {
-                        if (MPTweaks.ClientHasTweak(attacker.connectionToClient.connectionId, "damagenumbers"))
+                        if (Tweaks.ClientHasTweak(attacker.connectionToClient.connectionId, "damagenumbers"))
                         {
                             NetworkServer.SendToClient(attacker.connectionToClient.connectionId, MessageTypes.MsgSendDamage, new SendDamageMessage
                             {
@@ -375,7 +376,7 @@ namespace GameMod {
             }
 
             // Send stats to client and clear out
-            if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "deathreview")) {
+            if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "deathreview")) {
                 NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgDeathReview, new DeathReviewMessage { m_killer_id = killer_id, m_assister_id = assister_id, players = ServerDamageLog.GetSummaryForDeadPlayer(player) });
             }
             ServerDamageLog.Clear(player.netId);

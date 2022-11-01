@@ -1,4 +1,5 @@
 ﻿using GameMod.Messages;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using System;
@@ -258,7 +259,7 @@ namespace GameMod
         {
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
             {
-                if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
+                if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
                 {
                     foreach (var kvp in MPLoadouts.NetworkLoadouts)
                     {
@@ -306,9 +307,9 @@ namespace GameMod
 
                 foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
                 {
-                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
+                    if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
                     {
-                            NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetCustomLoadout, msg);
+                        NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetCustomLoadout, msg);
                     }
                 }
             }

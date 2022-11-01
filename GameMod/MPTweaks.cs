@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Reflection.Emit;
 using GameMod.Messages;
+using GameMod.Objects;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -13,138 +11,41 @@ using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
 
 namespace GameMod {
-    class MPTweaks
-    {
-        public class ClientInfo
-        {
-            public Dictionary<string, string> Capabilities = new Dictionary<string, string>();
-            public HashSet<string> SupportsTweaks = new HashSet<string>();
-        }
-
-        private static readonly Dictionary<string, string> oldSettings = new Dictionary<string, string>();
-        private static readonly Dictionary<string, string> settings = new Dictionary<string, string>();
-        public static readonly Dictionary<int, ClientInfo> ClientInfos = new Dictionary<int, ClientInfo>();
-
-        public static bool ClientHasMod(int connectionId)
-        {
-            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
-                clientInfo.Capabilities.ContainsKey("ModVersion");
-        }
-
-        public static bool ClientHasTweak(int connectionId, string tweak)
-        {
-            return ClientInfos.TryGetValue(connectionId, out var clientInfo) &&
-                clientInfo.SupportsTweaks.Contains(tweak);
-        }
-
-        public static void Set(Dictionary<string, string> newSettings)
-        {
-            settings.Clear();
-            foreach (var x in newSettings)
-                settings.Add(x.Key, x.Value);
-
-            if (NetworkMatch.GetMatchState() == MatchState.PLAYING)
-                Apply();
-        }
-
-        public static void Reset()
-        {
-            settings.Clear();
-        }
-
-        public static void InitMatch()
-        {
-            Reset();
-            ClientInfos.Clear();
-        }
-
-        public static string ApplySetting(string key, string value)
-        {
-            if (key == "item.pickupcheck" && bool.TryParse(value, out bool valBool))
-            {
-                MPPickupCheck.PickupCheck = valBool;
-                return Boolean.TrueString;
-            }
-
-            return null;
-        }
-
-        public static void Apply()
-        {
-            foreach (var x in oldSettings)
-                ApplySetting(x.Key, x.Value);
-
-            oldSettings.Clear();
-
-            foreach (var x in settings)
-                oldSettings[x.Key] = ApplySetting(x.Key, x.Value);
-        }
- 
-        public static void Send(int conn_id = -1)
-        {
-            var msg = new TweaksMessage { m_settings = settings };
-            if (conn_id == -1)
-            {
-                foreach (var conn in NetworkServer.connections)
-                    if (conn != null && ClientHasMod(conn.connectionId))
-                        conn.Send(MessageTypes.MsgMPTweaksSet, msg);
-            }
-            else if (ClientHasMod(conn_id))
-                NetworkServer.SendToClient(conn_id, MessageTypes.MsgMPTweaksSet, msg);
-        }
-
-        public static ClientInfo ClientCapabilitiesSet(int connectionId, Dictionary<string, string> capabilities)
-        {
-            var clientInfo = ClientInfos[connectionId] = new ClientInfo { Capabilities = capabilities };
-            if (capabilities.TryGetValue("SupportsTweaks", out string supportsTweaks))
-                foreach (var tweak in supportsTweaks.Split(','))
-                    clientInfo.SupportsTweaks.Add(tweak);
-            return clientInfo;
-        }
-
-        public static void ClientCapabilitiesRemove(int connectionId)
-        {
-            ClientInfos.Remove(connectionId);
-        }
-
-        public static bool MatchNeedsMod()
-        {
-            return (int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
-                (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && MPTeams.NetworkMatchTeamCount > 2) ||
-                MPClassic.matchEnabled || MPModPrivateData.ClassicSpawnsEnabled;
-        }
-    }
-
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
     class MPTweaksInitBeforeEachMatch
     {
         private static void Postfix()
         {
-            MPTweaks.InitMatch();
+            Tweaks.InitMatch();
         }
     }
 
-    // send tweaks after mp scene load, needed to make ReadMultiplayerModeFile work for pickupcheck
-    // was: NetworkMatch.NetSystemNotifyMatchStart, after start of lobby countdown
+    /// <summary>
+    /// Sends map-specific tweaks to the client.
+    /// </summary>
+    /// <remarks>
+    /// This should only be used for map-specific tweaks.  Use client capabilities in NetworkMatch.OnAcceptedToLobby for general tweaks.
+    /// </remarks>
     [HarmonyPatch(typeof(Overload.NetworkManager), "LoadScene")]
     class MPTweaksLoadScene
     {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         private static void Postfix()
         {
-            if (!GameplayManager.IsDedicatedServer())
-                return;
-
             RobotManager.ReadMultiplayerModeFile();
 
             var tweaks = new Dictionary<string, string>() { };
 
             if (!MPCustomModeFile.PickupCheck)
-                tweaks.Add("item.pickupcheck", Boolean.FalseString);
+                tweaks.Add("item.pickupcheck", bool.FalseString);
 
             if (tweaks.Any())
             {
-                MPTweaks.Set(tweaks);
-                MPTweaks.Send();
+                Settings.Set(tweaks);
+                Settings.Send();
             }
         }
     }
@@ -154,10 +55,9 @@ namespace GameMod {
     {
         private static void Postfix()
         {
-            //Debug.Log("MPTweaksStartLevel");
             if (!GameplayManager.IsMultiplayerActive)
-                MPTweaks.Reset();
-            MPTweaks.Apply();
+                Settings.Reset();
+            Settings.Apply();
         }
     }
 
@@ -165,9 +65,13 @@ namespace GameMod {
     [HarmonyPatch(typeof(Server), "OnConnect")]
     class MPTweaksServerOnConnect
     {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         static void Postfix(NetworkMessage msg)
         {
-            MPTweaks.ClientCapabilitiesRemove(msg.conn.connectionId);
+            Tweaks.ClientCapabilitiesRemove(msg.conn.connectionId);
         }
     }
 
@@ -175,6 +79,10 @@ namespace GameMod {
     [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
     class MPTweaksAcceptedToLobby
     {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
         private static void Prefix(AcceptedToLobbyMessage accept_msg)
         {
             if (Client.GetClient() == null)
@@ -190,12 +98,13 @@ namespace GameMod {
                 return;
             }
 
-            var caps = new Dictionary<string, string>();
-            caps.Add("ModVersion", OlmodVersion.RunningVersion.ToString(OlmodVersion.RunningVersion.Revision == 0 ? 3 : 4));
-            caps.Add("ModFullVersion", OlmodVersion.FullVersionString);
-            caps.Add("Modded", OlmodVersion.Modded ? "1" : "0");
-            caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
-            caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,damagenumbers");
+            var caps = new Dictionary<string, string> {
+                { "ModVersion", OlmodVersion.RunningVersion.ToString(OlmodVersion.RunningVersion.Revision == 0 ? 3 : 4) },
+                { "ModFullVersion", OlmodVersion.FullVersionString },
+                { "Modded", OlmodVersion.Modded ? "1" : "0" },
+                { "ModsLoaded", Core.GameMod.ModsLoaded },
+                { "SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,damagenumbers" }
+            };
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }
     }
@@ -204,6 +113,10 @@ namespace GameMod {
     [HarmonyPatch(typeof(Server), "OnLoadoutDataMessage")]
     class MPTweaksOnLoadoutDataMessage
     {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
         private static IEnumerator DisconnectCoroutine(int connectionId)
         {
             yield return new WaitForSecondsRealtime(5);
@@ -234,13 +147,11 @@ namespace GameMod {
             if (connId == 0) // ignore local connection
                 return;
 
-            if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo)) {
-                clientInfo = MPTweaks.ClientCapabilitiesSet(connId, new Dictionary<string, string>());
+            if (!Tweaks.ClientHasCapabilities(connId)) {
+                Tweaks.ClientCapabilitiesSet(connId, new Dictionary<string, string>());
             }
 
-            Debug.Log("MPTweaks: conn " + connId + " OnLoadoutDataMessage clientInfo is now " + clientInfo.Capabilities.Join());
-
-            if (!MPTweaks.ClientHasMod(connId) && MPTweaks.MatchNeedsMod()) {
+            if (!Tweaks.ClientHasMod(connId) && Tweaks.MatchNeedsMod()) {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires OLMod to play."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
@@ -248,7 +159,7 @@ namespace GameMod {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers.  Please disable these modifiers and try again: " + MPModifiers.GetDisabledModifiers()));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
-            if (MPTweaks.ClientHasMod(connId)) {
+            if (Tweaks.ClientHasMod(connId)) {
                 MPModPrivateDataTransfer.SendTo(connId);
             }
         }

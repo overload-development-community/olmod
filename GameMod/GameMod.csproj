@@ -125,6 +125,8 @@
     <Compile Include="Messages\TweaksMessage.cs" />
     <Compile Include="Metadata\Mods.cs" />
     <Compile Include="Metadata\ModAttribute.cs" />
+    <Compile Include="Objects\Settings.cs" />
+    <Compile Include="Objects\Tweaks.cs" />
     <Compile Include="Objects\PresetData.cs" />
     <Compile Include="Objects\RearView.cs" />
     <Compile Include="Objects\Switches.cs" />

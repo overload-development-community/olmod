@@ -244,7 +244,7 @@ namespace GameMod {
         private static IEnumerator WaitForMPTweaks(int connectionId, int maxSeconds, int informAfter=-1)
         {
             int cnt = 0;
-            while (!MPTweaks.ClientHasMod(connectionId) && cnt < maxSeconds * 10)  {
+            while (!Tweaks.ClientHasMod(connectionId) && cnt < maxSeconds * 10)  {
                 cnt++;
                 yield return new WaitForSecondsRealtime(0.1f);
                 if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
@@ -259,12 +259,12 @@ namespace GameMod {
 
         private static IEnumerator InformClientAboutOlmod(int connectionId, bool customLevel, int delaySeconds)
         {
-            if (!MPTweaks.ClientHasMod(connectionId)) {
+            if (!Tweaks.ClientHasMod(connectionId)) {
                 yield return GameManager.m_gm.StartCoroutine(WaitForMPTweaks(connectionId,3,1));
             }
             if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
                 yield break;
-            if (!MPTweaks.ClientHasMod(connectionId)) {
+            if (!Tweaks.ClientHasMod(connectionId)) {
                 // client does not have olmod
                 LobbyChatMessage lmsg = null;
                 if (customLevel) {
@@ -293,7 +293,7 @@ namespace GameMod {
             }
             string level = MPJoinInProgress.NetworkMatchLevelName();
             bool customLevel = (level != null)? level.Contains(':') : false;
-            if (customLevel && !MPTweaks.ClientHasMod(connectionId)) {
+            if (customLevel && !Tweaks.ClientHasMod(connectionId)) {
                 // client seems not to have olmod, warn it
                 yield return GameManager.m_gm.StartCoroutine(InformClientAboutOlmod(connectionId, customLevel, 8));
                 if (!NetworkMatch.m_players.ContainsKey(connectionId)) // disconnected?
@@ -378,7 +378,7 @@ namespace GameMod {
             }
 
             // Send disconnected pilot stats as separate message
-            if (MPTweaks.ClientHasTweak(connectionId, "jip"))
+            if (Tweaks.ClientHasTweak(connectionId, "jip"))
             {
                 var dcPlayers = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !Overload.NetworkManager.m_Players.Contains(x));
                 var dcmsg = new DisconnectedPlayerMatchStateMessage()
@@ -448,7 +448,7 @@ namespace GameMod {
             {
                 foreach (Player player in Overload.NetworkManager.m_Players)
                 {
-                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
+                    if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
                     {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = false });
                     }
@@ -473,7 +473,7 @@ namespace GameMod {
             {
                 foreach (Player player in Overload.NetworkManager.m_Players)
                 {
-                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
+                    if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
                     {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = true });
                     }
@@ -489,7 +489,7 @@ namespace GameMod {
             SendMatchState(connectionId);
 
             NetworkSpawnPlayer.Respawn(newPlayer.c_player_ship);
-            MPTweaks.Send(connectionId);
+            Settings.Send(connectionId);
             //if (!newPlayer.m_spectator && RearView.MPNetworkMatchEnabled)
             //    newPlayer.CallTargetAddHUDMessage(newPlayer.connectionToClient, "REARVIEW ENABLED", -1, true);
             CTF.SendJoinUpdate(newPlayer);
@@ -523,7 +523,7 @@ namespace GameMod {
             Server.SendLoadoutDataToClients();
 
             int connectionId = msg.conn.connectionId;
-            if (!MPTweaks.ClientHasMod(connectionId) && MPTweaks.MatchNeedsMod())
+            if (!Tweaks.ClientHasMod(connectionId) && Tweaks.MatchNeedsMod())
                 return;
 
             if (NetworkMatch.GetMatchState() == MatchState.PLAYING)
@@ -860,7 +860,7 @@ namespace GameMod {
         {
             var msg = new StringMessage(status);
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.ClientHasMod(conn.connectionId)) // do not send unsupported message to stock game
+                if (conn != null && Tweaks.ClientHasMod(conn.connectionId)) // do not send unsupported message to stock game
                     conn.Send(MessageTypes.MsgAddMpStatus, msg);
         }
 

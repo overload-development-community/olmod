@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using GameMod.Metadata;
+using GameMod.Objects;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -36,13 +37,13 @@ namespace GameMod.Messages {
 
         public static void ClientHandler(NetworkMessage rawMsg) {
             var msg = rawMsg.ReadMessage<TweaksMessage>();
-            MPTweaks.Set(msg.m_settings);
+            Settings.Set(msg.m_settings);
         }
 
         public static void ServerHandler(NetworkMessage rawMsg) {
             var msg = rawMsg.ReadMessage<TweaksMessage>();
             Debug.Log($"MPTweaks: received client capabilities {rawMsg.conn.connectionId}: {msg.m_settings.Join()}");
-            MPTweaks.ClientCapabilitiesSet(rawMsg.conn.connectionId, msg.m_settings);
+            Tweaks.ClientCapabilitiesSet(rawMsg.conn.connectionId, msg.m_settings);
         }
     }
 }

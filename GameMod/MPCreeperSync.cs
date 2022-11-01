@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using GameMod.Messages;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -117,7 +118,7 @@ namespace GameMod
 
             msg.m_num_proj_info = count;
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.ClientHasMod(conn.connectionId))
+                if (conn != null && Tweaks.ClientHasMod(conn.connectionId))
                     conn.SendByChannel(MessageTypes.MsgCreeperSync, msg, 3); // channel 3 has QosType.StateUpdate
         }
     }
@@ -217,7 +218,7 @@ namespace GameMod
             msg.m_pos = __instance.c_transform.position;
             msg.m_damaged_something = damaged_something;
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.ClientHasMod(conn.connectionId))
+                if (conn != null && Tweaks.ClientHasMod(conn.connectionId))
                 {
                     NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
                 }
