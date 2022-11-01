@@ -205,7 +205,6 @@
     <Compile Include="MPSetup.cs" />
     <Compile Include="MPSkipClientResimulation.cs" />
     <Compile Include="MPTeams.cs" />
-    <Compile Include="MPTeamsEnemyArrow.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\Overload\BroadcastState.cs" />
     <Compile Include="Patches\Overload\Client.cs" />

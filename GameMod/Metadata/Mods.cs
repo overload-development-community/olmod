@@ -13,6 +13,12 @@
         DisableGamelift,
 
         /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Adds a red arrow under enemy players in team games.
+        /// </summary>
+        EnemyPlayerArrows,
+
+        /// <summary>
         /// Author: roncli
         /// Extends the launch countdown to 60 seconds for players with poor-performing systems.
         /// </summary>
