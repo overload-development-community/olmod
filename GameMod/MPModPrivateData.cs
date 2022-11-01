@@ -1495,7 +1495,7 @@ END_ENTRY
         static void Postfix(NetworkConnection conn)
         {
             var server = NetworkMatch.m_client_server_location;
-            if (!server.StartsWith("OLMOD ") || server == "OLMOD 0.2.8" || server.StartsWith("OLMOD 0.2.8."))
+            if (!server.StartsWith("OLMOD "))
                 return;
             /-*
             var msg = new MPModPrivateDataMessage

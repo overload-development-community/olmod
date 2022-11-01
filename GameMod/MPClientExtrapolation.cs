@@ -322,7 +322,7 @@ namespace GameMod {
                 } else {
                     bool estimateVelocities = (version == MPNoPositionCompression.SnapshotVersion.VANILLA);
                     int deltaFrames;
-                    if (version != MPNoPositionCompression.SnapshotVersion.VELOCITY_TIMESTAMP) {
+                    if (version != MPNoPositionCompression.SnapshotVersion.VELOCITY) {
                         // we do not have server timestamps,
                         // just assume the packet is the next in sequence
                         deltaFrames = 1;

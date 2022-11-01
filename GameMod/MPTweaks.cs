@@ -192,9 +192,9 @@ namespace GameMod {
                 return;
             }
             var server = accept_msg.m_server_location;
-            if (!server.StartsWith("OLMOD ") ||
-                server == "OLMOD 0.2.6") // other server / server too old
+            if (!server.StartsWith("OLMOD "))
             {
+                // other server / server too old
                 Debug.LogFormat("MPTweaks: unsupported server {0}", server);
                 return;
             }

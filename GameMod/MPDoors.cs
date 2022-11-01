@@ -22,8 +22,7 @@ namespace GameMod
         //Removes the proximity sensor which is replaced by a collision in MPShootDoors
         private static void Postfix(GameObject __instance, GameObject ___m_player_trigger)
         {
-            if (GameplayManager.IsMultiplayerActive && __instance != null && ___m_player_trigger.GetComponentInChildren<BoxCollider>() != null &&
-                NetworkMatch.m_client_server_location != "OLMOD 0.2.5") // keep old behaviour on current server for now
+            if (GameplayManager.IsMultiplayerActive && __instance != null && ___m_player_trigger.GetComponentInChildren<BoxCollider>() != null) // keep old behaviour on current server for now
             {
                 ___m_player_trigger.GetComponentInChildren<BoxCollider>().size = default(Vector3);
             }

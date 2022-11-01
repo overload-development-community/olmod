@@ -18,14 +18,10 @@ namespace GameMod {
         static public NewPlayerSnapshotToClientMessage m_new_snapshot_buffer = new NewPlayerSnapshotToClientMessage();
         public enum SnapshotVersion : uint {
             VANILLA = 0,          // PlayerSnapshotToClientMessage from vanilla overload /  olmod <= 0.3.5
-            VELOCITY,             // NewPlayerSnapshotToClientMessage omlod >= 0.3.6, but no usable timestamps
-            VELOCITY_TIMESTAMP,   // NewPlayerSnapshotToClientMessage olmod >= 0.3.6 but with usable timestamps
+            VELOCITY,             // NewPlayerSnapshotToClientMessage olmod >= 0.3.6
         }
         // Which version of the NewPlayerSnapshotToClientMessages we process
-        // Set it to the default of a 0.3.6/0.3.7 server where we can't trust the
-        // message timestamps. This might be updated by MPTweaks with the
-        // "nocompress.reliable_timestamps" field if the server actually sends
-        // reliable timestamps.
+        // Set it to the default of a 0.3.6/0.3.7 server.
         static public SnapshotVersion NewSnapshotVersion = SnapshotVersion.VELOCITY;
     }
 
