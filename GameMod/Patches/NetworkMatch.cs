@@ -1,4 +1,6 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
+using System.Reflection.Emit;
 using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
@@ -6,6 +8,26 @@ using Overload;
 using UnityEngine;
 
 namespace GameMod.Patches {
+    /// <summary>
+    /// Doubles the time allotted to wait for a client to start the match.
+    /// </summary>
+    [Mod(Mods.LaunchCountdown)]
+    [HarmonyPatch(typeof(NetworkMatch), "CanLaunchCountdown")]
+    public class MPTweaks_NetworkMatch_CanLaunchCountdown {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Ldc_R4) {
+                    code.operand = 60f;
+                }
+                yield return code;
+            }
+        }
+    }
+
     /// <summary>
     /// Reports the end of the game to the tracker.
     /// </summary>

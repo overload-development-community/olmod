@@ -14,6 +14,12 @@
 
         /// <summary>
         /// Author: roncli
+        /// Extends the launch countdown to 60 seconds for players with poor-performing systems.
+        /// </summary>
+        LaunchCountdown,
+
+        /// <summary>
+        /// Author: roncli
         /// Provides common functionality for custom messages and message handlers for olmod.
         /// </summary>
         MessageHandlers,
