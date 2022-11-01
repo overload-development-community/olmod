@@ -1,8 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using GameMod.Messages;
 using GameMod.Metadata;
 using GameMod.Objects;
+using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -46,13 +48,57 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Initialize the tweaks before each match.
+    /// </summary>
+    [Mod(Mods.Tweaks)]
+    [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
+    public class NetworkMatch_InitBeforeEachMatch {
+        public static void Postfix() {
+            Tweaks.InitMatch();
+        }
+    }
+
+    /// <summary>
     /// Update lobby status display.
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
-    public class NetworkMatch_OnAcceptedToLobby {
+    public class NetworkMatch_OnAcceptedToLobby_PresetData {
         public static void Postfix() {
             PresetData.UpdateLobbyStatus();
+        }
+    }
+
+    /// <summary>
+    /// Send client capabilities for compatibility.
+    /// </summary>
+    [Mod(Mods.Tweaks)]
+    [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
+    public class NetworkMatch_OnAcceptedToLobby_Tweaks {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Prefix(AcceptedToLobbyMessage accept_msg) {
+            if (Client.GetClient() == null) {
+                return;
+            }
+
+            var server = accept_msg.m_server_location;
+            if (!server.StartsWith("OLMOD ")) {
+                // other server / server too old
+                Debug.LogFormat("MPTweaks: unsupported server {0}", server);
+                return;
+            }
+
+            var caps = new Dictionary<string, string> {
+                { "ModVersion", OlmodVersion.RunningVersion.ToString(OlmodVersion.RunningVersion.Revision == 0 ? 3 : 4) },
+                { "ModFullVersion", OlmodVersion.FullVersionString },
+                { "Modded", OlmodVersion.Modded ? "1" : "0" },
+                { "ModsLoaded", Core.GameMod.ModsLoaded },
+                { "SupportsTweaks", "" }
+            };
+            Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps });
         }
     }
 

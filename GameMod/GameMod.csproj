@@ -207,12 +207,12 @@
     <Compile Include="MPSkipClientResimulation.cs" />
     <Compile Include="MPTeams.cs" />
     <Compile Include="MPTeamsEnemyArrow.cs" />
-    <Compile Include="MPTweaks.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\Overload\BroadcastState.cs" />
     <Compile Include="Patches\Overload\Client.cs" />
     <Compile Include="Patches\Overload\GameManager.cs" />
     <Compile Include="Patches\Overload\GameplayManager.cs" />
+    <Compile Include="Patches\Overload\NetworkManager.cs" />
     <Compile Include="Patches\Overload\Player.cs" />
     <Compile Include="Patches\Overload\PlayerShip.cs" />
     <Compile Include="Patches\Overload\ProjectileManager.cs" />

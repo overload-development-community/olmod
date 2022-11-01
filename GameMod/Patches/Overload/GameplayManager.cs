@@ -47,4 +47,17 @@ namespace GameMod.Patches.Overload {
             }
         }
     }
+
+    /// <summary>
+    /// Applies the tweak settings at the start of a level.
+    /// </summary>
+    [Mod(Mods.Tweaks)]
+    [HarmonyPatch(typeof(GameplayManager), "StartLevel")]
+    public class GameplayManager_StartLevel {
+        public static void Postfix() {
+            if (!GameplayManager.IsMultiplayerActive)
+                Settings.Reset();
+            Settings.Apply();
+        }
+    }
 }

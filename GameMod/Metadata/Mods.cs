@@ -19,6 +19,12 @@
         LaunchCountdown,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Allows creation of games that disable modifiers in multiplayer.
+        /// </summary>
+        Modifiers,
+
+        /// <summary>
         /// Author: roncli
         /// Provides common functionality for custom messages and message handlers for olmod.
         /// </summary>
