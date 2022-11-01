@@ -103,7 +103,7 @@ namespace GameMod {
                 { "ModFullVersion", OlmodVersion.FullVersionString },
                 { "Modded", OlmodVersion.Modded ? "1" : "0" },
                 { "ModsLoaded", Core.GameMod.ModsLoaded },
-                { "SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,damagenumbers" }
+                { "SupportsTweaks", "" }
             };
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }

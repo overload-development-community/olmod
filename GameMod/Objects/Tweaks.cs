@@ -32,9 +32,13 @@ namespace GameMod.Objects {
         /// <param name="capabilities"></param>
         public static void ClientCapabilitiesSet(int connectionId, Dictionary<string, string> capabilities) {
             ClientInfos[connectionId] = new ClientInfo { Capabilities = capabilities };
-            if (capabilities.TryGetValue("SupportsTweaks", out string supportsTweaks))
-                foreach (var tweak in supportsTweaks.Split(','))
-                    ClientInfos[connectionId].Tweaks.Add(tweak);
+            if (capabilities.TryGetValue("SupportsTweaks", out string supportsTweaks)) {
+                if (!string.IsNullOrEmpty(supportsTweaks)) {
+                    foreach (var tweak in supportsTweaks.Split(',')) {
+                        ClientInfos[connectionId].Tweaks.Add(tweak);
+                    }
+                }
+            }
 
             Debug.Log($"MPTweaks: conn {connectionId} clientInfo is now {ClientInfos[connectionId].Capabilities.Join()}");
         }

@@ -1388,7 +1388,7 @@ namespace GameMod
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
             {
                 // Send message to clients with 'changeteam' support to give them HUD message
-                if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "changeteam"))
+                if (Tweaks.ClientHasMod(player.connectionToClient.connectionId))
                     NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgChangeTeam, msg);
             }
         }

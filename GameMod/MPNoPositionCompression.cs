@@ -225,7 +225,7 @@ namespace GameMod {
             }
             if (m_snapshot_buffer.m_num_snapshots > 0)
             {
-                if (!MPNoPositionCompression.enabled || !Tweaks.ClientHasTweak(send_to_player.connectionToClient.connectionId, "nocompress_0_3_6")) {
+                if (!MPNoPositionCompression.enabled || !Tweaks.ClientHasMod(send_to_player.connectionToClient.connectionId)) {
                     send_to_player.connectionToClient.SendByChannel(64, m_snapshot_buffer.ToOldSnapshotMessage(), 1);
                     return false;
                 }

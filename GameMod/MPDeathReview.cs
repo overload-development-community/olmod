@@ -341,7 +341,7 @@ namespace GameMod {
 
                     if (attacker != null)
                     {
-                        if (Tweaks.ClientHasTweak(attacker.connectionToClient.connectionId, "damagenumbers"))
+                        if (Tweaks.ClientHasMod(attacker.connectionToClient.connectionId))
                         {
                             NetworkServer.SendToClient(attacker.connectionToClient.connectionId, MessageTypes.MsgSendDamage, new SendDamageMessage
                             {
@@ -376,7 +376,7 @@ namespace GameMod {
             }
 
             // Send stats to client and clear out
-            if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "deathreview")) {
+            if (Tweaks.ClientHasMod(player.connectionToClient.connectionId)) {
                 NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgDeathReview, new DeathReviewMessage { m_killer_id = killer_id, m_assister_id = assister_id, players = ServerDamageLog.GetSummaryForDeadPlayer(player) });
             }
             ServerDamageLog.Clear(player.netId);

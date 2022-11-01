@@ -378,7 +378,7 @@ namespace GameMod {
             }
 
             // Send disconnected pilot stats as separate message
-            if (Tweaks.ClientHasTweak(connectionId, "jip"))
+            if (Tweaks.ClientHasMod(connectionId))
             {
                 var dcPlayers = Overload.NetworkManager.m_PlayersForScoreboard.Where(x => !Overload.NetworkManager.m_Players.Contains(x));
                 var dcmsg = new DisconnectedPlayerMatchStateMessage()
@@ -448,7 +448,7 @@ namespace GameMod {
             {
                 foreach (Player player in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
+                    if (Tweaks.ClientHasMod(player.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = false });
                     }
@@ -473,7 +473,7 @@ namespace GameMod {
             {
                 foreach (Player player in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "jip"))
+                    if (Tweaks.ClientHasMod(player.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgJIPJustJoined, new JIPJustJoinedMessage { playerId = newPlayer.netId, ready = true });
                     }

@@ -90,7 +90,7 @@ namespace GameMod
         {
             if (!enabled) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
             if (!GameplayManager.IsMultiplayerActive) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "sniper")) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
+            if (NetworkServer.active && !Tweaks.ClientHasMod(player.connectionToClient.connectionId)) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
 
             // Set this to false so that creepers and time bombs do not explode unless the server tells us.
             CreeperSyncExplode.m_allow_explosions = false;
@@ -855,7 +855,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerWeaponSynchronization, msg);
                 }
@@ -901,7 +901,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerSyncResource, msg);
                 }
@@ -931,7 +931,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerSyncAllMissiles, msg);
                 }
@@ -962,7 +962,7 @@ namespace GameMod
 
             foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
             {
-                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                if (player.connectionToClient.connectionId != remotePlayer.connectionToClient.connectionId && Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                 {
                     NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgDetonate, msg);
                 }
@@ -1018,7 +1018,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1034,7 +1034,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             __result = __instance.m_weapon_level[4] != WeaponUnlock.LOCKED || __instance.m_weapon_level[3] != WeaponUnlock.LOCKED || __instance.m_weapon_level[5] != WeaponUnlock.LOCKED;
 
@@ -1128,7 +1128,7 @@ namespace GameMod
     {
         private static bool Prefix(PlayerShip __instance)
         {
-            return !Tweaks.ClientHasTweak(__instance.c_player.connectionToClient.connectionId, "sniper");
+            return !Tweaks.ClientHasMod(__instance.c_player.connectionToClient.connectionId);
         }
     }
 
@@ -1182,7 +1182,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             if (__instance.m_weapon_type != value)
             {
@@ -1215,7 +1215,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             if (__instance.m_weapon_type_prev != value)
             {
@@ -1248,7 +1248,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1264,7 +1264,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1284,7 +1284,7 @@ namespace GameMod
             {
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
                         {
@@ -1314,7 +1314,7 @@ namespace GameMod
             {
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
                         {
@@ -1344,7 +1344,7 @@ namespace GameMod
             {
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
                         {
@@ -1370,7 +1370,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1386,7 +1386,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             if (__instance.m_overdrive || Player.CheatUnlimited)
             {
@@ -1412,7 +1412,7 @@ namespace GameMod
             {
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
                         {
@@ -1438,7 +1438,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1454,7 +1454,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             if (__instance.m_overdrive || Player.CheatUnlimited)
             {
@@ -1498,7 +1498,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1514,7 +1514,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             if (!NetworkServer.active)
             {
@@ -1544,7 +1544,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             if (__instance.m_missile_type_prev != value)
             {
@@ -1577,7 +1577,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1593,7 +1593,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1630,7 +1630,7 @@ namespace GameMod
 
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, MessageTypes.MsgPlayerAddResource, new PlayerAddResourceMessage
                         {
@@ -1683,7 +1683,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(__instance.c_player.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.c_player.connectionToClient.connectionId)) return true;
 
             return false;
         }
@@ -1699,7 +1699,7 @@ namespace GameMod
         {
             if (!MPSniperPackets.enabled) return true;
             if (!GameplayManager.IsMultiplayerActive) return true;
-            if (NetworkServer.active && !Tweaks.ClientHasTweak(p.connectionToClient.connectionId, "sniper")) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(p.connectionToClient.connectionId)) return true;
 
             if (NetworkServer.active && !MPSniperPackets.serverCanDetonate)
             {
@@ -1750,7 +1750,7 @@ namespace GameMod
                 ButtonJustPressedMessage msg = new ButtonJustPressedMessage(player.netId, button);
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, 66, msg);
                     }
@@ -1761,7 +1761,7 @@ namespace GameMod
                 ButtonJustReleasedMessage msg2 = new ButtonJustReleasedMessage(player.netId, button);
                 foreach (Player remotePlayer in Overload.NetworkManager.m_Players)
                 {
-                    if (Tweaks.ClientHasTweak(remotePlayer.connectionToClient.connectionId, "sniper"))
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, 67, msg2);
                     }

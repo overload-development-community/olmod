@@ -259,7 +259,7 @@ namespace GameMod
         {
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
             {
-                if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
+                if (Tweaks.ClientHasMod(player.connectionToClient.connectionId))
                 {
                     foreach (var kvp in MPLoadouts.NetworkLoadouts)
                     {
@@ -307,7 +307,7 @@ namespace GameMod
 
                 foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
                 {
-                    if (Tweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
+                    if (Tweaks.ClientHasMod(player.connectionToClient.connectionId))
                     {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetCustomLoadout, msg);
                     }
