@@ -291,7 +291,7 @@ namespace GameMod {
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
             position.y += 55f;
 
-            uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, ThunderboltPassthrough.Enabled ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
         }
@@ -539,7 +539,7 @@ namespace GameMod {
                         MenuManager.PlaySelectSound(1f);
                         break;
                     case 20:
-                        MPThunderboltPassthrough.isAllowed = !MPThunderboltPassthrough.isAllowed;
+                        ThunderboltPassthrough.Enabled = !ThunderboltPassthrough.Enabled;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                     case 21:

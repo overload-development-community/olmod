@@ -73,6 +73,12 @@
         ThunderboltBalance,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Adds an match creation option to allow thunderbolt passthrough.
+        /// </summary>
+        ThunderboltPassthrough,
+
+        /// <summary>
         /// Authors: luponix, roncli
         /// Sends multiplayer game data to a game tracker.
         /// </summary>

@@ -126,6 +126,7 @@
     <Compile Include="Metadata\Mods.cs" />
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\Settings.cs" />
+    <Compile Include="Objects\ThunderboltPassthrough.cs" />
     <Compile Include="Objects\Tweaks.cs" />
     <Compile Include="Objects\PresetData.cs" />
     <Compile Include="Objects\RearView.cs" />
@@ -186,8 +187,6 @@
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
     <Compile Include="MPTags.cs" />
-    <Compile Include="MPThunderboltPassthrough.cs" />
-    <Compile Include="MPTriggers.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />
@@ -220,6 +219,7 @@
     <Compile Include="Patches\Overload\UIElement.cs" />
     <Compile Include="Patches\Overload\UIManager.cs" />
     <Compile Include="Patches\ProFlareBatch.cs" />
+    <Compile Include="Patches\Projectile.cs" />
     <Compile Include="Patches\RobotManager.cs" />
     <Compile Include="Patches\UnityAudio.cs" />
     <Compile Include="PoorMansProfiler.cs" />

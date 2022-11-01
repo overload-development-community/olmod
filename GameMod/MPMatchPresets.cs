@@ -66,7 +66,7 @@ namespace GameMod
                 damageNumbers = Menus.mms_damage_numbers,
                 assistScoring = Menus.mms_assist_scoring,
                 teamCount = MPTeams.MenuManagerTeamCount,
-                thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
+                thunderboltPassthrough = ThunderboltPassthrough.Enabled
             });
 
             presets.Add(new MPMatchPreset
@@ -227,7 +227,7 @@ namespace GameMod
                 Menus.mms_damage_numbers = this.damageNumbers;
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
-                MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
+                ThunderboltPassthrough.Enabled = this.thunderboltPassthrough;
             }
         }
 

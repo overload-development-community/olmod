@@ -1246,10 +1246,10 @@ END_ENTRY
             get { return true; }
             set { JoystickRotationFix.server_support = value; }
         }
-        public static bool ThunderboltPassthrough
+        public static bool ThunderboltPassthroughEnabled
         {
-            get { return MPThunderboltPassthrough.isAllowed; }
-            set { MPThunderboltPassthrough.isAllowed = value; }
+            get { return ThunderboltPassthrough.Enabled; }
+            set { ThunderboltPassthrough.Enabled = value; }
         }
 
         public static bool DamageNumbers
@@ -1280,7 +1280,7 @@ END_ENTRY
             jobject["matchtimelimit"] = MatchTimeLimit;
             jobject["assistscoring"] = AssistScoring;
             jobject["joystickrotationfixsupported"] = JoystickRotationFixSupported;
-            jobject["thunderboltpassthrough"] = ThunderboltPassthrough;
+            jobject["thunderboltpassthrough"] = ThunderboltPassthrough.Enabled;
             jobject["damagenumbers"] = DamageNumbers;
             return jobject;
         }
@@ -1310,7 +1310,7 @@ END_ENTRY
                 NetworkMatch.m_match_time_limit_seconds = MatchTimeLimit;
             AssistScoring = root["assistscoring"].GetBool(true);
             JoystickRotationFixSupported = root["joystickrotationfixsupported"].GetBool(false);
-            ThunderboltPassthrough = root["thunderboltpassthrough"].GetBool(false);
+            ThunderboltPassthrough.Enabled = root["thunderboltpassthrough"].GetBool(false);
             DamageNumbers = root["damagenumbers"].GetBool(false);
         }
 
@@ -1603,7 +1603,7 @@ END_ENTRY
             MPModPrivateData.DamageNumbers = Menus.mms_damage_numbers;
             MPModPrivateData.MatchTimeLimit = Menus.mms_match_time_limit == 0 ? int.MaxValue : Menus.mms_match_time_limit;
             MPModPrivateData.AssistScoring = Menus.mms_assist_scoring;
-            MPModPrivateData.ThunderboltPassthrough = MPThunderboltPassthrough.isAllowed;
+            MPModPrivateData.ThunderboltPassthroughEnabled = ThunderboltPassthrough.Enabled;
             if (Menus.mms_mp_projdata_fn == "STOCK") {
                 MPModPrivateData.CustomProjdata = string.Empty;
             } else {
