@@ -110,7 +110,8 @@ namespace GameMod {
         public static bool MatchNeedsMod()
         {
             return (int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
-                (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && MPTeams.NetworkMatchTeamCount > 2);
+                (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && MPTeams.NetworkMatchTeamCount > 2) ||
+                MPClassic.matchEnabled || MPModPrivateData.ClassicSpawnsEnabled;
         }
     }
 
@@ -190,13 +191,11 @@ namespace GameMod {
             }
 
             var caps = new Dictionary<string, string>();
-            caps.Add("ModVersion", OlmodVersion.RunningVersion.ToString(3));
-            caps.Add("FullModVersion", OlmodVersion.FullVersionString);
+            caps.Add("ModVersion", OlmodVersion.RunningVersion.ToString(OlmodVersion.RunningVersion.Revision == 0 ? 3 : 4));
+            caps.Add("ModFullVersion", OlmodVersion.FullVersionString);
             caps.Add("Modded", OlmodVersion.Modded ? "1" : "0");
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
             caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,damagenumbers");
-            caps.Add("ModPrivateData", "1");
-            caps.Add("ClassicWeaponSpawns", "1");
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps } );
         }
     }
@@ -231,8 +230,10 @@ namespace GameMod {
         private static void Postfix(NetworkMessage msg)
         {
             var connId = msg.conn.connectionId;
+
             if (connId == 0) // ignore local connection
                 return;
+
             if (!MPTweaks.ClientInfos.TryGetValue(connId, out var clientInfo)) {
                 clientInfo = MPTweaks.ClientCapabilitiesSet(connId, new Dictionary<string, string>());
             }
@@ -240,8 +241,6 @@ namespace GameMod {
             Debug.Log("MPTweaks: conn " + connId + " OnLoadoutDataMessage clientInfo is now " + clientInfo.Capabilities.Join());
 
             if (!MPTweaks.ClientHasMod(connId) && MPTweaks.MatchNeedsMod()) {
-                //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
-                //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires OLMod to play."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
@@ -249,11 +248,7 @@ namespace GameMod {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers.  Please disable these modifiers and try again: " + MPModifiers.GetDisabledModifiers()));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
-            if (!clientInfo.Capabilities.ContainsKey("ClassicWeaponSpawns") && (MPClassic.matchEnabled || MPModPrivateData.ClassicSpawnsEnabled)) {
-                NetworkServer.SendToClient(connId, 86, new StringMessage("This match has classic weapon spawns and requires OLMod 0.3.6 or greater."));
-                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
-            }
-            if (clientInfo.Capabilities.ContainsKey("ModPrivateData")) {
+            if (MPTweaks.ClientHasMod(connId)) {
                 MPModPrivateDataTransfer.SendTo(connId);
             }
         }
