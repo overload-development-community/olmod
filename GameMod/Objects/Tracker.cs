@@ -118,16 +118,8 @@ namespace GameMod.Objects {
             }
         }
 
-        private static string GetLevel(int levelNum, string level) {
-            if (string.IsNullOrEmpty(level)) {
-                return GameManager.MultiplayerMission.GetLevelDisplayName(levelNum);
-            } else {
-                return level.Split(':')[0];
-            }
-        }
-
-        private static FieldInfo _Networkmatch_m_match_force_playlist_addon_idstringhash_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_addon_idstringhash", AccessTools.all);
-        private static FieldInfo _Networkmatch_m_match_force_playlist_level_idx_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all);
+        private static readonly FieldInfo _Networkmatch_m_match_force_playlist_addon_idstringhash_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_addon_idstringhash", AccessTools.all);
+        private static readonly FieldInfo _Networkmatch_m_match_force_playlist_level_idx_Field = typeof(NetworkMatch).GetField("m_match_force_playlist_level_idx", AccessTools.all);
         private static string GetCurrentLevelName() {
             string match_force_playlist_addon_idstringhash = (string)_Networkmatch_m_match_force_playlist_addon_idstringhash_Field.GetValue(null);
             int idx;

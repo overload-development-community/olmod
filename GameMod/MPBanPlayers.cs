@@ -253,7 +253,7 @@ namespace GameMod {
         }
 
         // Delayed disconnect on Kick
-        static private MethodInfo _Server_OnDisconnect_Method = AccessTools.Method(typeof(Overload.Server), "OnDisconnect");
+        private static MethodInfo _Server_OnDisconnect_Method = AccessTools.Method(typeof(Overload.Server), "OnDisconnect");
 
         public static IEnumerator DelayedDisconnect(int connection_id, bool banned)
         {

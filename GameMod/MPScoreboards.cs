@@ -13,7 +13,7 @@ namespace GameMod
     {
         public class Anarchy
         {
-            static FieldInfo m_alpha_Field = AccessTools.Field(typeof(UIElement), "m_alpha");
+            private static FieldInfo m_alpha_Field = AccessTools.Field(typeof(UIElement), "m_alpha");
 
             public static void DrawMpScoreboardRaw(UIElement uie, ref Vector2 pos)
             {
@@ -107,7 +107,7 @@ namespace GameMod
         public class TeamAnarchy
         {
 
-            static FieldInfo m_alpha_Field = AccessTools.Field(typeof(UIElement), "m_alpha");
+            private static FieldInfo m_alpha_Field = AccessTools.Field(typeof(UIElement), "m_alpha");
 
             public static void DrawMpScoreboardRaw(UIElement uie, ref Vector2 pos)
             {

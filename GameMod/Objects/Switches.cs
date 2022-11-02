@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using HarmonyLib;
 
 namespace GameMod.Objects {
@@ -43,7 +40,7 @@ namespace GameMod.Objects {
             NoDownload = FindArg("-nodownload");
             NoRobot = FindArg("-norobot");
             NoSound = FindArg("-nosound");
-            FindArgVal("-port", out string Port);
+            FindArgVal("-port", out Port);
             TexResLow = FindArg("-texreslow");
             FindArgVal("-trustedPlayerIds", out TrustedPlayerIds);
             VREnabled = FindArgVal("-vrmode", out var vrmode) && vrmode != "none";

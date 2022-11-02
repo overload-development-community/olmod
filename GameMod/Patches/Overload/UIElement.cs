@@ -17,7 +17,7 @@ namespace GameMod.Patches.Overload {
 
         public static void Postfix(UIElement __instance) {
             if (PresetData.ProjDataExists) {
-                Vector2 vector = default(Vector2);
+                Vector2 vector = default;
                 vector.x = UIManager.UI_LEFT + 110;
                 vector.y = UIManager.UI_TOP + 120f;
                 __instance.DrawStringSmall("Using custom projdata", vector, 0.5f, StringOffset.CENTER, UIManager.m_col_damage, 1f);

@@ -90,8 +90,8 @@ namespace GameMod.Patches {
             return GameplayManager.IsDedicatedServer();
         }
 
-        private static FieldInfo _MenuManager_m_seconds_waiting_for_gi_covergence = typeof(MenuManager).GetField("m_seconds_waiting_for_gi_covergence", BindingFlags.Static | BindingFlags.NonPublic);
-        private static MethodInfo _MenuManager_ResetBackStack = AccessTools.Method(typeof(MenuManager), "ResetBackStack");
+        private static readonly FieldInfo _MenuManager_m_seconds_waiting_for_gi_covergence = typeof(MenuManager).GetField("m_seconds_waiting_for_gi_covergence", BindingFlags.Static | BindingFlags.NonPublic);
+        private static readonly MethodInfo _MenuManager_ResetBackStack = AccessTools.Method(typeof(MenuManager), "ResetBackStack");
         public static bool Prefix(bool returning_from_secret) {
             if (MenuManager.m_menu_sub_state != MenuSubState.INIT) {
                 return true;
