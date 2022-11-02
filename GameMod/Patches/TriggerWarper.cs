@@ -11,7 +11,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.WarperOrientation)]
     [HarmonyPatch(typeof(TriggerWarper), "TeleportObject")]
-    public class TriggerWarper_TeleportObject {
+    public static class TriggerWarper_TeleportObject {
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) {
             const int BufferSize = 3;
             int state = 1;

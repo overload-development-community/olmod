@@ -9,7 +9,7 @@ namespace GameMod.Objects {
     /// A class to handle the setting and getting of client tweaks.
     /// </summary>
     [Mod(Mods.Tweaks)]
-    public class Tweaks {
+    public static class Tweaks {
         private class ClientInfo {
             public Dictionary<string, string> Capabilities = new Dictionary<string, string>();
             public HashSet<string> Tweaks = new HashSet<string>();

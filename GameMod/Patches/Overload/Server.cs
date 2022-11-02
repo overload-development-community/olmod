@@ -15,7 +15,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(Server), "InvokeDisconnectFlashOnClients")]
-    public class Server_InvokeDisconnectFlashOnClients {
+    public static class Server_InvokeDisconnectFlashOnClients {
         public static bool Prepare() {
             return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
         }
@@ -32,7 +32,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ServerPort)]
     [HarmonyPatch(typeof(Server), "Listen")]
-    public class Server_Listen {
+    public static class Server_Listen {
         private static int PortArg = 0;
 
         public static bool Prepare() {
@@ -53,7 +53,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.Tweaks)]
     [HarmonyPatch(typeof(Server), "OnConnect")]
-    public class Server_OnConnect {
+    public static class Server_OnConnect {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
@@ -68,7 +68,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(new Mods[] { Mods.Modifiers, Mods.Tweaks })]
     [HarmonyPatch(typeof(Server), "OnLoadoutDataMessage")]
-    public class Server_OnLoadoutDataMessage {
+    public static class Server_OnLoadoutDataMessage {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
@@ -122,7 +122,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.MessageHandlers)]
     [HarmonyPatch(typeof(Server), "RegisterHandlers")]
-    public class Server_RegisterHandlers {
+    public static class Server_RegisterHandlers {
         public static void Postfix() {
             RegisterHandlers.RegisterServerHandlers();
         }
@@ -133,7 +133,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(Server), "SendPlayersInLobbyToAllClients")]
-    public class Server_SendPlayersInLobbyToAllClients {
+    public static class Server_SendPlayersInLobbyToAllClients {
         public static bool Prepare() {
             return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
         }

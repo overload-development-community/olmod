@@ -15,7 +15,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.LaunchCountdown)]
     [HarmonyPatch(typeof(NetworkMatch), "CanLaunchCountdown")]
-    public class MPTweaks_NetworkMatch_CanLaunchCountdown {
+    public static class MPTweaks_NetworkMatch_CanLaunchCountdown {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
@@ -35,7 +35,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(NetworkMatch), "ExitMatch")]
-    public class NetworkMatch_ExitMatch {
+    public static class NetworkMatch_ExitMatch {
         public static bool Prepare() {
             return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
         }
@@ -52,7 +52,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.Tweaks)]
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
-    public class NetworkMatch_InitBeforeEachMatch {
+    public static class NetworkMatch_InitBeforeEachMatch {
         public static void Postfix() {
             Tweaks.InitMatch();
         }
@@ -63,7 +63,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
-    public class NetworkMatch_OnAcceptedToLobby_PresetData {
+    public static class NetworkMatch_OnAcceptedToLobby_PresetData {
         public static void Postfix() {
             PresetData.UpdateLobbyStatus();
         }
@@ -74,7 +74,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.Tweaks)]
     [HarmonyPatch(typeof(NetworkMatch), "OnAcceptedToLobby")]
-    public class NetworkMatch_OnAcceptedToLobby_Tweaks {
+    public static class NetworkMatch_OnAcceptedToLobby_Tweaks {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -107,7 +107,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(NetworkMatch), "StartLobby")]
-    public class NetworkMatch_StartLobby {
+    public static class NetworkMatch_StartLobby {
         private static bool started = false;
 
         public static bool Prepare() {
@@ -134,7 +134,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
-    public class NetworkMatch_StartPlaying {
+    public static class NetworkMatch_StartPlaying {
         public static bool Prepare() {
             return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
         }
@@ -151,7 +151,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.DisableGamelift)]
     [HarmonyPatch(typeof(NetworkMatch), "UpdateGameliftPings")]
-    public class NetworkMatch_UpdateGameliftPings {
+    public static class NetworkMatch_UpdateGameliftPings {
         public static bool Prefix() {
             return false;
         }

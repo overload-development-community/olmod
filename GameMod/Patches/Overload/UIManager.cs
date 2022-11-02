@@ -11,7 +11,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.EnemyPlayerArrows)]
     [HarmonyPatch(typeof(UIManager), "DrawMpPlayerArrow")]
-    public class UIManager_DrawMpPlayerArrow {
+    public static class UIManager_DrawMpPlayerArrow {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -33,7 +33,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.UIMeshCollider)]
     [HarmonyPatch(typeof(UIManager), "GenerateUICollisionMesh")]
-    public class UIManager_GenerateUICollisionMesh {
+    public static class UIManager_GenerateUICollisionMesh {
         /// <remarks>
         /// url[4] seems to be the ui collision layer, it is never _meant_
         /// to be rendered at all, but only (mis?-)used by the game as a

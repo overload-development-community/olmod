@@ -9,7 +9,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.MessageHandlers)]
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
-    public class Client_RegisterHandlers {
+    public static class Client_RegisterHandlers {
         public static void Postfix() {
             RegisterHandlers.RegisterClientHandlers();
         }

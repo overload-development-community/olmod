@@ -12,7 +12,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(PlayerShip), "ApplyDamage")]
-    public class PlayerShip_ApplyDamage {
+    public static class PlayerShip_ApplyDamage {
         public static bool Prepare() {
             return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
         }
@@ -46,7 +46,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.VRScale)]
     [HarmonyPatch(typeof(PlayerShip), "Awake")]
-    public class PlayerShip_Awake {
+    public static class PlayerShip_Awake {
         public static bool Prepare() {
             return Switches.VREnabled;
         }
@@ -61,7 +61,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ThunderboltBalance)]
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
-    public class PlayerShip_MaybeFireWeapon {
+    public static class PlayerShip_MaybeFireWeapon {
 
         public static Vector3 AdjustLeftPos(Vector3 muzzle_pos, Vector3 c_right) {
             return GameplayManager.IsMultiplayerActive ? muzzle_pos + c_right * ThunderboltBalance.m_muzzle_adjust : muzzle_pos;
@@ -113,7 +113,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ThunderboltBalance)]
     [HarmonyPatch(typeof(PlayerShip), "OnDestroy")]
-    public class PlayerShip_OnDestroy {
+    public static class PlayerShip_OnDestroy {
         public static void Postfix() {
             ThunderboltBalance.StopThunderboltSelfDamageLoop();
         }
@@ -124,7 +124,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ThunderboltBalance)]
     [HarmonyPatch(typeof(PlayerShip), "OnDisable")]
-    public class PlayerShip_OnDisable {
+    public static class PlayerShip_OnDisable {
         public static void Postfix() {
             ThunderboltBalance.StopThunderboltSelfDamageLoop();
         }
@@ -135,7 +135,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ThunderboltBalance)]
     [HarmonyPatch(typeof(PlayerShip), "ThunderCharge")]
-    public class PlayerShip_ThunderCharge {
+    public static class PlayerShip_ThunderCharge {
         public static void Prefix(PlayerShip __instance) {
             if (__instance.m_refire_time <= 0f && __instance.m_thunder_power == 0f)
                 ThunderboltBalance.StopThunderboltSelfDamageLoop();
@@ -156,7 +156,7 @@ namespace GameMod.Patches.Overload {
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldloca_S, 2);
                     yield return new CodeInstruction(OpCodes.Ldloc_0);
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldarg_0); // TODO: Determine if this is necessary.  See ThunderboltBalance.cs
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ThunderboltBalance), "GetSelfChargeDamage"));
                     yield return new CodeInstruction(OpCodes.Stfld, AccessTools.Field(typeof(DamageInfo), "damage"));
                     continue;
@@ -172,7 +172,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ThunderboltBalance)]
     [HarmonyPatch(typeof(PlayerShip), "Update")]
-    public class PlayerShip_Update {
+    public static class PlayerShip_Update {
         public static void Postfix(PlayerShip __instance) {
             if ((__instance.m_boosting || __instance.m_dead || __instance.m_dying) && GameplayManager.IsMultiplayerActive && __instance.isLocalPlayer) {
                 ThunderboltBalance.StopThunderboltSelfDamageLoop();
@@ -185,7 +185,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.PreviousWeaponFix)]
     [HarmonyPatch(typeof(PlayerShip), "UpdateReadImmediateControls")]
-    public class PlayerShip_UpdateReadImmediateControls {
+    public static class PlayerShip_UpdateReadImmediateControls {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }

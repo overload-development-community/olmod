@@ -11,7 +11,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.RearView)]
     [HarmonyPatch(typeof(GameplayManager), "ChangeGameplayState")]
-    public class GameplayManager_ChangeGameplayState {
+    public static class GameplayManager_ChangeGameplayState {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -33,7 +33,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(GameplayManager), "OnSceneLoaded")]
-    public class GameplayManager_OnSceneLoaded {
+    public static class GameplayManager_OnSceneLoaded {
         public static void LoadCustomPresets() {
             ProjectileManager.ReadProjPresetData(ProjectileManager.proj_prefabs);
             RobotManager.ReadPresetData(RobotManager.m_enemy_prefab);
@@ -53,7 +53,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.Tweaks)]
     [HarmonyPatch(typeof(GameplayManager), "StartLevel")]
-    public class GameplayManager_StartLevel {
+    public static class GameplayManager_StartLevel {
         public static void Postfix() {
             if (!GameplayManager.IsMultiplayerActive)
                 Settings.Reset();

@@ -5,7 +5,7 @@ namespace GameMod.Messages {
     /// The customer message types for olmod.
     /// </summary>
     [Mod(Mods.MessageHandlers)]
-    public class MessageTypes
+    public static class MessageTypes
     {
         public const short MsgSetMatchState = 101;
         public const short MsgAddMpStatus = 102;

@@ -8,7 +8,7 @@ namespace GameMod.Objects {
     /// A class to keep track of the current match's capabilities, and allows for those capabilities to be reset after the match.
     /// </summary>
     [Mod(Mods.Tweaks)]
-    public class Settings {
+    public static class Settings {
         private static readonly Dictionary<string, string> oldSettings = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> settings = new Dictionary<string, string>();
 

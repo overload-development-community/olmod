@@ -11,8 +11,8 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.ThunderboltPassthrough)]
     [HarmonyPatch(typeof(Projectile), "OnTriggerEnter")]
-    public class Projectile_OnTriggerEnter {
-        public void MaybeExplode(bool damaged_something, Projectile proj) {
+    public static class Projectile_OnTriggerEnter {
+        public static void MaybeExplode(bool damaged_something, Projectile proj) {
             bool enablePassthrough = proj.m_type == ProjPrefab.proj_thunderbolt && GameplayManager.IsMultiplayer && ThunderboltPassthrough.Enabled;
 
             if (!enablePassthrough)

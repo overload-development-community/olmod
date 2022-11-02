@@ -9,7 +9,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(GameManager), "SetupDedicatedServer")]
-    public class GameManager_SetupDedicatedServer {
+    public static class GameManager_SetupDedicatedServer {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
@@ -28,7 +28,7 @@ namespace GameMod.Patches.Overload {
     /// </remarks>
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(GameManager), "Update")]
-    public class GameManager_Update {
+    public static class GameManager_Update {
         private const bool enableAudio = false;
 
         public static bool Prepare() {

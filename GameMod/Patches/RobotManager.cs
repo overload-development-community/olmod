@@ -12,7 +12,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(RobotManager), "ReadPresetData")]
-    public class RobotManager_ReadPresetData {
+    public static class RobotManager_ReadPresetData {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -32,7 +32,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.Triggers)]
     [HarmonyPatch(typeof(RobotManager), "TriggerInRelevantSegment")]
-    public class RobotManager_TriggerInRelevantSegment {
+    public static class RobotManager_TriggerInRelevantSegment {
         public static void Postfix(ref bool __result) {
             if (GameplayManager.IsMultiplayerActive) {
                 __result = true;

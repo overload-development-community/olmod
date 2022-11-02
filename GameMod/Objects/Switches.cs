@@ -5,7 +5,7 @@ namespace GameMod.Objects {
     /// <summary>
     /// Loads the command line switches and stores them in memory.
     /// </summary>
-    public class Switches {
+    public static class Switches {
         private static string[] Args;
 
         public static string ChatCommandPassword = null;

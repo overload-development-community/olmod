@@ -6,7 +6,7 @@ using GameMod.Metadata;
 
 namespace GameMod.Objects {
     [Mod(Mods.ThunderboltPassthrough)]
-    public class ThunderboltPassthrough {
+    public static class ThunderboltPassthrough {
         public static bool Enabled { get; set; } = false;
     }
 }

@@ -10,7 +10,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(UIElement), "DrawHUD")]
-    public class UIElement_DrawHUD_PresetData {
+    public static class UIElement_DrawHUD_PresetData {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -30,7 +30,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.RearView)]
     [HarmonyPatch(typeof(UIElement), "DrawHUD")]
-    public class UIElement_DrawHUD_RearView {
+    public static class UIElement_DrawHUD_RearView {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -65,7 +65,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(UIElement), "DrawMpPreMatchMenu")]
-    public class UIElement_DrawMpPreMatchMenu {
+    public static class UIElement_DrawMpPreMatchMenu {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }

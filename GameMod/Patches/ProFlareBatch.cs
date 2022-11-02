@@ -10,7 +10,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.VRFlashingFix)]
     [HarmonyPatch(typeof(ProFlareBatch), "CreateMat")]
-    public class ProFlareBatch_CreateMat {
+    public static class ProFlareBatch_CreateMat {
         public static bool Prepare() {
             return Switches.VREnabled;
         }
@@ -31,7 +31,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.VRFlashingFix)]
     [HarmonyPatch(typeof(ProFlareBatch), "Reset")]
-    public class ProFlareBatch_Reset {
+    public static class ProFlareBatch_Reset {
         private static readonly MethodInfo _ProFlareBatch_CreateHelperTransform_Method = AccessTools.Method(typeof(ProFlareBatch), "CreateHelperTransform");
         private static readonly MethodInfo _ProFlareBatch_SetupMeshes_Method = AccessTools.Method(typeof(ProFlareBatch), "SetupMeshes");
         public static bool Prepare() {

@@ -7,7 +7,7 @@ namespace GameMod.Objects {
     /// Gets and sets the VR scale.
     /// </summary>
     [Mod(Mods.VRScale)]
-    public class VRScale {
+    public static class VRScale {
         private static float _VR_Scale = 1f;
 
         public static float VR_Scale {

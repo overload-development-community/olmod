@@ -10,7 +10,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(UnityAudio), "FindNextOpenAudioSlot")]
-    public class UnityAudio_FindNextOpenAudioSlot {
+    public static class UnityAudio_FindNextOpenAudioSlot {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
@@ -27,7 +27,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.CustomMusic)]
     [HarmonyPatch(typeof(UnityAudio), "PlayCurrentTrack")]
-    public class UnityAudio_PlayCurrentTrack {
+    public static class UnityAudio_PlayCurrentTrack {
         private static AudioClip LoadLevelAudioClip(LevelInfo level, string name) {
             if (!level.IsAddOn || level.FilePath == null)
                 return null;
@@ -78,7 +78,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(UnityAudio), "PlayMusic")]
-    public class ServerCleanup_NoPlayMusic {
+    public static class ServerCleanup_NoPlayMusic {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }

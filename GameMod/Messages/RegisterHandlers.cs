@@ -8,7 +8,7 @@ namespace GameMod.Messages {
     /// </summary>
     [Mod(Mods.MessageHandlers)]
 
-    public class RegisterHandlers {
+    public static class RegisterHandlers {
         public static void RegisterClientHandlers() {
             if (Client.GetClient() == null)
                 return;

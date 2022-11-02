@@ -13,7 +13,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GetVSyncSetting")]
-    public class MenuManager_GetVSyncSetting {
+    public static class MenuManager_GetVSyncSetting {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -40,7 +40,7 @@ namespace GameMod.Patches {
     /// </remarks>
     [Mod(Mods.VSync)]
     [HarmonyPatch(typeof(MenuManager), "GraphicsOptionsUpdate")]
-    public class MenuManager_GraphicsOptionsUpdate {
+    public static class MenuManager_GraphicsOptionsUpdate {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -70,7 +70,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-    public class MenuManager_MpMatchSetup {
+    public static class MenuManager_MpMatchSetup {
         public static void Postfix() {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE) {
                 if (MenuManager.m_menu_micro_state != 2) {
@@ -85,7 +85,7 @@ namespace GameMod.Patches {
     /// </summary>
     [Mod(Mods.ServerCleanup)]
     [HarmonyPatch(typeof(MenuManager), "PlayGameUpdate")]
-    public class MenuManager_PlayGameUpdate {
+    public static class MenuManager_PlayGameUpdate {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }

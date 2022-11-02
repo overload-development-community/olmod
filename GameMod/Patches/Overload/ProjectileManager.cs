@@ -12,7 +12,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.PresetData)]
     [HarmonyPatch(typeof(ProjectileManager), "ReadProjPresetData")]
-    public class ProjectileManager_ReadProjPresetData {
+    public static class ProjectileManager_ReadProjPresetData {
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
             var dataReader_GetProjData_Method = typeof(PresetData).GetMethod("GetProjData");
             foreach (var code in instructions)

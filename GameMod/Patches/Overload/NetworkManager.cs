@@ -14,7 +14,7 @@ namespace GameMod.Patches.Overload {
     /// </remarks>
     [Mod(Mods.Tweaks)]
     [HarmonyPatch(typeof(NetworkManager), "LoadScene")]
-    public class NetworkManager_LoadScene {
+    public static class NetworkManager_LoadScene {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }

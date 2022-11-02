@@ -14,7 +14,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.ServerPing)]
     [HarmonyPatch(typeof(BroadcastState), "Tick")]
-    public class BroadcastState_Tick {
+    public static class BroadcastState_Tick {
         private static void ProcessPing(byte[] packetData, IPEndPoint senderEndPoint, UdpClient client) {
             byte[] outBuf = new byte[packetData.Length];
             Array.Copy(packetData, outBuf, packetData.Length);

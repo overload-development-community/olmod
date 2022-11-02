@@ -12,7 +12,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.UnlockModifiers)]
     [HarmonyPatch(typeof(Player), "GetModifierMinXP")]
-    public class MPUnlockAllModifiers {
+    public static class MPUnlockAllModifiers {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -28,7 +28,7 @@ namespace GameMod.Patches.Overload {
     /// </summary>
     [Mod(Mods.Tracker)]
     [HarmonyPatch(typeof(Player), "OnKilledByPlayer")]
-    public class Player_OnKilledByPlayer {
+    public static class Player_OnKilledByPlayer {
         public static bool Prepare() {
             return Config.Settings.Value<bool>("isServer") && !string.IsNullOrEmpty(Config.Settings.Value<string>("trackerBaseUrl"));
         }
