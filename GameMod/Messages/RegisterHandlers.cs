@@ -14,10 +14,12 @@ namespace GameMod.Messages {
                 return;
 
             Client.GetClient().RegisterHandler(MessageTypes.MsgMPTweaksSet, TweaksMessage.ClientHandler);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgChangeTeam, ChangeTeamMessage.ClientHandler);
         }
 
         public static void RegisterServerHandlers() {
             NetworkServer.RegisterHandler(MessageTypes.MsgClientCapabilities, TweaksMessage.ServerHandler);
+            NetworkServer.RegisterHandler(MessageTypes.MsgChangeTeam, ChangeTeamMessage.ServerHandler);
         }
     }
 }

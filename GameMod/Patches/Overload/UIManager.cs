@@ -1,11 +1,43 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using GameMod.Metadata;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
 
 namespace GameMod.Patches.Overload {
+    /// <summary>
+    /// Chooses the correct color for the team.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(UIManager), "ChooseMpColor")]
+    public static class UIManager_ChooseMpColor {
+        public static bool Prefix(MpTeam team, ref Color __result) {
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
+                return true;
+
+            if (Teams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS) {
+                if (Menus.mms_team_color_default)
+                    return true;
+
+                bool my_team = team == GameManager.m_local_player.m_mp_team;
+                if (my_team) {
+                    __result = Teams.TeamColorByIndex(Menus.mms_team_color_self, 2);
+                } else {
+                    __result = Teams.TeamColorByIndex(Menus.mms_team_color_enemy, 0);
+                }
+
+            } else {
+                __result = Teams.TeamColor(team, 2);
+            }
+
+            return false;
+        }
+    }
+
     /// <summary>
     /// In team games, display a red arrow below enemy names.
     /// </summary>

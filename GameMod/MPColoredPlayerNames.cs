@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GameMod.Objects;
+using HarmonyLib;
 using Overload;
 using System.Collections.Generic;
 using System.Reflection.Emit;
@@ -70,7 +71,7 @@ namespace GameMod
                 foreach (var code in instructions)
                 {
                     yield return code;
-                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MPTeams_UIElement_DrawRecentKillsMP), "GetMessageColor"))//AccessTools.Method(typeof(UIElement), AccessTools.Method(typeof(UIElement), "GetMessageColor"))
+                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Teams), "GetMessageColor"))//AccessTools.Method(typeof(UIElement), AccessTools.Method(typeof(UIElement), "GetMessageColor"))
                     {
                         if(count == 0)
                         {

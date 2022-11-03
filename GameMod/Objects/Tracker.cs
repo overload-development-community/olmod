@@ -64,7 +64,7 @@ namespace GameMod.Objects {
         public static DateTime StartTime, EndTime;
 
         private static string TeamName(MpTeam? team) {
-            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : MPTeams.TeamNameNotLocalized((MpTeam)team);
+            return team == null || team == MpTeam.ANARCHY || team == (MpTeam)(-1) ? null : Teams.TeamNameNotLocalized((MpTeam)team);
         }
 
         private static string GetPowerupBigSpawnString(int spawn) {
@@ -161,7 +161,7 @@ namespace GameMod.Objects {
                 level = GetCurrentLevelName(),
                 joinInProgress = MPJoinInProgress.NetworkMatchEnabled,
                 rearViewAllowed = RearView.MPNetworkMatchEnabled,
-                teamCount = MPTeams.NetworkMatchTeamCount,
+                teamCount = Teams.NetworkMatchTeamCount,
                 players = NetworkMatch.m_players.Values.Where(x => !x.m_name.StartsWith("OBSERVER")).Select(x => x.m_name),
                 hasPassword = MPModPrivateData.HasPassword,
                 matchNotes = MPModPrivateData.MatchNotes,

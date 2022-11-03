@@ -1179,8 +1179,8 @@ END_ENTRY
 
         public static int TeamCount
         {
-            get { return MPTeams.NetworkMatchTeamCount; }
-            set { MPTeams.NetworkMatchTeamCount = value; }
+            get { return Teams.NetworkMatchTeamCount; }
+            set { Teams.NetworkMatchTeamCount = value; }
         }
         public static bool RearViewEnabled
         {
@@ -1287,7 +1287,7 @@ END_ENTRY
 
         public static void Deserialize(JToken root)
         {
-            TeamCount = root["teamcount"].GetInt(MPTeams.Min);
+            TeamCount = root["teamcount"].GetInt(Teams.Min);
             RearViewEnabled = root["rearviewenabled"].GetBool(false);
             JIPEnabled = root["jipenabled"].GetBool(false);
             SniperPacketsEnabled = root["sniperpacketsenabled"].GetBool(false);
@@ -1590,7 +1590,7 @@ END_ENTRY
             MPModPrivateData.MatchMode = MenuManager.mms_mode;
             MPModPrivateData.RearViewEnabled = RearView.MPMenuManagerEnabled;
             MPModPrivateData.JIPEnabled = MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable;
-            MPModPrivateData.TeamCount = MPTeams.MenuManagerTeamCount;
+            MPModPrivateData.TeamCount = Teams.MenuManagerTeamCount;
             MPModPrivateData.LapLimit = ExtMenuManager.mms_ext_lap_limit;
             MPModPrivateData.MatchNotes = MPServerBrowser.mms_match_notes;
             MPModPrivateData.SniperPacketsEnabled = true;

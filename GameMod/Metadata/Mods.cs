@@ -7,6 +7,12 @@
         CustomMusic,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Allows for custom team colors in two team games.
+        /// </summary>
+        CustomTeamColors,
+
+        /// <summary>
         /// Author: roncli
         /// Disables updating of Gamelift pings.
         /// </summary>
@@ -55,6 +61,12 @@
         RearView,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Scales respawn time based on the number of players in the game.
+        /// </summary>
+        ScaleRespawnTime,
+
+        /// <summary>
         /// Authors: derhass, roncli
         /// Disables unnecessary game elements when running as a server.
         /// </summary>
@@ -71,6 +83,12 @@
         /// Allows specifying a server port.
         /// </summary>
         ServerPort,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Allows for more than 2 teams in a team anarchy game.
+        /// </summary>
+        Teams,
 
         /// <summary>
         /// Author: tobiasksu (Tobias)

@@ -23,7 +23,7 @@ namespace GameMod.Objects {
             }
         }
 
-        public static float GetSelfChargeDamage(float num, PlayerShip playerShip) {
+        public static float GetSelfChargeDamage(float num) {
             return GetThunderboltSelfDamageMultiplier() * num;
         }
     }

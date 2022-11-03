@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -565,7 +566,7 @@ namespace GameMod {
 
                     if (player == null)
                     {
-                        GameplayManager.AddHUDMessage($"No {MPTeams.TeamName(MpTeam.TEAM0)} player is carrying a flag.");
+                        GameplayManager.AddHUDMessage($"No {Teams.TeamName(MpTeam.TEAM0)} player is carrying a flag.");
                     }
                     else
                     {
@@ -581,7 +582,7 @@ namespace GameMod {
 
                     if (player == null)
                     {
-                        GameplayManager.AddHUDMessage($"No {MPTeams.TeamName(MpTeam.TEAM1)} player is carrying a flag.");
+                        GameplayManager.AddHUDMessage($"No {Teams.TeamName(MpTeam.TEAM1)} player is carrying a flag.");
                     }
                     else
                     {

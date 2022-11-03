@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 using GameMod.Metadata;
 using GameMod.Objects;
@@ -53,6 +54,37 @@ namespace GameMod.Patches.Overload {
 
         public static void Postfix(PlayerShip __instance) {
             __instance.c_camera_transform.localScale = Vector3.one * VRScale.VR_Scale;
+        }
+    }
+
+    /// <summary>
+    /// If ScaleRespawnTime is set, automatically set respawn timer = player's team count.
+    /// </summary>
+    [Mod(Mods.ScaleRespawnTime)]
+    [HarmonyPatch(typeof(PlayerShip), "DyingUpdate")]
+    public static class PlayerShip_DyingUpdate {
+        public static void MaybeUpdateDeadTimer(PlayerShip playerShip) {
+            if (MPModPrivateData.ScaleRespawnTime) {
+                playerShip.m_dead_timer = NetworkManager.m_Players.Count(x => x.m_mp_team == playerShip.c_player.m_mp_team && !x.m_spectator);
+            }
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            var playerShip_m_dead_timer_Field = AccessTools.Field(typeof(PlayerShip), "m_dead_timer");
+            var mpTeams_PlayerShip_DyingUpdate_Method = AccessTools.Method(typeof(PlayerShip_DyingUpdate), "MaybeUpdateDeadTimer");
+
+            int state = 0;
+            foreach (var code in codes) {
+                if (state == 0 && code.opcode == OpCodes.Stfld && code.operand == playerShip_m_dead_timer_Field) {
+                    state = 1;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, mpTeams_PlayerShip_DyingUpdate_Method);
+                    continue;
+                }
+
+                yield return code;
+            }
         }
     }
 
@@ -156,7 +188,6 @@ namespace GameMod.Patches.Overload {
                     yield return code;
                     yield return new CodeInstruction(OpCodes.Ldloca_S, 2);
                     yield return new CodeInstruction(OpCodes.Ldloc_0);
-                    yield return new CodeInstruction(OpCodes.Ldarg_0); // TODO: Determine if this is necessary.  See ThunderboltBalance.cs
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ThunderboltBalance), "GetSelfChargeDamage"));
                     yield return new CodeInstruction(OpCodes.Stfld, AccessTools.Field(typeof(DamageInfo), "damage"));
                     continue;
@@ -168,14 +199,66 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
-    /// Stops the overcharge sound if it no longer applies.
+    /// Stops the overcharge sound if it no longer applies, and shows edge glow in the correct color.
     /// </summary>
-    [Mod(Mods.ThunderboltBalance)]
+    [Mod(new Mods[] { Mods.Teams, Mods.ThunderboltBalance })]
     [HarmonyPatch(typeof(PlayerShip), "Update")]
     public static class PlayerShip_Update {
+        [Mod(Mods.Teams)]
+        public static Material LoadDamageMaterial(PlayerShip player_ship) {
+            if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode())) {
+                Material m = new Material(UIManager.gm.m_damage_material);
+                var teamcolor = UIManager.ChooseMpColor(player_ship.c_player.m_mp_team);
+                m.SetColor("_EdgeColor", teamcolor);
+                return m;
+            } else {
+                return UIManager.gm.m_damage_material;
+            }
+        }
+
+        /// <summary>
+        /// Damage glow in team color
+        /// </summary>
+        /// <param name="__instance"></param>
+        [Mod(new Mods[] { Mods.Teams, Mods.ThunderboltBalance })]
         public static void Postfix(PlayerShip __instance) {
-            if ((__instance.m_boosting || __instance.m_dead || __instance.m_dying) && GameplayManager.IsMultiplayerActive && __instance.isLocalPlayer) {
-                ThunderboltBalance.StopThunderboltSelfDamageLoop();
+            if (GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode())) {
+                if ((__instance.m_boosting || __instance.m_dead || __instance.m_dying) && GameplayManager.IsMultiplayerActive && __instance.isLocalPlayer) {
+                    ThunderboltBalance.StopThunderboltSelfDamageLoop();
+                }
+
+                var teamcolor = UIManager.ChooseMpColor(__instance.c_player.m_mp_team);
+                foreach (var mat in __instance.m_materials) {
+                    // Main damage color
+                    if (mat.shader != null) {
+                        if ((Color)mat.GetVector("_color_burn") == teamcolor) {
+                            return;
+                        }
+                        mat.SetVector("_color_burn", teamcolor);
+                    }
+
+                    // Light color (e.g. TB overcharge)
+                    __instance.c_lights[4].color = teamcolor;
+                }
+            }
+        }
+
+        /// <summary>
+        /// UIManager.gm.m_damage_material is a global client field for heavy incurred damage/TB overcharge, patch to call our LoadDamageMaterial() instead
+        /// </summary>
+        /// <param name="codes"></param>
+        /// <returns></returns>
+        [Mod(Mods.Teams)]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(GameManager), "m_damage_material")) {
+                    yield return new CodeInstruction(OpCodes.Pop); // Remove previous ldsfld    class Overload.GameManager Overload.UIManager::gm, cheap enough to keep transpiler simpler
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(PlayerShip_Update), "LoadDamageMaterial"));
+                    continue;
+                }
+
+                yield return code;
             }
         }
     }
@@ -206,4 +289,44 @@ namespace GameMod.Patches.Overload {
             player.c_player.CallCmdSetCurrentWeapon(player.c_player.m_weapon_type);
         }
     }
+
+    /// <summary>
+    /// Updates the ship rim color, which is Team0/Team1/Anarchy dependent.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(PlayerShip), "UpdateRimColor")]
+    public static class PlayerShip_UpdateRimColor {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(PlayerShip __instance) {
+            Color c = UIManager.ChooseMpColor(__instance.c_player.m_mp_team);
+            __instance.m_mp_rim_color.r = c.r * 0.25f;
+            __instance.m_mp_rim_color.g = c.g * 0.25f;
+            __instance.m_mp_rim_color.b = c.b * 0.25f;
+            __instance.m_update_mp_color = true;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Updates the ship colors.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(PlayerShip), "UpdateShipColors")]
+    public static class PlayerShip_UpdateShipColors {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Prefix(ref MpTeam team, ref int glow_color, ref int decal_color) {
+            if (team == MpTeam.ANARCHY)
+                return;
+
+            glow_color = decal_color = Teams.TeamColorIdx(team);
+            team = MpTeam.ANARCHY; // prevent original team color assignment
+        }
+    }
+
 }

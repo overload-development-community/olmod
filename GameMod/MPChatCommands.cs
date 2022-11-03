@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using GameMod.Messages;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
@@ -750,12 +751,12 @@ namespace GameMod {
             if (inLobby && (selectedPlayerLobbyData != null)) {
                 // requesting a team switch in the lobby
                 ReturnTo(String.Format("manual TEAM SWITCH request for {0} by {1}",selectedPlayerEntry.name, senderEntry.name));
-                NetworkMatch.OnRequestSwitchTeam(selectedPlayerConnectionId, MPTeams.NextTeam(selectedPlayerLobbyData.m_team));
+                NetworkMatch.OnRequestSwitchTeam(selectedPlayerConnectionId, Teams.NextTeam(selectedPlayerLobbyData.m_team));
             } else if (!inLobby && (selectedPlayer != null)) {
                 // requesting a team switch in-game
                 ReturnTo(String.Format("manual TEAM SWITCH request for {0} by {1}",selectedPlayerEntry.name, senderEntry.name));
-                MPTeams.ChangeTeamMessage msg =  new MPTeams.ChangeTeamMessage { netId = selectedPlayer.netId, newTeam = MPTeams.NextTeam(selectedPlayer.m_mp_team) };
-                MPTeams_Server_RegisterHandlers.DoChangeTeam(msg);
+                ChangeTeamMessage msg =  new ChangeTeamMessage { netId = selectedPlayer.netId, newTeam = Teams.NextTeam(selectedPlayer.m_mp_team) };
+                ChangeTeamMessage.DoTeamChange(msg);
             } else {
                 ReturnToSender("SWITCHTEAM: did not find the player");
                 return false;

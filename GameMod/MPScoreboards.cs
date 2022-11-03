@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GameMod.Objects;
+using HarmonyLib;
 using Overload;
 using System;
 using System.Collections.Generic;
@@ -118,7 +119,7 @@ namespace GameMod
                 float col5 = 350f;  // Ping
                 MpTeam myTeam = GameManager.m_local_player.m_mp_team;
 
-                foreach (MpTeam team in MPTeams.TeamsByScore)
+                foreach (MpTeam team in Teams.TeamsByScore)
                 {
                     DrawTeamScore(uie, pos, team, NetworkMatch.GetTeamScore(team), 350f, GameManager.m_local_player.m_mp_team == myTeam);
                     pos.y += 35f;
@@ -134,8 +135,8 @@ namespace GameMod
             static void DrawTeamScore(UIElement uie, Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
             {
                 float m_alpha = (float)m_alpha_Field.GetValue(uie);
-                Color c = MPTeams.TeamColor(team, my_team ? 2 : 0);
-                Color color = MPTeams.TeamColor(team, my_team ? 4 : 2);
+                Color c = Teams.TeamColor(team, my_team ? 2 : 0);
+                Color color = Teams.TeamColor(team, my_team ? 4 : 2);
                 c.a = m_alpha;
                 if (my_team)
                     UIManager.DrawQuadBarHorizontal(pos, 18f, 18f, w * 2f, c, 7);
@@ -161,8 +162,8 @@ namespace GameMod
                     ? players[b].m_kills.CompareTo(players[a].m_kills)
                     : (players[a].m_assists != players[b].m_assists ? players[b].m_assists.CompareTo(players[a].m_assists) : players[a].m_deaths.CompareTo(players[b].m_deaths))
                 );
-                Color color = MPTeams.TeamColor(team, 4);
-                Color color2 = MPTeams.TeamColor(team, 1);
+                Color color = Teams.TeamColor(team, 4);
+                Color color2 = Teams.TeamColor(team, 1);
                 for (int j = 0; j < list.Count; j++)
                 {
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];
@@ -217,7 +218,7 @@ namespace GameMod
 
             public static bool DrawHUDScoreInfo(UIElement uie, Vector2 pos)
             {
-                if (!GameplayManager.IsMultiplayerActive || NetworkMatch.GetMode() == MatchMode.ANARCHY || MPTeams.NetworkMatchTeamCount == 2)
+                if (!GameplayManager.IsMultiplayerActive || NetworkMatch.GetMode() == MatchMode.ANARCHY || Teams.NetworkMatchTeamCount == 2)
                     return true;
 
                 pos.x -= 4f;
@@ -237,9 +238,9 @@ namespace GameMod
                 pos.y += 24f;
 
                 MpTeam myTeam = GameManager.m_local_player.m_mp_team;
-                foreach (var team in MPTeams.TeamsByScore)
+                foreach (var team in Teams.TeamsByScore)
                 {
-                    MPTeams.DrawTeamScoreSmall(uie, pos, team, NetworkMatch.GetTeamScore(team), 98f, team == myTeam);
+                    Teams.DrawTeamScoreSmall(uie, pos, team, NetworkMatch.GetTeamScore(team), 98f, team == myTeam);
                     pos.y += 28f;
                 }
                 pos.y += 6f - 28f;
@@ -278,7 +279,7 @@ namespace GameMod
             public static void DrawMpScoreboardRaw(UIElement uie, ref Vector2 pos)
             {
                 int i = 0;
-                foreach (var team in MPTeams.TeamsByScore)
+                foreach (var team in Teams.TeamsByScore)
                 {
                     DrawTeamScore(uie, ref pos, team, NetworkMatch.GetTeamScore(team), 350f, team == GameManager.m_local_player.m_mp_team);
                     pos.y += 35f;
@@ -299,8 +300,8 @@ namespace GameMod
 
             static void DrawTeamScore(UIElement uie, ref Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
             {
-                Color c = MPTeams.TeamColor(team, my_team ? 2 : 0);
-                Color color = MPTeams.TeamColor(team, my_team ? 4 : 2);
+                Color c = Teams.TeamColor(team, my_team ? 2 : 0);
+                Color color = Teams.TeamColor(team, my_team ? 4 : 2);
                 c.a = uie.m_alpha;
                 if (my_team)
                     UIManager.DrawQuadBarHorizontal(pos, 18f, 18f, w * 2f, c, 7);
@@ -340,7 +341,7 @@ namespace GameMod
                         ? players[b].m_kills.CompareTo(players[a].m_kills)
                         : (players[a].m_assists != players[b].m_assists ? players[b].m_assists.CompareTo(players[a].m_assists) : players[a].m_deaths.CompareTo(players[b].m_deaths))
                 );
-                Color color = MPTeams.TeamColor(team, team == GameManager.m_local_player.m_mp_team ? 2 : 0);
+                Color color = Teams.TeamColor(team, team == GameManager.m_local_player.m_mp_team ? 2 : 0);
                 for (int j = 0; j < list.Count; j++)
                 {
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];
@@ -565,7 +566,7 @@ namespace GameMod
             public static void DrawMpScoreboardRaw(UIElement uie, ref Vector2 pos)
             {
                 int i = 0;
-                foreach (var team in MPTeams.TeamsByScore)
+                foreach (var team in Teams.TeamsByScore)
                 {
                     DrawTeamScore(uie, ref pos, team, NetworkMatch.GetTeamScore(team), 350f, team == GameManager.m_local_player.m_mp_team);
                     pos.y += 35f;
@@ -586,8 +587,8 @@ namespace GameMod
 
             static void DrawTeamScore(UIElement uie, ref Vector2 pos, MpTeam team, int score, float w = 350f, bool my_team = false)
             {
-                Color c = MPTeams.TeamColor(team, my_team ? 2 : 0);
-                Color color = MPTeams.TeamColor(team, my_team ? 4 : 2);
+                Color c = Teams.TeamColor(team, my_team ? 2 : 0);
+                Color color = Teams.TeamColor(team, my_team ? 4 : 2);
                 c.a = uie.m_alpha;
                 if (my_team)
                     UIManager.DrawQuadBarHorizontal(pos, 18f, 18f, w * 2f, c, 7);
@@ -627,7 +628,7 @@ namespace GameMod
                         ? players[b].m_kills.CompareTo(players[a].m_kills)
                         : (players[a].m_assists != players[b].m_assists ? players[b].m_assists.CompareTo(players[a].m_assists) : players[a].m_deaths.CompareTo(players[b].m_deaths))
                 );
-                Color color = MPTeams.TeamColor(team, team == GameManager.m_local_player.m_mp_team ? 2 : 0);
+                Color color = Teams.TeamColor(team, team == GameManager.m_local_player.m_mp_team ? 2 : 0);
                 for (int j = 0; j < list.Count; j++)
                 {
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];

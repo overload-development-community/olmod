@@ -205,12 +205,12 @@ namespace GameMod {
 
         public static string GetMMSTeamColorSelf()
         {
-            return MPTeams.ColorName(mms_team_color_self);
+            return Teams.ColorName(mms_team_color_self);
         }
 
         public static string GetMMSTeamColorEnemy()
         {
-            return MPTeams.ColorName(mms_team_color_enemy);
+            return Teams.ColorName(mms_team_color_enemy);
         }
 
         public static void SetLagCompensationDefaults()
@@ -388,7 +388,7 @@ namespace GameMod {
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("FRIENDLY FIRE"), position, 3, MenuManager.GetMMSFriendlyFire(), string.Empty, 1.5f, MenuManager.mms_mode == MatchMode.ANARCHY);
                     position.y += 62f;
 
-                    __instance.SelectAndDrawStringOptionItem("TEAM COUNT", position, 8, MPTeams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f,
+                    __instance.SelectAndDrawStringOptionItem("TEAM COUNT", position, 8, Teams.MenuManagerTeamCount.ToString(), string.Empty, 1.5f,
                         MenuManager.mms_mode == MatchMode.ANARCHY || !MenuManager.m_mp_lan_match);
                     position.y += 62f;
 
@@ -559,9 +559,9 @@ namespace GameMod {
                         MenuManager.PlayCycleSound(1f, 1f);
                         break;
                     case 8:
-                        MPTeams.MenuManagerTeamCount = MPTeams.Min +
-                            (MPTeams.MenuManagerTeamCount - MPTeams.Min + (MPTeams.Max - MPTeams.Min + 1) + UIManager.m_select_dir) %
-                            (MPTeams.Max - MPTeams.Min + 1);
+                        Teams.MenuManagerTeamCount = Teams.Min +
+                            (Teams.MenuManagerTeamCount - Teams.Min + (Teams.Max - Teams.Min + 1) + UIManager.m_select_dir) %
+                            (Teams.Max - Teams.Min + 1);
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                     case 12:
@@ -963,21 +963,21 @@ namespace GameMod {
                                     case 1:
                                         Menus.mms_team_color_default = !Menus.mms_team_color_default;
                                         MenuManager.PlaySelectSound(1f);
-                                        MPTeams.UpdateClientColors();
+                                        Teams.UpdateClientColors();
                                         break;
                                     case 2:
                                         Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                                         if (Menus.mms_team_color_self == Menus.mms_team_color_enemy)
                                             Menus.mms_team_color_self = (Menus.mms_team_color_self + 9 + UIManager.m_select_dir) % 9;
                                         MenuManager.PlaySelectSound(1f);
-                                        MPTeams.UpdateClientColors();
+                                        Teams.UpdateClientColors();
                                         break;
                                     case 3:
                                         Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
                                         if (Menus.mms_team_color_enemy == Menus.mms_team_color_self)
                                             Menus.mms_team_color_enemy = (Menus.mms_team_color_enemy + 9 + UIManager.m_select_dir) % 9;
                                         MenuManager.PlaySelectSound(1f);
-                                        MPTeams.UpdateClientColors();
+                                        Teams.UpdateClientColors();
                                         break;
                                     case 4:
                                         Menus.mms_team_health = !Menus.mms_team_health;
@@ -1215,9 +1215,9 @@ namespace GameMod {
 
             // Specifying colors gets a bit goofy when using relative us/enemy assignments
             string selection;
-            if (MPTeams.NetworkMatchTeamCount > 2)
+            if (Teams.NetworkMatchTeamCount > 2)
             {
-                selection = MPTeams.TeamName(Menus.mms_team_selection ?? GameManager.m_local_player.m_mp_team);
+                selection = Teams.TeamName(Menus.mms_team_selection ?? GameManager.m_local_player.m_mp_team);
             }
             else
             {
@@ -1252,7 +1252,7 @@ namespace GameMod {
         {
             if (UIManager.m_menu_selection == 13)
             {
-                Menus.mms_team_selection = MPTeams.NextTeam(Menus.mms_team_selection ?? GameManager.m_local_player.m_mp_team);
+                Menus.mms_team_selection = Teams.NextTeam(Menus.mms_team_selection ?? GameManager.m_local_player.m_mp_team);
                 MenuManager.PlaySelectSound(1f);
             }
         }
@@ -1295,7 +1295,7 @@ namespace GameMod {
 
             if (Menus.mms_team_selection.HasValue && Menus.mms_team_selection != GameManager.m_local_player.m_mp_team)
             {
-                Client.GetClient().Send(MessageTypes.MsgChangeTeam, new MPTeams.ChangeTeamMessage { netId = GameManager.m_local_player.netId, newTeam = Menus.mms_team_selection.Value });
+                Client.GetClient().Send(MessageTypes.MsgChangeTeam, new ChangeTeamMessage { netId = GameManager.m_local_player.netId, newTeam = Menus.mms_team_selection.Value });
             }
         }
     }

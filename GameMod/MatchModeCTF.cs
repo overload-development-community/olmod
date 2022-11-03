@@ -71,12 +71,12 @@ namespace GameMod {
 
         public static Color FlagColor(int teamIdx)
         {
-            return MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], teamIdx == 1 ? 2 : 3); // make orange a bit darker
+            return Teams.TeamColor(Teams.AllTeams[teamIdx], teamIdx == 1 ? 2 : 3); // make orange a bit darker
         }
 
         public static Color FlagColorUI(int teamIdx)
         {
-            return MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], 1);
+            return Teams.TeamColor(Teams.AllTeams[teamIdx], 1);
         }
 
         private static void SendToClientOrAll(int conn_id, short msg_type, MessageBase msg)
@@ -186,7 +186,7 @@ namespace GameMod {
             int[] posCount = new int[TeamCount];
             foreach (var x in GameObject.FindObjectsOfType<MonsterBallGoal>())
             {
-                int flag = MPTeams.TeamNum(x.m_team);
+                int flag = Teams.TeamNum(x.m_team);
                 if (flag < 0 || flag >= TeamCount)
                     continue;
                 var box = x.gameObject.GetComponent<BoxCollider>();
@@ -197,7 +197,7 @@ namespace GameMod {
             {
                 if (posCount[flag] == 0)
                 {
-                    Debug.Log("CTF: No goal found for team " + MPTeams.AllTeams[flag]);
+                    Debug.Log("CTF: No goal found for team " + Teams.AllTeams[flag]);
                 }
                 else
                 {
@@ -256,7 +256,7 @@ namespace GameMod {
 
             if (flag < 0 || flag >= FlagObjs.Count)
                 return false;
-            var ownFlag = MPTeams.AllTeams[flag] == player.m_mp_team;
+            var ownFlag = Teams.AllTeams[flag] == player.m_mp_team;
             if  (ownFlag && FlagStates[flag] == FlagState.HOME)
             {
                 if (CTF.PlayerHasFlag.ContainsKey(player.netId))
@@ -292,8 +292,8 @@ namespace GameMod {
             var msg = evt == CTFEvent.RETURN ? "{0} RETURNS THE {2} FLAG!" :
                 currentState == FlagState.HOME ? "{0} ({1}) PICKS UP THE {2} FLAG!" :
                 "{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!";
-            CTF.NotifyAll(evt, string.Format(Loc.LS(msg), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
-                MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
+            CTF.NotifyAll(evt, string.Format(Loc.LS(msg), player.m_mp_name, Teams.TeamName(player.m_mp_team),
+                Teams.TeamName(Teams.AllTeams[flag])), player, flag);
             if (FlagReturnTimer[flag] != null)
             {
                 GameManager.m_gm.StopCoroutine(FlagReturnTimer[flag]);
@@ -352,7 +352,7 @@ namespace GameMod {
         public static void UpdateFlagColor(GameObject flag, int teamIdx)
         {
             Color c1 = CTF.FlagColor(teamIdx);
-            var lightColor = MPTeams.TeamColor(MPTeams.AllTeams[teamIdx], 5);
+            var lightColor = Teams.TeamColor(Teams.AllTeams[teamIdx], 5);
             foreach (var rend in flag.GetComponentsInChildren<MeshRenderer>())
             {
                 rend.sharedMaterial.SetColor("_Color", c1);
@@ -392,7 +392,7 @@ namespace GameMod {
             Debug.Log("CTF.NotifyAll " + evt);
             NetworkServer.SendToAll(MessageTypes.MsgCTFNotify, new CTFNotifyMessage { m_event = evt, m_message = message,
                 m_player_id = player == null ? default(NetworkInstanceId) : player.netId, m_flag_id = flag });
-            LogEvent(evt, player, MPTeams.AllTeams[flag]);
+            LogEvent(evt, player, Teams.AllTeams[flag]);
         }
 
         public static void Score(Player player)
@@ -400,7 +400,7 @@ namespace GameMod {
             if (NetworkMatch.m_postgame) {
                 return;
             }
-            if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[MPTeams.TeamNum(player.m_mp_team)] != FlagState.HOME) {
+            if (!PlayerHasFlag.TryGetValue(player.netId, out int flag) || FlagStates[Teams.TeamNum(player.m_mp_team)] != FlagState.HOME) {
                 return;
             }
             PlayerHasFlag.Remove(player.netId);
@@ -417,8 +417,8 @@ namespace GameMod {
 
             NetworkMatch.AddPointForTeam(player.m_mp_team);
 
-            NotifyAll(CTFEvent.SCORE, string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
-                MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
+            NotifyAll(CTFEvent.SCORE, string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, Teams.TeamName(player.m_mp_team),
+                Teams.TeamName(Teams.AllTeams[flag])), player, flag);
         }
 
         public static IEnumerator CreateReturnTimer(int flag)
@@ -433,7 +433,7 @@ namespace GameMod {
                 yield break;
             }
 
-            NotifyAll(CTFEvent.RETURN, string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[flag])), null, flag);
+            NotifyAll(CTFEvent.RETURN, string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), Teams.TeamName(Teams.AllTeams[flag])), null, flag);
             FlagReturnTimer[flag] = null;
         }
 
@@ -445,7 +445,7 @@ namespace GameMod {
                 player.c_player_ship.m_boost_overheat_timer = 0;
                 player.c_player_ship.m_boost_heat = 0;
             }
-            NotifyAll(CTFEvent.DROP, string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team), MPTeams.TeamName(MPTeams.AllTeams[flag])), player, flag);
+            NotifyAll(CTFEvent.DROP, string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, Teams.TeamName(player.m_mp_team), Teams.TeamName(Teams.AllTeams[flag])), player, flag);
             if (FlagReturnTimer[flag] != null)
                 GameManager.m_gm.StopCoroutine(FlagReturnTimer[flag]);
             GameManager.m_gm.StartCoroutine(FlagReturnTimer[flag] = CreateReturnTimer(flag));
@@ -520,15 +520,15 @@ namespace GameMod {
             {
                 var pickedupTeamIdx = 1 - flag;
                 UIManager.DrawSpriteUIRotated(pos, 0.4f, 0.4f, Mathf.PI / 2f,
-                    MPTeams.TeamColor(MPTeams.AllTeams[pickedupTeamIdx], 4), m_alpha, (int)AtlasIndex0.RING_MED0);
+                    Teams.TeamColor(Teams.AllTeams[pickedupTeamIdx], 4), m_alpha, (int)AtlasIndex0.RING_MED0);
 
                 UIManager.DrawSpriteUIRotated(pos, 0.18f, 0.18f, Mathf.PI / 2f,
-                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * 0.5f, m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+                    Teams.TeamColor(Teams.AllTeams[flag], 4) * 0.5f, m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
             }
             else
             {
                 UIManager.DrawSpriteUIRotated(pos, 0.3f, 0.3f, Mathf.PI / 2f,
-                    MPTeams.TeamColor(MPTeams.AllTeams[flag], 4) * (state == FlagState.LOST ? 0.2f : 1f), m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
+                    Teams.TeamColor(Teams.AllTeams[flag], 4) * (state == FlagState.LOST ? 0.2f : 1f), m_alpha, (int)AtlasIndex0.ICON_SECURITY_KEY1);
                 if (state == FlagState.LOST && CTF.ShowReturnTimer)
                 {
                     pos.y += 32f;
@@ -536,7 +536,7 @@ namespace GameMod {
                     float t = CTF.FlagReturnTime[flag] - Time.time + 1f; // 'round up'
                     if (t < 0)
                         t = 0;
-                    uie.DrawDigitsTimeNoHours(pos, t, 0.45f, MPTeams.TeamColor(MPTeams.AllTeams[flag], 4), m_alpha);
+                    uie.DrawDigitsTimeNoHours(pos, t, 0.45f, Teams.TeamColor(Teams.AllTeams[flag], 4), m_alpha);
                 }
             }
         }
@@ -646,7 +646,7 @@ namespace GameMod {
                 GameObject flag = UnityEngine.Object.Instantiate(prefab, Vector3.zero, Quaternion.identity);
                 UnityEngine.Object.Destroy(flag.GetChildByName("cloak_ball (1)"));
                 var color = CTF.FlagColor(i);
-                var lightColor = MPTeams.TeamColor(MPTeams.AllTeams[i], 5);
+                var lightColor = Teams.TeamColor(Teams.AllTeams[i], 5);
                 Material newMat = null;
                 var keyA2 = UnityEngine.Object.Instantiate(prefabkeyA2, flag.transform);
                 foreach (var rend in keyA2.GetComponentsInChildren<MeshRenderer>())
@@ -797,7 +797,7 @@ namespace GameMod {
                 return;
 
             CTF.PlayerStats[attacker.netId].CarrierKills++;
-            Tracker.AddFlagEvent(attacker, "CarrierKill", MPTeams.AllTeams[flag]);
+            Tracker.AddFlagEvent(attacker, "CarrierKill", Teams.AllTeams[flag]);
             NetworkServer.SendToAll(MessageTypes.MsgCTFPlayerStats, new CTF.PlayerStatesMessage() { m_player_states = CTF.PlayerStats });
         }
     }
@@ -960,33 +960,33 @@ namespace GameMod {
                     switch (msg.m_event)
                     {
                         case CTFEvent.SCORE:
-                            message = string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
-                                MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            message = string.Format(Loc.LS("{0} ({1}) CAPTURES THE {2} FLAG!"), player.m_mp_name, Teams.TeamName(player.m_mp_team),
+                                Teams.TeamName(Teams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
                             break;
                         case CTFEvent.RETURN:
                             if (msg.m_player_id == null || msg.m_player_id == default(NetworkInstanceId))
                             {
-                                message = string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]));
+                                message = string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), Teams.TeamName(Teams.AllTeams[msg.m_flag_id]));
                             }
                             else
                             {
-                                message = string.Format(Loc.LS("{0} RETURNS THE {1} FLAG!"), player.m_mp_name, MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]));
+                                message = string.Format(Loc.LS("{0} RETURNS THE {1} FLAG!"), player.m_mp_name, Teams.TeamName(Teams.AllTeams[msg.m_flag_id]));
                             }
                             break;
                         case CTFEvent.PICKUP:
                             var currentState = CTF.FlagStates[msg.m_flag_id];
                             if (currentState == FlagState.HOME)
                             {
-                                message = string.Format(Loc.LS("{0} ({1}) PICKS UP THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
-                                    MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                                message = string.Format(Loc.LS("{0} ({1}) PICKS UP THE {2} FLAG!"), player.m_mp_name, Teams.TeamName(player.m_mp_team),
+                                    Teams.TeamName(Teams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
                             } else
                             {
-                                message = message = string.Format(Loc.LS("{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
-                                    MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                                message = message = string.Format(Loc.LS("{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!"), player.m_mp_name, Teams.TeamName(player.m_mp_team),
+                                    Teams.TeamName(Teams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
                             }
                             break;
                         case CTFEvent.DROP:
-                            message = string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            message = string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, Teams.TeamName(player.m_mp_team), Teams.TeamName(Teams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
                             break;
                     }
                 }
@@ -1072,11 +1072,11 @@ namespace GameMod {
             var org_mat = UIManager.gm.m_pull_material; //UIManager.gm.m_damage_material; //UIManager.gm.m_pull_material;
             for (int i = 0; i < CTF.TeamCount; i++)
             {
-                var team = MPTeams.AllTeams[i];
+                var team = Teams.AllTeams[i];
                 var mat = new Material(org_mat.shader);
                 mat.CopyPropertiesFromMaterial(org_mat);
-                mat.SetColor("_EdgeColor", MPTeams.TeamColor(team, 0));
-                //mat.SetColor("_GlowColor", MPTeams.TeamColor(team, 0));
+                mat.SetColor("_EdgeColor", Teams.TeamColor(team, 0));
+                //mat.SetColor("_GlowColor", Teams.TeamColor(team, 0));
                 mats[i] = mat;
             }
         }
@@ -1101,7 +1101,7 @@ namespace GameMod {
         {
             if (NetworkMatch.GetMode() != CTF.MatchModeCTF)
                 return true;
-            __result = MPTeams.HighestScore();
+            __result = Teams.HighestScore();
             return false;
         }
     }

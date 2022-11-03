@@ -16,7 +16,7 @@ namespace GameMod {
         public static void Postfix()
         {
             MPDownloadLevel.Reset();
-            MPTeams.NetworkMatchTeamCount = 2;
+            Teams.NetworkMatchTeamCount = 2;
             MPJoinInProgress.NetworkMatchEnabled = false;
             RearView.MPNetworkMatchEnabled = false;
             MPSuddenDeath.SuddenDeathMatchEnabled = false;
@@ -37,7 +37,7 @@ namespace GameMod {
             }
             else
             {
-                MPTeams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
+                Teams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
                 MPJoinInProgress.NetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 8) != 0;
                 RearView.MPNetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 16) != 0;
                 MPSuddenDeath.SuddenDeathMatchEnabled = (NetworkMatch.m_name[i + 1] & 32) != 0;
@@ -72,12 +72,12 @@ namespace GameMod {
         static void Postfix(PrivateMatchDataMessage __result)
         {
             Debug.Log("Build PMD name jipsingle " + MPJoinInProgress.SingleMatchEnable);
-            if ((MPTeams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable || RearView.MPMenuManagerEnabled ||
+            if ((Teams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable || RearView.MPMenuManagerEnabled ||
                 MPSuddenDeath.SuddenDeathMenuEnabled) &&
                 MenuManager.m_mp_lan_match)
             {
                 __result.m_name += new string(new char[] { '\0', (char)(
-                    ((Math.Max(2, MPTeams.MenuManagerTeamCount) - 2) & 7) |
+                    ((Math.Max(2, Teams.MenuManagerTeamCount) - 2) & 7) |
                     (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 8 : 0) |
                     (RearView.MPMenuManagerEnabled ? 16 : 0) |
                     (MPSuddenDeath.SuddenDeathMenuEnabled ? 32 : 0))});
@@ -96,7 +96,7 @@ namespace GameMod {
     {
         public static void Postfix()
         {
-            MPTeams.MenuManagerTeamCount = 2;
+            Teams.MenuManagerTeamCount = 2;
             MPJoinInProgress.MenuManagerEnabled = false;
             RearView.MPMenuManagerEnabled = false;
             MPSuddenDeath.SuddenDeathMenuEnabled = false;
@@ -221,7 +221,7 @@ namespace GameMod {
         {
             if (ModPrefs.Load(filename + "mod"))
             {
-                MPTeams.MenuManagerTeamCount = ModPrefs.GetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
+                Teams.MenuManagerTeamCount = ModPrefs.GetInt("MP_PM_TEAM_COUNT", Teams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
                 RearView.MPMenuManagerEnabled = ModPrefs.GetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
                 RearView.MenuManagerEnabled = ModPrefs.GetBool("O_PM_REARVIEW", RearView.MenuManagerEnabled);
@@ -287,7 +287,7 @@ namespace GameMod {
             }
             else // for compatibility with old olmod, no need to add new settings
             {
-                MPTeams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
+                Teams.MenuManagerTeamCount = MenuManager.LocalGetInt("MP_PM_TEAM_COUNT", Teams.MenuManagerTeamCount);
                 MPJoinInProgress.MenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
                 RearView.MPMenuManagerEnabled = MenuManager.LocalGetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
                 Console.KeyEnabled = MenuManager.LocalGetBool("O_CONSOLE_KEY", Console.KeyEnabled);
@@ -312,7 +312,7 @@ namespace GameMod {
             lastXP = MenuManager.LocalGetInt("PS_XP2", 0);
 
             ModPrefs.DeleteAll();
-            ModPrefs.SetInt("MP_PM_TEAM_COUNT", MPTeams.MenuManagerTeamCount);
+            ModPrefs.SetInt("MP_PM_TEAM_COUNT", Teams.MenuManagerTeamCount);
             ModPrefs.SetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
             ModPrefs.SetBool("O_PM_REARVIEW", RearView.MenuManagerEnabled);

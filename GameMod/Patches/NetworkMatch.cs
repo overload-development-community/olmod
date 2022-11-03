@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Messages;
 using GameMod.Metadata;
@@ -48,13 +49,126 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
-    /// Initialize the tweaks before each match.
+    /// Gets the highest team score in a monsterball match.
     /// </summary>
-    [Mod(Mods.Tweaks)]
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(NetworkMatch), "GetHighestScorePowercore")]
+    public static class NetworkMatch_GetHighestScorePowercore {
+        public static bool Prefix(ref int __result) {
+            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || Teams.NetworkMatchTeamCount == 2)
+                return true;
+            __result = Teams.HighestScore();
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Gets the highest team score in a team anarchy match.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(NetworkMatch), "GetHighestScoreTeamAnarchy")]
+    public static class NetworkMatch_GetHighestScoreTeamAnarchy {
+        public static bool Prefix(ref int __result) {
+            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || Teams.NetworkMatchTeamCount == 2)
+                return true;
+            __result = Teams.HighestScore();
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Gets the team name.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(NetworkMatch), "GetTeamName")]
+    public static class NetworkMatch_GetTeamName {
+        public static bool Prefix(MpTeam team, ref string __result) {
+            __result = Teams.TeamName(team);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Allows game to start even if teams are severely unbalanced.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch]
+    public static class NetworkMatch_HostActiveMatchInfo_CanStartNow {
+        public static MethodBase TargetMethod() {
+            return typeof(NetworkMatch).GetNestedType("HostActiveMatchInfo", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetMethod("CanStartNow", BindingFlags.Public | BindingFlags.Instance);
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> cs) {
+            foreach (var c in cs) {
+                if (c.opcode == OpCodes.Ldsfld && ((FieldInfo)c.operand).Name == "m_match_mode") {
+                    var c2 = new CodeInstruction(OpCodes.Ldc_I4_1) { labels = c.labels };
+                    yield return c2;
+                    yield return new CodeInstruction(OpCodes.Ret);
+                    c.labels = null;
+                }
+                yield return c;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resets the team scores at the start of the game.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(NetworkMatch), "Init")]
+    public static class NetworkMatch_Init {
+        public static void Prefix() {
+            NetworkMatch.m_team_scores = new int[(int)Teams.MPTEAM_NUM];
+        }
+    }
+
+    /// <summary>
+    /// Initialize the tweaks before each match, and resets the team scores.
+    /// </summary>
+    [Mod(new Mods[] { Mods.Teams, Mods.Tweaks })]
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
     public static class NetworkMatch_InitBeforeEachMatch {
         public static void Postfix() {
             Tweaks.InitMatch();
+
+            for (int i = 0, l = NetworkMatch.m_team_scores.Length; i < l; i++)
+                NetworkMatch.m_team_scores[i] = 0;
+        }
+    }
+
+    /// <summary>
+    /// Balances teams when new players join.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(NetworkMatch), "NetSystemGetTeamForPlayer")]
+    public static class NetworkMatch_NetSystemGetTeamForPlayer {
+        public static bool Prefix(ref MpTeam __result, int connection_id) {
+            if (!NetworkMatch.IsTeamMode(NetworkMatch.GetMode())) {
+                __result = MpTeam.ANARCHY;
+                return false;
+            }
+            if (NetworkMatch.GetMode() == MatchMode.ANARCHY || (Teams.NetworkMatchTeamCount == 2 &&
+                !MPJoinInProgress.NetworkMatchEnabled)) // use this simple balancing method for JIP to hopefully solve JIP team imbalances
+                return true;
+            if (NetworkMatch.m_players.TryGetValue(connection_id, out var connPlayer)) // keep team if player already exists (when called from OnUpdateGameSession)
+            {
+                __result = connPlayer.m_team;
+                return false;
+            }
+            int[] team_counts = new int[(int)Teams.MPTEAM_NUM];
+            foreach (var player in NetworkMatch.m_players.Values)
+                team_counts[(int)player.m_team]++;
+            MpTeam min_team = MpTeam.TEAM0;
+            foreach (var team in Teams.GetTeams)
+                if (team_counts[(int)team] < team_counts[(int)min_team] ||
+                    (team_counts[(int)team] == team_counts[(int)min_team] &&
+                        NetworkMatch.m_team_scores[(int)team] < NetworkMatch.m_team_scores[(int)min_team]))
+                    min_team = team;
+            __result = min_team;
+            Debug.LogFormat("GetTeamForPlayer: result {0}, conn {1}, counts {2}, scores {3}", (int)min_team, connection_id,
+                team_counts.Join(), NetworkMatch.m_team_scores.Join());
+            return false;
         }
     }
 
@@ -130,9 +244,9 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
-    /// Reports the start of the game to the tracker.
+    /// Reports the start of the game to the tracker, and resets the team scores.
     /// </summary>
-    [Mod(Mods.Tracker)]
+    [Mod(new Mods[] { Mods.Teams, Mods.Tracker })]
     [HarmonyPatch(typeof(NetworkMatch), "StartPlaying")]
     public static class NetworkMatch_StartPlaying {
         public static bool Prepare() {
@@ -140,9 +254,12 @@ namespace GameMod.Patches {
         }
 
         public static void Prefix() {
-            if (!NetworkManager.IsHeadless())
-                return;
-            Tracker.StartGame();
+            if (NetworkManager.IsHeadless()) {
+                Tracker.StartGame();
+            }
+
+            for (int i = 0, l = NetworkMatch.m_team_scores.Length; i < l; i++)
+                NetworkMatch.m_team_scores[i] = 0;
         }
     }
 

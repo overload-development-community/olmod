@@ -65,7 +65,7 @@ namespace GameMod
                 allowSmash = Menus.mms_allow_smash,
                 damageNumbers = Menus.mms_damage_numbers,
                 assistScoring = Menus.mms_assist_scoring,
-                teamCount = MPTeams.MenuManagerTeamCount,
+                teamCount = Teams.MenuManagerTeamCount,
                 thunderboltPassthrough = ThunderboltPassthrough.Enabled
             });
 
@@ -226,7 +226,7 @@ namespace GameMod
                 Menus.mms_allow_smash = this.allowSmash;
                 Menus.mms_damage_numbers = this.damageNumbers;
                 Menus.mms_assist_scoring = this.assistScoring;
-                MPTeams.MenuManagerTeamCount = this.teamCount;
+                Teams.MenuManagerTeamCount = this.teamCount;
                 ThunderboltPassthrough.Enabled = this.thunderboltPassthrough;
             }
         }

@@ -9,6 +9,36 @@ using UnityEngine;
 
 namespace GameMod.Patches {
     /// <summary>
+    /// Gets the team name.
+    /// </summary>
+    [Mod(new Mods[] { Mods.CustomTeamColors, Mods.Teams })]
+    [HarmonyPatch(typeof(MenuManager), "GetMpTeamName")]
+    public static class MenuManager_GetMpTeamName {
+        public static bool Prefix(MpTeam team, ref string __result) {
+            if (!GameplayManager.IsMultiplayerActive) {
+                switch (team) {
+                    case MpTeam.TEAM0:
+                        __result = Loc.LS("BLUE TEAM / TEAM 1");
+                        break;
+                    case MpTeam.TEAM1:
+                        __result = Loc.LS("ORANGE TEAM / TEAM 2");
+                        break;
+                    case MpTeam.ANARCHY:
+                        __result = Loc.LS("ANARCHY");
+                        break;
+                    default:
+                        __result = Loc.LS("UNKNOWN");
+                        break;
+                }
+            } else {
+                __result = Teams.TeamName(team) + " TEAM";
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Stock game shows 60/30hz for what is actually "full/half" sync rates in Unity, simply change labels
     /// </summary>
     [Mod(Mods.VSync)]
@@ -76,6 +106,36 @@ namespace GameMod.Patches {
                 if (MenuManager.m_menu_micro_state != 2) {
                     PresetData.UpdateLobbyStatus();
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reduces the wait time to switch teams.
+    /// </summary>
+    [Mod(Mods.Teams)]
+    [HarmonyPatch(typeof(MenuManager), "MpPreMatchMenuUpdate")]
+    public static class MenuManager_MpPreMatchMenuUpdate {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+            var mpTeams_NextTeam_Method = AccessTools.Method(typeof(Teams), "NextTeam");
+
+            for (var codes = instructions.GetEnumerator(); codes.MoveNext();) {
+                var code = codes.Current;
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 3f) // reduce team switch wait time
+                    code.operand = 0.2f;
+                if (code.opcode == OpCodes.Ldfld && ((FieldInfo)code.operand).Name == "m_team") {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Call, mpTeams_NextTeam_Method);
+                    // skip until RequestSwitchTeam call
+                    while (codes.MoveNext() && codes.Current.opcode != OpCodes.Call)
+                        ;
+                    code = codes.Current;
+                }
+                yield return code;
             }
         }
     }

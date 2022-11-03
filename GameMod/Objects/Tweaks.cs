@@ -87,7 +87,7 @@ namespace GameMod.Objects {
         /// <returns></returns>
         public static bool MatchNeedsMod() {
             return (int)NetworkMatch.GetMode() > (int)MatchMode.TEAM_ANARCHY ||
-                (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && MPTeams.NetworkMatchTeamCount > 2) ||
+                (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && Teams.NetworkMatchTeamCount > 2) ||
                 MPClassic.matchEnabled || MPModPrivateData.ClassicSpawnsEnabled;
         }
     }

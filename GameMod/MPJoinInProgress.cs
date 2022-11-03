@@ -332,7 +332,7 @@ namespace GameMod {
         private static void SendMatchState(int connectionId)
         {
             if (NetworkMatch.IsTeamMode(NetworkMatch.GetMode()))
-                foreach (var team in MPTeams.ActiveTeams)
+                foreach (var team in Teams.ActiveTeams)
                     NetworkServer.SendToClient(connectionId, CustomMsgType.SetScoreForTeam, new ScoreForTeamMessage
                     {
                         team = (int)team,
