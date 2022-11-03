@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Messages;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -17,7 +18,7 @@ namespace GameMod
         public static List<ArenaSpawn> spawns = new List<ArenaSpawn>();
         public static List<RobotManager.MultiplayerSpawnableWeapon> initialWeapons = new List<RobotManager.MultiplayerSpawnableWeapon>();
         public static List<RobotManager.MultiplayerSpawnableMissile> initialMissiles = new List<RobotManager.MultiplayerSpawnableMissile>();
-        public static List<MPTags.MultiplayerSpawnablePowerup> initialPowerups = new List<MPTags.MultiplayerSpawnablePowerup>();
+        public static List<BasicPowerupSpawns.MultiplayerSpawnablePowerup> initialPowerups = new List<BasicPowerupSpawns.MultiplayerSpawnablePowerup>();
         public static ItemPrefab GetPrefabFromType(ItemType itemType)
         {
             switch (itemType)
@@ -219,10 +220,10 @@ namespace GameMod
                 else if (selected > 0 && selected > 100)
                 {
                     // Powerup
-                    var pt = (MPTags.PowerupType)selected - 100;
+                    var pt = (BasicPowerupSpawns.PowerupType)selected - 100;
                     switch (pt)
                     {
-                        case MPTags.PowerupType.ALIENORB:
+                        case BasicPowerupSpawns.PowerupType.ALIENORB:
                             flag |= player.AddArmor(GameplayManager.dl_powerup_shields[GameplayManager.DifficultyLevel] * 0.5f, true, false);
                             flag |= player.AddEnergy(GameplayManager.dl_powerup_energy[GameplayManager.DifficultyLevel] * 0.25f, true, false);
                             flag |= player.AddAmmo((int)(GameplayManager.dl_powerup_ammo[GameplayManager.DifficultyLevel] * 0.2f), true, false, false);
@@ -231,13 +232,13 @@ namespace GameMod
                                 player.CallTargetAddHUDMessage(player.connectionToClient, Loc.LSN("ARMOR, ENERGY, AND AMMO INCREASED"), -1, false);
                             }
                             break;
-                        case MPTags.PowerupType.AMMO:
+                        case BasicPowerupSpawns.PowerupType.AMMO:
                             flag = player.AddAmmo((!super) ? 50 : 1000, false, super, false);
                             break;
-                        case MPTags.PowerupType.ENERGY:
+                        case BasicPowerupSpawns.PowerupType.ENERGY:
                             flag = player.AddEnergy(GameplayManager.dl_powerup_energy[GameplayManager.DifficultyLevel], false, false);
                             break;
-                        case MPTags.PowerupType.HEALTH:
+                        case BasicPowerupSpawns.PowerupType.HEALTH:
                             flag = player.AddArmor(GameplayManager.dl_powerup_shields[GameplayManager.DifficultyLevel], false, false);
                             break;
                         default:
@@ -415,7 +416,7 @@ namespace GameMod
             Race.initialPowerups.Clear();
             RobotManager.m_multiplayer_spawnable_weapons.ForEach(x => Race.initialWeapons.Add(new RobotManager.MultiplayerSpawnableWeapon { type = x.type, count = x.count, percent = x.percent }));
             RobotManager.m_multiplayer_spawnable_missiles.ForEach(x => Race.initialMissiles.Add(new RobotManager.MultiplayerSpawnableMissile { type = x.type, percent = x.percent }));
-            MPTags.m_multiplayer_spawnable_powerups.ForEach(x => Race.initialPowerups.Add(new MPTags.MultiplayerSpawnablePowerup { type = x.type, percent = x.percent }));
+            BasicPowerupSpawns.m_multiplayer_spawnable_powerups.ForEach(x => Race.initialPowerups.Add(new BasicPowerupSpawns.MultiplayerSpawnablePowerup { type = x.type, percent = x.percent }));
         }
     }
 

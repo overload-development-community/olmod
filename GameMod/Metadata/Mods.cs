@@ -1,6 +1,12 @@
 ﻿namespace GameMod.Metadata {
     internal enum Mods {
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Allows map makers to specify how basic powerups spawn in multiplayer games.
+        /// </summary>
+        BasicPowerupSpawns,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Adds custom music support.
         /// </summary>

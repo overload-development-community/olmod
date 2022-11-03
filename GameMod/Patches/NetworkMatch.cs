@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Messages;
@@ -138,6 +139,115 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Changes the original algorithm for basic powerup spawns, if the map implemented it.
+    /// </summary>
+    [Mod(Mods.BasicPowerupSpawns)]
+    [HarmonyPatch(typeof(NetworkMatch), "MaybeSpawnPowerup")]
+    public static class NetworkMatch_MaybeSpawnPowerup {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        private static ItemPrefab PowerupTypeToPrefab(BasicPowerupSpawns.PowerupType pt) {
+            switch (pt) {
+                case BasicPowerupSpawns.PowerupType.HEALTH:
+                    return ItemPrefab.entity_item_shields;
+                case BasicPowerupSpawns.PowerupType.ENERGY:
+                    return ItemPrefab.entity_item_energy;
+                case BasicPowerupSpawns.PowerupType.AMMO:
+                    return ItemPrefab.entity_item_ammo;
+                case BasicPowerupSpawns.PowerupType.ALIENORB:
+                    return ItemPrefab.entity_item_alien_orb;
+                default:
+                    return ItemPrefab.none;
+            }
+        }
+
+        public static ItemPrefab RandomBasicSpawn() {
+            if (BasicPowerupSpawns.m_multiplayer_spawnable_powerups.Count > 0) {
+                // Somewhat ugly but consistent/based on NetworkMatch.RandomAllowedMissileSpawn()
+                // New algorithm
+                float[] array = new float[4];
+                for (int i = 0; i < BasicPowerupSpawns.m_multiplayer_spawnable_powerups.Count; i++) {
+                    BasicPowerupSpawns.PowerupType type = (BasicPowerupSpawns.PowerupType)BasicPowerupSpawns.m_multiplayer_spawnable_powerups[i].type;
+                    array[(int)type] = BasicPowerupSpawns.m_multiplayer_spawnable_powerups[i].percent;
+                }
+                float num = 0f;
+                for (int j = 0; j < 4; j++) {
+                    num += array[j];
+                }
+
+                if (num > 0f) {
+                    for (int k = 0; k < 4; k++) {
+                        array[k] /= num;
+                    }
+                    float num2 = UnityEngine.Random.Range(0f, 1f);
+                    float num3 = 0f;
+                    for (int l = 0; l < 4; l++) {
+                        if (num2 < num3 + array[l]) {
+                            return PowerupTypeToPrefab((BasicPowerupSpawns.PowerupType)l);
+                        }
+                        num3 += array[l];
+                    }
+                    Debug.Log("We had valid powerups, but couldn't choose one when spawning it");
+                    return ItemPrefab.num;
+                }
+            } else {
+                // Original algorithm
+                int num = UnityEngine.Random.Range(0, 4);
+                if (NetworkMatch.AnyPlayersHaveAmmoWeapons()) {
+                    num = UnityEngine.Random.Range(0, 5);
+                }
+                switch (num) {
+                    case 1:
+                    case 2:
+                        return ItemPrefab.entity_item_energy;
+                    case 3:
+                    case 4:
+                        return ItemPrefab.entity_item_ammo;
+                    default:
+                        return ItemPrefab.entity_item_shields;
+                }
+            }
+
+            return ItemPrefab.num;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+            List<CodeInstruction> codes = instructions.ToList();
+            int m_spawn_basic_timer_index = -1;
+            int removeStart = -1;
+            int removeEnd = -1;
+
+            for (int i = 0; i < codes.Count; i++) {
+                if (codes[i].operand == AccessTools.Field(typeof(NetworkMatch), "m_spawn_basic_timer"))
+                    m_spawn_basic_timer_index++;
+
+                if (codes[i].opcode == OpCodes.Ldc_I4_0 && m_spawn_basic_timer_index == 3) {
+                    removeStart = i;
+                    m_spawn_basic_timer_index = -3;
+                }
+
+                if (codes[i].operand == AccessTools.Method(typeof(NetworkMatch), "SetSpawnBasicTimer")) {
+                    removeEnd = i;
+                }
+            }
+
+            if (removeStart >= 0 && removeEnd >= 0) {
+                codes.RemoveRange(removeStart, removeEnd - removeStart - 1);
+                codes.InsertRange(removeStart, new List<CodeInstruction>() {
+                    new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(NetworkMatch_MaybeSpawnPowerup), "RandomBasicSpawn")),
+                    new CodeInstruction(OpCodes.Stloc_2),
+                    new CodeInstruction(OpCodes.Ldloc_2),
+                    new CodeInstruction(OpCodes.Ldc_I4_0)
+                });
+            }
+
+            return codes;
+        }
+    }
+
+    /// <summary>
     /// Balances teams when new players join.
     /// </summary>
     [Mod(Mods.Teams)]
@@ -213,6 +323,33 @@ namespace GameMod.Patches {
                 { "SupportsTweaks", "" }
             };
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps });
+        }
+    }
+
+    /// <summary>
+    /// Sets the timer for basic spawns.
+    /// </summary>
+    [Mod(Mods.BasicPowerupSpawns)]
+    [HarmonyPatch(typeof(NetworkMatch), "SetSpawnBasicTimer")]
+    public static class MPTags_NetworkMatch_SetSpawnBasicTimer {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix() {
+            if (BasicPowerupSpawns.m_multi_powerup_frequency <= 0f)
+                return true;
+
+            float num = Mathf.Max(1f, BasicPowerupSpawns.m_multi_powerup_frequency);
+            int count = NetworkMatch.m_players.Count;
+            num *= NetworkMatch.GetNumPlayerSpawnModifier(count);
+            int count2 = RobotManager.m_master_item_list.Count;
+            if (count2 > 10) {
+                num += (count2 - 10) * 0.5f;
+            }
+            num *= NetworkMatch.GetSpawnMultiplier();
+            AccessTools.Field(typeof(NetworkMatch), "m_spawn_basic_timer").SetValue(null, num);
+            return false;
         }
     }
 
