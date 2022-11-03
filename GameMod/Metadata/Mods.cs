@@ -26,6 +26,12 @@
 
         /// <summary>
         /// Author: arbruijn (Arne)
+        /// Disables the super spawn in maps that don't have a super spawn.
+        /// </summary>
+        DisableSuperSpawn,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
         /// Adds a red arrow under enemy players in team games.
         /// </summary>
         EnemyPlayerArrows,

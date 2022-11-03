@@ -354,6 +354,21 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Only start super spawn timer if super spawn actually exists in the level.
+    /// </summary>
+    [Mod(Mods.DisableSuperSpawn)]
+    [HarmonyPatch(typeof(NetworkMatch), "SetSpawnSuperTimer")]
+    public static class NetworkMatch_SetSpawnSuperTimer {
+        public static bool Prefix(ref float ___m_spawn_super_timer) {
+            if (GameManager.m_level_data.m_item_spawn_points.Any(x => x.multiplayer_team_association_mask == 1) && // 1 -> is super
+                RobotManager.m_multiplayer_spawnable_supers.Count != 0)
+                return true;
+            ___m_spawn_super_timer = -1f;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Starts pinging the tracker every 5 minutes.
     /// </summary>
     [Mod(Mods.Tracker)]
