@@ -508,7 +508,7 @@ namespace GameMod
     }
 
     [HarmonyPatch(typeof(NetworkMatch), "MaybeEndTimer")]
-    class NetworkMatch_MaybeEndTimer
+    class MatchModeRace_NetworkMatch_MaybeEndTimer
     {
         static bool Prefix()
         {

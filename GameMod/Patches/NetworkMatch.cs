@@ -125,16 +125,47 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
-    /// Initialize the tweaks before each match, and resets the team scores.
+    /// Sets overtime off, initialize the tweaks before each match, and resets the team scores.
     /// </summary>
-    [Mod(new Mods[] { Mods.Teams, Mods.Tweaks })]
+    [Mod(new Mods[] { Mods.SuddenDeath, Mods.Teams, Mods.Tweaks })]
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
     public static class NetworkMatch_InitBeforeEachMatch {
         public static void Postfix() {
+            SuddenDeath.InOvertime = false;
+
             Tweaks.InitMatch();
 
             for (int i = 0, l = NetworkMatch.m_team_scores.Length; i < l; i++)
                 NetworkMatch.m_team_scores[i] = 0;
+        }
+    }
+
+    /// <summary>
+    /// When sudden death overtime is enabled, this code ensures overtime begins when time expires, and ends when the tie is broken.
+    /// </summary>
+    [Mod(Mods.SuddenDeath)]
+    [HarmonyPatch(typeof(NetworkMatch), "MaybeEndTimer")]
+    public static class NetworkMatch_MaybeEndTimer {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix() {
+            if (
+                NetworkMatch.m_match_elapsed_seconds > NetworkMatch.m_match_time_limit_seconds
+                && (NetworkMatch.GetMode() == MatchMode.MONSTERBALL || NetworkMatch.GetMode() == CTF.MatchModeCTF)
+                && SuddenDeath.SuddenDeathMatchEnabled
+                && NetworkMatch.m_team_scores[(int)MpTeam.TEAM0] == NetworkMatch.m_team_scores[(int)MpTeam.TEAM1]
+            ) {
+                if (!SuddenDeath.InOvertime) {
+                    SuddenDeath.InOvertime = true;
+                    MPHUDMessage.SendToAll("Sudden Death!");
+
+                }
+                return false;
+            }
+
+            return true;
         }
     }
 

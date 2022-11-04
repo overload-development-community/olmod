@@ -53,7 +53,7 @@ namespace GameMod
                 powerupBigSpawn = MenuManager.mms_powerup_big_spawn,
                 powerupFilter = MenuManager.mms_powerup_filter,
                 jipEnabled = MPJoinInProgress.MenuManagerEnabled,
-                suddenDeathOvertime = MPSuddenDeath.SuddenDeathMenuEnabled,
+                suddenDeathOvertime = SuddenDeath.SuddenDeathMenuEnabled,
                 lapLimit = ExtMenuManager.mms_ext_lap_limit,
                 sniperPackets = MPSniperPackets.enabled,
                 noCompression = MPNoPositionCompression.enabled,
@@ -214,7 +214,7 @@ namespace GameMod
                 MenuManager.mms_powerup_big_spawn = this.powerupBigSpawn;
                 MenuManager.mms_powerup_filter = this.powerupFilter;
                 MPJoinInProgress.MenuManagerEnabled = this.jipEnabled;
-                MPSuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
+                SuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
                 ExtMenuManager.mms_ext_lap_limit = this.lapLimit;
                 MPSniperPackets.enabled = this.sniperPackets;
                 MPNoPositionCompression.enabled = this.noCompression;

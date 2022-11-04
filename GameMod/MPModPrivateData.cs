@@ -1204,8 +1204,8 @@ END_ENTRY
         }
         public static bool SuddenDeathEnabled
         {
-            get { return MPSuddenDeath.SuddenDeathMatchEnabled; }
-            set { MPSuddenDeath.SuddenDeathMatchEnabled = value; }
+            get { return SuddenDeath.SuddenDeathMatchEnabled; }
+            set { SuddenDeath.SuddenDeathMatchEnabled = value; }
         }
         public static int LapLimit;
         public static string MatchNotes { get; set; }

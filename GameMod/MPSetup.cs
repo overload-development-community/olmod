@@ -19,7 +19,7 @@ namespace GameMod {
             Teams.NetworkMatchTeamCount = 2;
             MPJoinInProgress.NetworkMatchEnabled = false;
             RearView.MPNetworkMatchEnabled = false;
-            MPSuddenDeath.SuddenDeathMatchEnabled = false;
+            SuddenDeath.SuddenDeathMatchEnabled = false;
             MPClassic.matchEnabled = false;
         }
     }
@@ -40,7 +40,7 @@ namespace GameMod {
                 Teams.NetworkMatchTeamCount = (NetworkMatch.m_name[i + 1] & 7) + 2;
                 MPJoinInProgress.NetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 8) != 0;
                 RearView.MPNetworkMatchEnabled = (NetworkMatch.m_name[i + 1] & 16) != 0;
-                MPSuddenDeath.SuddenDeathMatchEnabled = (NetworkMatch.m_name[i + 1] & 32) != 0;
+                SuddenDeath.SuddenDeathMatchEnabled = (NetworkMatch.m_name[i + 1] & 32) != 0;
             }
         }
 
@@ -73,14 +73,14 @@ namespace GameMod {
         {
             Debug.Log("Build PMD name jipsingle " + MPJoinInProgress.SingleMatchEnable);
             if ((Teams.MenuManagerTeamCount > 2 || MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable || RearView.MPMenuManagerEnabled ||
-                MPSuddenDeath.SuddenDeathMenuEnabled) &&
+                SuddenDeath.SuddenDeathMenuEnabled) &&
                 MenuManager.m_mp_lan_match)
             {
                 __result.m_name += new string(new char[] { '\0', (char)(
                     ((Math.Max(2, Teams.MenuManagerTeamCount) - 2) & 7) |
                     (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ? 8 : 0) |
                     (RearView.MPMenuManagerEnabled ? 16 : 0) |
-                    (MPSuddenDeath.SuddenDeathMenuEnabled ? 32 : 0))});
+                    (SuddenDeath.SuddenDeathMenuEnabled ? 32 : 0))});
             }
             Debug.Log("Build PMD name " + String.Join(",", __result.m_name.Select(x => ((int)x).ToString()).ToArray()));
             if (MPJoinInProgress.MenuManagerEnabled || MPJoinInProgress.SingleMatchEnable ||
@@ -99,7 +99,7 @@ namespace GameMod {
             Teams.MenuManagerTeamCount = 2;
             MPJoinInProgress.MenuManagerEnabled = false;
             RearView.MPMenuManagerEnabled = false;
-            MPSuddenDeath.SuddenDeathMenuEnabled = false;
+            SuddenDeath.SuddenDeathMenuEnabled = false;
             ExtMenuManager.mms_ext_lap_limit = 0;
         }
     }
@@ -225,7 +225,7 @@ namespace GameMod {
                 MPJoinInProgress.MenuManagerEnabled = ModPrefs.GetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
                 RearView.MPMenuManagerEnabled = ModPrefs.GetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
                 RearView.MenuManagerEnabled = ModPrefs.GetBool("O_PM_REARVIEW", RearView.MenuManagerEnabled);
-                MPSuddenDeath.SuddenDeathMenuEnabled = ModPrefs.GetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
+                SuddenDeath.SuddenDeathMenuEnabled = ModPrefs.GetBool("MP_PM_SUDDENDEATH", SuddenDeath.SuddenDeathMenuEnabled);
                 ExtMenuManager.mms_ext_lap_limit = ModPrefs.GetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
                 Console.KeyEnabled = ModPrefs.GetBool("O_CONSOLE_KEY", Console.KeyEnabled);
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
@@ -316,7 +316,7 @@ namespace GameMod {
             ModPrefs.SetBool("MP_PM_JIP", MPJoinInProgress.MenuManagerEnabled);
             ModPrefs.SetBool("MP_PM_REARVIEW", RearView.MPMenuManagerEnabled);
             ModPrefs.SetBool("O_PM_REARVIEW", RearView.MenuManagerEnabled);
-            ModPrefs.SetBool("MP_PM_SUDDENDEATH", MPSuddenDeath.SuddenDeathMenuEnabled);
+            ModPrefs.SetBool("MP_PM_SUDDENDEATH", SuddenDeath.SuddenDeathMenuEnabled);
             ModPrefs.SetInt("MP_PM_LAP_LIMIT", ExtMenuManager.mms_ext_lap_limit);
             ModPrefs.SetBool("O_CONSOLE_KEY", Console.KeyEnabled);
             ModPrefs.SetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);

@@ -128,6 +128,7 @@
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\BasicPowerupSpawns.cs" />
     <Compile Include="Objects\Settings.cs" />
+    <Compile Include="Objects\SuddenDeath.cs" />
     <Compile Include="Objects\Teams.cs" />
     <Compile Include="Objects\ThunderboltPassthrough.cs" />
     <Compile Include="Objects\Tweaks.cs" />
@@ -187,7 +188,6 @@
     <Compile Include="MPSpawnInitialization.cs" />
     <Compile Include="MPSpawnInvuln.cs" />
     <Compile Include="MPSpew.cs" />
-    <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />

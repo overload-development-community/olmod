@@ -97,6 +97,12 @@
         ServerPort,
 
         /// <summary>
+        /// Author: roncli
+        /// Allows for sudden death overtime for CTF and monsterball.
+        /// </summary>
+        SuddenDeath,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Allows for more than 2 teams in a team anarchy game.
         /// </summary>

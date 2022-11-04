@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Messages;
+using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
@@ -405,6 +406,69 @@ namespace GameMod {
     }
 
     /// <summary>
+    /// Moves the advanced settings button, and draws the sudden death overtime option.
+    /// </summary>
+    [Mod(new Mods[] { Mods.SuddenDeath, Mods.Teams })]
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    public static class UIElement_DrawMpMatchSetup {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        [Mod(Mods.SuddenDeath)]
+        private static string GetMMSSuddenDeath() {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(SuddenDeath.SuddenDeathMenuEnabled));
+        }
+
+        [Mod(Mods.SuddenDeath)]
+        public static void DrawSuddenDeathToggle(UIElement uie, ref Vector2 position) {
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SUDDEN DEATH OVERTIME"), position, 10, GetMMSSuddenDeath(), string.Empty, 1f, MenuManager.mms_mode != MatchMode.NUM);
+            position.y += 62f;
+        }
+
+        [Mod(new Mods[] { Mods.SuddenDeath, Mods.Teams })]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> cs) {
+            var vector2_y_Field = AccessTools.Field(typeof(Vector2), "y");
+
+            int lastAdv = 0;
+            var powerupFound = false;
+
+            foreach (var c in cs) {
+                if (lastAdv == 0 && c.opcode == OpCodes.Ldstr && (string)c.operand == "ADVANCED SETTINGS") {
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 0);
+                    yield return new CodeInstruction(OpCodes.Dup);
+                    yield return new CodeInstruction(OpCodes.Ldfld, vector2_y_Field);
+                    yield return new CodeInstruction(OpCodes.Ldc_R4, 62f);
+                    yield return new CodeInstruction(OpCodes.Add);
+                    yield return new CodeInstruction(OpCodes.Stfld, vector2_y_Field);
+                    lastAdv = 1;
+                } else if ((lastAdv == 1 || lastAdv == 2) && c.opcode == OpCodes.Call) {
+                    lastAdv++;
+                } else if (lastAdv == 3) {
+                    if (c.opcode != OpCodes.Ldloca_S)
+                        continue;
+                    lastAdv = 4;
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 0);
+                    yield return new CodeInstruction(OpCodes.Dup);
+                    yield return new CodeInstruction(OpCodes.Ldfld, vector2_y_Field);
+                    yield return new CodeInstruction(OpCodes.Ldc_R4, 62f - 93f);
+                    yield return new CodeInstruction(OpCodes.Add);
+                    yield return new CodeInstruction(OpCodes.Stfld, vector2_y_Field);
+                }
+
+                if (!powerupFound && c.opcode == OpCodes.Ldstr && (string)c.operand == "POWERUP SETTINGS") {
+                    powerupFound = true;
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UIElement_DrawMpMatchSetup), "DrawSuddenDeathToggle"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+
+                yield return c;
+            }
+        }
+    }
+
+    /// <summary>
     /// Add Rear View, Ship Velocity, Frame Rate options to Options -> Cockpit & HUD Options
     /// </summary>
     [HarmonyPatch(typeof(UIElement), "DrawHUDMenu")]
@@ -467,6 +531,23 @@ namespace GameMod {
         }
     }
 
+    [Mod(Mods.SuddenDeath)]
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    public static class MenuManager_MpMatchSetup {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Postfix() {
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
+                MenuManager.m_menu_micro_state == 3 &&
+                UIManager.m_menu_selection == 10) {
+                SuddenDeath.SuddenDeathMenuEnabled = !SuddenDeath.SuddenDeathMenuEnabled;
+                MenuManager.PlayCycleSound(1f, UIManager.m_select_dir);
+            }
+        }
+    }
 
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
     class Menus_MenuManager_MpMatchSetup
@@ -2089,6 +2170,91 @@ namespace GameMod {
                 if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Controls), "ResetControlJoy"))
                     code.operand = AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "ResetControlJoy");
 
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update lobby status display, and show updated menu options.
+    /// </summary>
+    [Mod(new Mods[] { Mods.PresetData, Mods.Teams })]
+    [HarmonyPatch(typeof(UIElement), "DrawMpPreMatchMenu")]
+    public static class UIElement_DrawMpPreMatchMenu {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        [Mod(Mods.Teams)]
+        public static bool DrawLast(UIElement uie) {
+            if (MenuManager.m_menu_micro_state != 0)
+                return MenuManager.m_menu_micro_state != 1 || DrawLastQuit(uie);
+            Vector2 position;
+            position.x = 0f;
+            position.y = 170f + 62f * 2;
+            //uie.DrawMenuSeparator(position - Vector2.up * 40f);
+            bool flag = NetworkMatch.m_last_lobby_status != null && NetworkMatch.m_last_lobby_status.m_can_start_now && MPModifiers.PlayerModifiersValid(Player.Mp_modifier1, Player.Mp_modifier2);
+            uie.SelectAndDrawCheckboxItem(Loc.LS("START MATCH NOW"), position - Vector2.right * 250f, 0, MenuManager.m_mp_ready_to_start && flag,
+                !flag || MenuManager.m_mp_ready_vote_timer > 0f, 0.75f, -1);
+            //position.y += 62f;
+            uie.SelectAndDrawItem(Loc.LS("CUSTOMIZE"), position + Vector2.right * 250f, 1, false, 0.75f, 0.75f);
+            position.y += 62f;
+            uie.SelectAndDrawItem(Loc.LS("OPTIONS"), position - Vector2.right * 250f, 2, false, 0.75f, 0.75f);
+            //position.y += 62f;
+            uie.SelectAndDrawItem(Loc.LS("MULTIPLAYER MENU"), position + Vector2.right * 250f, 100, false, 0.75f, 0.75f);
+            return false;
+        }
+
+        [Mod(Mods.Teams)]
+        public static bool DrawLastQuit(UIElement uie) {
+            Vector2 position;
+            position.x = 0f;
+            position.y = 170f + 62f * 2;
+            uie.SelectAndDrawItem(Loc.LS("QUIT"), position, 0, false, 1f, 0.75f);
+            position.y += 62f;
+            uie.SelectAndDrawItem(Loc.LS("CANCEL"), position, 100, false, 1f, 0.75f);
+            return false;
+        }
+
+        [Mod(Mods.PresetData)]
+        public static void Prefix() {
+            PresetData.UpdateLobbyStatus();
+        }
+
+        [Mod(Mods.Teams)]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+            var UIElement_DrawMpPreMatchMenu_DrawLast_Method = AccessTools.Method(typeof(UIElement_DrawMpPreMatchMenu), "DrawLast");
+
+            int state = 0; // 0 = before switch, 1 = after switch
+            int oneSixtyCount = 0;
+            for (var codes = instructions.GetEnumerator(); codes.MoveNext();) {
+                var code = codes.Current;
+                // add call before switch m_menu_micro_state
+                if (state == 0 && code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "m_menu_micro_state") {
+                    yield return code;
+                    codes.MoveNext();
+                    code = codes.Current;
+                    yield return code;
+                    if (code.opcode != OpCodes.Stloc_S)
+                        continue;
+                    var buf = new List<CodeInstruction>();
+                    // find br to end of switch just after switch instruction
+                    while (codes.MoveNext() && (code = codes.Current).opcode != OpCodes.Br)
+                        buf.Add(code);
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, UIElement_DrawMpPreMatchMenu_DrawLast_Method);
+                    yield return new CodeInstruction(OpCodes.Brfalse, code.operand); // returns false? skip to end of switch
+                    // preserve switch jump
+                    foreach (var bcode in buf)
+                        yield return bcode;
+                    state = 1;
+                }
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 160f) {
+                    oneSixtyCount++;
+                    if (oneSixtyCount == 3) {
+                        code.operand = 300f;
+                    }
+                }
                 yield return code;
             }
         }
