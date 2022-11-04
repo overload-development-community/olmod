@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
+using System.Threading;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -61,10 +62,9 @@ namespace GameMod {
         public MethodProfile Start()
         {
             //UnityEngine.Debug.LogFormat("Prefix called {0}", method );
-            if (depth != 0) {
+            if (Interlocked.Exchange(ref depth, 1) > 0) {
                 return null;
             }
-            depth = 1;
             ticksStart = PoorMansProfiler.timerBase.ElapsedTicks;
             return this;
         }
@@ -84,7 +84,7 @@ namespace GameMod {
             }
             ticksTotal += ticks;
             count++;
-            depth = 0;
+            Interlocked.Exchange(ref depth, 0);
             //UnityEngine.Debug.LogFormat("Postfix called {0} {1} {2} {3}", method, count, ticksTotal, ticksTotal/(double)count);
         }
 
@@ -676,11 +676,13 @@ namespace GameMod {
         public static void PoorMansProfilerPrefix(MethodBase __originalMethod, out MethodProfile __state)
         {
             MethodProfile mp;
-            try {
-                mp = profileData[__originalMethod];
-            } catch (KeyNotFoundException) {
-                mp = new MethodProfile(__originalMethod);
-                profileData[__originalMethod] = mp;
+            lock(profileData) {
+                try {
+                    mp = profileData[__originalMethod];
+                } catch (KeyNotFoundException) {
+                    mp = new MethodProfile(__originalMethod);
+                    profileData[__originalMethod] = mp;
+                }
             }
             __state = mp.Start();
         }
@@ -730,11 +732,13 @@ namespace GameMod {
         public static void UpdatePostfix()
         {
             MethodProfile mp;
-            try {
-                mp = profileData[pmpFrametimeDummy];
-            } catch (KeyNotFoundException) {
-                mp = new MethodProfile("+++PMP-Frametime",-7777);
-                profileData[pmpFrametimeDummy] = mp;
+            lock(profileData) {
+                try {
+                    mp = profileData[pmpFrametimeDummy];
+                } catch (KeyNotFoundException) {
+                    mp = new MethodProfile("+++PMP-Frametime",-7777);
+                    profileData[pmpFrametimeDummy] = mp;
+                }
             }
             mp.ImportFrametime(Time.unscaledDeltaTime);
         }
@@ -877,11 +881,13 @@ namespace GameMod {
         }
 
         // Reset the current interval Data
-        public static void ResetInterval()
+        public static Dictionary<MethodBase,MethodProfile> ResetInterval()
         {
             // create a new Dict so in-fly operations are still well-defined
-            profileData = new Dictionary<MethodBase,MethodProfile>();
+            Dictionary<MethodBase,MethodProfile> newProfileData = new Dictionary<MethodBase,MethodProfile>();
+            Dictionary<MethodBase,MethodProfile> data = Interlocked.Exchange(ref profileData, newProfileData);
             intervalStart = timerBase.ElapsedTicks;
+            return data;
         }
 
         /*
@@ -898,35 +904,36 @@ namespace GameMod {
         // Cycle a single profiler interval
         public static void CycleInterval() {
             intervalEnd = timerBase.ElapsedTicks;
-            Dictionary<MethodBase,MethodProfile> data = profileData;
+            Dictionary<MethodBase,MethodProfile> data = ResetInterval();
             MethodProfile intervalTime = new MethodProfile("+++PMP-Interval", -7778);
             intervalTime.ImportTicks(intervalEnd - intervalStart);
-            data[pmpIntervalTimeDummy] = intervalTime;
+            lock(data) {
+                data[pmpIntervalTimeDummy] = intervalTime;
+            }
             intervalData[curIdx] = data;
             //Collect(profileDataCollector, data, curIdx);
             curIdx++;
             if (curIdx >= MethodProfileCollector.MaxEntryCount) {
                 Cycle("flush");
             }
-            ResetInterval();
         }
 
         // Cycle Profile Data Collection: flush to disk and start new
         public static void Cycle(string reason)
         {
             DateTime tsEnd = DateTime.UtcNow;
+            int intervalCnt = Interlocked.Exchange(ref curIdx, 0);
+            Dictionary<MethodBase,MethodProfile>[] intervals = Interlocked.Exchange(ref intervalData, new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount]);
             Dictionary<MethodBase,MethodProfileCollector> pdc = new Dictionary<MethodBase, MethodProfileCollector>();
-            for (int i=0; i<curIdx; i++) {
-                Collect(pdc, intervalData[i], i);
+            for (int i=0; i<intervalCnt; i++) {
+                Collect(pdc, intervals[i], i);
             }
-            intervalData = new Dictionary<MethodBase, MethodProfile>[MethodProfileCollector.MaxEntryCount];
             string curDateTime = GetTimestamp(tsEnd);
             string ftemplate = String.Format("olmod_pmp{0}_{1}_{2}_", ((isServer)?"_srv":""),curDateTime, reason);
             string fn = Path.Combine(outputPath, ftemplate);
-            WriteResults(pdc, fn, curIdx, startTime, tsEnd);
+            WriteResults(pdc, fn, intervalCnt, startTime, tsEnd);
             startTime = DateTime.UtcNow;
             ResetInterval();
-            curIdx = 0;
         }
 
     }
