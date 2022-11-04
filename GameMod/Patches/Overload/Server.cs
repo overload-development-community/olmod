@@ -5,6 +5,7 @@ using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
+using Overload_Vanilla = Overload; // Required to differentiate between Overload.NetworkManager and UnityEngine.Networking.NetworkManager, without Overload colliding with GameMod.Patches.Overload.
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Networking.NetworkSystem;
@@ -118,6 +119,24 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Projectile launch data is always synced for sniper packets.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(Server), "ProjectileTypeHasLaunchDataSynced")]
+    public static class Server_ProjectileTypeHasLaunchDataSynced {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(ref bool __result) {
+            if (!SniperPackets.enabled) return true;
+
+            __result = true;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Registers all of olmod's server handlers.
     /// </summary>
     [Mod(Mods.MessageHandlers)]
@@ -125,6 +144,42 @@ namespace GameMod.Patches.Overload {
     public static class Server_RegisterHandlers {
         public static void Postfix() {
             RegisterHandlers.RegisterServerHandlers();
+        }
+    }
+
+    /// <summary>
+    /// Ensure thunderbolt charge effects are played across all clients.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(Server), "SendJustPressedOrJustReleasedMessage")]
+    public static class Server_SendJustPressedOrJustReleasedMessage {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(Player player, CCInput button) {
+            if (!SniperPackets.enabled) return true;
+
+            // This is necessary for charge effects to be played across all clients.
+            if (button == CCInput.FIRE_WEAPON && player.m_weapon_type == WeaponType.THUNDERBOLT) return true;
+
+            if (player.m_input_count[(int)button] == 1) {
+                ButtonJustPressedMessage msg = new ButtonJustPressedMessage(player.netId, button);
+                foreach (Player remotePlayer in Overload_Vanilla.NetworkManager.m_Players) {
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId)) {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, 66, msg);
+                    }
+                }
+            } else if (player.m_input_count[(int)button] == -1) {
+                ButtonJustReleasedMessage msg2 = new ButtonJustReleasedMessage(player.netId, button);
+                foreach (Player remotePlayer in Overload_Vanilla.NetworkManager.m_Players) {
+                    if (Tweaks.ClientHasMod(remotePlayer.connectionToClient.connectionId)) {
+                        NetworkServer.SendToClient(remotePlayer.connectionToClient.connectionId, 67, msg2);
+                    }
+                }
+            }
+
+            return false;
         }
     }
 

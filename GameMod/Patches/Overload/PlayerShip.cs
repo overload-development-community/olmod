@@ -1,11 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Messages;
 using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
+using Overload_Vanilla = Overload; // Required to differentiate between Overload.NetworkManager and UnityEngine.Networking.NetworkManager, without Overload colliding with GameMod.Patches.Overload.
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod.Patches.Overload {
     /// <summary>
@@ -19,7 +23,7 @@ namespace GameMod.Patches.Overload {
         }
 
         public static void Prefix(DamageInfo di, PlayerShip __instance) {
-            if (!NetworkManager.IsHeadless() || di.damage == 0f || __instance.m_death_stats_recorded || __instance.m_cannot_die || __instance.c_player.m_invulnerable)
+            if (!Overload_Vanilla.NetworkManager.IsHeadless() || di.damage == 0f || __instance.m_death_stats_recorded || __instance.m_cannot_die || __instance.c_player.m_invulnerable)
                 return;
 
             var otherPlayer = di.owner?.GetComponent<Player>();
@@ -58,6 +62,25 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// This disables the ability of the server to control detonation of a devastator.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "DetonatorInFlight")]
+    public static class PlayerShip_DetonatorInFlight {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(PlayerShip __instance) {
+            if (!SniperPackets.enabled) return true;
+            if (!(GameplayManager.IsMultiplayerActive && NetworkServer.active)) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(__instance.c_player.connectionToClient.connectionId)) return true;
+
+            return false;
+        }
+    }
+
+    /// <summary>
     /// If ScaleRespawnTime is set, automatically set respawn timer = player's team count.
     /// </summary>
     [Mod(Mods.ScaleRespawnTime)]
@@ -65,7 +88,7 @@ namespace GameMod.Patches.Overload {
     public static class PlayerShip_DyingUpdate {
         public static void MaybeUpdateDeadTimer(PlayerShip playerShip) {
             if (MPModPrivateData.ScaleRespawnTime) {
-                playerShip.m_dead_timer = NetworkManager.m_Players.Count(x => x.m_mp_team == playerShip.c_player.m_mp_team && !x.m_spectator);
+                playerShip.m_dead_timer = Overload_Vanilla.NetworkManager.m_Players.Count(x => x.m_mp_team == playerShip.c_player.m_mp_team && !x.m_spectator);
             }
         }
 
@@ -89,20 +112,80 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
-    /// Updates where thunderbolt appears from when fired from a ship.
+    /// Similar to MaybeFireWeapon, we redirect Projectile.PlayerFire to SniperPackets.MaybePlayerFire in order for the client to control where the flare gets fired from.
     /// </summary>
-    [Mod(Mods.ThunderboltBalance)]
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "FireFlare")]
+    public static class PlayerShip_FireFlare {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "PlayerFire") {
+                    code.operand = AccessTools.Method(typeof(SniperPackets), "MaybePlayerFire");
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Similar to MaybeFireWeapon, we redirect Server.IsActive to SniperPackets.AlwaysUseEnergy to instruct the clients to deduct energy for boosting, and not wait for the server to synchronize the energy count.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
+    public static class PlayerShip_FixedUpdateProcessControlsInternal {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Call && code.operand is MethodInfo method && method.Name == "IsActive") {
+                    code.operand = AccessTools.Method(typeof(SniperPackets), "AlwaysUseEnergy");
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Similar to MaybeFireWeapon, we redirect Projectile.PlayerFire to SniperPackets.MaybePlayerFire in order for the client to control where the missile gets fired from.
+    /// 
+    /// We also want to try to switch to a new secondary on the client no matter what at the end of MaybeFireMissile.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "MaybeFireMissile")]
+    public static class PlayerShip_MaybeFireMissile {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "PlayerFire") {
+                    code.operand = AccessTools.Method(typeof(SniperPackets), "MaybePlayerFire");
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Updates where thunderbolt appears from when fired from a ship.
+    /// 
+    /// In base Overload, energy is only deducted from the player's total on the server, and then it synchronizes that energy amount to the client.  Instead, we are going to keep track of the energy on the client and sync it to the server.  Since everywhere where energy is used in this function check Server.IsActive, we instead redirect to our own function SniperPackets.AlwaysUseEnergy, which always returns true, and thus always deducts energy regardless as to whether it's on the server or the client.
+    /// 
+    /// In base Overload, the server simulates the position/rotation of each player's weapon fire.  Instead, we are going to let players decide the position/rotation of the weapon fire.  We replace the call to ProjectileManager.PlayerFire with our own call to SniperPackets.MaybePlayerFire that ensures that this simulation does not happen server side, and that when the client fires a weapon that it is synced to the server as a sniper packet.
+    /// </summary>
+    [Mod(new Mods[] { Mods.SniperPackets, Mods.ThunderboltBalance })]
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
     public static class PlayerShip_MaybeFireWeapon {
 
+        [Mod(Mods.ThunderboltBalance)]
         public static Vector3 AdjustLeftPos(Vector3 muzzle_pos, Vector3 c_right) {
             return GameplayManager.IsMultiplayerActive ? muzzle_pos + c_right * ThunderboltBalance.m_muzzle_adjust : muzzle_pos;
         }
 
+        [Mod(Mods.ThunderboltBalance)]
         public static Vector3 AdjustRightPos(Vector3 muzzle_pos, Vector3 c_right) {
             return GameplayManager.IsMultiplayerActive ? muzzle_pos + c_right * -ThunderboltBalance.m_muzzle_adjust : muzzle_pos;
         }
 
+        [Mod(new Mods[] { Mods.SniperPackets, Mods.ThunderboltBalance })]
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             int state = 0;
             foreach (var code in codes) {
@@ -135,6 +218,16 @@ namespace GameMod.Patches.Overload {
                     continue;
                 }
 
+                // Always use energy on the client for sniper packets.
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "IsActive") {
+                    code.operand = AccessTools.Method(typeof(SniperPackets), "AlwaysUseEnergy");
+                }
+                
+                // Use the player's firing position/rotation for sniper packets.
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "PlayerFire") {
+                    code.operand = AccessTools.Method(typeof(SniperPackets), "MaybePlayerFire");
+                }
+
                 yield return code;
             }
         }
@@ -163,6 +256,79 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Here, we are attaching to the end of PlayerShip.ProcessFiringControls to synchronize a player's resource when they release the primary fire key and the boost key, two sources of frequent resource use.
+    /// 
+    /// We also use this method to mark when we have released the secondary fire key so that devastators don't explode in the player's face unless they purposely triggered them to.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "ProcessFiringControls")]
+    public static class PlayerShip_ProcessFiringControls {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Postfix(PlayerShip __instance) {
+            if (!SniperPackets.enabled) return;
+
+            if (__instance.c_player.isLocalPlayer) {
+                if (__instance.c_player.JustReleased(CCInput.FIRE_WEAPON)) {
+                    switch (__instance.c_player.m_weapon_type) {
+                        case WeaponType.IMPULSE:
+                        case WeaponType.CYCLONE:
+                        case WeaponType.REFLEX:
+                        case WeaponType.THUNDERBOLT:
+                        case WeaponType.LANCER:
+                            Client.GetClient().Send(MessageTypes.MsgPlayerSyncResource, new PlayerSyncResourceMessage {
+                                m_player_id = __instance.c_player.netId,
+                                m_type = PlayerSyncResourceMessage.ValueType.ENERGY,
+                                m_value = __instance.c_player.m_energy
+                            });
+                            break;
+                        case WeaponType.CRUSHER:
+                        case WeaponType.DRILLER:
+                        case WeaponType.FLAK:
+                            Client.GetClient().Send(MessageTypes.MsgPlayerSyncResource, new PlayerSyncResourceMessage {
+                                m_player_id = __instance.c_player.netId,
+                                m_type = PlayerSyncResourceMessage.ValueType.AMMO,
+                                m_value = __instance.c_player.m_ammo
+                            });
+                            break;
+                    }
+                }
+
+                if (__instance.c_player.JustReleased(CCInput.USE_BOOST)) {
+                    Client.GetClient().Send(MessageTypes.MsgPlayerSyncResource, new PlayerSyncResourceMessage {
+                        m_player_id = __instance.c_player.netId,
+                        m_type = PlayerSyncResourceMessage.ValueType.ENERGY,
+                        m_value = __instance.c_player.m_energy
+                    });
+                }
+
+                if (__instance.c_player.isLocalPlayer && __instance.c_player.JustReleased(CCInput.FIRE_MISSILE)) {
+                    SniperPackets.justFiredDev = false;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Similar to MaybeFireWeapon, we redirect Server.IsActive to SniperPackets.AlwaysUseEnergy to instruct the clients to deduct energy for a flare, and not wait for the server to synchronize the energy count.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "ProcessFlareAndHeadlightControls")]
+    public static class PlayerShip_ProcessFlareAndHeadlightControls {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "IsActive") {
+                    code.operand = AccessTools.Method(typeof(SniperPackets), "AlwaysUseEnergy");
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
     /// Do not spew the lancer.
     /// </summary>
     [Mod(Mods.ReduceSpewedMissiles)]
@@ -173,11 +339,38 @@ namespace GameMod.Patches.Overload {
         }
 
         public static void Prefix(PlayerShip __instance) {
-            if (!NetworkManager.IsServer()) {
+            if (!Overload_Vanilla.NetworkManager.IsServer()) {
                 return;
             }
 
             __instance.c_player.m_weapon_picked_up[(int)WeaponType.LANCER] = false;
+        }
+    }
+
+    /// <summary>
+    /// When the player dies, we need to sync our missile inventory with the server so it knows what to spew.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(PlayerShip), "StartDying")]
+    public static class PlayerShip_StartDying {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Postfix(PlayerShip __instance) {
+            if (!SniperPackets.enabled) return;
+
+            if (Overload_Vanilla.NetworkManager.IsMultiplayerSceneLoaded() && !NetworkMatch.InGameplay()) {
+                return;
+            }
+
+            if (__instance.c_player.isLocalPlayer) {
+                var missiles = __instance.c_player.m_missile_ammo.Select(a => (int)a).ToArray();
+                Client.GetClient().Send(MessageTypes.MsgPlayerSyncAllMissiles, new PlayerSyncAllMissilesMessage {
+                    m_player_id = __instance.c_player.netId,
+                    m_missile_ammo = missiles
+                });
+            }
         }
     }
 

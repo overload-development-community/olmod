@@ -1,12 +1,43 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using GameMod.Messages;
 using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
+using UnityEngine.Networking;
 
 namespace GameMod.Patches.Overload {
+    /// <summary>
+    /// This tells the server to explode any devastators in flight.
+    /// </summary>
+    [Mod(Mods.SniperPackets)]
+    [HarmonyPatch(typeof(ProjectileManager), "ExplodePlayerDetonators")]
+    public static class ProjectileManager_ExplodePlayerDetonators {
+        public static bool Prefix(Player p) {
+            if (!SniperPackets.enabled) return true;
+            if (!GameplayManager.IsMultiplayerActive) return true;
+            if (NetworkServer.active && !Tweaks.ClientHasMod(p.connectionToClient.connectionId)) return true;
+
+            if (NetworkServer.active && !SniperPackets.serverCanDetonate) {
+                return false;
+            }
+
+            if (!NetworkServer.active && p.isLocalPlayer) {
+                if (SniperPackets.justFiredDev) {
+                    return false;
+                }
+
+                Client.GetClient().Send(MessageTypes.MsgDetonate, new DetonateMessage {
+                    m_player_id = p.netId
+                });
+            }
+
+            return true;
+        }
+    }
+
     /// <summary>
     /// Reads the projdata if it exists.
     /// </summary>

@@ -1194,8 +1194,8 @@ END_ENTRY
         }
         public static bool SniperPacketsEnabled
         {
-            get { return MPSniperPackets.enabled; }
-            set { MPSniperPackets.enabled = value; }
+            get { return SniperPackets.enabled; }
+            set { SniperPackets.enabled = value; }
         }
         public static MatchMode MatchMode
         {

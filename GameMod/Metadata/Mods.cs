@@ -109,6 +109,12 @@
         ServerPort,
 
         /// <summary>
+        /// Author: roncli
+        /// Trust the client with weapon firing position/rotation, selected primary/secondary, and most resource amounts.
+        /// </summary>
+        SniperPackets,
+
+        /// <summary>
         /// Authors: CCraigen (Fireball)
         /// Applies a filter to sounds that are behind walls to make them sound muffled.
         /// </summary>

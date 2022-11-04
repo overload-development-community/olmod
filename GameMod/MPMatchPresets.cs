@@ -55,7 +55,7 @@ namespace GameMod
                 jipEnabled = MPJoinInProgress.MenuManagerEnabled,
                 suddenDeathOvertime = SuddenDeath.SuddenDeathMenuEnabled,
                 lapLimit = ExtMenuManager.mms_ext_lap_limit,
-                sniperPackets = MPSniperPackets.enabled,
+                sniperPackets = SniperPackets.enabled,
                 noCompression = MPNoPositionCompression.enabled,
                 allowRearView = RearView.MPMenuManagerEnabled,
                 scaleRespawnTime = Menus.mms_scale_respawn_time,
@@ -216,7 +216,7 @@ namespace GameMod
                 MPJoinInProgress.MenuManagerEnabled = this.jipEnabled;
                 SuddenDeath.SuddenDeathMenuEnabled = this.suddenDeathOvertime;
                 ExtMenuManager.mms_ext_lap_limit = this.lapLimit;
-                MPSniperPackets.enabled = this.sniperPackets;
+                SniperPackets.enabled = this.sniperPackets;
                 MPNoPositionCompression.enabled = this.noCompression;
                 RearView.MPMenuManagerEnabled = this.allowRearView;
                 Menus.mms_scale_respawn_time = this.scaleRespawnTime;

@@ -167,7 +167,7 @@ namespace GameMod
             if (Server.IsActive())
                 return;
             var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb }); 
-            if (proj == null && MPSniperPackets.enabled) // Extend to devs and novas when sniper packets are enabled.
+            if (proj == null && SniperPackets.enabled) // Extend to devs and novas when sniper packets are enabled.
             {
                 proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_devastator, ProjPrefab.missile_smart });
             }
@@ -204,7 +204,7 @@ namespace GameMod
         static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
         {
             if (!GameplayManager.IsMultiplayerActive ||
-                (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || // Extend to devastators and novas when sniper packets are enabled.
+                (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!SniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || // Extend to devastators and novas when sniper packets are enabled.
                 __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
             {
                 return true;
@@ -242,7 +242,7 @@ namespace GameMod
         static void Postfix(float ___m_refire_missile_time, Player ___c_player)
         {
             // When sniper packets are enabled, this code is not needed as missile firing synchronization happens automatically.
-            if (MPSniperPackets.enabled)
+            if (SniperPackets.enabled)
             {
                 return;
             }
