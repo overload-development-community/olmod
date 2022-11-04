@@ -128,6 +128,7 @@
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\BasicPowerupSpawns.cs" />
     <Compile Include="Objects\Settings.cs" />
+    <Compile Include="Objects\SoundOcclusion.cs" />
     <Compile Include="Objects\SuddenDeath.cs" />
     <Compile Include="Objects\Teams.cs" />
     <Compile Include="Objects\ThunderboltPassthrough.cs" />
@@ -185,7 +186,6 @@
     <Compile Include="MPSniperPackets.cs" />
     <Compile Include="MPSoundExt.cs" />
     <Compile Include="MPSoundOcclusion.cs" />
-    <Compile Include="MPSpawnInitialization.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />

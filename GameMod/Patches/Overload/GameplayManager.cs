@@ -4,6 +4,7 @@ using GameMod.Metadata;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
+using UnityEngine;
 
 namespace GameMod.Patches.Overload {
     /// <summary>
@@ -24,6 +25,26 @@ namespace GameMod.Patches.Overload {
                     RearView.Init();
                 else
                     RearView.Pause();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resets the audio filters on level end.
+    /// </summary>
+    [Mod(Mods.SoundOcclusion)]
+    [HarmonyPatch(typeof(GameplayManager), "DoneLevel")]
+    public static class GameplayManager_DoneLevel {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Postfix() {
+            if (Menus.mms_audio_occlusion_strength != 0) {
+                foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter) {
+                    f.cutoffFrequency = 22000f;
+                    f.enabled = false;
+                }
             }
         }
     }

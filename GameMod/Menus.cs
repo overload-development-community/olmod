@@ -68,11 +68,11 @@ namespace GameMod {
             {
                 if (value == 0)
                 {
-                    MPSoundOcclusion.RemoveFilters();
+                    SoundOcclusion.RemoveFilters();
                 }
                 else if (mms_audio_occlusion_strength_internal == 0)
                 {
-                    MPSoundOcclusion.AddFilters();
+                    SoundOcclusion.AddFilters();
                 }
                 mms_audio_occlusion_strength_internal = value;
             }

@@ -103,6 +103,12 @@
         ServerPort,
 
         /// <summary>
+        /// Authors: CCraigen (Fireball)
+        /// Applies a filter to sounds that are behind walls to make them sound muffled.
+        /// </summary>
+        SoundOcclusion,
+
+        /// <summary>
         /// Authors: arbruijn (Arne), roncli
         /// Improves initialization of flak, cycle, thunderbolt, and boost on spawn.
         /// </summary>
