@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -554,6 +555,7 @@ namespace GameMod {
         private static int fixedTickCount = 60; // 1 second interval by default (during MP at least)
         private static long cycleLongIntervals = 60000; // >= 60 seconds long intervals force a full cycle
         private static string outputPath = null;
+        private static bool useLocking = false;
 
         private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
         private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
@@ -585,8 +587,28 @@ namespace GameMod {
             } else {
                 outputPath = Application.persistentDataPath;
             }
+            string lockingModeArg;
+            int lockingMode = -1;
+            if (GameMod.Core.GameMod.FindArgVal("-pmp-locking", out lockingModeArg) && !String.IsNullOrEmpty(lockingModeArg)) {
+                if (!int.TryParse(lockingModeArg, NumberStyles.Number, CultureInfo.InvariantCulture, out lockingMode)) {
+                    lockingMode = -1;
+                }
+                fixedTickCount = Int32.Parse(intervalLength);
+            }
 
-            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, interval: {0}, output path:  {1}", fixedTickCount, outputPath);
+            if (lockingMode < 0) {
+                // AUTO: on for servers, off for client (?!)
+                if (GameMod.Core.GameMod.FindArg("-batchmode")) {
+                    UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: server detected, enable locking");
+                    lockingMode = 1;
+                } else {
+                    UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: client detected, not enabling locking");
+                    lockingMode = 0;
+                }
+            }
+            useLocking = (lockingMode > 0);
+
+            UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: enabled, interval: {0}, lock: {1}, output path: {2}", fixedTickCount, useLocking, outputPath);
 
             // Dictionary of all previously patched methods
             Dictionary<MethodBase,bool> patchedMethods = new Dictionary<MethodBase,bool>();
@@ -640,7 +662,13 @@ namespace GameMod {
             
             // Patch the methods with the profiler prefix and postfix
             UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: applying to {0} methods", targetMethods.Count);
-            MethodInfo mPrefix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPrefix");
+            MethodInfo mPrefix = null;
+            if (useLocking){
+                mPrefix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPrefixLock");
+            } else {
+                mPrefix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPrefix");
+            }
+
             MethodInfo mPostfix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPostfix");
             var hmPrefix = new HarmonyMethod(mPrefix, Priority.First);
             var hmPostfix = new HarmonyMethod(mPostfix, Priority.Last);
@@ -662,7 +690,11 @@ namespace GameMod {
             }
             harmony.Patch(AccessTools.Method(typeof(Overload.Client), "OnStartPregameCountdown"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPregamePostfix"), Priority.Last));
             harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "FixedUpdate"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("FixedUpdatePostfix"), Priority.Last));
-            harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfix"), Priority.Last));
+            if (useLocking) {
+                harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfixLock"), Priority.Last));
+            } else {
+                harmony.Patch(AccessTools.Method(typeof(Overload.GameManager), "Update"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("UpdatePostfix"), Priority.Last));
+            }
 
             startTime = DateTime.UtcNow;
             timerBaseToMS = 1000.0 / (double)Stopwatch.Frequency;
@@ -674,6 +706,19 @@ namespace GameMod {
 
         // The Prefix run at the start of every target method
         public static void PoorMansProfilerPrefix(MethodBase __originalMethod, out MethodProfile __state)
+        {
+            MethodProfile mp;
+            try {
+                mp = profileData[__originalMethod];
+            } catch (KeyNotFoundException) {
+                mp = new MethodProfile(__originalMethod);
+                profileData[__originalMethod] = mp;
+            }
+            __state = mp.Start();
+        }
+
+        // The Prefix run at the start of every target method, version with locking
+        public static void PoorMansProfilerPrefixLock(MethodBase __originalMethod, out MethodProfile __state)
         {
             MethodProfile mp;
             lock(profileData) {
@@ -730,6 +775,19 @@ namespace GameMod {
 
         // This is an additional Postfix to Overload.GameManager.Update() to gather frame statistics
         public static void UpdatePostfix()
+        {
+            MethodProfile mp;
+            try {
+                mp = profileData[pmpFrametimeDummy];
+            } catch (KeyNotFoundException) {
+                mp = new MethodProfile("+++PMP-Frametime",-7777);
+                profileData[pmpFrametimeDummy] = mp;
+            }
+            mp.ImportFrametime(Time.unscaledDeltaTime);
+        }
+
+        // This is an additional Postfix to Overload.GameManager.Update() to gather frame statistics, version with locking
+        public static void UpdatePostfixLock()
         {
             MethodProfile mp;
             lock(profileData) {
@@ -907,7 +965,11 @@ namespace GameMod {
             Dictionary<MethodBase,MethodProfile> data = ResetInterval();
             MethodProfile intervalTime = new MethodProfile("+++PMP-Interval", -7778);
             intervalTime.ImportTicks(intervalEnd - intervalStart);
-            lock(data) {
+            if (useLocking) {
+                lock(data) {
+                    data[pmpIntervalTimeDummy] = intervalTime;
+                }
+            } else {
                 data[pmpIntervalTimeDummy] = intervalTime;
             }
             intervalData[curIdx] = data;

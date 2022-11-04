@@ -38,6 +38,8 @@ To use the profiler, you have to enable it via the `olmod` command line. The fol
    (where the `GameMod.dll` is located) and the persistent data dir of Overload (where the pilot files and savegames are stored). Multiple files can 
    be specified, separated by a colon, and will be processed in order.
 * `-pmp-lazy`: Activate experimental lazy mode. The profiler is not activated at startup, but can later be activated by the `pmpinit` console command.
+* `-pmp-locking <n>`: Set use of locking for thread-safety to off (`0`), on (`1`) or auto-detect (`-1`, the default). 
+  It seems that servers crash without locking, but clients don't, so the auto-detect enables it just for servers.
 
 ## In-Game Console Commands
 
