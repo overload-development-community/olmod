@@ -60,4 +60,24 @@ namespace GameMod.Patches.Overload {
             }
         }
     }
+
+    /// <summary>
+    /// Skip the portion in Player.UpdateInvul() where ship movement reduces your invuln time. 
+    /// </summary>
+    [Mod(Mods.SpawnInvulnerability)]
+    [HarmonyPatch(typeof(Player), "UpdateInvul")]
+    public static class Player_UpdateInvul {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            int state = 0;
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Stloc_1) {
+                    state++;
+                    if (state == 2)
+                        code.opcode = OpCodes.Pop;
+                }
+
+                yield return code;
+            }
+        }
+    }
 }

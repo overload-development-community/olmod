@@ -103,6 +103,12 @@
         ServerPort,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Eliminates spawn invulnerability decay from movement.
+        /// </summary>
+        SpawnInvulnerability,
+
+        /// <summary>
         /// Author: roncli
         /// Allows for sudden death overtime for CTF and monsterball.
         /// </summary>
