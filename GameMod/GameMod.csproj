@@ -186,7 +186,6 @@
     <Compile Include="MPSoundExt.cs" />
     <Compile Include="MPSoundOcclusion.cs" />
     <Compile Include="MPSpawnInitialization.cs" />
-    <Compile Include="MPSpawnInvuln.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />

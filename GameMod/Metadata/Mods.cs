@@ -103,6 +103,12 @@
         ServerPort,
 
         /// <summary>
+        /// Authors: arbruijn (Arne), roncli
+        /// Improves initialization of flak, cycle, thunderbolt, and boost on spawn.
+        /// </summary>
+        SpawnInitialization,
+
+        /// <summary>
         /// Author: tobiasksu (Tobias)
         /// Eliminates spawn invulnerability decay from movement.
         /// </summary>
