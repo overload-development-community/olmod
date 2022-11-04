@@ -1,20 +1,26 @@
 ﻿using System.Reflection;
+using GameMod.Metadata;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
 
-namespace GameMod {
+namespace GameMod.Patches {
     /// <summary>
     /// Reduce the number of spawns of lesser missiles.
     /// </summary>
+    [Mod(Mods.ReduceSpewedMissiles)]
     [HarmonyPatch(typeof(Item), "OnTriggerEnter")]
-    class MPSpew_Item_OnTriggerEnter {
-        private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static MethodInfo _Item_PlayItemPickupFX_Method = typeof(Item).GetMethod("PlayItemPickupFX", BindingFlags.NonPublic | BindingFlags.Instance);
+    public static class Item_OnTriggerEnter {
+        private static readonly MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo _Item_PlayItemPickupFX_Method = typeof(Item).GetMethod("PlayItemPickupFX", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        static bool Prefix(Item __instance, Collider other) {
-            // Needs to be multiplayer, on the server, not on a spawn point, and not a super pickup.  Bail otherwise.
-            if (!GameplayManager.IsMultiplayerActive || !NetworkManager.IsServer() || __instance.m_spawn_point != -1 || __instance.m_super) {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(Item __instance, Collider other) {
+            // Needs to be multiplayer, not on a spawn point, and not a super pickup.  Bail otherwise.
+            if (!GameplayManager.IsMultiplayerActive || __instance.m_spawn_point != -1 || __instance.m_super) {
                 return true;
             }
 
@@ -30,7 +36,7 @@ namespace GameMod {
                 return true;
             }
 
-            bool flag = false;
+            bool flag;
 
             switch (__instance.m_type) {
                 case ItemType.MISSILE_FALCON:
@@ -74,17 +80,6 @@ namespace GameMod {
             }
 
             return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
-    class MPSpew_PlayerShip_SpewItemsOnDeath {
-        static void Prefix(PlayerShip __instance) {
-            if (!NetworkManager.IsServer()) {
-                return;
-            }
-
-            __instance.c_player.m_weapon_picked_up[(int)WeaponType.LANCER] = false;
         }
     }
 }

@@ -73,6 +73,12 @@
         RearView,
 
         /// <summary>
+        /// Author: roncli
+        /// Reduces the quantity of missiles spewed from destroyed ships, and removes the lancer from a ship's spew.
+        /// </summary>
+        ReduceSpewedMissiles,
+
+        /// <summary>
         /// Author: tobiasksu (Tobias)
         /// Scales respawn time based on the number of players in the game.
         /// </summary>

@@ -163,6 +163,25 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Do not spew the lancer.
+    /// </summary>
+    [Mod(Mods.ReduceSpewedMissiles)]
+    [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
+    public static class PlayerShip_SpewItemsOnDeath {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Prefix(PlayerShip __instance) {
+            if (!NetworkManager.IsServer()) {
+                return;
+            }
+
+            __instance.c_player.m_weapon_picked_up[(int)WeaponType.LANCER] = false;
+        }
+    }
+
+    /// <summary>
     /// Self damage and charge time
     /// </summary>
     [Mod(Mods.ThunderboltBalance)]
