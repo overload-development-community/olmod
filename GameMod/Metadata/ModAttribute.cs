@@ -6,11 +6,11 @@ namespace GameMod.Metadata {
         public List<Mods> Mods { get; set; }
         public Version Version { get; set; }
 
-        public ModAttribute(Mods mod) : this(new Mods[] { mod }, VersionHandling.OlmodVersion.RunningVersion) { }
+        public ModAttribute(Mods mod) : this(new Mods[] { mod }, null) { }
 
         public ModAttribute(Mods mod, Version version) : this(new Mods[] { mod }, version) { }
 
-        public ModAttribute(Mods[] mods) : this(mods, VersionHandling.OlmodVersion.RunningVersion) { }
+        public ModAttribute(Mods[] mods) : this(mods, null) { }
 
         public ModAttribute(Mods[] mods, Version version) {
             Mods = new List<Mods>(mods);
