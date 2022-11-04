@@ -109,6 +109,12 @@
         ServerPort,
 
         /// <summary>
+        /// Author: derhass
+        /// Skips unnecessary client resimulations.
+        /// </summary>
+        SkipClientResiumulation,
+
+        /// <summary>
         /// Author: roncli
         /// Option to allow smash attack in multiplayer.
         /// </summary>

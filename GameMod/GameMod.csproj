@@ -134,6 +134,7 @@
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\BasicPowerupSpawns.cs" />
     <Compile Include="Objects\Settings.cs" />
+    <Compile Include="Objects\Smash.cs" />
     <Compile Include="Objects\SniperPackets.cs" />
     <Compile Include="Objects\SoundOcclusion.cs" />
     <Compile Include="Objects\SuddenDeath.cs" />
@@ -189,7 +190,6 @@
     <Compile Include="MPRespawn.cs" />
     <Compile Include="MPScoreboards.cs" />
     <Compile Include="MPServerBrowser.cs" />
-    <Compile Include="MPSmash.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />
@@ -206,7 +206,6 @@
     <Compile Include="MPProjInit.cs" />
     <Compile Include="MPPwdPaste.cs" />
     <Compile Include="MPSetup.cs" />
-    <Compile Include="MPSkipClientResimulation.cs" />
     <Compile Include="Patches\Item.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\Overload\BroadcastState.cs" />
