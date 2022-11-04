@@ -41,7 +41,7 @@ namespace GameMod.Patches.Overload {
 
         public static void Postfix() {
             if (Menus.mms_audio_occlusion_strength != 0) {
-                foreach (AudioLowPassFilter f in MPSoundExt.m_a_filter) {
+                foreach (AudioLowPassFilter f in SoundOcclusion.m_a_filter) {
                     f.cutoffFrequency = 22000f;
                     f.enabled = false;
                 }

@@ -184,8 +184,6 @@
     <Compile Include="MPServerBrowser.cs" />
     <Compile Include="MPSmash.cs" />
     <Compile Include="MPSniperPackets.cs" />
-    <Compile Include="MPSoundExt.cs" />
-    <Compile Include="MPSoundOcclusion.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />
@@ -220,6 +218,7 @@
     <Compile Include="Patches\ProFlareBatch.cs" />
     <Compile Include="Patches\Projectile.cs" />
     <Compile Include="Patches\RobotManager.cs" />
+    <Compile Include="Patches\TriggerEnergy.cs" />
     <Compile Include="Patches\UnityAudio.cs" />
     <Compile Include="PoorMansProfiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

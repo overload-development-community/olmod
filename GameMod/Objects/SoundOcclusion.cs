@@ -21,6 +21,10 @@ namespace GameMod.Objects {
         public static int CueState = 0;
         public static bool Occluded;
 
+        public static GameObject[] m_a_object = new GameObject[512];
+        public static AudioSource[] m_a_source = new AudioSource[512];
+        public static AudioLowPassFilter[] m_a_filter = new AudioLowPassFilter[512];
+
         // an attempt to optimize the "disabled" setting for occlusion - AddFilters re-adds a new set of filters if re-enabled
         public static void AddFilters() {
             if (!GameplayManager.IsDedicatedServer()) {
@@ -31,20 +35,20 @@ namespace GameMod.Objects {
         }
 
         public static void AddFilter(int i) {
-            if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() == null) {
-                MPSoundExt.m_a_filter[i] = MPSoundExt.m_a_object[i].AddComponent<AudioLowPassFilter>();
+            if (m_a_object[i].GetComponent<AudioLowPassFilter>() == null) {
+                m_a_filter[i] = m_a_object[i].AddComponent<AudioLowPassFilter>();
             } else {
-                MPSoundExt.m_a_filter[i] = MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>();
+                m_a_filter[i] = m_a_object[i].GetComponent<AudioLowPassFilter>();
             }
-            MPSoundExt.m_a_filter[i].cutoffFrequency = 22000f;
-            MPSoundExt.m_a_filter[i].enabled = false;
+            m_a_filter[i].cutoffFrequency = 22000f;
+            m_a_filter[i].enabled = false;
         }
 
         // ... while RemoveFilters takes them out completely
         public static void RemoveFilters() {
             for (int i = 0; i < 512; i++) {
-                if (MPSoundExt.m_a_object[i].GetComponent<AudioLowPassFilter>() != null) {
-                    Object.Destroy(MPSoundExt.m_a_filter[i]);
+                if (m_a_object[i].GetComponent<AudioLowPassFilter>() != null) {
+                    Object.Destroy(m_a_filter[i]);
                 }
             }
         }

@@ -31,6 +31,12 @@
         DisableSuperSpawn,
 
         /// <summary>
+        /// Authors: CCraigen (Fireball)
+        /// Improves game and audio performance while using an energy center.
+        /// </summary>
+        EnergyCenterPerformance,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Adds a red arrow under enemy players in team games.
         /// </summary>

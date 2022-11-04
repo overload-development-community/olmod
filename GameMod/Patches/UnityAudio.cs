@@ -22,8 +22,8 @@ namespace GameMod.Patches {
             //GameManager.m_audio.m_debug_sounds = true;
 
             if (___m_a_object != null) {
-                MPSoundExt.m_a_object[i] = ___m_a_object[i];
-                MPSoundExt.m_a_source[i] = ___m_a_object[i].GetComponent<AudioSource>();
+                SoundOcclusion.m_a_object[i] = ___m_a_object[i];
+                SoundOcclusion.m_a_source[i] = ___m_a_object[i].GetComponent<AudioSource>();
 
                 if (Menus.mms_audio_occlusion_strength != 0) {
                     SoundOcclusion.AddFilter(i);
@@ -224,16 +224,16 @@ namespace GameMod.Patches {
                     }
                 }
                 if (SoundOcclusion.Occluded) {
-                    MPSoundExt.m_a_filter[__result].cutoffFrequency = SoundOcclusion.CutoffFreq;
-                    MPSoundExt.m_a_source[__result].volume = MPSoundExt.m_a_source[__result].volume + SoundOcclusion.BoostAmount; // slight boost to volume as range increases to counter the HF rolloff
-                    MPSoundExt.m_a_filter[__result].enabled = true;
+                    SoundOcclusion.m_a_filter[__result].cutoffFrequency = SoundOcclusion.CutoffFreq;
+                    SoundOcclusion.m_a_source[__result].volume = SoundOcclusion.m_a_source[__result].volume + SoundOcclusion.BoostAmount; // slight boost to volume as range increases to counter the HF rolloff
+                    SoundOcclusion.m_a_filter[__result].enabled = true;
                 } else {
                     // restore the normal filter
-                    MPSoundExt.m_a_filter[__result].cutoffFrequency = 22000f;
-                    MPSoundExt.m_a_filter[__result].enabled = false;
+                    SoundOcclusion.m_a_filter[__result].cutoffFrequency = 22000f;
+                    SoundOcclusion.m_a_filter[__result].enabled = false;
                 }
             }
-            MPSoundExt.m_a_source[__result].Play();  // Nop'd out in the transpiler
+            SoundOcclusion.m_a_source[__result].Play();  // Nop'd out in the transpiler
         }
     }
 }
