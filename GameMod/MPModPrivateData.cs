@@ -1230,8 +1230,8 @@ END_ENTRY
         public static string CustomProjdata { get; set; }
         public static bool AllowSmash
         {
-            get { return MPSmash.Enabled; }
-            set { MPSmash.Enabled = value; }
+            get { return Smash.Enabled; }
+            set { Smash.Enabled = value; }
         }
 
         public static int MatchTimeLimit

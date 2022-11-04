@@ -110,6 +110,12 @@
 
         /// <summary>
         /// Author: roncli
+        /// Option to allow smash attack in multiplayer.
+        /// </summary>
+        Smash,
+
+        /// <summary>
+        /// Author: roncli
         /// Trust the client with weapon firing position/rotation, selected primary/secondary, and most resource amounts.
         /// </summary>
         SniperPackets,

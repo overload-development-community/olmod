@@ -146,6 +146,21 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Don't run this on the server.
+    /// </summary>
+    [Mod(Mods.Smash)]
+    [HarmonyPatch(typeof(PlayerShip), "MaybeDoChargeAttackFinish")]
+    public static class PlayerShip_MaybeDoChargeAttackFinish {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix() {
+            return !Smash.Enabled;
+        }
+    }
+
+    /// <summary>
     /// Similar to MaybeFireWeapon, we redirect Projectile.PlayerFire to SniperPackets.MaybePlayerFire in order for the client to control where the missile gets fired from.
     /// 
     /// We also want to try to switch to a new secondary on the client no matter what at the end of MaybeFireMissile.
@@ -252,6 +267,47 @@ namespace GameMod.Patches.Overload {
     public static class PlayerShip_OnDisable {
         public static void Postfix() {
             ThunderboltBalance.StopThunderboltSelfDamageLoop();
+        }
+    }
+
+    /// <summary>
+    /// Check for collision and do damage if necessary.
+    /// </summary>
+    [Mod(Mods.Smash)]
+    [HarmonyPatch(typeof(PlayerShip), "ProcessCollision")]
+    public static class PlayerShip_ProcessCollision {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        private static readonly MethodInfo _PlayerShip_CalculateChargeAttackDamage_Method = AccessTools.Method(typeof(PlayerShip), "CalculateChargeAttackDamage");
+        public static void Prefix(PlayerShip __instance, Collision collision) {
+            if (!Smash.Enabled) {
+                return;
+            }
+
+            if (collision.collider.gameObject == null || NetworkSim.m_resimulating || !GameplayManager.IsMultiplayer) {
+                return;
+            }
+
+            switch (collision.collider.gameObject.layer) {
+                case 9:
+                    var opponent = collision.collider.GetComponent<PlayerShip>();
+                    if (opponent != null && __instance.m_charge_timer > 0f && __instance.c_rigidbody.velocity.magnitude > 2f && __instance.m_boosting) {
+                        var di = new DamageInfo {
+                            damage = (float)_PlayerShip_CalculateChargeAttackDamage_Method.Invoke(__instance, null),
+                            owner = __instance.gameObject,
+                            pos = __instance.transform.position,
+                            type = DamageType.PLAYER_CHARGE,
+                            weapon = ProjPrefab.none
+                        };
+                        opponent.ApplyDamage(di);
+
+                        __instance.CallRpcDoChargeAttackFinish();
+                        __instance.m_charge_timer = 0f;
+                    }
+                    break;
+            }
         }
     }
 
@@ -407,6 +463,38 @@ namespace GameMod.Patches.Overload {
 
                 yield return code;
             }
+        }
+    }
+
+    /// <summary>
+    /// Allow smash on server.
+    /// </summary>
+    [Mod(Mods.Smash)]
+    [HarmonyPatch(typeof(PlayerShip), "TryChargeAttackStart")]
+    public static class PlayerShip_TryChargeAttackStart {
+        private static readonly FieldInfo _PlayerShip_m_refire_charge_time_Field = typeof(PlayerShip).GetField("m_refire_charge_time", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo _PlayerShip_FindEnemyTarget_Method = AccessTools.Method(typeof(PlayerShip), "FindEnemyTarget");
+
+        public static bool Prefix(PlayerShip __instance) {
+            if (!Smash.Enabled) {
+                return true;
+            }
+
+            if ((float)_PlayerShip_m_refire_charge_time_Field.GetValue(__instance) <= 0f && __instance.m_wheel_select_state == WheelSelectState.NONE && __instance.c_player.m_energy >= 10f && __instance.m_boost_overheat_timer <= 0f) {
+                _PlayerShip_FindEnemyTarget_Method.Invoke(__instance, null);
+                var chargeTime = __instance.m_charge_target ? 0.45f : 0.1f;
+                __instance.CallCmdDoChargeAttackStart(chargeTime);
+                __instance.m_charge_timer = chargeTime;
+                __instance.c_player.UseEnergy(10f);
+                __instance.m_boost_heat += 0.3f;
+                Client.GetClient().Send(MessageTypes.MsgPlayerSyncResource, new PlayerSyncResourceMessage {
+                    m_player_id = __instance.c_player.netId,
+                    m_type = PlayerSyncResourceMessage.ValueType.ENERGY,
+                    m_value = __instance.c_player.m_energy
+                });
+            }
+
+            return false;
         }
     }
 
