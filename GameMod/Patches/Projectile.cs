@@ -12,7 +12,7 @@ namespace GameMod.Patches {
     [Mod(Mods.ThunderboltPassthrough)]
     [HarmonyPatch(typeof(Projectile), "OnTriggerEnter")]
     public static class Projectile_OnTriggerEnter {
-        public static void MaybeExplode(bool damaged_something, Projectile proj) {
+        public static void MaybeExplode(Projectile proj, bool damaged_something) {
             bool enablePassthrough = proj.m_type == ProjPrefab.proj_thunderbolt && GameplayManager.IsMultiplayer && ThunderboltPassthrough.Enabled;
 
             if (!enablePassthrough)
@@ -22,7 +22,13 @@ namespace GameMod.Patches {
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             foreach (var code in codes) {
                 if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Projectile), "Explode")) {
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    // Original call was this.Explode(bool).
+                    // This replaces it with Projectile_OnTrigger.MaybeExplode(proj, damaged_something).
+                    //
+                    // But where does proj come from, you ask?
+                    //
+                    // Well, because this.Explode is a member function of class Projectile, it was already passing proj (aka this) in the original code.
+                    // Therefore, we don't need to pass a second proj to the static function Projectile.OnTrigger.
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Projectile_OnTriggerEnter), "MaybeExplode"));
                     continue;
                 }
