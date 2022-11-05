@@ -133,6 +133,8 @@
     <Compile Include="Metadata\Mods.cs" />
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\BasicPowerupSpawns.cs" />
+    <Compile Include="Objects\DefaultProjData.cs" />
+    <Compile Include="Objects\ModPreferences.cs" />
     <Compile Include="Objects\Settings.cs" />
     <Compile Include="Objects\Smash.cs" />
     <Compile Include="Objects\SniperPackets.cs" />

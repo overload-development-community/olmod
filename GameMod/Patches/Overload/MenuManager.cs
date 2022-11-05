@@ -9,6 +9,20 @@ using UnityEngine;
 
 namespace GameMod.Patches {
     /// <summary>
+    /// Set players to start to 1 if it is not already, and send a valid match mode to avoid a crash.
+    /// </summary>
+    [Mod(new Mods[] { Mods.OnePlayerMultiplayerGames, Mods.Race })]
+    [HarmonyPatch(typeof(MenuManager), "BuildPrivateMatchData")]
+    public static class MenuManager_BuildPrivateMatchData {
+        public static void Postfix(PrivateMatchDataMessage __result) {
+            if (__result.m_num_players_to_start != 1)
+                __result.m_num_players_to_start = 1;
+            if ((int)__result.m_match_mode > (int)ExtMatchMode.CTF) // Newer matchmodes must be sent with ModPrivateData.
+                __result.m_match_mode = NetworkMatch.IsTeamMode(__result.m_match_mode) ? MatchMode.TEAM_ANARCHY : MatchMode.ANARCHY;
+        }
+    }
+
+    /// <summary>
     /// Gets the team name.
     /// </summary>
     [Mod(new Mods[] { Mods.CustomTeamColors, Mods.Teams })]
@@ -96,6 +110,28 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Initializes some settings.
+    /// </summary>
+    [Mod(Mods.ModPreferences)]
+    [HarmonyPatch(typeof(MenuManager), "InitMpPrivateMatch")]
+    public static class MenuManager_InitMpPrivateMatch {
+        public static void Postfix() {
+            ModPreferences.InitSettings();
+        }
+    }
+
+    /// <summary>
+    /// Loads modded preferences.
+    /// </summary>
+    [Mod(Mods.ModPreferences)]
+    [HarmonyPatch(typeof(MenuManager), "LoadPreferences")]
+    public static class MenuManager_LoadPreferences {
+        public static void Postfix() {
+            ModPreferences.LoadPreferences();
+        }
+    }
+
+    /// <summary>
     /// Update lobby status display.
     /// </summary>
     [Mod(Mods.PresetData)]
@@ -173,6 +209,50 @@ namespace GameMod.Patches {
             _MenuManager_ResetBackStack.Invoke(null, new object[] { });
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Saves modded preferences, and fixes a bug with XP resetting.
+    /// </summary>
+    [Mod(new Mods[] { Mods.ModPreferences, Mods.XPResetFix })]
+    [HarmonyPatch(typeof(MenuManager), "SavePreferences")]
+    public static class MenuManager_SavePreferences {
+        private static int lastXP;
+
+        [Mod(Mods.XPResetFix)]
+        public static void Store() {
+            if (MenuManager.LocalGetInt("PS_XP2", 0) == 0 && lastXP > 0)
+                MenuManager.LocalSetInt("PS_XP2", lastXP);
+        }
+
+        [Mod(Mods.XPResetFix)]
+        public static void Prefix(string filename) {
+            lastXP = MenuManager.LocalGetInt("PS_XP2", 0);
+
+            ModPreferences.SavePreferences(filename);
+        }
+
+        [Mod(new Mods[] { Mods.ModPreferences, Mods.XPResetFix })]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            var mpSetupSave_Store_Method = AccessTools.Method(typeof(MenuManager_SavePreferences), "Store");
+            foreach (var code in codes) {
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "Flush")
+                    yield return new CodeInstruction(OpCodes.Call, mpSetupSave_Store_Method);
+                yield return code;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sets defaults for some settings.
+    /// </summary>
+    [Mod(Mods.ModPreferences)]
+    [HarmonyPatch(typeof(MenuManager), "SetPreferencesDefaults")]
+    public static class MenuManager_SetPreferencesDefaults {
+        public static void Postfix() {
+            ModPreferences.InitSettings();
+            ModPreferences.SetDefaults();
         }
     }
 }

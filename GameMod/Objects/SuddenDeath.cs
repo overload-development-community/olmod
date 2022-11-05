@@ -4,12 +4,11 @@ using GameMod.Metadata;
 namespace GameMod.Objects {
     [Mod(Mods.SuddenDeath)]
     public static class SuddenDeath {
-        public static bool SuddenDeathMenuEnabled = false;
-        public static bool SuddenDeathMatchEnabled = false;
+        public static bool Enabled = false;
         public static bool InOvertime = false;
 
         public static int GetTimer() {
-            if (NetworkMatch.m_match_time_limit_seconds == int.MaxValue || !SuddenDeathMatchEnabled) {
+            if (NetworkMatch.m_match_time_limit_seconds == int.MaxValue || !Enabled) {
                 return NetworkMatch.m_match_time_remaining;
             }
 

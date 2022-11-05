@@ -417,7 +417,7 @@ namespace GameMod {
 
         [Mod(Mods.SuddenDeath)]
         private static string GetMMSSuddenDeath() {
-            return MenuManager.GetToggleSetting(Convert.ToInt32(SuddenDeath.SuddenDeathMenuEnabled));
+            return MenuManager.GetToggleSetting(Convert.ToInt32(SuddenDeath.Enabled));
         }
 
         [Mod(Mods.SuddenDeath)]
@@ -543,7 +543,7 @@ namespace GameMod {
                 (UIManager.PushedSelect(100) || UIManager.PushedDir()) &&
                 MenuManager.m_menu_micro_state == 3 &&
                 UIManager.m_menu_selection == 10) {
-                SuddenDeath.SuddenDeathMenuEnabled = !SuddenDeath.SuddenDeathMenuEnabled;
+                SuddenDeath.Enabled = !SuddenDeath.Enabled;
                 MenuManager.PlayCycleSound(1f, UIManager.m_select_dir);
             }
         }

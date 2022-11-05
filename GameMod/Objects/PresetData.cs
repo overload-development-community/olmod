@@ -42,7 +42,7 @@ namespace GameMod.Objects {
             if (PresetData.ProjDataExists) {
                 return MPModPrivateData.CustomProjdata;
             } else if (GameplayManager.IsMultiplayer) {
-                return MPModPrivateData.DEFAULT_PROJ_DATA;
+                return DefaultProjData.DEFAULT_PROJ_DATA;
             } else {
                 // Look for "projdata.txt" in SP/CM zip files and use if possible
                 if (!GameplayManager.IsMultiplayer && GameplayManager.Level.IsAddOn) {

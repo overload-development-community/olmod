@@ -52,7 +52,15 @@ namespace GameMod.Objects {
             return AllTeams[Array.IndexOf(teamMessageColorIndexList, messageColorIndex)];
         }
 
-        public static Color GetMessageColor(MpMessageColor mpmc, float flash) {
+        /// <remarks>
+        /// Because the original function is a member function on UIElement and this is a static function,
+        /// we must have a placeholder UIElement parameter as the first parameter.
+        /// </remarks>
+        /// <param name="_"></param>
+        /// <param name="mpmc"></param>
+        /// <param name="flash"></param>
+        /// <returns></returns>
+        public static Color GetMessageColor(UIElement _, MpMessageColor mpmc, float flash) {
             switch (mpmc) {
                 case MpMessageColor.LOCAL:
                     return Color.Lerp(UIManager.m_col_hi2, UIManager.m_col_hi7, flash);

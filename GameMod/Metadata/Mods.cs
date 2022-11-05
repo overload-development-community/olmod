@@ -20,6 +20,12 @@
 
         /// <summary>
         /// Author: roncli
+        /// Updated default projdata based on balance testing.
+        /// </summary>
+        DefaultProjData,
+
+        /// <summary>
+        /// Author: roncli
         /// Disables updating of Gamelift pings.
         /// </summary>
         DisableGamelift,
@@ -29,6 +35,12 @@
         /// Disables the super spawn in maps that don't have a super spawn.
         /// </summary>
         DisableSuperSpawn,
+
+        /// <summary>
+        /// Authors: arbruijn (Arne), SiriusTR (Sirius)
+        /// Auto-downloads addon levels for multiplayer from overloadmaps.com.
+        /// </summary>
+        DownloadLevels,
 
         /// <summary>
         /// Authors: CCraigen (Fireball)
@@ -61,6 +73,18 @@
         MessageHandlers,
 
         /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Loads and saves preferences for other mods.
+        /// </summary>
+        ModPreferences,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Allows multiplayer games to be started with one player.
+        /// </summary>
+        OnePlayerMultiplayerGames,
+
+        /// <summary>
         /// Authors: arbruijn (Arne), tobiasksu (Tobias)
         /// Allows for custom projdata and robotdata.
         /// </summary>
@@ -71,6 +95,12 @@
         /// Fixes the previous weapon keybind.
         /// </summary>
         PreviousWeaponFix,
+
+        /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Adds the race game mode.
+        /// </summary>
+        Race,
 
         /// <summary>
         /// Author: arbruijn (Arne)
@@ -220,6 +250,12 @@
         /// Author: klmcdorm (kevin)
         /// Fixes object orientation coming out of a warper.
         /// </summary>
-        WarperOrientation
+        WarperOrientation,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
+        /// 
+        /// </summary>
+        XPResetFix
     }
 }

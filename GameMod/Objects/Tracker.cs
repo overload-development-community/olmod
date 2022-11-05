@@ -167,7 +167,7 @@ namespace GameMod.Objects {
                 matchNotes = MPModPrivateData.MatchNotes,
                 classicSpawnsEnabled = MPClassic.matchEnabled,
                 ctfCarrierBoostEnabled = CTF.CarrierBoostEnabled,
-                suddenDeath = SuddenDeath.SuddenDeathMenuEnabled
+                suddenDeath = SuddenDeath.Enabled
             });
         }
 

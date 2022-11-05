@@ -13,6 +13,29 @@ using UnityEngine;
 
 namespace GameMod.Patches {
     /// <summary>
+    /// Attempts to download the level if missing, and set players to start match to 1 if not already.
+    /// </summary>
+    [Mod(new Mods[] { Mods.DownloadLevels, Mods.OnePlayerMultiplayerGames })]
+    [HarmonyPatch(typeof(NetworkMatch), "ApplyPrivateMatchSettings")]
+    public static class NetworkMatch_ApplyPrivateMatchSettings {
+        [Mod(new Mods[] { Mods.DownloadLevels })]
+        private static void TryDownloadLevelIfMissing(ref bool __result, PrivateMatchDataMessage pmd) {
+            // unknown level?
+            if (!__result && !Switches.NoDownload && !string.IsNullOrEmpty(pmd.m_addon_level_name_hash)) {
+                MPDownloadLevel.StartGetLevel(pmd.m_addon_level_name_hash);
+                __result = true;
+            }
+        }
+
+        [Mod(new Mods[] { Mods.DownloadLevels, Mods.OnePlayerMultiplayerGames })]
+        public static void Postfix(ref bool __result, PrivateMatchDataMessage pmd, ref int ___m_num_players_to_start_match) {
+            if (___m_num_players_to_start_match != 1) // Always allow game to start with 1 player.
+                ___m_num_players_to_start_match = 1;
+            TryDownloadLevelIfMissing(ref __result, pmd);
+        }
+    }
+
+    /// <summary>
     /// Doubles the time allotted to wait for a client to start the match.
     /// </summary>
     [Mod(Mods.LaunchCountdown)]
@@ -154,7 +177,7 @@ namespace GameMod.Patches {
             if (
                 NetworkMatch.m_match_elapsed_seconds > NetworkMatch.m_match_time_limit_seconds
                 && (NetworkMatch.GetMode() == MatchMode.MONSTERBALL || NetworkMatch.GetMode() == CTF.MatchModeCTF)
-                && SuddenDeath.SuddenDeathMatchEnabled
+                && SuddenDeath.Enabled
                 && NetworkMatch.m_team_scores[(int)MpTeam.TEAM0] == NetworkMatch.m_team_scores[(int)MpTeam.TEAM1]
             ) {
                 if (!SuddenDeath.InOvertime) {
@@ -354,6 +377,17 @@ namespace GameMod.Patches {
                 { "SupportsTweaks", "" }
             };
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps });
+        }
+    }
+
+    /// <summary>
+    /// Resets level downloading.
+    /// </summary>
+    [Mod(new Mods[] { Mods.DownloadLevels })]
+    [HarmonyPatch(typeof(NetworkMatch), "SetDefaultMatchSettings")]
+    public static class NetworkMatch_SetDefaultMatchSettings {
+        public static void Postfix() {
+            MPDownloadLevel.Reset();
         }
     }
 

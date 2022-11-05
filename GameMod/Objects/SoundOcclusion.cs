@@ -47,7 +47,7 @@ namespace GameMod.Objects {
         // ... while RemoveFilters takes them out completely
         public static void RemoveFilters() {
             for (int i = 0; i < 512; i++) {
-                if (m_a_object[i].GetComponent<AudioLowPassFilter>() != null) {
+                if (m_a_object[i] != null && m_a_object[i].GetComponent<AudioLowPassFilter>() != null) {
                     Object.Destroy(m_a_filter[i]);
                 }
             }
