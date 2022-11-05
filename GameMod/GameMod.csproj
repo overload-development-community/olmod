@@ -160,6 +160,7 @@
     <Compile Include="MPOpponentCockpits.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
+    <Compile Include="MPReduceJoinTimeout.cs" />
     <Compile Include="MPRespawn.cs" />
     <Compile Include="MPScoreboards.cs" />
     <Compile Include="MPServerBrowser.cs" />
