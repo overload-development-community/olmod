@@ -962,9 +962,10 @@ namespace GameMod {
         // Cycle a single profiler interval
         public static void CycleInterval() {
             intervalEnd = timerBase.ElapsedTicks;
+            long previousStart = intervalStart;
             Dictionary<MethodBase,MethodProfile> data = ResetInterval();
             MethodProfile intervalTime = new MethodProfile("+++PMP-Interval", -7778);
-            intervalTime.ImportTicks(intervalEnd - intervalStart);
+            intervalTime.ImportTicks(intervalEnd - previousStart);
             if (useLocking) {
                 lock(data) {
                     data[pmpIntervalTimeDummy] = intervalTime;
