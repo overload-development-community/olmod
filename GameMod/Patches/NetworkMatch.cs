@@ -165,16 +165,19 @@ namespace GameMod.Patches {
     /// <summary>
     /// Sets overtime off, initialize the tweaks before each match, and resets the team scores.
     /// </summary>
-    [Mod(new Mods[] { Mods.SuddenDeath, Mods.Teams, Mods.Tweaks })]
+    [Mod(new Mods[] { Mods.Respawn, Mods.SuddenDeath, Mods.Teams, Mods.Tweaks })]
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
     public static class NetworkMatch_InitBeforeEachMatch {
         public static void Postfix() {
-            SuddenDeath.InOvertime = false;
+            Respawn.spawnPointsFromItems.Clear();
+            Respawn.spawnPointDistances.Clear();
 
-            Tweaks.InitMatch();
+            SuddenDeath.InOvertime = false;
 
             for (int i = 0, l = NetworkMatch.m_team_scores.Length; i < l; i++)
                 NetworkMatch.m_team_scores[i] = 0;
+
+            Tweaks.InitMatch();
         }
     }
 
@@ -392,6 +395,81 @@ namespace GameMod.Patches {
                 { "SupportsTweaks", "" }
             };
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps });
+        }
+    }
+
+    [Mod(Mods.Respawn)]
+    [HarmonyPatch(typeof(NetworkMatch), "ProcessPregame")]
+    public static class NetworkMatch_ProcessPregame {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Prefix() {
+            // Check mode, bail if not Anarchy or Team Anarchy.
+            var mode = NetworkMatch.GetMode();
+            if (mode != MatchMode.ANARCHY && mode != MatchMode.TEAM_ANARCHY) {
+                return;
+            }
+
+            // Bail if we have spawn points.
+            if (Respawn.spawnPointDistances.Count > 0) {
+                return;
+            }
+
+            // If enabled, get all of the item spawn points and check to see if they can be reused as player spawn points.
+            if (Respawn.EnableItemSpawnsAsPlayerSpawns) {
+                for (int i = 0; i < GameManager.m_level_data.m_item_spawn_points.Length; i++) {
+                    // TODO: Figure out how to bail when supers are involved.
+                    // if (spawn point is super) {
+                    //     continue;
+                    // }
+
+                    var itemSpawnPoint = GameManager.m_level_data.m_item_spawn_points[i];
+
+                    float largestDistance = 0f;
+                    Quaternion largestQuaternion = Quaternion.identity;
+
+                    for (float angle = 0f; angle < 360f; angle += 15f) {
+                        var quaternion = Quaternion.Euler(0, angle, 0);
+
+                        if (Physics.Raycast(itemSpawnPoint.position, quaternion * Vector3.forward, out RaycastHit hitInfo, 9999f)) {
+                            var distance = hitInfo.distance;
+                            if (distance > largestDistance) {
+                                largestDistance = distance;
+                                largestQuaternion = quaternion;
+                            }
+                        }
+                    }
+
+                    if (largestDistance > 20f) {
+                        Respawn.spawnPointsFromItems.Add(new Respawn.ItemSpawnPoint(i, largestQuaternion));
+                    }
+                }
+            }
+
+            // Generate a lookup of the distance between spawn points.
+            var spawnPoints = new List<LevelData.SpawnPoint>();
+            spawnPoints.AddRange(Respawn.spawnPointsFromItems.Select(s => s.spawnPoint));
+            spawnPoints.AddRange(GameManager.m_level_data.m_player_spawn_points);
+
+            foreach (var spawn1 in spawnPoints) {
+                var position = spawn1.position;
+                var segnum = GameManager.m_level_data.FindSegmentContainingWorldPosition(position);
+                Respawn.spawnPointDistances.Add(spawn1, new Dictionary<LevelData.SpawnPoint, float>());
+                foreach (var spawn2 in spawnPoints) {
+                    if (spawn1 == spawn2) {
+                        continue;
+                    }
+
+                    var position2 = spawn2.position;
+                    var segnum2 = GameManager.m_level_data.FindSegmentContainingWorldPosition(position2);
+
+                    var distance = RUtility.FindVec3Distance(position - position2);
+
+                    Respawn.spawnPointDistances[spawn1].Add(spawn2, distance);
+                }
+            }
         }
     }
 

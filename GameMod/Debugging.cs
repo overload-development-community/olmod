@@ -6,6 +6,7 @@ using Overload;
 using UnityEngine;
 using System.Linq;
 using System;
+using GameMod.Objects;
 
 namespace GameMod {
     public class Debugging {
@@ -83,8 +84,8 @@ namespace GameMod {
                 return;
             }
 
-            var respawnPointCandidates = MPRespawn_ChooseSpawnPoint.GetRespawnPointCandidates(GameManager.m_local_player.m_mp_team);
-            spawn_scores = MPRespawn_ChooseSpawnPoint.GetRespawnPointScores(GameManager.m_local_player.m_mp_team, respawnPointCandidates);
+            var respawnPointCandidates = Respawn.GetRespawnPointCandidates(GameManager.m_local_player.m_mp_team);
+            spawn_scores = Respawn.GetRespawnPointScores(GameManager.m_local_player.m_mp_team, respawnPointCandidates);
         }
     }
 

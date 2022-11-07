@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using GameMod.Metadata;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
 
-namespace GameMod {
-    public class MPRespawn {
+namespace GameMod.Objects {
+    [Mod(Mods.Respawn)]
+    public static class Respawn {
         public static bool EnableItemSpawnsAsPlayerSpawns = false;
 
         public struct ItemSpawnPoint {
@@ -21,118 +23,15 @@ namespace GameMod {
             }
         }
 
-        public static List<ItemSpawnPoint> spawnPointsFromItems = new List<ItemSpawnPoint>();
-        public static Dictionary<LevelData.SpawnPoint, Dictionary<LevelData.SpawnPoint, float>> spawnPointDistances = new Dictionary<LevelData.SpawnPoint, Dictionary<LevelData.SpawnPoint, float>>();
-    }
+        private static readonly List<Quaternion> m_player_rot = new List<Quaternion>();
 
-    [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
-    class MPRespawn_InitBeforeEachMatch {
-        private static void Prefix() {
-            MPRespawn.spawnPointsFromItems.Clear();
-            MPRespawn.spawnPointDistances.Clear();
-        }
-    }
+        public static readonly List<ItemSpawnPoint> spawnPointsFromItems = new List<ItemSpawnPoint>();
+        public static readonly Dictionary<LevelData.SpawnPoint, Dictionary<LevelData.SpawnPoint, float>> spawnPointDistances = new Dictionary<LevelData.SpawnPoint, Dictionary<LevelData.SpawnPoint, float>>();
+        public static readonly Dictionary<LevelData.SpawnPoint, DateTime> lastRespawn = new Dictionary<LevelData.SpawnPoint, DateTime>();
 
-    [HarmonyPatch(typeof(NetworkMatch), "ProcessPregame")]
-    class MPRespawn_ProcessPregame {
-        public static readonly int layerMask = (int)Math.Pow((int)UnityObjectLayers.LEVEL, 2) + (int)Math.Pow((int)UnityObjectLayers.DOOR, 2) + (int)Math.Pow((int)UnityObjectLayers.LAVA, 2);
-
-        private static void Prefix() {
-            // Check mode, bail if not Anarchy or Team Anarchy.
-            var mode = NetworkMatch.GetMode();
-            if (mode != MatchMode.ANARCHY && mode != MatchMode.TEAM_ANARCHY) {
-                return;
-            }
-
-            // Bail if we have spawn points.
-            if (MPRespawn.spawnPointDistances.Count > 0) {
-                return;
-            }
-
-            // If enabled, get all of the item spawn points and check to see if they can be reused as player spawn points.
-            if (MPRespawn.EnableItemSpawnsAsPlayerSpawns) {
-                for (int i = 0; i < GameManager.m_level_data.m_item_spawn_points.Length; i++) {
-                    // TODO: Figure out how to bail when supers are involved.
-                    // if (spawn point is super) {
-                    //     continue;
-                    // }
-
-                    var itemSpawnPoint = GameManager.m_level_data.m_item_spawn_points[i];
-
-                    float largestDistance = 0f;
-                    Quaternion largestQuaternion = Quaternion.identity;
-
-                    for (float angle = 0f; angle < 360f; angle += 15f) {
-                        var quaternion = Quaternion.Euler(0, angle, 0);
-
-                        if (Physics.Raycast(itemSpawnPoint.position, quaternion * Vector3.forward, out RaycastHit hitInfo, 9999f)) {
-                            var distance = hitInfo.distance;
-                            if (distance > largestDistance) {
-                                largestDistance = distance;
-                                largestQuaternion = quaternion;
-                            }
-                        }
-                    }
-
-                    if (largestDistance > 20f) {
-                        MPRespawn.spawnPointsFromItems.Add(new MPRespawn.ItemSpawnPoint(i, largestQuaternion));
-                    }
-                }
-            }
-
-            // Generate a lookup of the distance between spawn points.
-            var spawnPoints = new List<LevelData.SpawnPoint>();
-            spawnPoints.AddRange(MPRespawn.spawnPointsFromItems.Select(s => s.spawnPoint));
-            spawnPoints.AddRange(GameManager.m_level_data.m_player_spawn_points);
-
-            foreach (var spawn1 in spawnPoints) {
-                var position = spawn1.position;
-                var segnum = GameManager.m_level_data.FindSegmentContainingWorldPosition(position);
-                MPRespawn.spawnPointDistances.Add(spawn1, new Dictionary<LevelData.SpawnPoint, float>());
-                foreach (var spawn2 in spawnPoints) {
-                    if (spawn1 == spawn2) {
-                        continue;
-                    }
-
-                    var position2 = spawn2.position;
-                    var segnum2 = GameManager.m_level_data.FindSegmentContainingWorldPosition(position2);
-
-                    var distance = RUtility.FindVec3Distance(position - position2);
-
-                    MPRespawn.spawnPointDistances[spawn1].Add(spawn2, distance);
-                }
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(NetworkSpawnPoints), "ChooseSpawnPoint")]
-    class MPRespawn_ChooseSpawnPoint {
-        private static FieldInfo _NetworkSpawnPoints_m_player_pos_Field = typeof(NetworkSpawnPoints).GetField("m_player_pos", BindingFlags.NonPublic | BindingFlags.Static);
-        private static FieldInfo _NetworkSpawnPoints_m_player_team_Field = typeof(NetworkSpawnPoints).GetField("m_player_team", BindingFlags.NonPublic | BindingFlags.Static);
-        private static MethodInfo _NetworkSpawnPoints_GetRespawnPointCandidates_Method = AccessTools.Method(typeof(NetworkSpawnPoints), "GetRespawnPointCandidates");
-        private static MethodInfo _NetworkSpawnPoints_GetRandomRespawnPointWithoutFiltering_Method = AccessTools.Method(typeof(NetworkSpawnPoints), "GetRandomRespawnPointWithoutFiltering");
-
-        private static bool Prefix(MpTeam team, ref LevelData.SpawnPoint __result) {
-            // Check mode, bail if not Anarchy or Team Anarchy.
-            var mode = NetworkMatch.GetMode();
-            if (mode != MatchMode.ANARCHY && mode != MatchMode.TEAM_ANARCHY) {
-                return true;
-            }
-
-            var respawnPointCandidates = GetRespawnPointCandidates(team);
-
-            if (respawnPointCandidates.Count == 0) {
-                __result = (LevelData.SpawnPoint)_NetworkSpawnPoints_GetRandomRespawnPointWithoutFiltering_Method.Invoke(null, new object[] { });
-            } else if (NetworkManager.m_Players.Count == 0) {
-                __result = respawnPointCandidates[UnityEngine.Random.Range(0, respawnPointCandidates.Count)];
-            } else {
-                var scores = GetRespawnPointScores(team, respawnPointCandidates, true);
-                __result = scores.OrderByDescending(s => s.Value).First().Key;
-            }
-
-            lastRespawn[__result] = DateTime.Now;
-            return false;
-        }
+        private static readonly FieldInfo _NetworkSpawnPoints_m_player_pos_Field = typeof(NetworkSpawnPoints).GetField("m_player_pos", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly FieldInfo _NetworkSpawnPoints_m_player_team_Field = typeof(NetworkSpawnPoints).GetField("m_player_team", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly MethodInfo _NetworkSpawnPoints_GetRespawnPointCandidates_Method = AccessTools.Method(typeof(NetworkSpawnPoints), "GetRespawnPointCandidates");
 
         public static List<LevelData.SpawnPoint> GetRespawnPointCandidates(MpTeam team) {
             var respawnPointCandidates = (
@@ -142,19 +41,15 @@ namespace GameMod {
 
             IEnumerable<LevelData.SpawnPoint> validItemSpawnPoints;
             if (NetworkManager.IsServer()) {
-                validItemSpawnPoints = MPRespawn.spawnPointsFromItems.Where(i => Item.HasLiveItem == null || i.index > Item.HasLiveItem.Length || !Item.HasLiveItem[i.index]).Select(i => i.spawnPoint);
+                validItemSpawnPoints = Respawn.spawnPointsFromItems.Where(i => Item.HasLiveItem == null || i.index > Item.HasLiveItem.Length || !Item.HasLiveItem[i.index]).Select(i => i.spawnPoint);
             } else {
-                validItemSpawnPoints = MPRespawn.spawnPointsFromItems.Where(i => !Item.m_ItemList.Exists(it => Math.Abs(it.transform.position.x - i.spawnPoint.position.x) < 0.1f && Math.Abs(it.transform.position.y - i.spawnPoint.position.y) < 0.1f && Math.Abs(it.transform.position.z - i.spawnPoint.position.z) < 0.1f)).Select(i => i.spawnPoint);
+                validItemSpawnPoints = Respawn.spawnPointsFromItems.Where(i => !Item.m_ItemList.Exists(it => Math.Abs(it.transform.position.x - i.spawnPoint.position.x) < 0.1f && Math.Abs(it.transform.position.y - i.spawnPoint.position.y) < 0.1f && Math.Abs(it.transform.position.z - i.spawnPoint.position.z) < 0.1f)).Select(i => i.spawnPoint);
             }
 
             respawnPointCandidates.AddRange(validItemSpawnPoints);
 
             return respawnPointCandidates;
         }
-
-        private static Dictionary<LevelData.SpawnPoint, DateTime> lastRespawn = new Dictionary<LevelData.SpawnPoint, DateTime>();
-
-        internal static List<Quaternion> m_player_rot = new List<Quaternion>();
 
         public static Dictionary<LevelData.SpawnPoint, float> GetRespawnPointScores(MpTeam team, List<LevelData.SpawnPoint> candidates, bool randomness = false) {
             var m_player_pos = (List<Vector3>)_NetworkSpawnPoints_m_player_pos_Field.GetValue(null);
@@ -201,7 +96,7 @@ namespace GameMod {
                         continue;
                     }
 
-                    var distance = MPRespawn.spawnPointDistances[candidates[i]][candidates[j]];
+                    var distance = Respawn.spawnPointDistances[candidates[i]][candidates[j]];
 
                     if (distance > max) {
                         max = distance;
@@ -225,7 +120,7 @@ namespace GameMod {
             return scores;
         }
 
-        public static float GetRespawnPointScore(MpTeam team, LevelData.SpawnPoint spawnPoint, List<float> distances, float max) {
+        private static float GetRespawnPointScore(MpTeam team, LevelData.SpawnPoint spawnPoint, List<float> distances, float max) {
             var playerPositions = (List<Vector3>)_NetworkSpawnPoints_m_player_pos_Field.GetValue(null);
             var playerTeams = (List<MpTeam>)_NetworkSpawnPoints_m_player_team_Field.GetValue(null);
 
@@ -292,8 +187,7 @@ namespace GameMod {
 
         private static bool VisibilityRaycast(Vector3 pos, Vector3 td_vec, float dist) {
             int layerMask = 67125248;
-            RaycastHit hitInfo;
-            bool flag = Physics.Raycast(pos, td_vec, out hitInfo, dist, layerMask);
+            bool flag = Physics.Raycast(pos, td_vec, out RaycastHit _, dist, layerMask);
             return !flag;
         }
     }

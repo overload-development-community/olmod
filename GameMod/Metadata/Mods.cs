@@ -121,6 +121,12 @@
         ReduceSpewedMissiles,
 
         /// <summary>
+        /// Author: roncli
+        /// Changes the respawn algorithm to take other players into account better.
+        /// </summary>
+        Respawn,
+
+        /// <summary>
         /// Author: tobiasksu (Tobias)
         /// Scales respawn time based on the number of players in the game.
         /// </summary>
