@@ -1,12 +1,11 @@
-﻿using HarmonyLib;
-using Overload;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using HarmonyLib;
+using Overload;
 using UnityEngine;
 
-namespace GameMod
-{
+namespace GameMod {
     [HarmonyPatch(typeof(PlayerShip), "DyingUpdate")]
     class MPDeathExplosion_PlayerShip_DyingUpdate
     {

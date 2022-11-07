@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Messages;
+using GameMod.ModdedMenus.ServerBrowser;
 using GameMod.Objects;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
@@ -387,7 +388,7 @@ namespace GameMod {
             MPModPrivateData.TeamCount = Teams.MenuManagerTeamCount;
             MPModPrivateData.SuddenDeathEnabled = SuddenDeath.Enabled;
             MPModPrivateData.LapLimit = ExtMenuManager.mms_ext_lap_limit;
-            MPModPrivateData.MatchNotes = MPServerBrowser.mms_match_notes;
+            MPModPrivateData.MatchNotes = ServerBrowser.mms_match_notes;
             MPModPrivateData.SniperPacketsEnabled = true;
             MPModPrivateData.ScaleRespawnTime = Menus.mms_scale_respawn_time;
             MPModPrivateData.ModifierFilterMask = RUtility.BoolArrayToBitmask(MPModifiers.mms_modifier_filter);

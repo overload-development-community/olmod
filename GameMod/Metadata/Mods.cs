@@ -121,6 +121,12 @@
         ScaleRespawnTime,
 
         /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Adds a server browser.
+        /// </summary>
+        ServerBrowser,
+
+        /// <summary>
         /// Authors: derhass, roncli
         /// Disables unnecessary game elements when running as a server.
         /// </summary>

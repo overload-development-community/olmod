@@ -120,6 +120,11 @@
     <Compile Include="JoystickRotationFix.cs" />
     <Compile Include="LevelError.cs" />
     <Compile Include="MatchModeRace.cs" />
+    <Compile Include="ModdedMenus\ServerBrowser\ServerBrowser.cs" />
+    <Compile Include="ModdedMenus\ServerBrowser\ServerItem.cs" />
+    <Compile Include="ModdedMenus\ServerBrowser\TrackerEntry.cs" />
+    <Compile Include="ModdedMenus\ServerBrowser\TrackerGame.cs" />
+    <Compile Include="ModdedMenus\ServerBrowser\TrackerServer.cs" />
     <Compile Include="Messages\ChangeTeamMessage.cs" />
     <Compile Include="Messages\DetonateMessage.cs" />
     <Compile Include="Messages\MessageTypes.cs" />
@@ -191,7 +196,6 @@
     <Compile Include="MPReduceJoinTimeout.cs" />
     <Compile Include="MPRespawn.cs" />
     <Compile Include="MPScoreboards.cs" />
-    <Compile Include="MPServerBrowser.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />
@@ -207,7 +211,6 @@
     <Compile Include="MPObserver.cs" />
     <Compile Include="MPProjInit.cs" />
     <Compile Include="MPPwdPaste.cs" />
-    <Compile Include="MPSetup.cs" />
     <Compile Include="Patches\Item.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\Overload\BroadcastState.cs" />

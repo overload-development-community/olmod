@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Messages;
 using GameMod.Metadata;
+using GameMod.ModdedMenus.ServerBrowser;
 using GameMod.Objects;
 using HarmonyLib;
 using Overload;
@@ -14,7 +15,6 @@ using UnityEngine;
 namespace GameMod {
     public static class Menus
     {
-
         //public static MenuState msServerBrowser = (MenuState)75;
         //public static MenuState msLagCompensation = (MenuState)76;
         public static MenuState msAutoSelect = (MenuState)77;
@@ -410,7 +410,7 @@ namespace GameMod {
     /// </summary>
     [Mod(new Mods[] { Mods.SuddenDeath, Mods.Teams })]
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
-    public static class UIElement_DrawMpMatchSetup {
+    public static class UIElement_DrawMpMatchSetup_SuddenDeath_and_Teams {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -533,7 +533,7 @@ namespace GameMod {
 
     [Mod(Mods.SuddenDeath)]
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-    public static class MenuManager_MpMatchSetup {
+    public static class MenuManager_MpMatchSetup_SuddenDeath {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -2255,6 +2255,552 @@ namespace GameMod {
                         code.operand = 300f;
                     }
                 }
+                yield return code;
+            }
+        }
+    }
+
+    [Mod(Mods.ServerBrowser)]
+    [HarmonyPatch(typeof(UIElement), "DrawMpMenu")]
+    public static class UIElement_DrawMpMenu {
+        private static int loadCount = 0;
+
+        public static void DrawBrowserButton(UIElement __instance, ref Vector2 position) {
+            __instance.SelectAndDrawItem("SERVER BROWSER", position, 5, false, 1f, 0.75f);
+            position.y += 62f;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            var mpServerBrowser_UIElement_DrawMpMenu_Method = AccessTools.Method(typeof(UIElement_DrawMpMenu), "DrawBrowserButton");
+
+            int state = 0;
+            foreach (var code in codes) {
+                if (loadCount < 2 && state == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "LAN MATCH") {
+                    loadCount++;
+                    state = 1;
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMenu_Method);
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [Mod(Mods.ServerBrowser)]
+    [HarmonyPatch(typeof(MenuManager), "MpMenuUpdate")]
+    public static class MenuManager_MpMenuUpdate {
+
+        public static void Postfix() {
+            if (MenuManager.m_menu_sub_state == MenuSubState.INIT)
+                ServerBrowser.selectedItem = null;
+            if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE && UIManager.PushedSelect(100)) {
+                if (UIManager.m_menu_selection == 5) {
+                    UIManager.DestroyAll();
+                    MenuManager.ChangeMenuState(ServerBrowser.msServerBrowser);
+                    MenuManager.PlaySelectSound();
+                }
+            }
+        }
+    }
+
+    [Mod(Mods.ServerBrowser)]
+    [HarmonyPatch(typeof(UIElement), "Draw")]
+    public static class UIElement_Draw {
+        private static void DrawBrowserWindow(UIElement uie) {
+            UIManager.ui_bg_dark = true;
+            uie.DrawMenuBG();
+            Vector2 position = uie.m_position;
+            position.y = UIManager.UI_TOP + 64f;
+            int menu_micro_state = MenuManager.m_menu_micro_state;
+
+            switch (menu_micro_state) {
+                default:
+                    uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("SERVER BROWSER"), 265f);
+                    position.y += 20f;
+                    float d = -600f; // Title
+                    float d1 = -420f; // Version
+                    float d2 = -310f; // Level
+                    float d3 = -110f; // Players
+                    //float d4 = 20f; // Status
+                    float d5 = 100f; // Mode
+                    float d6 = 260f; // Ping
+                    float d7 = 330f; // JIP
+                                     //float d8 = 490f; // PW
+                    float d9 = 550f + 50f;
+                    uie.DrawStringSmall(Loc.LS("SERVER"), position + Vector2.right * d, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("VERSION"), position + Vector2.right * d1, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("LEVEL"), position + Vector2.right * d2, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("STATUS"), position + Vector2.right * d3, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("MODE"), position + Vector2.right * d5, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("PING"), position + Vector2.right * d6, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    uie.DrawStringSmall(Loc.LS("NOTES"), position + Vector2.right * d7, 0.5f, StringOffset.LEFT, UIManager.m_col_hi2, 1f);
+                    position.y += 30f;
+                    uie.DrawMenuSeparator(position);
+                    position.y += 30f;
+                    for (int i = MenuManager.m_list_items_first; i <= MenuManager.m_list_items_last; i++) {
+                        if (i >= ServerBrowser.Items.Count)
+                            continue;
+
+                        var item = ServerBrowser.Items[i];
+
+                        Color c = item.online ? UIManager.m_col_ui3 : new Color(0.2f, 0.2f, 0.2f);
+                        position.y += 35f;
+                        uie.DrawStringSmall(item.name /*.Substring(0, Math.Min(item.name.Length, 28))*/, position + Vector2.right * d, 0.5f, StringOffset.LEFT, c, 1f, d1 - d - 4f);
+                        uie.DrawStringSmall(item.version /*.Substring(0, Math.Min(item.name.Length, 28))*/, position + Vector2.right * d1, 0.5f, StringOffset.LEFT, c, 1f, d2 - d1 - 4f);
+                        uie.DrawStringSmall(item.mapName /*.Substring(0, Math.Min(item.mapName.Length, 18))*/, position + Vector2.right * d2, 0.5f, StringOffset.LEFT, c, 1f, d3 - d2 - 4f);
+                        if (item.status == ServerBrowser.BrowserItemStatus.INLOBBY || item.status == ServerBrowser.BrowserItemStatus.PLAYING) {
+                            uie.SelectAndDrawTextOnlyItem(item.statusText, position + Vector2.right * d3, 20000 + i, 0.5f, StringOffset.LEFT, false);
+                        } else {
+                            uie.DrawStringSmall(item.statusText, position + Vector2.right * d3, 0.5f, StringOffset.LEFT, c, 1f);
+                        }
+                        uie.DrawStringSmall(item.mode, position + Vector2.right * d5, 0.5f, StringOffset.LEFT, c, 1f);
+                        UIManager.m_fixed_width_digits = true;
+                        Vector2 v = position + Vector2.right * d6;
+                        v.x += 11f;
+                        Color startColor = uie.GetPingColor(item.ping);
+                        Color endColor = startColor;
+                        endColor.r *= 0.5f;
+                        endColor.g *= 0.5f;
+                        endColor.b *= 0.5f;
+                        if (item.ping > 0)
+                            uie.DrawDigitsVariable(v, item.ping, 0.5f, StringOffset.LEFT, item.online ? Color.Lerp(startColor, endColor, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER)) : startColor, 1f);
+                        uie.DrawStringSmall(item.matchNotes, position + Vector2.right * d7, 0.5f, StringOffset.LEFT, c, 1f, d9 - d7 - 25f - 4f);
+                        Color c2 = item.online ? Color.Lerp(UIManager.m_col_hi5, UIManager.m_col_hi6, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER)) : c;
+                        if (item.actionText == "CREATE" || item.actionText == "JOIN" || item.actionText == "JOIN (PW)") {
+                            SelectAndDrawSmallerItem(uie, item.actionText, position + Vector2.right * d9, 10000 + i, false, 0.1f, 0.5f);
+                        } else {
+                            uie.DrawStringSmall(item.actionText, position + Vector2.right * d9, 0.5f, StringOffset.CENTER, c2, 1f, 50f);
+                        }
+                        UIManager.m_fixed_width_digits = false;
+                        if (i % 2 == 0) {
+                            UIManager.DrawQuadUI(position, 600f, 16f, UIManager.m_col_ub0, uie.m_alpha * 0.3f, 13);
+                        }
+                    }
+
+                    position.y = UIManager.UI_BOTTOM - 100f;
+
+                    uie.DrawPageControls(position,
+                        string.Format(Loc.LS("SERVERS {0}-{1} OF {2}"), MenuManager.m_list_items_first + 1, MenuManager.m_list_items_last + 1, ServerBrowser.Items.Count),
+                        true, true, false, false, 500, 40, false);
+
+                    position.y += 40f;
+                    uie.DrawMenuSeparator(position);
+                    position.y += 30f;
+                    uie.SelectAndDrawItem(Loc.LS("RETURN TO MULTIPLAYER"), position, 100, fade: false);
+                    break;
+            }
+        }
+
+        private static void SelectAndDrawSmallerItem(UIElement uie, string s, Vector2 pos, int selection, bool fade, float width = 1f, float text_size = 0.75f) {
+            float drawWidth = 500f * width;
+
+            var so = StringOffset.CENTER;
+            if (!fade && !uie.m_fade_die) {
+                Vector2 pos2 = pos;
+                if (so == StringOffset.LEFT) {
+                    pos2.x += drawWidth / 2f;
+                } else if (so == StringOffset.RIGHT) {
+                    pos2.x -= drawWidth / 2f;
+                }
+                uie.TestMouseInRect(pos2, drawWidth / 2f, 20f * text_size, selection, true);
+            }
+
+            float num2 = 12.36f;
+            float d = drawWidth * 0.5f + num2 * 0.9f - 1f;
+            Color color;
+            if (UIManager.m_menu_selection == selection) {
+                color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!uie.m_fade_die) ? 0f : 0.5f));
+                float a = color.a = 1f - Mathf.Pow(1f - uie.m_alpha, 8f);
+                UIManager.DrawQuadBarHorizontal(pos, 16f, 16f, drawWidth, color, 12);
+                color = UIManager.m_col_ub3;
+                color.a = a;
+                UIManager.DrawQuadUI(pos - d * Vector2.right, num2 * 0.1f, num2, color, color.a, 13);
+                UIManager.DrawQuadUI(pos + d * Vector2.right, num2 * 0.1f, num2, color, color.a, 13);
+            } else {
+                float alpha = uie.m_alpha;
+                //color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.6f * UIElement.FLICKER));
+                //color.a = alpha * ((!fade) ? 1f : 0.3f);
+                //UIManager.DrawQuadBarHorizontal(pos, 22f, 22f, drawWidth, color, 7);
+                color = UIManager.m_col_ui2;
+                color.a = alpha * ((!fade) ? 1f : 0.5f);
+            }
+            if (fade) {
+                color.a *= 0.5f;
+                uie.DrawStringSmallOverrideAlpha(s, pos, text_size, so, color, 500f * width);
+            } else {
+                uie.DrawStringSmallOverrideAlpha(s, pos, text_size, so, color, 500f * width);
+            }
+        }
+
+        public static void Postfix(UIElement __instance) {
+            if (__instance.m_type == ServerBrowser.uiServerBrowser && __instance.m_alpha > 0f)
+                DrawBrowserWindow(__instance);
+        }
+    }
+
+    [Mod(Mods.ServerBrowser)]
+    [HarmonyPatch(typeof(MenuManager), "Update")]
+    public static class MenuManager_Update {
+        private static readonly MethodInfo _MenuManager_CheckPaging_Method = typeof(MenuManager).GetMethod("CheckPaging", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly FieldInfo _InternetMatch_ServerAddress_Field = typeof(GameManager).Assembly.GetType("InternetMatch").GetField("ServerAddress", BindingFlags.Static | BindingFlags.Public);
+        private static void MPServerBrowserUpdate(ref float m_menu_state_timer) {
+            UIManager.MouseSelectUpdate();
+            switch (MenuManager.m_menu_sub_state) {
+                case MenuSubState.INIT:
+                    if (!ServerBrowser.browserCoroutineActive)
+                        GameManager.m_gm.StartCoroutine(ServerBrowser.Update());
+                    if (m_menu_state_timer > 0.25f) {
+                        //Debug.Log("MPServerBrowser Init " + DateTime.Now);
+                        GameplayManager.SetGameType(GameType.MULTIPLAYER);
+                        MPInternet.Enabled = true;
+                        MenuManager.m_game_paused = false;
+                        GameplayManager.DifficultyLevel = 3;
+                        PlayerShip.DeathPaused = false;
+                        if (!Overload.NetworkManager.IsHeadless()) {
+                            void callback(string error, string player_id) {
+                                if (error != null) {
+                                    NetworkMatch.SetPlayerId("00000000-0000-0000-0000-000000000000");
+                                } else {
+                                    //Debug.Log("MPServerBrowser: Set player id to " + player_id);
+                                    NetworkMatch.SetPlayerId(player_id);
+                                }
+                            }
+                            NetworkMatch.GetMyPlayerId(PilotManager.PilotName, callback);
+                        }
+                        MenuManager.m_mp_lan_match = true;
+                        MenuManager.m_mp_private_match = true;
+                        NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.Invalid);
+                        MenuManager.ClearMpStatus();
+
+                        ServerBrowser.selectedItem = null;
+                        UIManager.CreateUIElement(UIManager.SCREEN_CENTER, 7000, ServerBrowser.uiServerBrowser);
+                        ServerBrowser.UpdateList();
+                        MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                        m_menu_state_timer = 0f;
+                        MenuManager.SetDefaultSelection(0);
+                    }
+                    break;
+                case MenuSubState.ACTIVE:
+                    UIManager.ControllerMenu();
+                    Controls.m_disable_menu_letter_keys = false;
+                    int menu_micro_state = MenuManager.m_menu_micro_state;
+
+                    if (m_menu_state_timer > 0.25f) //
+                    {
+                        bool flag = false;
+                        var args = new object[] {  MenuManager.m_list_items_first, MenuManager.m_list_items_last,
+                                MenuManager.m_list_items_total_count, MenuManager.m_list_items_max_per_page };
+                        flag = (bool)_MenuManager_CheckPaging_Method.Invoke(null, args);
+
+                        if (MenuManager.m_list_items_first != (int)args[0])
+                            m_menu_state_timer = 0f;
+
+                        MenuManager.m_list_items_first = (int)args[0];
+                        MenuManager.m_list_items_last = (int)args[1];
+
+
+                        if (!flag) {
+                            if (UIManager.PushedSelect(100) || (MenuManager.option_dir && UIManager.PushedDir())) {
+                                if (UIManager.m_menu_selection == 100) {
+                                    MenuManager.PlaySelectSound(1f);
+                                    m_menu_state_timer = 0f;
+                                    UIManager.DestroyAll(false);
+                                    MenuManager.m_menu_state = 0;
+                                    MenuManager.m_menu_micro_state = 0;
+                                    MenuManager.m_menu_sub_state = MenuSubState.BACK;
+                                } else if (UIManager.m_menu_selection >= 20000) {
+                                    // Status action
+                                    ServerBrowser.selectedItem = ServerBrowser.Items[UIManager.m_menu_selection - 20000];
+                                    MenuManager.PlaySelectSound(1f);
+                                    Application.OpenURL("https://tracker.otl.gg/game/" + ServerBrowser.selectedItem.ip);
+                                } else if (UIManager.m_menu_selection >= 10000) {
+                                    // Far right action
+                                    ServerBrowser.selectedItem = ServerBrowser.Items[UIManager.m_menu_selection - 10000];
+                                    MenuManager.PlaySelectSound(1f);
+                                    m_menu_state_timer = 0f;
+                                    UIManager.DestroyAll(false);
+
+                                    if (ServerBrowser.selectedItem.online) {
+                                        if (ServerBrowser.selectedItem.status == ServerBrowser.BrowserItemStatus.INLOBBY || (ServerBrowser.selectedItem.status == ServerBrowser.BrowserItemStatus.PLAYING && ServerBrowser.selectedItem.jip)) {
+                                            // Join
+                                            UIManager.DestroyAll(false);
+                                            MPInternet.MenuPassword = ServerBrowser.selectedItem.ip;
+
+                                            // temporary show password field for non-jip matches because old server won't send hasPassword
+                                            if (ServerBrowser.selectedItem.hasPassword || !ServerBrowser.selectedItem.jip) {
+                                                NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
+                                                MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH, false);
+                                                MenuManager.m_menu_micro_state = 1;
+                                                UIManager.m_menu_selection = 0;
+                                            } else {
+                                                NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
+                                                NetworkMatch.m_match_req_password = ServerBrowser.selectedItem.ip;
+                                                MPInternet.ServerAddress = MPInternet.FindPasswordAddress(ServerBrowser.selectedItem.ip, out string msg);
+                                                if (Core.GameMod.HasInternetMatch()) {
+                                                    _InternetMatch_ServerAddress_Field.SetValue(null, MPInternet.ServerAddress);
+                                                }
+                                                MenuManager.m_mp_status = Loc.LS("JOINING " + MPInternet.ClientModeName());
+                                                NetworkMatch.JoinPrivateLobby(MPInternet.MenuPassword);
+                                            }
+
+                                        } else if (ServerBrowser.selectedItem.status == ServerBrowser.BrowserItemStatus.READY) {
+                                            // Create
+                                            UIManager.DestroyAll(false);
+                                            NetworkMatch.SetNetworkGameClientMode(NetworkMatch.NetworkGameClientMode.LocalLAN);
+                                            MPInternet.MenuPassword = ServerBrowser.selectedItem.ip;
+                                            MenuManager.ChangeMenuState(MenuState.MP_LOCAL_MATCH, false);
+                                            UIManager.m_menu_selection = 1;
+                                            MenuManager.m_menu_state = MenuState.MP_LOCAL_MATCH;
+                                            MenuManager.PlaySelectSound(1f);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    break;
+                case MenuSubState.BACK:
+                    if (m_menu_state_timer > 0.25f) {
+                        UIManager.DestroyAll(false);
+                        m_menu_state_timer = 0f;
+                        MenuManager.m_menu_state = 0;
+                        MenuManager.m_menu_sub_state = 0;
+                        MenuManager.m_menu_micro_state = 0;
+                        MenuManager.ChangeMenuState(MenuState.MP_MENU, false);
+                    }
+                    break;
+                case MenuSubState.START:
+                    if (m_menu_state_timer > 0.25f) {
+
+                    }
+                    break;
+            }
+        }
+
+        public static void Postfix(ref float ___m_menu_state_timer) {
+            if (MenuManager.m_menu_state == ServerBrowser.msServerBrowser)
+                MPServerBrowserUpdate(ref ___m_menu_state_timer);
+        }
+    }
+
+    [Mod(Mods.ServerBrowser)]
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    public static class MenuManager_MpMatchSetup {
+        private static bool ProcessInputField(ref string s, ref float m_menu_state_timer) {
+            foreach (char c in Input.inputString) {
+                if (c == '\b') {
+                    if (s.Length != 0) {
+                        s = s.Substring(0, s.Length - 1);
+                        SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_bot_died, 0.4f, UnityEngine.Random.Range(-0.15f, -0.05f), 0f, false);
+                    }
+                } else {
+                    if (c == '\n' || c == '\r') {
+                        m_menu_state_timer = 0f;
+                        s = s.Trim();
+                        MenuManager.SetDefaultSelection((MenuManager.m_menu_micro_state != 1) ? 1 : 0);
+                        MenuManager.PlayCycleSound(1f, 1f);
+                        return true;
+                    }
+                    if (MenuManager.IsPrintableChar(c) && s.Length < 64) {
+                        s += c;
+                        SFXCueManager.PlayRawSoundEffect2D(SoundEffect.hud_notify_bot_died, 0.5f, UnityEngine.Random.Range(0.1f, 0.2f), 0f, false);
+                    }
+                }
+            }
+            return false;
+        }
+
+        public static void MpMatchSetupMicrostate() {
+            if (ServerBrowser.selectedItem != null) {
+                if (ServerBrowser.selectedItem.maxPlayers > 0) {
+                    // Join
+                    MenuManager.m_menu_micro_state = 1;
+                } else {
+                    // Create
+                    MenuManager.m_menu_micro_state = 2;
+                }
+            }
+        }
+
+        private static readonly FieldInfo _MenuManager_m_back_stack_Field = AccessTools.Field(typeof(MenuManager), "m_back_stack");
+        private static readonly FieldInfo _MenuManager_m_menu_state_timer_Field = AccessTools.Field(typeof(MenuManager), "m_menu_state_timer");
+        public static void MpBackButton() {
+            switch (MenuManager.m_menu_sub_state) {
+                case MenuSubState.BACK:
+                    if (UIManager.PushedSelect(100)) {
+                        Debug.Log("Pushed back");
+                        Stack<MenuState> m_back_stack = (Stack<MenuState>)_MenuManager_m_back_stack_Field.GetValue(null);
+                        _MenuManager_m_menu_state_timer_Field.SetValue(null, 0f);
+                        UIManager.DestroyAll(false);
+                        if (m_back_stack.Peek() == MenuState.MP_MENU) {
+                            MenuManager.ChangeMenuState(MenuState.MP_MENU, false);
+                        } else {
+                            MenuManager.ChangeMenuState(ServerBrowser.msServerBrowser, false);
+                            MenuManager.m_menu_state = 0;
+                            MenuManager.m_menu_sub_state = 0;
+                            MenuManager.m_menu_micro_state = 0;
+                        }
+
+                    }
+                    return;
+            }
+
+        }
+
+        public static void Postfix(ref float ___m_menu_state_timer) {
+            switch (MenuManager.m_menu_sub_state) {
+                case MenuSubState.ACTIVE:
+                    switch (UIManager.m_menu_selection) {
+                        case 303:
+                            Controls.m_disable_menu_letter_keys = false;
+                            Controls.m_disable_menu_letter_keys = true;
+                            ProcessInputField(ref ServerBrowser.mms_match_notes, ref ___m_menu_state_timer);
+                            break;
+                    }
+                    break;
+            }
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            var mpServerBrowser_MenuManager_MpMatchSetup_MpBackButton_Method = AccessTools.Method(typeof(MenuManager_MpMatchSetup), "MpBackButton");
+            var mpServerBrowser_MenuManager_MpMatchSetup_MpMatchSetupMicrostate_Method = AccessTools.Method(typeof(MenuManager_MpMatchSetup), "MpMatchSetupMicrostate");
+
+            int state = 0;
+            foreach (var code in codes) {
+                // Allow back button to return to browser if cancelling
+                if (code.opcode == OpCodes.Ldsfld && ((FieldInfo)code.operand).Name == "m_updating_pm_settings") {
+                    List<Label> labels = code.labels;
+                    code.labels = new List<Label>();
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_MenuManager_MpMatchSetup_MpBackButton_Method) { labels = labels };
+                }
+
+                // MpMatchSetup init always sets m_menu_micro_state = 0, override if initiated by browser select
+                if (state == 0 && code.opcode == OpCodes.Ldsfld &&
+                    (((FieldInfo)code.operand).Name == "_mms_match_password" || ((FieldInfo)code.operand).Name == "mms_match_password")) {
+                    state = 1;
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_MenuManager_MpMatchSetup_MpMatchSetupMicrostate_Method);
+                }
+
+                yield return code;
+            }
+        }
+    }
+
+    [Mod(Mods.ServerBrowser)]
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    public static class UIElement_DrawMpMatchSetup {
+        private static readonly FieldInfo _UIElement_m_cursor_blink_timer_Field = AccessTools.Field(typeof(UIElement), "m_cursor_blink_timer");
+        private static readonly FieldInfo _UIElement_m_cursor_on_Field = AccessTools.Field(typeof(UIElement), "m_cursor_on");
+        private static void SelectAndDrawTextEntry(UIElement uie, string label, string text, Vector2 pos, int selection, float width_scale = 1.5f, bool fade = false) {
+            float width = 500f * width_scale;
+            int quad_index = UIManager.m_quad_index;
+            if (!fade) {
+                uie.TestMouseInRect(pos, width * 0.5f + 22f, 24f, selection, true);
+            }
+            bool selected = UIManager.m_menu_selection == selection;
+
+            Color label_color;
+            var text_width = 244f;
+            var text_right = 2f;
+            float alpha8 = 1f - Mathf.Pow(1f - uie.m_alpha, 8f);
+            if (selected) {
+                Color bar_color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.2f * UIElement.FLICKER) + UIManager.m_select_flash * 0.3f);
+                bar_color.a = alpha8;
+                var bar_width = width - text_width - text_right;
+                var rest_width = width - bar_width;
+                // highlight left
+                UIManager.DrawQuadBarHorizontal(pos - Vector2.right * (width - bar_width + 22f + 18f - 3f) * 0.5f, 0f, 22f, bar_width + 4f, bar_color, 12);
+                // highlight around text field
+                UIManager.DrawQuadBarHorizontal(pos + Vector2.right * (bar_width + 22f - 18f) * 0.5f - Vector2.up * 18f, 0f, 2f, rest_width + 22f + 18f, bar_color, 12);
+                UIManager.DrawQuadBarHorizontal(pos + Vector2.right * (bar_width + 22f - 18f) * 0.5f + Vector2.up * 18f, 0f, 2f, rest_width + 22f + 18f, bar_color, 12);
+                UIManager.DrawQuadBarHorizontal(pos + Vector2.right * (width - text_right + 20f * 2) * 0.5f, 0f, 22f, text_right + 4f, bar_color, 12);
+                label_color = UIManager.m_col_ub3;
+                label_color.a = alpha8;
+            } else {
+                label_color = UIManager.m_col_ui0;
+                label_color.a = uie.m_alpha;
+            }
+
+            float alpha6 = 1f - Mathf.Pow(1f - uie.m_alpha, 6f);
+            Color border_color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER));
+            border_color.a = alpha6;
+            UIManager.DrawQuadBarHorizontal(pos, 22f, 22f, width, border_color, 7);
+
+            Color text_color = UIManager.m_col_ui2;
+            text_color.a = uie.m_alpha;
+            uie.DrawStringSmallOverrideAlpha(label, pos - Vector2.right * (width * 0.5f + 15f), 0.75f, StringOffset.LEFT, label_color, width - 270f);
+            pos.x += (width - text_width - text_right) * 0.5f;
+            uie.DrawOutlineBackdrop(pos, 17f, text_width, text_color, 2);
+
+            float m_cursor_blink_timer = (float)_UIElement_m_cursor_blink_timer_Field.GetValue(uie);
+            bool m_cursor_on = (bool)_UIElement_m_cursor_on_Field.GetValue(uie);
+            m_cursor_blink_timer -= RUtility.FRAMETIME_UI;
+            if (m_cursor_blink_timer < 0f) {
+                m_cursor_blink_timer += 0.25f;
+                m_cursor_on = !m_cursor_on;
+                _UIElement_m_cursor_on_Field.SetValue(uie, m_cursor_on);
+            }
+            _UIElement_m_cursor_blink_timer_Field.SetValue(uie, m_cursor_blink_timer);
+            bool show_cursor = m_cursor_on && selected;
+
+            float scale = 0.5f * 20f;
+            var textCursor = text + "_";
+            float stringWidth = UIManager.GetStringWidth(textCursor, scale);
+            DrawStringAlignCenterWidth(show_cursor ? textCursor : text, pos, scale, text_color, stringWidth, 200f + 22f * 2 + 22f);
+
+            if (fade) {
+                UIManager.PreviousQuadsAlpha(quad_index, 0.3f);
+            }
+        }
+
+        private static void DrawStringAlignCenterWidth(string s, Vector2 position, float scale, Color c, float stringWidth, float max_width = -1f) {
+            Vector2 scl_pos = position;
+            position.x -= ((!(max_width > 0f)) ? stringWidth : ((!(max_width < stringWidth)) ? stringWidth : max_width)) * 0.5f;
+            UIManager.DrawStringScaled(s, position, scl_pos, scale, c, max_width, stringWidth, 0.5f);
+        }
+
+        public static void DrawMatchNotes(UIElement uie, ref Vector2 position) {
+            position.y += 62f;
+            SelectAndDrawTextEntry(uie, "MATCH NOTES", ServerBrowser.mms_match_notes, position, 303, 1.5f, false);
+        }
+
+        public static void DrawFriendlyFire(UIElement uie, ref Vector2 position) {
+            uie.SelectAndDrawStringOptionItem(Loc.LS("FRIENDLY FIRE"), position, 3, MenuManager.GetMMSFriendlyFire(), string.Empty, 1f, MenuManager.mms_mode == MatchMode.ANARCHY);
+            position.y += 62f;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            var mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method = AccessTools.Method(typeof(UIElement_DrawMpMatchSetup), "DrawMatchNotes");
+
+            int state = 0;
+
+            foreach (var code in codes) {
+
+                // Check for Friendly Fire select
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "FRIENDLY FIRE")
+                    state = 1;
+
+                // Skip up until Time Limit (move FF to Advanced)
+                if (state == 1 && !(code.opcode == OpCodes.Ldstr && (string)code.operand == "TIME LIMIT"))
+                    continue;
+
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "TIME LIMIT")
+                    state = 2;
+
+                // Add Match Notes above Advanced
+                if (code.opcode == OpCodes.Ldstr && (string)code.operand == "ADVANCED SETTINGS") {
+                    state = 3;
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method);
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                }
+
+                // Move Advanced Match section up slightly
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 155)
+                    code.operand = 250f;
+
                 yield return code;
             }
         }
