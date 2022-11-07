@@ -459,7 +459,7 @@ namespace GameMod {
                 if (!powerupFound && c.opcode == OpCodes.Ldstr && (string)c.operand == "POWERUP SETTINGS") {
                     powerupFound = true;
                     yield return new CodeInstruction(OpCodes.Ldloca, 0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UIElement_DrawMpMatchSetup), "DrawSuddenDeathToggle"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UIElement_DrawMpMatchSetup_SuddenDeath_and_Teams), "DrawSuddenDeathToggle"));
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
                 }
 
@@ -2690,7 +2690,7 @@ namespace GameMod {
 
     [Mod(Mods.ServerBrowser)]
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
-    public static class UIElement_DrawMpMatchSetup {
+    public static class UIElement_DrawMpMatchSetup_ServerBrowser {
         private static readonly FieldInfo _UIElement_m_cursor_blink_timer_Field = AccessTools.Field(typeof(UIElement), "m_cursor_blink_timer");
         private static readonly FieldInfo _UIElement_m_cursor_on_Field = AccessTools.Field(typeof(UIElement), "m_cursor_on");
         private static void SelectAndDrawTextEntry(UIElement uie, string label, string text, Vector2 pos, int selection, float width_scale = 1.5f, bool fade = false) {
@@ -2762,8 +2762,8 @@ namespace GameMod {
         }
 
         public static void DrawMatchNotes(UIElement uie, ref Vector2 position) {
-            position.y += 62f;
             SelectAndDrawTextEntry(uie, "MATCH NOTES", ServerBrowser.mms_match_notes, position, 303, 1.5f, false);
+            position.y += 62f;
         }
 
         public static void DrawFriendlyFire(UIElement uie, ref Vector2 position) {
@@ -2772,7 +2772,7 @@ namespace GameMod {
         }
 
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
-            var mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method = AccessTools.Method(typeof(UIElement_DrawMpMatchSetup), "DrawMatchNotes");
+            var mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method = AccessTools.Method(typeof(UIElement_DrawMpMatchSetup_ServerBrowser), "DrawMatchNotes");
 
             int state = 0;
 
