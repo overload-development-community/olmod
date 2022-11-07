@@ -73,6 +73,21 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Adjust highest score so kill goals work as expected in no-assist games.
+    /// </summary>
+    [Mod(Mods.AssistScoring)]
+    [HarmonyPatch(typeof(NetworkMatch), "GetHighestScoreAnarchy")]
+    public static class NetworkMatch_GetHighestScoreAnarchy {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static int Postfix(int result) {
+            return MPModPrivateData.AssistScoring ? result : (result / 3);
+        }
+    }
+
+    /// <summary>
     /// Gets the highest team score in a monsterball match.
     /// </summary>
     [Mod(Mods.Teams)]

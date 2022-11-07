@@ -195,7 +195,6 @@
     <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPReduceJoinTimeout.cs" />
     <Compile Include="MPRespawn.cs" />
-    <Compile Include="MPScoreboards.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />
@@ -237,6 +236,11 @@
     <Compile Include="Patches\Overload\MenuManager.cs" />
     <Compile Include="Patches\TriggerWarper.cs" />
     <Compile Include="ExitCutscene.cs" />
+    <Compile Include="Scoreboards\AnarchyScoreboard.cs" />
+    <Compile Include="Scoreboards\CTFScoreboard.cs" />
+    <Compile Include="Scoreboards\MonsterballScoreboard.cs" />
+    <Compile Include="Scoreboards\RaceScoreboard.cs" />
+    <Compile Include="Scoreboards\TeamAnarchyScoreboard.cs" />
     <Compile Include="VersionHandling\OlmodVersion.cs" />
     <Compile Include="VersionHandling\PatchVersionInfo.cs" />
     <Compile Include="Boss2B.cs" />

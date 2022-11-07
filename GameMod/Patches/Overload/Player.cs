@@ -355,6 +355,21 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Only track assists if assist scoring is enabled for this game.
+    /// </summary>
+    [Mod(Mods.AssistScoring)]
+    [HarmonyPatch(typeof(Player), "RpcAddAssist")]
+    public static class Player_RpcAddAssist {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix() {
+            return MPModPrivateData.AssistScoring;
+        }
+    }
+
+    /// <summary>
     /// Prevents the server from setting a client's ammo.
     /// </summary>
     [Mod(Mods.SniperPackets)]

@@ -2,14 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 using System.Net;
-using System.Text;
+using System.Net.Sockets;
 using GameMod.Metadata;
 using Newtonsoft.Json;
 using Overload;
-using UnityEngine.Networking;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod.ModdedMenus.ServerBrowser {
     [Mod(Mods.ServerBrowser)]

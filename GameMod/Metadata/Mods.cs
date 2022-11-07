@@ -1,6 +1,12 @@
 ﻿namespace GameMod.Metadata {
     internal enum Mods {
         /// <summary>
+        /// Author: SiriusTR (Sirius)
+        /// Makes assist scoring an option for anarchy games.
+        /// </summary>
+        AssistScoring,
+
+        /// <summary>
         /// Author: tobiasksu (Tobias)
         /// Allows map makers to specify how basic powerups spawn in multiplayer games.
         /// </summary>
@@ -119,6 +125,12 @@
         /// Scales respawn time based on the number of players in the game.
         /// </summary>
         ScaleRespawnTime,
+
+        /// <summary>
+        /// Author: tobiasksu (Tobias)
+        /// Adds custom scoreboards for all game types.
+        /// </summary>
+        Scoreboards,
 
         /// <summary>
         /// Author: tobiasksu (Tobias)

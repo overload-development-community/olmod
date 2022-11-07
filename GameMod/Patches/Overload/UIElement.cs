@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Metadata;
 using GameMod.Objects;
+using GameMod.Scoreboards;
 using HarmonyLib;
 using Mono.Cecil.Cil;
 using Overload;
@@ -94,6 +95,52 @@ namespace GameMod.Patches.Overload {
             }
             while (codes.MoveNext())
                 yield return codes.Current;
+        }
+    }
+
+    /// <summary>
+    /// Draw the HUD scoreboard, and counts up the timer in sudden death overtime.
+    /// </summary>
+    [Mod(new Mods[] { Mods.Scoreboards, Mods.SuddenDeath })]
+    [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
+    public static class UIElement_DrawHUDScoreInfo {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        [Mod(Mods.Scoreboards)]
+        public static bool Prefix(Vector2 pos, UIElement __instance, Vector2 ___temp_pos, float ___m_alpha) {
+            switch (MPModPrivateData.MatchMode) {
+                case ExtMatchMode.CTF:
+                    // CTF HUD score only prefix to original
+                    return CTFScoreboard.DrawHUDScoreInfo(__instance, pos, ___m_alpha);
+                case ExtMatchMode.TEAM_ANARCHY:
+                    return TeamAnarchyScoreboard.DrawHUDScoreInfo(__instance, pos);
+                case ExtMatchMode.ANARCHY:
+                    return true;
+                case ExtMatchMode.MONSTERBALL:
+                    return true;
+                case ExtMatchMode.RACE:
+                    return RaceScoreboard.DrawHUDScoreInfo(__instance, pos, ___temp_pos);
+                default:
+                    return true;
+            }
+        }
+
+        [Mod(Mods.SuddenDeath)]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+            bool found = false;
+            foreach (var code in instructions) {
+                if (!found && code.opcode == OpCodes.Ldloc_S && ((LocalBuilder)code.operand).LocalIndex == 5) {
+                    found = true;
+
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(SuddenDeath), "GetTimer"));
+
+                    continue;
+                }
+
+                yield return code;
+            }
         }
     }
 
@@ -245,7 +292,7 @@ namespace GameMod.Patches.Overload {
     /// </remarks>
     [Mod(Mods.Teams)]
     [HarmonyPatch(typeof(UIElement), "DrawMpScoreboardRaw")]
-    public static class UIElement_DrawMpScoreboardRaw {
+    public static class UIElement_DrawMpScoreboardRaw_Teams {
         public static bool Prepare() {
             return !GameplayManager.IsDedicatedServer();
         }
@@ -297,6 +344,41 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Draw the raw scoreboard.
+    /// </summary>
+    [Mod(Mods.Scoreboards)]
+    [HarmonyPatch(typeof(UIElement), "DrawMpScoreboardRaw")]
+    public static class UIElement_DrawMpScoreboardRaw_Scoreboards {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(UIElement __instance, Vector2 pos) {
+            switch (MPModPrivateData.MatchMode) {
+                case ExtMatchMode.CTF:
+                    CTFScoreboard.DrawMpScoreboardRaw(__instance, ref pos);
+                    break;
+                case ExtMatchMode.TEAM_ANARCHY:
+                    TeamAnarchyScoreboard.DrawMpScoreboardRaw(__instance, ref pos);
+                    break;
+                case ExtMatchMode.ANARCHY:
+                    AnarchyScoreboard.DrawMpScoreboardRaw(__instance, ref pos);
+                    break;
+                case ExtMatchMode.MONSTERBALL:
+                    MonsterballScoreboard.DrawMpScoreboardRaw(__instance, ref pos);
+                    break;
+                case ExtMatchMode.RACE:
+                    RaceScoreboard.DrawMpScoreboardRaw(__instance, ref pos);
+                    break;
+                default:
+                    return true;
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Draws the weapon outline in the team's color.
     /// </summary>
     [Mod(Mods.Teams)]
@@ -316,6 +398,28 @@ namespace GameMod.Patches.Overload {
                     foreach (var c in Teams.ChangeTeamColorLoad(codes, OpCodes.Ldc_I4_1))
                         yield return c;
             }
+        }
+    }
+
+    /// <summary>
+    /// We no longer care about ranks or game platform.
+    /// </summary>
+    [Mod(Mods.Scoreboards)]
+    [HarmonyPatch(typeof(UIElement), "DrawPlayerNameBasic")]
+    public static class UIElement_DrawPlayerNameBasic {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(UIElement __instance, Vector2 pos, string s, Color c, float scl = 0.5f, float alpha_scale = 1f, float max_width = -1f) {
+            float x = pos.x + 14f;
+            if (max_width > -1f) {
+                max_width -= pos.x - x;
+            }
+
+            __instance.DrawStringSmall(s, pos, scl, StringOffset.LEFT, c, __instance.m_alpha * alpha_scale, max_width);
+
+            return false;
         }
     }
 
@@ -365,32 +469,6 @@ namespace GameMod.Patches.Overload {
 
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
             return codes.MethodReplacer(AccessTools.Method(typeof(UIElement), "GetMessageColor"), AccessTools.Method(typeof(Teams), "GetMessageColor"));
-        }
-    }
-
-    /// <summary>
-    /// Counts up the timer in sudden death overtime.
-    /// </summary>
-    [Mod(Mods.SuddenDeath)]
-    [HarmonyPatch(typeof(UIElement), "DrawHUDScoreInfo")]
-    public static class UIElement_DrawHUDScoreInfo {
-        public static bool Prepare() {
-            return !GameplayManager.IsDedicatedServer();
-        }
-
-        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
-            bool found = false;
-            foreach (var code in instructions) {
-                if (!found && code.opcode == OpCodes.Ldloc_S && ((LocalBuilder)code.operand).LocalIndex == 5) {
-                    found = true;
-
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(SuddenDeath), "GetTimer"));
-
-                    continue;
-                }
-
-                yield return code;
-            }
         }
     }
 
