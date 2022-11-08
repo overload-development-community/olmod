@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using System.Threading;
+using GameMod.Objects;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -248,7 +249,7 @@ namespace GameMod {
             Mode m = Mode.All;
             uint f = 0;
             string typeF = null;
-            string methodF = null;
+            string methodF;
 
             if (!String.IsNullOrEmpty(lineDesc)) {
                 string[] parts = lineDesc.Split('\t');
@@ -553,12 +554,12 @@ namespace GameMod {
         private static int curFixedTick = 0;
         private static DateTime startTime = DateTime.UtcNow;
         private static int fixedTickCount = 60; // 1 second interval by default (during MP at least)
-        private static long cycleLongIntervals = 60000; // >= 60 seconds long intervals force a full cycle
+        private const long cycleLongIntervals = 60000; // >= 60 seconds long intervals force a full cycle
         private static string outputPath = null;
         private static bool useLocking = false;
 
-        private static MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansFrametimeDummy");
-        private static MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler),"PoorMansIntervalTimeDummy");
+        private static readonly MethodInfo pmpFrametimeDummy = AccessTools.Method(typeof(PoorMansProfiler), "PoorMansFrametimeDummy");
+        private static readonly MethodInfo pmpIntervalTimeDummy = AccessTools.Method(typeof(PoorMansProfiler), "PoorMansIntervalTimeDummy");
 
         // Initialize and activate the Profiler via harmony
         public static void Initialize(Harmony harmony)
@@ -568,7 +569,7 @@ namespace GameMod {
                 return;
             }
 
-            if (initMode == 0 && GameMod.Core.GameMod.FindArg("-pmp-lazy")) {
+            if (initMode == 0 && Switches.Lazy) {
                 UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: lazy init");
                 // only initialize the console command Patch
                 harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
@@ -577,28 +578,25 @@ namespace GameMod {
                 return;
             }
 
-            string intervalLength;
-            if (GameMod.Core.GameMod.FindArgVal("-pmp-interval", out intervalLength) && !String.IsNullOrEmpty(intervalLength)) {
-                fixedTickCount = Int32.Parse(intervalLength);
+            if (!string.IsNullOrEmpty(Switches.Interval)) {
+                fixedTickCount = int.Parse(Switches.Interval);
             }
-            string outPath = null;
-            if (GameMod.Core.GameMod.FindArgVal("-pmp-output-path", out outPath) && !String.IsNullOrEmpty(outPath)) {
-                outputPath = Path.Combine(Application.persistentDataPath, outPath);
+            if (!string.IsNullOrEmpty(Switches.OutputPath)) {
+                outputPath = Path.Combine(Application.persistentDataPath, Switches.OutputPath);
             } else {
                 outputPath = Application.persistentDataPath;
             }
-            string lockingModeArg;
             int lockingMode = -1;
-            if (GameMod.Core.GameMod.FindArgVal("-pmp-locking", out lockingModeArg) && !String.IsNullOrEmpty(lockingModeArg)) {
-                if (!int.TryParse(lockingModeArg, NumberStyles.Number, CultureInfo.InvariantCulture, out lockingMode)) {
+            if (!string.IsNullOrEmpty(Switches.Locking)) {
+                if (!int.TryParse(Switches.Locking, NumberStyles.Number, CultureInfo.InvariantCulture, out lockingMode)) {
                     lockingMode = -1;
                 }
-                fixedTickCount = Int32.Parse(intervalLength);
+                fixedTickCount = int.Parse(Switches.Locking);
             }
 
             if (lockingMode < 0) {
                 // AUTO: on for servers, off for client (?!)
-                if (GameMod.Core.GameMod.FindArg("-batchmode")) {
+                if (GameplayManager.IsDedicatedServer()) {
                     UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: server detected, enable locking");
                     lockingMode = 1;
                 } else {
@@ -616,10 +614,9 @@ namespace GameMod {
             Dictionary<MethodBase,bool> targetMethods = new Dictionary<MethodBase,bool>();
 
             // Get the list of all fiters
-            string filterFileArg = null;
             PoorMansFilterList filters = new PoorMansFilterList();
-            if (GameMod.Core.GameMod.FindArgVal("-pmp-filter", out filterFileArg) && !String.IsNullOrEmpty(filterFileArg)) {
-                foreach (var f in filterFileArg.Split(';',',',':')) {
+            if (!string.IsNullOrEmpty(Switches.Filter)) {
+                foreach (var f in Switches.Filter.Split(';',',',':')) {
                     filters.LoadStandardLocation(f);
                 }
             } else {
@@ -662,7 +659,7 @@ namespace GameMod {
             
             // Patch the methods with the profiler prefix and postfix
             UnityEngine.Debug.LogFormat("POOR MAN's PROFILER: applying to {0} methods", targetMethods.Count);
-            MethodInfo mPrefix = null;
+            MethodInfo mPrefix;
             if (useLocking){
                 mPrefix = typeof(PoorMansProfiler).GetMethod("PoorMansProfilerPrefixLock");
             } else {
@@ -682,7 +679,7 @@ namespace GameMod {
             if (initMode < 1) {
                 harmony.Patch(AccessTools.Method(typeof(GameManager), "Start"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("StartPostfix"), Priority.Last));
             }
-            if (GameMod.Core.GameMod.FindArg("-batchmode")) {
+            if (GameplayManager.IsDedicatedServer()) {
                 isServer = true;
                 harmony.Patch(AccessTools.Method(typeof(NetworkMatch), "ExitMatch"), null, new HarmonyMethod(typeof(PoorMansProfiler).GetMethod("MatchEndPostfix"), Priority.Last));
             } else {
@@ -827,7 +824,7 @@ namespace GameMod {
                 }
             } else {
                 foreach( KeyValuePair<MethodBase,MethodProfile> pair in data) {
-                    MethodProfileCollector coll = null;
+                    MethodProfileCollector coll;
                     try {
                         coll = pdc[pair.Key];
                     } catch (KeyNotFoundException) {

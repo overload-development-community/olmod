@@ -70,7 +70,7 @@ namespace GameMod.Core {
                 }
             }
 
-            if (FindArg("-poor-mans-profiler")) {
+            if (Switches.Profiler) {
                 PoorMansProfiler.Initialize(harmony);
             }
         }
