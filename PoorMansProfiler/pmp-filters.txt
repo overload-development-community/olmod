@@ -1,0 +1,25 @@
+# method filter list for omlod -poor-mans-profiler
+# the first matching entry is applied
+# format is options<tab>type<tab>method
+# IGNORE THESE
+-R	^System\..*	
+-R	^Rewired\..*	
+# add stuff we're particularly interested in
++R	^GameMod.MPSoundOcclusion_UnityAudio_PlaySound$	^Void Postfix\(
++R	^GameMod.MPClientExtrapolation_FixedUpdateAll$	^Void Postfix\(
++R	^Overload.PlayerShip$	^Void FixedUpdatePre\(
+# add functions which look like Update() methods, but ignore some as patching leads to a crash
+-=	Overload.SFXCueManager	Void Update()
+-=	UnityEngine.UI.CanvasScaler	Void Update()
++=		Void Update()
++=		Void FixedUpdate()
++=		Void FixedUpdateAll()
++=		Void LateUpdate()
+# add interesting physics funtcions
++=R	^UnityEngine.Physics$	^[^()]* Linecast\(
++=R	^UnityEngine.Physics$	^[^()]* SphereCast\(
++=R	^UnityEngine.Physics$	^[^()]* Ray[Cc]ast\(
+# add functions which look like Message Handlers
++R		^Void On.*\(UnityEngine.Networking.NetworkMessage\)
+# add all previously patched functions (the tabs here are important)
++*p		
