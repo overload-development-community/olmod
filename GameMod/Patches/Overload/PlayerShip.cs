@@ -385,6 +385,21 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Disables other ships' cockpits when setting its cockpit's visibility.
+    /// </summary>
+    [Mod(Mods.DisableOpponentCockpits)]
+    [HarmonyPatch(typeof(PlayerShip), "SetCockpitVisibility")]
+    public static class PlayerShip_SetCockpitVisibility {
+        public static bool Prepare() {
+            return !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Postfix(PlayerShip __instance) {
+            DisableOpponentCockpits.SetOpponentCockpitVisibility(__instance.c_player, false);
+        }
+    }
+
+    /// <summary>
     /// Do not spew the lancer.
     /// </summary>
     [Mod(Mods.ReduceSpewedMissiles)]

@@ -37,6 +37,12 @@
         DisableGamelift,
 
         /// <summary>
+        /// Author: derhass
+        /// Disables rendering of opponent and teammate cockpits.
+        /// </summary>
+        DisableOpponentCockpits,
+
+        /// <summary>
         /// Author: arbruijn (Arne)
         /// Disables the super spawn in maps that don't have a super spawn.
         /// </summary>
@@ -101,6 +107,12 @@
         /// Allows pasting the game's password with Ctrl+V.
         /// </summary>
         PasswordPaste,
+
+        /// <summary>
+        /// Author: terminal
+        /// Allows picking up items within inverted segments and in adjacent segments.
+        /// </summary>
+        PickupCheck,
 
         /// <summary>
         /// Authors: arbruijn (Arne), tobiasksu (Tobias)
@@ -308,7 +320,7 @@
 
         /// <summary>
         /// Author: arbruijn (Arne)
-        /// 
+        /// Fixes inadvertent resetting of a player's XP.
         /// </summary>
         XPResetFix
     }

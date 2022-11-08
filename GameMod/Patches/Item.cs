@@ -1,10 +1,26 @@
 ﻿using System.Reflection;
 using GameMod.Metadata;
+using GameMod.Objects;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
 
 namespace GameMod.Patches {
+    /// <summary>
+    /// Allow picking up items in MP when item is adjacent to an inverted segment. Items also no longer get stuck inside grates.
+    /// </summary>
+    [Mod(Mods.PickupCheck)]
+    [HarmonyPatch(typeof(Item), "ItemIsReachable")]
+    public static class Item_ItemIsReachable {
+        public static bool Prefix(ref bool __result) {
+            if (GameplayManager.IsMultiplayerActive && !PickupCheck.Enabled) {
+                __result = true;
+                return false;
+            }
+            return true;
+        }
+    }
+
     /// <summary>
     /// Reduce the number of spawns of lesser missiles.
     /// </summary>

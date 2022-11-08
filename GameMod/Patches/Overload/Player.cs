@@ -339,18 +339,25 @@ namespace GameMod.Patches.Overload {
     }
 
     /// <summary>
+    /// Disable rendering other ships' cockpit after restoring ship data on respawn.
     /// Does a better job of initializing playership state at spawn, resetting the flak/cyclone fire counter, the thunderbolt power level, and clearing the boost overheat.
     /// </summary>
-    [Mod(Mods.SpawnInitialization)]
+    [Mod(new Mods[] { Mods.DisableOpponentCockpits, Mods.SpawnInitialization })]
     [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
     public static class Player_RestorePlayerShipDataAfterRespawn {
         private static readonly FieldInfo _PlayerShip_flak_fire_count_Field = typeof(PlayerShip).GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        [Mod(Mods.SpawnInitialization)]
         public static void Prefix(Player __instance) {
             _PlayerShip_flak_fire_count_Field.SetValue(__instance.c_player_ship, 0);
             __instance.c_player_ship.m_thunder_power = 0;
             __instance.c_player_ship.m_boost_heat = 0;
             __instance.c_player_ship.m_boost_overheat_timer = 0f;
+        }
+
+        [Mod(Mods.DisableOpponentCockpits)]
+        public static void Postfix(Player __instance) {
+            DisableOpponentCockpits.SetOpponentCockpitVisibility(__instance, false);
         }
     }
 

@@ -69,7 +69,7 @@ namespace GameMod.Objects {
         /// </returns>
         private static string ApplySetting(string key, string value) {
             if (key == "item.pickupcheck" && bool.TryParse(value, out bool valBool)) {
-                MPPickupCheck.PickupCheck = valBool;
+                PickupCheck.Enabled = valBool;
                 return bool.TrueString;
             }
 
