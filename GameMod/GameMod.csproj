@@ -194,7 +194,6 @@
     <Compile Include="MPOpponentCockpits.cs" />
     <Compile Include="MPPickupCheck.cs" />
     <Compile Include="MPPrimaries.cs" />
-    <Compile Include="MPReduceJoinTimeout.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />

@@ -152,6 +152,40 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Change the 60 second "Player Joining" timeout to 5 seconds.
+    /// </summary>
+    [Mod(Mods.ReducePlayerJoinTimeout)]
+    [HarmonyPatch]
+    public static class NetworkMatch_HostPlayerMatchmakerInfo_GetStatus {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static MethodBase TargetMethod() {
+            return typeof(NetworkMatch).GetNestedType("HostPlayerMatchmakerInfo", AccessTools.all).GetMethod("GetStatus");
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
+            int state = 0;
+            foreach (var code in codes) {
+                if (state == 0) {
+                    if (code.opcode == OpCodes.Ldc_R8 && (double)code.operand == 60) {
+                        state = 1;
+                        yield return new CodeInstruction(OpCodes.Ldc_R8, 5.0);
+                    } else {
+                        yield return code;
+                    }
+                } else {
+                    yield return code;
+                }
+            }
+            if (state != 1) {
+                Debug.LogFormat("MPReduceJoinTimeout: transpiler failed at state {0}", state);
+            }
+        }
+    }
+
+    /// <summary>
     /// Resets the team scores at the start of the game.
     /// </summary>
     [Mod(Mods.Teams)]

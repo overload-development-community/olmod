@@ -115,6 +115,12 @@
         RearView,
 
         /// <summary>
+        /// Author: derhass
+        /// Reduceds the timeout for a player joining from 60 seconds to 5 seconds.
+        /// </summary>
+        ReducePlayerJoinTimeout,
+
+        /// <summary>
         /// Author: roncli
         /// Reduces the quantity of missiles spewed from destroyed ships, and removes the lancer from a ship's spew.
         /// </summary>
