@@ -115,6 +115,12 @@
         PreviousWeaponFix,
 
         /// <summary>
+        /// Author: roncli
+        /// Gives map makers finer control over the spawn rates of primaries in multiplayer.
+        /// </summary>
+        PrimarySpawns,
+
+        /// <summary>
         /// Author: derhass
         /// Adds a configurable profiler to measure olmod performance.
         /// </summary>

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -26,11 +27,12 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
-    /// Adds the $basic and $basic_frequency tags.
+    /// Adds the $basic and $basic_frequency tags, and set LancerPlayers if it's included in the multiplayer mode file.
     /// </summary>
     /// <remarks>
     /// $basic tags include HEALTH, AMMO, ENERGY, and ALIENORB.  The third value indicates the probability that the basic powerup you indicate will spawn when a basic powerup should spawn.
     /// $basic_frequency indicates the base time in seconds that a basic powerup will spawn.  This base time is affected by the game's set spawn frequency and if there are more than 10 powerups currently spawned in.
+    /// $lancer_players declares the minimum number of players required to spawn the lancer in a multiplayer game.
     /// </remarks>
     /// <example>
     /// $basic;HEALTH;0.1
@@ -38,14 +40,16 @@ namespace GameMod.Patches {
     /// $basic;ENERGY;0.3
     /// $basic;ALIENORB;0.4
     /// $basic_frequency;15
+    /// $lancer_players;4
     /// </example>
-    [Mod(Mods.BasicPowerupSpawns)]
+    [Mod(new Mods[] { Mods.BasicPowerupSpawns, Mods.PrimarySpawns })]
     [HarmonyPatch(typeof(RobotManager), "ParseTagMultiplayer")]
     public static class RobotManager_ParseTagMultiplayer {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
 
+        [Mod(new Mods[] { Mods.BasicPowerupSpawns, Mods.PrimarySpawns })]
         public static void ProcessExtendedMultiplayerTags(string[] words) {
             switch (words[0]) {
                 case "$basic":
@@ -69,9 +73,21 @@ namespace GameMod.Patches {
                         Debug.Log("Invalid number of arguments to powerup_frequency.  Must be 1, is " + (words.Length - 1));
                     }
                     return;
+                case "$lancer_players":
+                    try {
+                        if (words.Length == 2) {
+                            PrimarySpawns.LancerPlayers = (int)words[1].ToFloat();
+                        } else {
+                            Debug.Log("No count set for lancer players, ignoring.  Format is, for example, \"$lancer_players;4\"");
+                        }
+                    } catch (Exception) {
+                        Debug.Log("Error setting $lancer_players.  Format is, for example, \"$lancer_players;4\"");
+                    }
+                    break;
             }
         }
 
+        [Mod(Mods.BasicPowerupSpawns)]
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
             List<CodeInstruction> codes = instructions.ToList();
             int removeStart = -1;
@@ -92,6 +108,21 @@ namespace GameMod.Patches {
             }
 
             return codes;
+        }
+    }
+
+    /// <summary>
+    /// Initialize LancerPlayers to 0 before reading the multiplayer mode file.
+    /// </summary>
+    [Mod(Mods.PrimarySpawns)]
+    [HarmonyPatch(typeof(RobotManager), "ReadMultiplayerModeFile")]
+    public static class RobotManager_ReadMultiplayerModeFile {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Prefix() {
+            PrimarySpawns.LancerPlayers = 0;
         }
     }
 

@@ -139,7 +139,9 @@
     <Compile Include="Metadata\ModAttribute.cs" />
     <Compile Include="Objects\BasicPowerupSpawns.cs" />
     <Compile Include="Objects\DefaultProjData.cs" />
+    <Compile Include="Objects\Models\PrimaryBudget.cs" />
     <Compile Include="Objects\ModPreferences.cs" />
+    <Compile Include="Objects\PrimarySpawns.cs" />
     <Compile Include="Objects\Respawn.cs" />
     <Compile Include="Objects\Settings.cs" />
     <Compile Include="Objects\Smash.cs" />
@@ -193,7 +195,6 @@
     <Compile Include="MPNoPositionCompression.cs" />
     <Compile Include="MPOpponentCockpits.cs" />
     <Compile Include="MPPickupCheck.cs" />
-    <Compile Include="MPPrimaries.cs" />
     <Compile Include="MPDownloadLevel.cs" />
     <Compile Include="MPInternet.cs" />
     <Compile Include="MPJoinInProgress.cs" />

@@ -6,12 +6,53 @@ using System.Reflection.Emit;
 using GameMod.Messages;
 using GameMod.Metadata;
 using GameMod.Objects;
+using GameMod.Objects.Models;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
 
 namespace GameMod.Patches {
+    /// <summary>
+    /// Refresh the weapon spawn budget with the specified type.
+    /// </summary>
+    [Mod(Mods.PrimarySpawns)]
+    [HarmonyPatch(typeof(NetworkMatch), "AddWeaponSpawn")]
+    public static class NetworkMatch_AddWeaponSpawn {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(WeaponType wt) {
+            // Get the primary from the budget list, bail if there isn't one.
+            var primary = PrimarySpawns.Budget.Find(b => b.Type == wt);
+            if (primary == null) {
+                return false;
+            }
+
+            // Bail if there are none active.
+            if (primary.Active == 0) {
+                return false;
+            }
+
+            // Restore some remaining budget, decrement the active count.
+            primary.Remaining += (primary.Budget - primary.Remaining) / primary.Active;
+            primary.Active--;
+
+            // Set timer if it's less than 0.
+            if (PrimarySpawns.SpawnWeaponTimer <= 0) {
+                if (MPClassic.matchEnabled) {
+                    PrimarySpawns.SpawnWeaponTimer = UnityEngine.Random.Range(15f, 30f);
+                } else {
+                    PrimarySpawns.SpawnWeaponTimer = UnityEngine.Random.Range(60f, 120f);
+                }
+            }
+
+            // Short circuit the original code.
+            return false;
+        }
+    }
+
     /// <summary>
     /// Attempts to download the level if missing, and set players to start match to 1 if not already.
     /// </summary>
@@ -245,15 +286,16 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
-    /// Changes the original algorithm for basic powerup spawns, if the map implemented it.
+    /// Try to spawn a primary if the timer is ready for it, and change the original algorithm for basic powerup spawns if the map implemented it.
     /// </summary>
-    [Mod(Mods.BasicPowerupSpawns)]
+    [Mod(new Mods[] { Mods.BasicPowerupSpawns, Mods.PrimarySpawns })]
     [HarmonyPatch(typeof(NetworkMatch), "MaybeSpawnPowerup")]
     public static class NetworkMatch_MaybeSpawnPowerup {
         public static bool Prepare() {
             return GameplayManager.IsDedicatedServer();
         }
 
+        [Mod(Mods.BasicPowerupSpawns)]
         private static ItemPrefab PowerupTypeToPrefab(BasicPowerupSpawns.PowerupType pt) {
             switch (pt) {
                 case BasicPowerupSpawns.PowerupType.HEALTH:
@@ -269,6 +311,7 @@ namespace GameMod.Patches {
             }
         }
 
+        [Mod(Mods.BasicPowerupSpawns)]
         public static ItemPrefab RandomBasicSpawn() {
             if (BasicPowerupSpawns.m_multiplayer_spawnable_powerups.Count > 0) {
                 // Somewhat ugly but consistent/based on NetworkMatch.RandomAllowedMissileSpawn()
@@ -319,6 +362,15 @@ namespace GameMod.Patches {
             return ItemPrefab.num;
         }
 
+        [Mod(Mods.PrimarySpawns)]
+        public static void Prefix() {
+            PrimarySpawns.SpawnWeaponTimer -= RUtility.FRAMETIME_GAME;
+            if (PrimarySpawns.SpawnWeaponTimer <= 0f) {
+                PrimarySpawns.SpawnPrimary();
+            }
+        }
+
+        [Mod(Mods.BasicPowerupSpawns)]
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
             List<CodeInstruction> codes = instructions.ToList();
             int m_spawn_basic_timer_index = -1;
@@ -429,6 +481,62 @@ namespace GameMod.Patches {
                 { "SupportsTweaks", "" }
             };
             Client.GetClient().Send(MessageTypes.MsgClientCapabilities, new TweaksMessage { m_settings = caps });
+        }
+    }
+
+    /// <summary>
+    /// Override the original PowerupLevelStart to use a primary budget.
+    /// </summary>
+    [Mod(Mods.PrimarySpawns)]
+    [HarmonyPatch(typeof(NetworkMatch), "PowerupLevelStart")]
+    public static class NetworkMatch_PowerupLevelStart {
+        public static bool Prepare() {
+            return GameplayManager.IsDedicatedServer();
+        }
+
+        public static bool Prefix(ref int[] ___m_spawn_weapon_count) {
+            // Setup the primary budget.
+            PrimarySpawns.Budget.Clear();
+            foreach (var weapon in RobotManager.m_multiplayer_spawnable_weapons) {
+                var weaponType = (WeaponType)weapon.type;
+                if (NetworkMatch.IsWeaponAllowed(weaponType)) {
+                    PrimarySpawns.Budget.Add(new PrimaryBudget {
+                        Type = weaponType,
+                        Budget = weapon.percent,
+                        Remaining = weapon.percent,
+                        Active = 0
+                    });
+                }
+            }
+
+            // Spawn in initial primaries.
+            var primaries = PrimarySpawns.GetMaxPrimaries();
+
+            for (int i = 0; i < primaries; i++) {
+                PrimarySpawns.SpawnPrimary();
+            }
+
+            // This is the rest of the PowerupLevelStart code, currently unmodified.
+            var num = RobotManager.m_multi_missile_count;
+            for (int n = 0; n < num; n++) {
+                MissileType missileType = NetworkMatch.RandomAllowedMissileSpawn();
+                if (missileType != MissileType.NUM) {
+                    ItemPrefab item2 = ChallengeManager.MissileTypeToPrefab(missileType);
+                    // NetworkMatch.SpawnItem(item2, false);
+                    AccessTools.Method(typeof(NetworkMatch), "SpawnItem").Invoke(null, new object[] { item2, false });
+                }
+            }
+            NetworkMatch.SetSpawnMissileTimer();
+            NetworkMatch.SetSpawnSuperTimer();
+            NetworkMatch.SetSpawnBasicTimer();
+
+            // Get rid of weapon counts so they aren't triggered by the original function.
+            for (var i = 0; i < 8; i++) {
+                ___m_spawn_weapon_count[i] = 0;
+            }
+
+            // Short circuit the original code.
+            return false;
         }
     }
 
