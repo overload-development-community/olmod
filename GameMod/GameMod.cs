@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using GameMod.Objects;
+using GameMod.Profiler;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;

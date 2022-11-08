@@ -30,26 +30,26 @@ Note that you might as well consider using the Unity Profiler if that is availab
 ## Command-Line Options
 
 To use the profiler, you have to enable it via the `olmod` command line. The following options are available:
-* `-poor-mans-profiler`: Enable the profiler. If this option is not present, the profiler is completely disabled and has **no** runtime overhead whatsoever.
-* `-pmp-interval <n>`: Set the measurement interval to `n` ticks
-* `-pmp-output-path <path>`: Set the path for the output files. This can be absolute or relative, relative paths are considered relative to the
+* `-profiler`: Enable the profiler. If this option is not present, the profiler is completely disabled and has **no** runtime overhead whatsoever.
+* `-interval <n>`: Set the measurement interval to `n` ticks
+* `-output-path <path>`: Set the path for the output files. This can be absolute or relative, relative paths are considered relative to the
   persistent data dir of Overload (where the pilot files and savegames are stored)
-* `-pmp-filter <file1>[:<file2>][:...]`: Load function name [filter](#selecting-the-methods-to-trace) files. Relative paths are searched against the olmod dir
+* `-filter <file1>[:<file2>][:...]`: Load function name [filter](#selecting-the-methods-to-trace) files. Relative paths are searched against the olmod dir
    (where the `GameMod.dll` is located) and the persistent data dir of Overload (where the pilot files and savegames are stored). Multiple files can 
    be specified, separated by a colon, and will be processed in order.
-* `-pmp-lazy`: Activate experimental lazy mode. The profiler is not activated at startup, but can later be activated by the `pmpinit` console command.
-* `-pmp-locking <n>`: Set use of locking for thread-safety to off (`0`), on (`1`) or auto-detect (`-1`, the default). 
+* `-lazy`: Activate experimental lazy mode. The profiler is not activated at startup, but can later be activated by the `pmpinit` console command.
+* `-locking <n>`: Set use of locking for thread-safety to off (`0`), on (`1`) or auto-detect (`-1`, the default). 
   It seems that servers crash without locking, but clients don't, so the auto-detect enables it just for servers.
 
 ## In-Game Console Commands
 
 * `pmpcycle`: Start an new measurement cycle: dump the current cycle with all intervals as a `manual` cycle.
 * `pmpinterval <n>`: Set the measurement interval to `n` ticks.
-* `pmpinit`: Only if `-pmp-lazy` was used: Start the profiler now.
+* `pmpinit`: Only if `-lazy` was used: Start the profiler now.
 
 ## Selecting the Methods to Trace
 
-If no `-pmp-filter` command line option is specified, the profiler will look for a `pmp-filters.txt` file (in the same paths trhe `-pmp-filter` 
+If no `-filter` command line option is specified, the profiler will look for a `pmp-filters.txt` file (in the same paths the `-filter` 
 option looks). If no such file is found, the profiler will default to trace any function which was previously patched by olmod.
 
 If a filter file is present, the profiler will walk through all methods of all types of a set of pre-defined dotnet assebmlies

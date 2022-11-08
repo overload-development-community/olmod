@@ -228,7 +228,11 @@
     <Compile Include="Patches\RobotManager.cs" />
     <Compile Include="Patches\TriggerEnergy.cs" />
     <Compile Include="Patches\UnityAudio.cs" />
-    <Compile Include="PoorMansProfiler.cs" />
+    <Compile Include="Profiler\Filter.cs" />
+    <Compile Include="Profiler\FilterList.cs" />
+    <Compile Include="Profiler\MethodProfileCollector.cs" />
+    <Compile Include="Profiler\MethodProfiler.cs" />
+    <Compile Include="Profiler\Profiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Debugging.cs" />
     <Compile Include="Menus.cs" />

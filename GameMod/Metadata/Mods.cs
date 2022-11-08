@@ -109,6 +109,12 @@
         PreviousWeaponFix,
 
         /// <summary>
+        /// Author: derhass
+        /// Adds a configurable profiler to measure olmod performance.
+        /// </summary>
+        Profiler,
+
+        /// <summary>
         /// Author: tobiasksu (Tobias)
         /// Adds the race game mode.
         /// </summary>
