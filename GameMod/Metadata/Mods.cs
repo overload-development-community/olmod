@@ -86,6 +86,12 @@
 
         /// <summary>
         /// Author: arbruijn (Arne)
+        /// Removes randomness in multiplayer projectile lifetime and speed.
+        /// </summary>
+        NoProjectileRandomness,
+
+        /// <summary>
+        /// Author: arbruijn (Arne)
         /// Allows multiplayer games to be started with one player.
         /// </summary>
         OnePlayerMultiplayerGames,

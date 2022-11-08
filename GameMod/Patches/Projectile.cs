@@ -7,6 +7,36 @@ using Overload;
 
 namespace GameMod.Patches {
     /// <summary>
+    /// Removes randomization from the lifetime of a projectile in multiplayer.
+    /// </summary>
+    [Mod(Mods.NoProjectileRandomness)]
+    [HarmonyPatch(typeof(Projectile), "InitLifetime")]
+    public static class Projectile_InitLifetime {
+        public static bool Prefix(ref float __result, Projectile ___m_proj_info) {
+            if (GameplayManager.IsMultiplayerActive && (GameplayManager.IsDedicatedServer() || MenuManager.m_mp_lan_match)) {
+                __result = ___m_proj_info.m_lifetime_max >= 0f ? (___m_proj_info.m_lifetime_min + ___m_proj_info.m_lifetime_max) / 2 : ___m_proj_info.m_lifetime_min;
+                return false;
+            }
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Removes randomization from the speed of a projectile in mulltiplayer.
+    /// </summary>
+    [Mod(Mods.NoProjectileRandomness)]
+    [HarmonyPatch(typeof(Projectile), "InitSpeed")]
+    public static class Projectile_InitSpeed {
+        public static bool Prefix(ref float __result, Projectile ___m_proj_info) {
+            if (GameplayManager.IsMultiplayerActive && (GameplayManager.IsDedicatedServer() || MenuManager.m_mp_lan_match)) {
+                __result = ___m_proj_info.m_init_speed_max >= 0f ? (___m_proj_info.m_init_speed_min + ___m_proj_info.m_init_speed_max) / 2 : ___m_proj_info.m_init_speed_min;
+                return false;
+            }
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Allows Thunderbolt projectiles to penetrate through ships.
     /// </summary>
     [Mod(Mods.ThunderboltPassthrough)]
