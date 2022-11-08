@@ -91,6 +91,12 @@
         OnePlayerMultiplayerGames,
 
         /// <summary>
+        /// Author: arbruijn (Arne)
+        /// Allows pasting the game's password with Ctrl+V.
+        /// </summary>
+        PasswordPaste,
+
+        /// <summary>
         /// Authors: arbruijn (Arne), tobiasksu (Tobias)
         /// Allows for custom projdata and robotdata.
         /// </summary>

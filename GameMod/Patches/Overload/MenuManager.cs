@@ -147,6 +147,23 @@ namespace GameMod.Patches {
     }
 
     /// <summary>
+    /// Allows pasting of the password with Ctrl+V.
+    /// </summary>
+    [Mod(Mods.PasswordPaste)]
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    public static class MenuManager_MpMatchSetup_PasswordPaste {
+        public static bool Prepare() {
+            return !Core.GameMod.HasInternetMatch() && !GameplayManager.IsDedicatedServer();
+        }
+
+        public static void Prefix() {
+            if ((MenuManager.m_menu_micro_state == 1 || MenuManager.m_menu_micro_state == 4) && UIManager.m_menu_selection == 11 &&
+                ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.V)))
+                MPInternet.MenuPassword = GUIUtility.systemCopyBuffer;
+        }
+    }
+
+    /// <summary>
     /// Reduces the wait time to switch teams.
     /// </summary>
     [Mod(Mods.Teams)]

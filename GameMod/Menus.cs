@@ -2587,7 +2587,7 @@ namespace GameMod {
 
     [Mod(Mods.ServerBrowser)]
     [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-    public static class MenuManager_MpMatchSetup {
+    public static class MenuManager_MpMatchSetup_ServerBrowser {
         private static bool ProcessInputField(ref string s, ref float m_menu_state_timer) {
             foreach (char c in Input.inputString) {
                 if (c == '\b') {
@@ -2664,8 +2664,8 @@ namespace GameMod {
         }
 
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes) {
-            var mpServerBrowser_MenuManager_MpMatchSetup_MpBackButton_Method = AccessTools.Method(typeof(MenuManager_MpMatchSetup), "MpBackButton");
-            var mpServerBrowser_MenuManager_MpMatchSetup_MpMatchSetupMicrostate_Method = AccessTools.Method(typeof(MenuManager_MpMatchSetup), "MpMatchSetupMicrostate");
+            var mpServerBrowser_MenuManager_MpMatchSetup_MpBackButton_Method = AccessTools.Method(typeof(MenuManager_MpMatchSetup_ServerBrowser), "MpBackButton");
+            var mpServerBrowser_MenuManager_MpMatchSetup_MpMatchSetupMicrostate_Method = AccessTools.Method(typeof(MenuManager_MpMatchSetup_ServerBrowser), "MpMatchSetupMicrostate");
 
             int state = 0;
             foreach (var code in codes) {

@@ -208,7 +208,6 @@
     <Compile Include="MPNoNewWeaponSound.cs" />
     <Compile Include="MPObserver.cs" />
     <Compile Include="MPProjInit.cs" />
-    <Compile Include="MPPwdPaste.cs" />
     <Compile Include="Patches\Item.cs" />
     <Compile Include="Patches\NetworkMatch.cs" />
     <Compile Include="Patches\NetworkSpawnPoints.cs" />
