@@ -736,6 +736,76 @@ namespace GameMod {
                         SelectAndDrawSliderItem(__instance, Loc.LS("LIMIT SHIPS DIVING INTO WALLS"), position, 11, Menus.mms_lag_compensation_collision_limit, 100, "LIMIT HOW FAR SHIPS MIGHT DIVE INTO WALLS (BUT SHIPS MIGHT APPEAR STUCK AT THE WALLS FOR SHORT MOMENTS INSTEAD)." + Environment.NewLine + "0 FOR UNLIMITED (NO CALCULATION OVERHEAD), OTHERWISE PERCENTAGE OF SHIP DIAMETER WHICH MUST REMAIN VISIBLE (100 = NO DIVE-IN AT ALL).");
                     }
                     break;
+                case 3:
+                case 4:
+                    // Audio Taunt Menu
+                    if (MPAudioTaunts.AClient.initialized)
+                    {
+                        position.x -= 150f;
+                        __instance.DrawStringSmall("AUDIO TAUNT SLOTS", position, 0.7f, StringOffset.CENTER, UIManager.m_col_ui2, 1f, -1f);
+                        position.x += 285f;
+                        __instance.DrawStringSmall("KEYBINDS", position, 0.7f, StringOffset.CENTER, UIManager.m_col_ui2, 1f, -1f);
+                        position.x -= 285f;
+                        position.y += 50f;
+
+                        for (int i = 0; i < 6; i++)
+                        {
+                            // Draws the Item slider for selecting an audio taunt
+                            __instance.SelectAndDrawStringOptionItem("", position, 16 + i, MPAudioTaunts.AClient.local_taunts[i].name, string.Empty, 0.49f, false);
+                            // Draws the buttons that play the selected audio taunt of the respective slot
+                            position.x -= 171f;
+                            __instance.TestMouseInRect(position, 25f, 25f, 1610 + i, true);
+                            bool highlighted = UIManager.m_menu_selection == 1610 + i;
+                            if (highlighted) MenuManager.option_dir = false;
+
+                            Color color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!__instance.m_fade_die) ? 0f : 0.5f));
+                            UIManager.DrawQuadBarHorizontal(position, 14f, 24f, 14f, 0.2f * UIManager.m_col_ub0, 12);
+                            UIManager.DrawSpriteUI(position, 0.138f, 0.138f, highlighted ? color : UIManager.m_col_ui2, __instance.m_alpha, 2);
+                            UIManager.DrawSpriteUI(position, 0.24f, 0.24f, highlighted ? color : UIManager.m_col_ui2, __instance.m_alpha, 80);
+                            position.x += 171f;
+
+                            // Draws the keybind buttons
+                            position.x += 290f;
+                            highlighted = UIManager.m_menu_selection == 1810 + i;
+                            if (highlighted) MenuManager.option_dir = false;
+                            __instance.TestMouseInRect(position, 110f, 22f, 1810 + i, true);
+                            __instance.DrawControlItem(MPAudioTaunts.AClient.keybinds[i] != -1 ? ((KeyCode)MPAudioTaunts.AClient.keybinds[i]).ToString() : "BIND KEY", position, highlighted, 190f, false);
+
+                            position.x -= 290f;
+                            position.y += 71f;
+                        }
+                        position.x += 150f;
+
+                        //Vector2 pos2 = new Vector2(270, -100);
+                        //__instance.DrawStringSmall(MPAudioTaunts.LocalAudioTauntDirectory, pos2, 0.3f, StringOffset.LEFT, UIManager.m_col_ui2 * 0.7f, 1f, -1f);
+                        // FOR TESTING PURPOSES
+
+                        Vector2 pos = new Vector2(-570, 0);
+                        float[] freqBand = MPAudioTaunts.AClient.calculateFrequencyBand();
+                        for (int i = 0; i < 8; i++)
+                        {
+
+                            // new Vector2(1.7f, 1f)
+                            if (freqBand.Length == 8) UIManager.DrawBarVertical(pos, new Vector2(4f, 1f), freqBand[i] * 50f, Color.green * 0.7f, 199);//UIManager.DrawQuadBarVertical(pos, 6f, 1f, freqBand[i] * 50f, Color.yellow, 199); //(pos, new Vector2(pos.x, -freqBand[i] * 200f), 1f, 0f, Color.yellow, 4);
+                            pos.x += 10f;
+                        }
+
+                        //uConsole.Log(UIManager.m_mouse_pos.ToString());
+                        __instance.SelectAndDrawItem("Status: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), new Vector2(478.4f,-178.7f), 2000, false, 0.27f, 0.4f);
+
+                        if (MenuManager.m_menu_micro_state == 4)
+                        {
+                            position = __instance.m_position;
+                            UIManager.DrawQuadUI(position, 1200f, 400f, UIManager.m_col_black, 1f, 22);
+                            UIManager.DrawQuadUI(position, 1200f, 54f, UIManager.m_col_ub2, 1f, 13);
+                            UIManager.DrawQuadUI(position - Vector2.up * 50f, 1200f, 2f, UIManager.m_col_ui4, 1f, 4);
+                            UIManager.DrawQuadUI(position + Vector2.up * 50f, 1200f, 2f, UIManager.m_col_ui4, 1f, 4);
+                            __instance.DrawLabelSmallBright(position - Vector2.up * 25f, Loc.LS("PRESS A BUTTON TO ASSIGN"), 200f, 1f);
+                            Color c2 = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER));
+                            __instance.DrawStringSmall("AUDIO TAUNT SLOT " + (1 + MPAudioTaunts.AClient.selected_audio_slot) + " : " + MPAudioTaunts.AClient.local_taunts[MPAudioTaunts.AClient.selected_audio_slot].name, position + Vector2.up * 17f, 1f, StringOffset.CENTER, c2, 1f, -1f);
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
@@ -751,17 +821,18 @@ namespace GameMod {
 
         public static void DrawTabs(UIElement uie, Vector2 pos, int tab_selected)
         {
-            float w = 378f;
+            float w = 508f;
             uie.DrawWideBox(pos, w, 22f, UIManager.m_col_ub2, uie.m_alpha, 7);
             string[] array = new string[]
             {
                 "GENERAL",
                 "TEAM",
-                "LAG COMPENSATION"
+                "LAG COMPENSATION",
+                "AUDIO TAUNTS"
             };
             for (int i = 0; i < array.Length; i++)
             {
-                pos.x = ((float)i - 1f) * 265f;
+                pos.x = -133f + ((float)i - 1f) * 265f;
                 uie.TestMouseInRect(pos, 112f, 16f, 200 + i, false);
                 if (UIManager.m_menu_selection == 200 + i)
                 {
@@ -882,6 +953,7 @@ namespace GameMod {
                             case 200:
                             case 201:
                             case 202:
+                            case 203:
                                 MenuManager.m_menu_micro_state = UIManager.m_menu_selection - 200;
                                 MenuManager.UIPulse(1f);
                                 _MenuManager_PlayHighlightSound_Method.Invoke(null, new object[] { 0.4f, 0.07f });
@@ -1037,12 +1109,135 @@ namespace GameMod {
                                         break;
                                 }
                                 break;
-                            default:
+                            case 3:
+                                switch (menu_selection)
+                                {
+                                    case 16:
+                                    case 17:
+                                    case 18:
+                                    case 19:
+                                    case 20:
+                                    case 21:
+                                        if (MPAudioTaunts.AClient.initialized)
+                                        {
+                                            // do not allow the selected audiotaunts to change during a multiplayer game
+                                            if(NetworkMatch.GetMatchState() != MatchState.PLAYING)
+                                            {
+                                                int index = MPAudioTaunts.AClient.taunts.IndexOf(MPAudioTaunts.AClient.local_taunts[menu_selection - 16]);
+                                                if (MPAudioTaunts.AClient.taunts.Count > 0)
+                                                {
+                                                    if (index != -1)
+                                                    {
+                                                        if (index + UIManager.m_select_dir < 0) index = MPAudioTaunts.AClient.taunts.Count - 1;
+                                                        else index = (index + UIManager.m_select_dir) % (MPAudioTaunts.AClient.taunts.Count);
+                                                        MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[index];
+                                                    }
+                                                    else
+                                                    {
+                                                        MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[0];
+                                                    }
+                                                }
+                                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                            }
+                                            else
+                                            {
+                                                GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
+                                            }
+
+                                        }
+                                        goto AVOID_INPUTMAPPING_DIALOG;
+                                    case 1610:
+                                    case 1611:
+                                    case 1612:
+                                    case 1613:
+                                    case 1614:
+                                    case 1615:
+                                        if (MPAudioTaunts.AClient.initialized)
+                                        {
+                                            if(MPAudioTaunts.AClient.local_taunts[menu_selection - 1610].audioclip != null)
+                                            {
+                                                MPAudioTaunts.AClient.PlayAudioTauntFromAudioclip(MPAudioTaunts.AClient.local_taunts[menu_selection - 1610].audioclip);
+                                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                            }
+                                            else
+                                                GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
+                                        }
+                                        goto AVOID_INPUTMAPPING_DIALOG;
+                                    case 1810:
+                                    case 1811:
+                                    case 1812:
+                                    case 1813:
+                                    case 1814:
+                                    case 1815:
+                                        MPAudioTaunts.AClient.selected_audio_slot = menu_selection - 1810;
+                                        break;
+                                    case 2000:
+                                        MPAudioTaunts.AClient.active = !MPAudioTaunts.AClient.active;
+                                        MenuManager.PlaySelectSound(1f);
+                                        goto AVOID_INPUTMAPPING_DIALOG;
+                                    default:
+                                        goto AVOID_INPUTMAPPING_DIALOG;
+
+                                }
+
+                                MenuManager.m_menu_micro_state = 4;
+                                MenuManager.m_menu_sub_state = MenuSubState.GET_INPUT;
+                                MenuManager.control_remap_alt = (UIManager.m_menu_selection >= 50);
+                                MenuManager.control_remap_index = UIManager.m_menu_selection % 50;
+                                MenuManager.control_remap_name = Controls.GetInputName((CCInput)MenuManager.control_remap_index);
+                                MenuManager.PlaySelectSound(1f);
+                            AVOID_INPUTMAPPING_DIALOG:
                                 break;
+
                         }
                         MenuManager.UnReverseOption();
                     }
                 }
+                else if (menu_sub_state == MenuSubState.GET_INPUT)
+                {
+                    bool flag = false;
+                    int menu_micro_state2 = MenuManager.m_menu_micro_state;
+
+                    if (menu_micro_state2 == 4)
+                    {
+                        if (Input.GetKeyDown(KeyCode.Escape))
+                        {
+                            MenuManager.PlaySelectSound(1f);
+                            flag = true;
+                        }
+                        else if (Controls.DetectKBType())
+                        {
+                            if (Controls.m_captured_input == KeyCode.LeftCommand || Controls.m_captured_input == KeyCode.RightCommand || Controls.m_captured_input == KeyCode.LeftWindows || Controls.m_captured_input == KeyCode.RightWindows)
+                            {
+
+                            }
+                            else
+                            {
+                                MPAudioTaunts.AClient.keybinds[MPAudioTaunts.AClient.selected_audio_slot] = (int)Controls.m_captured_input;
+                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                flag = true;
+                            }
+                            if ((Controls.m_captured_input == KeyCode.Joystick8Button11 || Controls.m_captured_input == KeyCode.Joystick8Button10) && (MenuManager.control_remap_index <= 11 || MenuManager.control_remap_index == 19 || MenuManager.control_remap_index == 22 || MenuManager.control_remap_index == 24))
+                            {
+
+                            }
+                            else
+                            {
+                                MPAudioTaunts.AClient.keybinds[MPAudioTaunts.AClient.selected_audio_slot] = (int)Controls.m_captured_input;
+                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                flag = true;
+                            }
+
+                        }
+                        if (flag)
+                        {
+                            MenuManager.m_menu_sub_state = MenuSubState.ACTIVE;
+                            MenuManager.m_menu_micro_state = 3;
+                            UIManager.m_menu_selection = MenuManager.control_remap_index + ((!MenuManager.control_remap_alt) ? 0 : 50);
+                        }
+                    }
+                }
+
             }
             else if (___m_menu_state_timer > 0.25f)
             {
@@ -1091,6 +1286,8 @@ namespace GameMod {
             position.y += 62f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("DIRECTIONAL HOMING WARNINGS"), position, 7, Menus.GetMMSDirectionalWarnings(), Loc.LS("PLAYS HOMING WARNINGS FROM THE DIRECTION OF THE INCOMING PROJECTILE"));
             position.y += 62f;
+            uie.SelectAndDrawSliderItem("AUDIO TAUNT VOLUME", position, 8, MPAudioTaunts.AClient.audio_taunt_volume / 100f);
+            position.y += 62f;
             uie.SelectAndDrawItem("REINITIALIZE AUDIO DEVICE", position, 5, false);
         }
 
@@ -1102,7 +1299,7 @@ namespace GameMod {
             {
                 if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 93f)
                 {
-                    code.operand = 186f; // offsets the menu up a bit for the extra options
+                    code.operand = 220f; // offsets the menu up a bit for the extra options
                 }
                 if (code.opcode == OpCodes.Ldstr && (string)code.operand == "SPEAKER MODE")
                     state = 1;
@@ -1146,6 +1343,10 @@ namespace GameMod {
                 case 7:
                     Menus.mms_directional_warnings = !Menus.mms_directional_warnings;
                     MenuManager.PlaySelectSound(1f);
+                    break;
+                case 8:
+                    MPAudioTaunts.AClient.audio_taunt_volume = (int)(UIElement.SliderPos * 100);
+                    //MenuManager.PlaySelectSound(1f);
                     break;
 
             }

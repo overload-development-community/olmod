@@ -124,6 +124,7 @@
     <Compile Include="MoreAudio.cs" />
     <Compile Include="MPAlwaysCloaked.cs" />
     <Compile Include="MPAnticheat.cs" />
+    <Compile Include="MPAudioTaunts.cs" />
     <Compile Include="MPAutomap.cs" />
     <Compile Include="MPAutoSelection.cs" />
     <Compile Include="MPAutoSelectionUI.cs" />
