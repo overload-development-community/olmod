@@ -90,7 +90,7 @@ namespace GameMod
                 powerupSpawn = 2,
                 powerupInitial = 2,
                 powerupBigSpawn = 1,
-                powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
+                powerupFilter = new bool[] { true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true },
                 jipEnabled = true,
                 suddenDeathOvertime = false,
                 lapLimit = 0,
@@ -130,7 +130,7 @@ namespace GameMod
                 powerupSpawn = 2,
                 powerupInitial = 2,
                 powerupBigSpawn = 1,
-                powerupFilter = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true },
+                powerupFilter = new bool[] { true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true },
                 jipEnabled = true,
                 suddenDeathOvertime = false,
                 lapLimit = 0,
@@ -192,6 +192,13 @@ namespace GameMod
 
             public void Apply()
             {
+                // part of the reflex sidearm addition (possibly unnecessary workaround for remote presets)
+                // disables reflex drops if classic spawns is off, regardless of the preset setting
+                if (!this.classicSpawnsEnabled)
+                {
+                    this.powerupFilter[2] = false;
+                }
+
                 MenuManager.mms_mode = this.matchMode;
                 MenuManager.mms_max_players = this.maxPlayers;
                 MenuManager.mms_friendly_fire = this.friendlyFire;
