@@ -298,6 +298,35 @@ namespace GameMod
                                             ExtendedConfig.Section_AutoSelect.ApplySettings();
                                         }
                                         break;
+
+                                    // triggers the weapon cycling exclusion code
+                                    case 3000:
+                                    case 3001:
+                                    case 3002:
+                                    case 3003:
+                                    case 3004:
+                                    case 3005:
+                                    case 3006:
+                                    case 3007:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            MPWeaponCycling.SetPrimaryCycleEnable(UIManager.m_menu_selection - 3000);
+                                        }
+                                        break;
+
+                                    case 3010:
+                                    case 3011:
+                                    case 3012:
+                                    case 3013:
+                                    case 3014:
+                                    case 3015:
+                                    case 3016:
+                                    case 3017:
+                                        if (UIManager.PushedSelect(100))
+                                        {
+                                            MPWeaponCycling.SetSecondaryCycleEnable(UIManager.m_menu_selection - 3010);
+                                        }
+                                        break;
                                 }
                             }
 
@@ -464,7 +493,14 @@ namespace GameMod
                         uie.DrawWideBox(position, 100f, 28f, Color.red, 0.2f, 7);
                         UIManager.DrawQuadBarHorizontal(position, 100f, 18f, 30f, Color.red, 12);
                     }
-                    position.x -= 150f;
+                    position.x -= 205f;
+                    if (!MPWeaponCycling.CPrimaries[MPWeaponCycling.pPos[i]])
+                    {
+                        uie.DrawWideBox(position, 5f, 28f, Color.red, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position, 18f, 18f, 18f, Color.red, 12);
+                    }
+                    uie.SelectAndDrawItem(MPWeaponCycling.CPrimaries[MPWeaponCycling.pPos[i]] ? "+" : "-", position, 3000 + i, false, 0.022f, 1f);
+                    position.x += 55f;
                     uie.SelectAndDrawItem(!MPAutoSelection.PrimaryNeverSelect[i] ? "+" : "-", position, 2000 + i, false, 0.022f, 1f);
                     position.x += 150f;
                     uie.SelectAndDrawHalfItem(MPAutoSelection.PrimaryPriorityArray[i], position, 1720 + i, false);
@@ -481,7 +517,14 @@ namespace GameMod
                         uie.DrawWideBox(position2, 100f, 28f, Color.red, 0.2f, 7);
                         UIManager.DrawQuadBarHorizontal(position2, 100f, 18f, 30, Color.red, 12);
                     }
-                    position2.x += 150f;
+                    position2.x += 205f;
+                    if (!MPWeaponCycling.CSecondaries[MPWeaponCycling.mPos[i]])
+                    {
+                        uie.DrawWideBox(position2, 5f, 28f, Color.red, 0.2f, 7);
+                        UIManager.DrawQuadBarHorizontal(position2, 18f, 18f, 18f, Color.red, 12);
+                    }
+                    uie.SelectAndDrawItem((MPWeaponCycling.CSecondaries[MPWeaponCycling.mPos[i]] ? "+" : "-"), position2, 3010 + i, false, 0.022f, 1f);
+                    position2.x -= 55f;
                     uie.SelectAndDrawItem((!MPAutoSelection.SecondaryNeverSelect[i] ? "+" : "-"), position2, 2010 + i, false, 0.022f, 1f);
                     position2.x -= 150f;
                     uie.SelectAndDrawHalfItem(MPAutoSelection.SecondaryPriorityArray[i], position2, 1728 + i, false);
@@ -580,12 +623,17 @@ namespace GameMod
                 MPAutoSelection.PrimaryPriorityArray[selection[0]] = MPAutoSelection.PrimaryPriorityArray[selection[1]];
                 MPAutoSelection.PrimaryPriorityArray[selection[1]] = temp;
 
+                int idx = MPWeaponCycling.pPos[selection[0]];
+                MPWeaponCycling.pPos[selection[0]] = MPWeaponCycling.pPos[selection[1]];
+                MPWeaponCycling.pPos[selection[1]] = idx;
+
                 isPrimarySelected[selection[0]] = false;
                 isPrimarySelected[selection[1]] = false;
                 MPAutoSelection.PrimaryNeverSelect[selection[0]] = false;
                 MPAutoSelection.PrimaryNeverSelect[selection[1]] = false;
 
                 ExtendedConfig.Section_AutoSelect.Set(true);
+                ExtendedConfig.Section_WeaponCycling.Set(true);
                 MPAutoSelection.Initialise();
             }
 
@@ -609,24 +657,30 @@ namespace GameMod
                 MPAutoSelection.SecondaryPriorityArray[selection[0]] = MPAutoSelection.SecondaryPriorityArray[selection[1]];
                 MPAutoSelection.SecondaryPriorityArray[selection[1]] = temp;
 
+                int idx = MPWeaponCycling.mPos[selection[0]];
+                MPWeaponCycling.mPos[selection[0]] = MPWeaponCycling.mPos[selection[1]];
+                MPWeaponCycling.mPos[selection[1]] = idx;
+
                 isSecondarySelected[selection[0]] = false;
                 isSecondarySelected[selection[1]] = false;
                 MPAutoSelection.SecondaryNeverSelect[selection[0]] = false;
                 MPAutoSelection.SecondaryNeverSelect[selection[1]] = false;
 
                 ExtendedConfig.Section_AutoSelect.Set(true);
+                ExtendedConfig.Section_WeaponCycling.Set(true);
                 MPAutoSelection.Initialise();
             }
 
 
             public static string selectionToDescription(int n)
             {
-                if (n == 2100) return "TOGGLES WETHER THE WHOLE MOD SHOULD BE ACTIVE";
+                if (n == 2100) return "TOGGLES WHETHER AUTOSELECTION IS GLOBALLY ENABLED";
                 if (n == 2101) return "REPLACES THE `PREV/NEXT WEAPON` FUNCTION WITH `SWAP TO NEXT HIGHER/LOWER PRIORITIZED WEAPONS`";
-                if (n <= 2017 && n >= 2000) return "TOGGLES WETHER THIS WEAPON SHOULD NEVER BE SELECTED";
-                if (n <= 1735 && n >= 1720) return "CHANGE THE ORDER BY CLICKING AT THE TWO WEAPONS YOU WANT TO SWAP";
-                if (n == 2103) return "TOGGLES EVERYTHING RELATED TO PRIMARY WEAPONS IN THIS MOD";
-                if (n == 2102) return "TOGGLES EVERYTHING RELATED TO SECONDARY WEAPONS IN THIS MOD";
+                if (n <= 2017 && n >= 2000) return "TOGGLES WHETHER THIS WEAPON SHOULD BE INCLUDED IN AUTOSELECT";
+                if (n <= 3017 && n >= 3000) return "TOGGLES WHETHER THIS WEAPON SHOULD BE INCLUDED IN MANUAL PRIMARY/SECONDARY PREV/NEXT CYCLING";
+                if (n <= 1735 && n >= 1720) return "CHANGE THE ORDER BY CLICKING ON THE TWO WEAPONS YOU WANT TO SWAP";
+                if (n == 2103) return "TOGGLES AUTOSELECTION OF PRIMARY WEAPONS";
+                if (n == 2102) return "TOGGLES AUTOSELECTION OF SECONDARY WEAPONS";
                 if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
                 if (n == 2105) return "DELAY SWAPS TILL THE PLAYER IS NOT FIRING ANYMORE";
                 if (n == 2106) return "SWAP EVEN IF THE PLAYER IS CURRENTLY FIRING";

@@ -198,6 +198,7 @@
     <Compile Include="MPTweaks.cs" />
     <Compile Include="MPUnlockAll.cs" />
     <Compile Include="MPWeaponBehavior.cs" />
+    <Compile Include="MPWeaponCycling.cs" />
     <Compile Include="MusicCustom.cs" />
     <Compile Include="PoorMansProfiler.cs" />
     <Compile Include="PrevWeaponFix.cs" />

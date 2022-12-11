@@ -110,7 +110,7 @@ namespace GameMod {
         private static FieldInfo _NetworkSpawnPoints_m_player_pos_Field = typeof(NetworkSpawnPoints).GetField("m_player_pos", BindingFlags.NonPublic | BindingFlags.Static);
         private static FieldInfo _NetworkSpawnPoints_m_player_team_Field = typeof(NetworkSpawnPoints).GetField("m_player_team", BindingFlags.NonPublic | BindingFlags.Static);
         private static MethodInfo _NetworkSpawnPoints_GetRespawnPointCandidates_Method = AccessTools.Method(typeof(NetworkSpawnPoints), "GetRespawnPointCandidates");
-        private static MethodInfo _NetworkSpawnPoints_GetRandomRespawnPointWithoutFiltering_Method = AccessTools.Method(typeof(NetworkSpawnItem), "GetRandomRespawnPointWithoutFiltering");
+        private static MethodInfo _NetworkSpawnPoints_GetRandomRespawnPointWithoutFiltering_Method = AccessTools.Method(typeof(NetworkSpawnPoints), "GetRandomRespawnPointWithoutFiltering");
 
         private static bool Prefix(MpTeam team, ref LevelData.SpawnPoint __result) {
             // Check mode, bail if not Anarchy or Team Anarchy.
