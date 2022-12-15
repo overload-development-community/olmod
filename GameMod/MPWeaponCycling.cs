@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using Overload;
-using UnityEngine;
 
 namespace GameMod
 {
@@ -103,7 +102,7 @@ namespace GameMod
             int num = 0;
             for (int i = 0; i < 8; i++)
             {
-                if (p.m_weapon_level[i] != 0 && MPWeaponCycling.CPrimaries[i])
+                if (p.m_weapon_level[i] != 0 && (MPWeaponCycling.CPrimaries[i] || MPWeaponCycling.PBypass || !MPWeaponCycling.CPrimaries[(int)p.m_weapon_type]))
                 {
                     num++;
                 }
@@ -119,7 +118,7 @@ namespace GameMod
         [HarmonyPriority(Priority.Last)]
         public static bool Prefix(Player __instance, bool prev = false)
         {
-            if (NumAvailableSecondaries(__instance) > 1 || (NumAvailableSecondaries(__instance) == 1 && (int)__instance.m_missile_ammo[(int)__instance.m_missile_type] == 0))
+            if (NumAvailableSecondaries(__instance) > 1 || (NumAvailableSecondaries(__instance) == 1 && __instance.m_missile_ammo[(int)__instance.m_missile_type] == 0))
             {
                 int next = (int)__instance.m_missile_type;
                 for (int i = 0; i < 9; i++) // try all 8 slots then give up and go back to the first
@@ -143,7 +142,7 @@ namespace GameMod
             int num = 0;
             for (int i = 0; i < 8; i++)
             {
-                if (p.m_missile_level[i] != 0 && (int)p.m_missile_ammo[i] > 0 && MPWeaponCycling.CSecondaries[i])
+                if (p.m_missile_level[i] != 0 && (int)p.m_missile_ammo[i] > 0 && (MPWeaponCycling.CSecondaries[i] || !MPWeaponCycling.CSecondaries[(int)p.m_missile_type]))
                 {
                     num++;
                 }

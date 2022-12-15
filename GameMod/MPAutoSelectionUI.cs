@@ -682,7 +682,7 @@ namespace GameMod
                 if (n == 2103) return "TOGGLES AUTOSELECTION OF PRIMARY WEAPONS";
                 if (n == 2102) return "TOGGLES AUTOSELECTION OF SECONDARY WEAPONS";
                 if (n == 2104) return "DISPLAY A WARNING IF A DEVASTATOR GETS AUTOSELECTED";
-                if (n == 2105) return "DELAY SWAPS TILL THE PLAYER IS NOT FIRING ANYMORE";
+                if (n == 2105) return "DELAY SWAPS UNTIL THE PLAYER IS NOT FIRING ANYMORE";
                 if (n == 2106) return "SWAP EVEN IF THE PLAYER IS CURRENTLY FIRING";
                 if (n == 2107) return "RESETS AUTOSELECT SETTINGS TO DEFAULTS FOR THIS PILOT";
                 else {
