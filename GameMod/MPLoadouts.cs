@@ -806,4 +806,17 @@ namespace GameMod
             }
         }
     }
+
+    // Disables reflex powerups since it's provided as a standard sidearm now.
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    internal class MPLoadouts_MenuManager_MpMatchSetup
+    {
+        public static void Postfix()
+        {
+            if (!Menus.mms_classic_spawns)
+            {
+                MenuManager.mms_powerup_filter[2] = false;
+            }
+        }
+    }
 }
