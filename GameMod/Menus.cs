@@ -491,6 +491,11 @@ namespace GameMod {
                     case 13:
                         Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        // Re-enables Reflex drops in classic spawn mode by default. 
+                        if (Menus.mms_classic_spawns)
+                        {
+                            MenuManager.mms_powerup_filter[2] = true;
+                        }
                         break;
                     case 14:
                         Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
