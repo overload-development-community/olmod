@@ -267,6 +267,7 @@ namespace GameMod {
                 Menus.mms_audio_occlusion_strength = ModPrefs.GetInt("MP_PM_AUDIO_OCCLUSION_STRENGTH", Menus.mms_audio_occlusion_strength);
                 Menus.mms_directional_warnings = ModPrefs.GetBool("MP_PM_DIRECTIONAL_WARNINGS", Menus.mms_directional_warnings);
                 Menus.mms_loadout_hotkeys = ModPrefs.GetInt("MP_PM_LOADOUT_HOTKEYS2", Menus.mms_loadout_hotkeys);
+                Menus.mms_creeper_colors = ModPrefs.GetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
 
                 MPLoadouts.Loadouts[0].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
                 MPLoadouts.Loadouts[0].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
@@ -367,6 +368,7 @@ namespace GameMod {
             ModPrefs.SetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
             ModPrefs.SetBool("MP_ASSIST_SCORING", Menus.mms_assist_scoring);
             ModPrefs.SetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
+            ModPrefs.SetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
 
             ModPrefs.Flush(filename + "mod");
         }

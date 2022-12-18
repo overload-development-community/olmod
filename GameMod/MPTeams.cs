@@ -28,7 +28,7 @@ namespace GameMod
         // This processes when team != TEAM0
         public static int TeamMessageColor(MpTeam team)
         {
-            return teamMessageColorIndexList[(int)team > 1 ? (int)team-1 : (int)team];
+            return teamMessageColorIndexList[(int)team > 1 ? (int)team - 1 : (int)team];
         }
 
         public static MpTeam GetMpTeamFromMessageColor(int messageColorIndex)
@@ -188,7 +188,7 @@ namespace GameMod
             if (MPTeams.NetworkMatchTeamCount < (int)MpTeam.NUM_TEAMS && !Menus.mms_team_color_default)
             {
                 c = c2 = UIManager.m_col_ui0;
-                teamName = $"{Loc.LS("TEAM")} {(int)team+1}";
+                teamName = $"{Loc.LS("TEAM")} {(int)team + 1}";
             }
 
             UIManager.DrawQuadBarHorizontal(pos, 13f, 13f, w * 2f, c, 7);
@@ -1371,7 +1371,7 @@ namespace GameMod
                 if (CTF.PlayerHasFlag.ContainsKey(targetPlayer.netId) && CTF.PlayerHasFlag.TryGetValue(targetPlayer.netId, out int flag))
                 {
                     CTF.SendCTFLose(-1, targetPlayer.netId, flag, FlagState.HOME, true);
-                    
+
                     if (!CTF.CarrierBoostEnabled)
                     {
                         targetPlayer.c_player_ship.m_boost_overheat_timer = 0;
@@ -1382,7 +1382,7 @@ namespace GameMod
                         targetPlayer, flag);
                 }
             }
-            
+
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
             {
                 // Send message to clients with 'changeteam' support to give them HUD message
@@ -1433,4 +1433,38 @@ namespace GameMod
         }
     }
 
+    // Team-colored creepers in team games
+    [HarmonyPatch(typeof(Projectile), "Fire")]
+    class MPTeams_Projectile_Fire
+    {
+        static void Postfix(Projectile __instance)
+        {
+            if (__instance.m_type == ProjPrefab.missile_creeper && GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && Menus.mms_creeper_colors)
+            {
+                var teamcolor = UIManager.ChooseMpColor(__instance.m_mp_team);
+                //var teamcolor = Color.Lerp(UIManager.ChooseMpColor(__instance.m_mp_team), Color.white, 0.1f); // brightens things slightly
+
+                __instance.c_go.GetComponent<Light>().color = teamcolor;
+
+                foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>())
+                {
+                    if (rend.name == "_glow" || rend.name == "extra_glow")
+                    {
+                        foreach (var mat in rend.materials)
+                        {
+                            if (mat.name == "_glow_superbright1_yellow" || mat.name == "enemy_creeper1")
+                            {
+                                mat.color = teamcolor;
+                                mat.SetColor("_EmissionColor", teamcolor);
+                            }
+                        }
+                    }
+                }
+                foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                {
+                    x.startColor = teamcolor;
+                }
+            }
+        }
+    }
 }
