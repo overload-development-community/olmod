@@ -1437,34 +1437,87 @@ namespace GameMod
     [HarmonyPatch(typeof(Projectile), "Fire")]
     class MPTeams_Projectile_Fire
     {
+        // stock Colors for restoring the correct particle colors in Anarchy
+        // since Unity actively attempts to outsmart me by reusing previous
+        // ParticleSystems and getting leftover TA colors despite my efforts.
+
+        public static Color s_glow = new Color(1f, 0.706f, 0.265f, 0.234f);
+        public static Color s_trail = new Color(1f, 0.419f, 0.074f, 0.853f);
+        public static Color s_ring = new Color(1f, 0.173f, 0.039f, 0.392f);
+
         static void Postfix(Projectile __instance)
         {
-            if (__instance.m_type == ProjPrefab.missile_creeper && GameplayManager.IsMultiplayerActive && !GameplayManager.IsDedicatedServer() && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && Menus.mms_creeper_colors)
+            if (__instance.m_type == ProjPrefab.missile_creeper && !GameplayManager.IsDedicatedServer())
             {
-                var teamcolor = UIManager.ChooseMpColor(__instance.m_mp_team);
-                //var teamcolor = Color.Lerp(UIManager.ChooseMpColor(__instance.m_mp_team), Color.white, 0.1f); // brightens things slightly
-
-                __instance.c_go.GetComponent<Light>().color = teamcolor;
-
-                foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>())
+                if (GameplayManager.IsMultiplayerActive && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && Menus.mms_creeper_colors)
                 {
-                    if (rend.name == "_glow" || rend.name == "extra_glow")
+                    var teamcolor = UIManager.ChooseMpColor(__instance.m_mp_team);
+                    //var teamcolor = Color.Lerp(UIManager.ChooseMpColor(__instance.m_mp_team), Color.white, 0.1f); // brightens things slightly
+
+                    __instance.c_go.GetComponent<Light>().color = teamcolor;
+
+                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>())
                     {
-                        foreach (var mat in rend.materials)
+                        if (rend.name == "_glow" || rend.name == "extra_glow")
                         {
-                            if (mat.name == "_glow_superbright1_yellow" || mat.name == "enemy_creeper1")
+                            foreach (var mat in rend.materials)
                             {
-                                mat.color = teamcolor;
-                                mat.SetColor("_EmissionColor", teamcolor);
+                                if (mat.name == "_glow_superbright1_yellow" || mat.name == "enemy_creeper1")
+                                {
+                                    mat.color = teamcolor;
+                                    mat.SetColor("_EmissionColor", teamcolor);
+                                }
                             }
                         }
                     }
+                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                    {
+                        var m = x.main;
+                        m.startColor = teamcolor;
+                    }
                 }
-                foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                else
                 {
-                    x.startColor = teamcolor;
+                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                    {
+                        var m = x.main;
+                        switch (x.name)
+                        {
+                            case "_glow":
+                                m.startColor = s_glow;
+                                break;
+                            case "partilce_ring": // No, I didn't misspell that. Revival did.
+                                m.startColor = s_ring;
+                                break;
+                            case "trail_creeper(Clone)":
+                                m.startColor = s_trail;
+                                break;
+                        }
+                    }
                 }
             }
+        }
+    }
+
+    // resets the projectile list between rounds
+    [HarmonyPatch(typeof(GameplayManager), "StartLevel")]
+    class MPTeams_GameplayManager_StartLevel
+    {
+        static void Postfix()
+        {
+            for (int i = 1; i < 29; i++) // Whyyyyyyyyy
+            {
+                //Debug.Log("CCC nuking proj list");
+                /*foreach (ProjElement p in ProjectileManager.proj_list[i])
+                {
+                    Debug.Log("CCC destroying projectile");
+                    UnityEngine.Object.Destroy(p.c_proj);
+                    UnityEngine.Object.Destroy(p.c_go);
+                    //p.Destroy();
+                }*/
+                ProjectileManager.proj_list[i].Clear();
+            }
+            UpdateDynamicManager.m_proj_count = 0;
         }
     }
 }
