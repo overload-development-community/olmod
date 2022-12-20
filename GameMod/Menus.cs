@@ -929,8 +929,10 @@ namespace GameMod {
         private static MethodInfo _MenuManager_GoBack_Method = AccessTools.Method(typeof(MenuManager), "GoBack");
         private static MethodInfo _MenuManager_PlayHighlightSound_Method = AccessTools.Method(typeof(MenuManager), "PlayHighlightSound");
 
+
         static bool Prefix(ref float ___m_menu_state_timer)
         {
+
             MenuManager.UpdateMPStatus();
             UIManager.MouseSelectUpdate();
             MenuSubState menu_sub_state = MenuManager.m_menu_sub_state;
@@ -1118,26 +1120,51 @@ namespace GameMod {
                                     case 19:
                                     case 20:
                                     case 21:
+                                        // these buttons handle changing the selected audio taunt
                                         if (MPAudioTaunts.AClient.initialized)
                                         {
-                                            // do not allow the selected audiotaunts to change during a multiplayer game
-                                            if(NetworkMatch.GetMatchState() != MatchState.PLAYING)
+                                            // do not allow the selected audiotaunts to change after the sharing of the taunts began
+                                            if(NetworkMatch.GetMatchState() != MatchState.PLAYING 
+                                                & NetworkMatch.GetMatchState() != MatchState.LOBBY
+                                                & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN
+                                                & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOADING_SCENE
+                                                & NetworkMatch.GetMatchState() != MatchState.PREGAME)
                                             {
+
+
                                                 int index = MPAudioTaunts.AClient.taunts.IndexOf(MPAudioTaunts.AClient.local_taunts[menu_selection - 16]);
                                                 if (MPAudioTaunts.AClient.taunts.Count > 0)
                                                 {
+                                                    int next_index;
                                                     if (index != -1)
-                                                    {
-                                                        if (index + UIManager.m_select_dir < 0) index = MPAudioTaunts.AClient.taunts.Count - 1;
-                                                        else index = (index + UIManager.m_select_dir) % (MPAudioTaunts.AClient.taunts.Count);
-                                                        MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[index];
-                                                    }
+                                                        next_index = MPAudioTaunts.AClient.GetNextSelectableAudioTauntIndex(index, UIManager.m_select_dir);
                                                     else
                                                     {
-                                                        MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[0];
+                                                        next_index = MPAudioTaunts.AClient.GetNextSelectableAudioTauntIndex(0, 1);
+                                                        if (next_index == -1)
+                                                        {
+                                                            MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = new MPAudioTaunts.AudioTaunt
+                                                            {
+                                                                hash = "EMPTY",
+                                                                name = "EMPTY",
+                                                                audioclip = null,
+                                                                ready_to_play = false
+                                                            };
+                                                        }
                                                     }
+
+
+                                                    if (next_index != -1)
+                                                    {
+                                                        MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[next_index];
+                                                    }
+                                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                                 }
-                                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                else
+                                                {
+                                                    GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
+                                                }
+
                                             }
                                             else
                                             {
@@ -1152,11 +1179,12 @@ namespace GameMod {
                                     case 1613:
                                     case 1614:
                                     case 1615:
+                                        // audio taunt play selected buttons
                                         if (MPAudioTaunts.AClient.initialized)
                                         {
                                             if(MPAudioTaunts.AClient.local_taunts[menu_selection - 1610].audioclip != null)
                                             {
-                                                MPAudioTaunts.AClient.PlayAudioTauntFromAudioclip(MPAudioTaunts.AClient.local_taunts[menu_selection - 1610].audioclip);
+                                                MPAudioTaunts.AClient.PlayAudioTauntFromAudioclip(MPAudioTaunts.AClient.local_taunts[menu_selection - 1610].audioclip, "");
                                                 MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                             }
                                             else
@@ -1213,20 +1241,32 @@ namespace GameMod {
                             }
                             else
                             {
-                                MPAudioTaunts.AClient.keybinds[MPAudioTaunts.AClient.selected_audio_slot] = (int)Controls.m_captured_input;
-                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                                flag = true;
+                                if(!MPAudioTaunts.AClient.IsKeyCodeAlreadyUsed((int)Controls.m_captured_input))
+                                {
+                                    MPAudioTaunts.AClient.keybinds[MPAudioTaunts.AClient.selected_audio_slot] = (int)Controls.m_captured_input;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    flag = true;
+                                }
+                                else
+                                    GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
                             }
+                            /*
                             if ((Controls.m_captured_input == KeyCode.Joystick8Button11 || Controls.m_captured_input == KeyCode.Joystick8Button10) && (MenuManager.control_remap_index <= 11 || MenuManager.control_remap_index == 19 || MenuManager.control_remap_index == 22 || MenuManager.control_remap_index == 24))
                             {
 
                             }
                             else
                             {
-                                MPAudioTaunts.AClient.keybinds[MPAudioTaunts.AClient.selected_audio_slot] = (int)Controls.m_captured_input;
-                                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                                flag = true;
-                            }
+                                if (!MPAudioTaunts.AClient.IsKeyCodeAlreadyUsed((int)Controls.m_captured_input))
+                                {
+                                    MPAudioTaunts.AClient.keybinds[MPAudioTaunts.AClient.selected_audio_slot] = (int)Controls.m_captured_input;
+                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                    flag = true;
+                                }
+                                else
+                                    GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
+
+                            }*/
 
                         }
                         if (flag)
@@ -1346,7 +1386,8 @@ namespace GameMod {
                     break;
                 case 8:
                     MPAudioTaunts.AClient.audio_taunt_volume = (int)(UIElement.SliderPos * 100);
-                    //MenuManager.PlaySelectSound(1f);
+                    if (Input.GetMouseButtonDown(0))
+                        MenuManager.PlaySelectSound(1f);
                     break;
 
             }
