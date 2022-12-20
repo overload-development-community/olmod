@@ -422,7 +422,11 @@ namespace GameMod
                 asc[index].source.PlayScheduled(AudioSettings.dspTime);
                 asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
 
-                if (GameplayManager.IsMultiplayer && clip_id != null && Client.GetClient() != null && (GameplayManager.m_gameplay_state == GameplayState.PLAYING | MenuManager.m_menu_state == MenuState.MP_LOBBY)) {
+                if (GameplayManager.IsMultiplayer 
+                    && clip_id != null 
+                    && Client.GetClient() != null 
+                    && (NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY)) 
+                {
                     Debug.Log("Client -> Server: Share the activation of "+clip_id);
                     Client.GetClient().Send(MessageTypes.MsgPlayAudioTaunt,
                                         new PlayAudioTaunt {
@@ -1385,7 +1389,7 @@ namespace GameMod
                 uConsole.RegisterCommand("q", "lets you test shiny soundeffects", new uConsole.DebugCommand(CmdPlaySoundEffect));
                 uConsole.RegisterCommand("b1", "", new uConsole.DebugCommand(testBool1));
                 uConsole.RegisterCommand("b2", "", new uConsole.DebugCommand(testBool2));
-                uConsole.RegisterCommand("serversupport", "", new uConsole.DebugCommand(testVar1));
+                uConsole.RegisterCommand("test", "", new uConsole.DebugCommand(testVar1));
             }
 
 
@@ -1405,7 +1409,13 @@ namespace GameMod
             }
             private static void testVar1()
             {
-                uConsole.Log("serversupport: " + AServer.server_supports_audiotaunts.ToString());
+                
+                    uConsole.Log(
+                        "GameplayManager.IsMultiplayer: " + GameplayManager.IsMultiplayer.ToString()+"\n" +
+                        "Client.GetClient() != null: " + (Client.GetClient() != null).ToString() + "\n" +
+                        "GameplayManager.m_gameplay_state == GameplayState.PLAYING: " + (GameplayManager.m_gameplay_state == GameplayState.PLAYING).ToString() + "\n" +
+                        "MenuManager.m_menu_state == MenuState.MP_LOBBY: " + (MenuManager.m_menu_state == MenuState.MP_LOBBY).ToString() + "\n"
+                        );
             }
 
         }
