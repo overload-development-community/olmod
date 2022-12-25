@@ -124,6 +124,7 @@
     <Compile Include="MoreAudio.cs" />
     <Compile Include="MPAlwaysCloaked.cs" />
     <Compile Include="MPAnticheat.cs" />
+    <Compile Include="MPAudioTaunts.cs" />
     <Compile Include="MPAutomap.cs" />
     <Compile Include="MPAutoSelection.cs" />
     <Compile Include="MPAutoSelectionUI.cs" />
@@ -198,6 +199,7 @@
     <Compile Include="MPTweaks.cs" />
     <Compile Include="MPUnlockAll.cs" />
     <Compile Include="MPWeaponBehavior.cs" />
+    <Compile Include="MPWeaponCycling.cs" />
     <Compile Include="MusicCustom.cs" />
     <Compile Include="PoorMansProfiler.cs" />
     <Compile Include="PrevWeaponFix.cs" />
