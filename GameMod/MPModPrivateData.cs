@@ -1256,6 +1256,12 @@ END_ENTRY
             set { MPObserver.DamageNumbersEnabled = value; }
         }
 
+        public static bool AudioTauntsSupported
+        {
+            get { return true; }
+            set { MPAudioTaunts.AServer.server_supports_audiotaunts = value; }
+        }
+
         public static JObject Serialize()
         {
             JObject jobject = new JObject();
@@ -1280,6 +1286,7 @@ END_ENTRY
             jobject["joystickrotationfixsupported"] = JoystickRotationFixSupported;
             jobject["thunderboltpassthrough"] = ThunderboltPassthrough;
             jobject["damagenumbers"] = DamageNumbers;
+            jobject["audiotauntsupport"] = AudioTauntsSupported;
             return jobject;
         }
 
@@ -1310,6 +1317,7 @@ END_ENTRY
             JoystickRotationFixSupported = root["joystickrotationfixsupported"].GetBool(false);
             ThunderboltPassthrough = root["thunderboltpassthrough"].GetBool(false);
             DamageNumbers = root["damagenumbers"].GetBool(false);
+            AudioTauntsSupported = root["audiotauntsupport"].GetBool(false);
         }
 
         public static string GetModeString(MatchMode mode)
