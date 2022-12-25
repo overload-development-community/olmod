@@ -795,7 +795,7 @@ namespace GameMod {
 
                         // Extra buttons on the right side
                         Vector2 right_side_position = new Vector2(478.4f, -178.7f);
-                        __instance.SelectAndDrawItem("Status: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), right_side_position, 2000, false, 0.27f, 0.4f);
+                        __instance.SelectAndDrawItem("Audio Taunts: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), right_side_position, 2000, false, 0.27f, 0.4f);
                         right_side_position.y += 50f;
                         __instance.SelectAndDrawItem("Show Audio Spectrum: " + (MPAudioTaunts.AClient.display_audio_spectrum ? "ON" : "OFF"), right_side_position, 2001, false, 0.27f, 0.4f);
 
