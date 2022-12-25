@@ -752,11 +752,13 @@ namespace GameMod {
                         {
                             // Draws the Item slider for selecting an audio taunt
                             __instance.SelectAndDrawStringOptionItem("", position, 16 + i, MPAudioTaunts.AClient.local_taunts[i].name, string.Empty, 0.49f, false);
+                            
                             // Draws the buttons that play the selected audio taunt of the respective slot
                             position.x -= 171f;
                             __instance.TestMouseInRect(position, 25f, 25f, 1610 + i, true);
                             bool highlighted = UIManager.m_menu_selection == 1610 + i;
-                            if (highlighted) MenuManager.option_dir = false;
+                            if (highlighted) 
+                                MenuManager.option_dir = false;
 
                             Color color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!__instance.m_fade_die) ? 0f : 0.5f));
                             UIManager.DrawQuadBarHorizontal(position, 14f, 24f, 14f, 0.2f * UIManager.m_col_ub0, 12);
@@ -776,23 +778,23 @@ namespace GameMod {
                         }
                         position.x += 150f;
 
-                        //Vector2 pos2 = new Vector2(270, -100);
-                        //__instance.DrawStringSmall(MPAudioTaunts.LocalAudioTauntDirectory, pos2, 0.3f, StringOffset.LEFT, UIManager.m_col_ui2 * 0.7f, 1f, -1f);
-                        // FOR TESTING PURPOSES
 
+                        // display the frequency band for active taunts
                         Vector2 pos = new Vector2(-570, 0);
                         float[] freqBand = MPAudioTaunts.AClient.calculateFrequencyBand();
                         for (int i = 0; i < 8; i++)
                         {
-
-                            // new Vector2(1.7f, 1f)
                             if (freqBand.Length == 8) UIManager.DrawBarVertical(pos, new Vector2(4f, 1f), freqBand[i] * 50f, Color.green * 0.7f, 199);//UIManager.DrawQuadBarVertical(pos, 6f, 1f, freqBand[i] * 50f, Color.yellow, 199); //(pos, new Vector2(pos.x, -freqBand[i] * 200f), 1f, 0f, Color.yellow, 4);
                             pos.x += 10f;
                         }
 
-                        //uConsole.Log(UIManager.m_mouse_pos.ToString());
-                        __instance.SelectAndDrawItem("Status: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), new Vector2(478.4f,-178.7f), 2000, false, 0.27f, 0.4f);
+                        // Extra buttons on the right side
+                        Vector2 right_side_position = new Vector2(478.4f, -178.7f);
+                        __instance.SelectAndDrawItem("Status: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), right_side_position, 2000, false, 0.27f, 0.4f);
+                        right_side_position.y += 50f;
+                        __instance.SelectAndDrawItem("Show Audio Spectrum: " + (MPAudioTaunts.AClient.display_audio_spectrum ? "ON" : "OFF"), right_side_position, 2001, false, 0.27f, 0.4f);
 
+                        // Overlayed Menu to handle binding keys
                         if (MenuManager.m_menu_micro_state == 4)
                         {
                             position = __instance.m_position;
@@ -1201,6 +1203,10 @@ namespace GameMod {
                                         break;
                                     case 2000:
                                         MPAudioTaunts.AClient.active = !MPAudioTaunts.AClient.active;
+                                        MenuManager.PlaySelectSound(1f);
+                                        goto AVOID_INPUTMAPPING_DIALOG;
+                                    case 2001:
+                                        MPAudioTaunts.AClient.display_audio_spectrum = !MPAudioTaunts.AClient.display_audio_spectrum;
                                         MenuManager.PlaySelectSound(1f);
                                         goto AVOID_INPUTMAPPING_DIALOG;
                                     default:
