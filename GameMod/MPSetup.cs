@@ -267,6 +267,7 @@ namespace GameMod {
                 Menus.mms_audio_occlusion_strength = ModPrefs.GetInt("MP_PM_AUDIO_OCCLUSION_STRENGTH", Menus.mms_audio_occlusion_strength);
                 Menus.mms_directional_warnings = ModPrefs.GetBool("MP_PM_DIRECTIONAL_WARNINGS", Menus.mms_directional_warnings);
                 Menus.mms_loadout_hotkeys = ModPrefs.GetInt("MP_PM_LOADOUT_HOTKEYS2", Menus.mms_loadout_hotkeys);
+                Menus.mms_creeper_colors = ModPrefs.GetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
 
                 MPLoadouts.Loadouts[0].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
                 MPLoadouts.Loadouts[0].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
@@ -376,13 +377,13 @@ namespace GameMod {
             ModPrefs.SetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
             ModPrefs.SetBool("MP_ASSIST_SCORING", Menus.mms_assist_scoring);
             ModPrefs.SetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
+            ModPrefs.SetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
             ModPrefs.SetBool("MP_AUDIOTAUNTS_ACTIVE", MPAudioTaunts.AClient.active);
             ModPrefs.SetString("MP_LOCAL_AUDIOTAUNTS", MPAudioTaunts.AClient.ChainTogetherHashesOfLocalTaunts());
             ModPrefs.SetInt("MP_AUDIOTAUNT_VOLUME", MPAudioTaunts.AClient.audio_taunt_volume);
             for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++){
                 ModPrefs.SetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), MPAudioTaunts.AClient.keybinds[i]);}
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
-
 
             ModPrefs.Flush(filename + "mod");
         }
