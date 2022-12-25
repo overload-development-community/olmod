@@ -401,7 +401,49 @@ namespace GameMod {
             TrackerPostStats(obj);
         }
 
-        public static void AddKill(DamageInfo di)
+        private static ProjPrefab GetProjPrefab(int damageType)
+        {
+            switch (damageType) {
+                case 0:
+                    return ProjPrefab.proj_impulse;
+                case 1:
+                    return ProjPrefab.proj_vortex;
+                case 2:
+                    return ProjPrefab.proj_reflex;
+                case 3:
+                    return ProjPrefab.proj_shotgun;
+                case 4:
+                    return ProjPrefab.proj_driller;
+                case 5:
+                    return ProjPrefab.proj_flak_cannon;
+                case 6:
+                    return ProjPrefab.proj_thunderbolt;
+                case 7:
+                    return ProjPrefab.proj_beam;
+                case 8:
+                    return ProjPrefab.missile_falcon;
+                case 9:
+                    return ProjPrefab.missile_pod;
+                case 10:
+                    return ProjPrefab.missile_hunter;
+                case 11:
+                    return ProjPrefab.missile_creeper;
+                case 12:
+                    return ProjPrefab.missile_smart;
+                case 13:
+                    return ProjPrefab.missile_devastator;
+                case 14:
+                    return ProjPrefab.missile_timebomb;
+                case 15:
+                    return ProjPrefab.missile_vortex;
+                case 16:
+                    return ProjPrefab.proj_melee;
+                default:
+                    return ProjPrefab.none;
+            }
+        }
+
+        public static void AddKill(DamageInfo di, PlayerDamageRecord pdr, bool flag)
         {
             if (NetworkMatch.m_postgame)
                 return;
@@ -429,7 +471,7 @@ namespace GameMod {
                 defenderTeam = Defender == null ? null : TeamName(DefenderTeam),
                 assisted = Assisted,
                 assistedTeam = Assisted == null ? null : TeamName(AssistedTeam),
-                weapon = di.weapon.ToString()
+                weapon = flag && pdr.client_id > -1 ? GetProjPrefab(pdr.dmg_type).ToString() : di.weapon.ToString()
             }, new JsonSerializer()
             {
                 NullValueHandling = NullValueHandling.Ignore
@@ -699,6 +741,8 @@ namespace GameMod {
                 if (code.opcode == OpCodes.Ret && setCount > 0)
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_1); // damageInfo
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 4); // pdr
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 5); // flag
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ServerStatLog), "AddKill"));
                 }
                 yield return code;
