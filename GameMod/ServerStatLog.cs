@@ -457,7 +457,7 @@ namespace GameMod {
                 AttackerTeam = AttackerTeam,
                 DefenderTeam = DefenderTeam,
                 AssistedTeam = AssistedTeam,
-                Weapon = di.weapon
+                Weapon = flag && pdr.client_id > -1 ? GetProjPrefab(pdr.dmg_type) : di.weapon
             });
 
             var obj = JObject.FromObject(new
@@ -741,8 +741,8 @@ namespace GameMod {
                 if (code.opcode == OpCodes.Ret && setCount > 0)
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_1); // damageInfo
-                    yield return new CodeInstruction(OpCodes.Ldloca_S, 4); // pdr
-                    yield return new CodeInstruction(OpCodes.Ldloca_S, 5); // flag
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, 4); // pdr
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, 5); // flag
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ServerStatLog), "AddKill"));
                 }
                 yield return code;
