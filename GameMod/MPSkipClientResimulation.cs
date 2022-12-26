@@ -55,6 +55,10 @@ namespace GameMod
                             if (Client.m_last_acknowledged_tick < msg.m_tick) {
                                 Client.m_last_acknowledged_tick = msg.m_tick;
                             }
+
+                            player.c_player_ship.m_boost_heat = msg.m_boost_heat;
+                            player.c_player_ship.m_boost_overheat_timer = msg.m_boost_overheat_timer;
+
                             Client.m_PendingPlayerStateMessages.Dequeue();
                             return false;
                         }
