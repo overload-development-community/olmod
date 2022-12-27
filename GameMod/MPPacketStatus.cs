@@ -10,6 +10,12 @@ namespace GameMod
 {
     public static class MPPacketStatus
     {
+        // do yourself a favour and make sure that holdTime is a multiple of sampleTime
+        public const int sampleTime = 1; // sample window size in seconds
+        public const int holdTime = 10; // length of time to hold a visible loss value on-screen
+
+        public const int holdSize = holdTime / sampleTime; // array size for the stats arrays
+
         public static Color InColor = UIManager.m_col_good_ping;
         public static Color OutColor = UIManager.m_col_good_ping;
 
@@ -26,10 +32,10 @@ namespace GameMod
 
         // time to next status update in seconds
         public static float shortUpdate = 0.25f; // ping timeout period from NetworkManager
-        public static float nextUpdate = 2f;
+        public static float nextUpdate = sampleTime;
 
-        public static int[] inStats = new int[5];
-        public static int[] outStats = new int[5];
+        public static int[] inStats = new int[holdSize];
+        public static int[] outStats = new int[holdSize];
 
         private static int inTotal = 0; // Total number of inbound packets
         private static int inCount = 0; // Number of inbound packets in the last sample period
@@ -56,7 +62,8 @@ namespace GameMod
                 {
                     int loss = NetworkTransport.GetOutgoingPacketNetworkLossPercent(connection.hostId, connection.connectionId, out _);
                     int drop = NetworkTransport.GetOutgoingPacketOverflowLossPercent(connection.hostId, connection.connectionId, out _);
-                    outErr = Math.Max(loss + drop, outErr);
+                    //outErr = Math.Max(loss + drop, outErr);  // this one keeps the max 1/4-second recorded value
+                    outErr += loss + drop;  // this one is for the average over the sampleTime
 
                     shortUpdate = Time.unscaledTime + 0.25f;
                 }
@@ -70,20 +77,21 @@ namespace GameMod
                     inErr = inErrNew - inErrTotal;
                     inErrTotal = inErrNew;
 
-                    inStats[idx] = 100 - (int)(100 - ((100f * inErr) / inCount)); // rounding, weeee
-                    outStats[idx] = outErr;
+                    inStats[idx] = 100 - (int)(100 - (100f * inErr / inCount)); // rounding up, weeee
+                    //outStats[idx] = outErr; // this one is for the max 1/4-second recorded value
+                    outStats[idx] = 100 - (int)(100 - (outErr / (4f * sampleTime))); // this one is for the average over the sampleTime. Also rounding up.
 
                     outErr = 0;
                     InStatus = 0;
                     OutStatus = 0;
 
-                    for (int i = 0; i < 5; i++)
+                    for (int i = 0; i < holdSize; i++)
                     {
                         InStatus = Math.Max(InStatus, inStats[i]);
                         OutStatus = Math.Max(OutStatus, outStats[i]);
                     }
 
-                    InColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, InStatus / 10f); // 10f since anything over 0 is bad, if you're at 10% it's terrible
+                    InColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, InStatus / 10f); // 10f since anything over 0% is bad, if you're at 10% it's terrible
                     OutColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, OutStatus / 10f);
 
                     if (InStatus > InMin)
@@ -97,21 +105,21 @@ namespace GameMod
                         OutColorMin = OutColor;
                     }
 
-                    idx = (idx + 1) % 5;
-                    nextUpdate = Time.unscaledTime + 2f;
+                    idx = (idx + 1) % holdSize;
+                    nextUpdate = Time.unscaledTime + sampleTime;
                 }
             }
-            else if (running)
+            else if (running) // reset everything since we're not connected anymore but we *were* running
             {
-                Debug.Log("Maximum packet loss seen during a sample window last round (2 seconds): " + InMin + "% in, " + OutMin + "% out");
+                Debug.Log("Maximum packet loss seen during a sample window last round (" + sampleTime + "-second window): " + InMin + "% in, " + OutMin + "% out");
                 InColor = UIManager.m_col_good_ping;
                 OutColor = UIManager.m_col_good_ping;
                 InColorMin = UIManager.m_col_good_ping;
                 OutColorMin = UIManager.m_col_good_ping;
                 InMin = 0;
                 OutMin = 0;
-                inStats = new int[5];
-                inStats = new int[5];
+                inStats = new int[holdSize];
+                inStats = new int[holdSize];
                 inTotal = 0;
                 inCount = 0;
                 inErrTotal = 0;
@@ -138,16 +146,22 @@ namespace GameMod
         static void Postfix(Vector2 pos, UIElement __instance)
         {
             pos.x += 65f;
-            __instance.DrawStringSmall(100 - MPPacketStatus.InStatus + "% in", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.InColor, 1f);
+            //__instance.DrawStringSmall(100 - MPPacketStatus.InStatus + "% in", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.InColor, 1f);  // uncomment this to show packet consistency % instead of loss %
+            __instance.DrawStringSmall(MPPacketStatus.InStatus + "% in", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.InColor, 1f);
             pos.x += 65f;
-            __instance.DrawStringSmall(100 - MPPacketStatus.OutStatus + "% out", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.OutColor, 1f);
-            pos.y -= 16f;
+            //__instance.DrawStringSmall(100 - MPPacketStatus.OutStatus + "% out", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.OutColor, 1f);  // uncomment this to show packet consistency % instead of loss %
+            __instance.DrawStringSmall(MPPacketStatus.OutStatus + "% out", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.OutColor, 1f);
+            pos.y -= 15f;
+            pos.x -= 65f;
+            __instance.DrawStringSmall("Packet loss (" + MPPacketStatus.holdTime + "s max):", pos, 0.3f, StringOffset.LEFT, UIManager.m_col_good_ping, 0.5f);
+            /* // This displays the worst values recorded so far in the round above the current values.
             pos.x -= 155f;
             __instance.DrawStringSmall("Minimums:", pos, 0.4f, StringOffset.LEFT, UIManager.m_col_good_ping, 0.5f);
             pos.x += 90f;
             __instance.DrawStringSmall(100 - MPPacketStatus.InMin + "% in", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.InColorMin, 0.5f);
             pos.x += 65f;
             __instance.DrawStringSmall(100 - MPPacketStatus.OutMin + "% out", pos, 0.4f, StringOffset.LEFT, MPPacketStatus.OutColorMin, 0.5f);
+            */
         }
     }
 
@@ -181,6 +195,37 @@ namespace GameMod
                     yield return new CodeInstruction(OpCodes.Br, jump2);
                 }
                 yield return code;
+            }
+        }
+    }
+
+    // Adds ping and packet loss indication onto the death page
+    [HarmonyPatch(typeof(UIElement), "DrawMpDeathOverlay")]
+    public static class MPPacketStatus_UIElement_DrawMpDeathOverlay
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                yield return code;
+
+                if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "DrawRecentKillsMP"))
+                {
+                    // pos.x = 430f;
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 1);
+                    yield return new CodeInstruction(OpCodes.Ldc_R4, 430f);
+                    yield return new CodeInstruction(OpCodes.Stfld, AccessTools.Field(typeof(Vector2), "x"));
+
+                    // pos.y = -270f;
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 1);
+                    yield return new CodeInstruction(OpCodes.Ldc_R4, -270f);
+                    yield return new CodeInstruction(OpCodes.Stfld, AccessTools.Field(typeof(Vector2), "y"));
+
+                    // DrawPing();
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloc_1);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UIElement), "DrawPing"));
+                }
             }
         }
     }

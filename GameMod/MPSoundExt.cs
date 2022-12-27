@@ -101,17 +101,25 @@ namespace GameMod
     // Increases the loop wait time for the energy center sounds. There is a noticeable performance hit when charging.
     [HarmonyPatch(typeof(Player), "AddEnergyDefault")]
     internal class MPSoundExt_Player_AddEnergyDefault
-    {
+    {        
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             bool state = false;
             foreach (var code in codes)
             {
-                if (!state && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 0.1f)
+                if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 0.1f)
                 {
-                    code.operand = 0.5f;
-                    state = true;
+                    if (!state) // first one is the sound cue timer
+                    {
+                        code.operand = 0.5f;
+                        state = true;
+                    }
+                    else // remaining ones are for boost energy and heat recharge
+                    {
+                        code.operand = 0.2f;
+                    }
                 }
+
                 yield return code;
             }
         }
