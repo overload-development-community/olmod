@@ -1,5 +1,10 @@
 ﻿using HarmonyLib;
 using Overload;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Resources;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -9,12 +14,37 @@ namespace GameMod
     {
         public static int selectedCollider = 0;
 
-        public static bool visualizeMe = false; // For debugging. Turn this on to render the collider mesh.
+        // there are 3 scales available in the assetbundle, 100 is same as ship, 105 and 115 are scaled up copies of the mesh
+        public static string[] meshName = { "PlayershipCollider-100", "PlayershipCollider-105", "PlayershipCollider-110" };
+        //public static string subName = "Pyro"; // :D Someday... It's *sorta* working.
+
+        public static bool visualizeMe = false;
+
+        public static GameObject[] m_prefabs = new GameObject[3];
+
+        // whether resources have been loaded yet
+        public static bool loaded = false;
+
+        // loads the prefabs from the embedded resource file
+        public static void loadResources()
+        {
+            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("GameMod.Resources.playershipmeshcollider"))
+            {
+                var ab = AssetBundle.LoadFromStream(stream);
+                for (int i = 0; i < 3; i++)
+                {
+                    m_prefabs[i] = Object.Instantiate(ab.LoadAsset<GameObject>(meshName[i]));
+                    m_prefabs[i].GetComponent<MeshRenderer>().enabled = false;
+                }
+                ab.Unload(false);
+            }
+            loaded = true;
+        }
     }
 
     // replaces the mesh when the PlayerShip object is started, provided that an accurate mesh has been selected instead of the default
     [HarmonyPatch(typeof(PlayerShip), "Start")]
-    static class MPColliderSwap_PlayerShip_Start
+    internal class MPColliderSwap_PlayerShip_Start
     {
         static void Postfix(PlayerShip __instance)
         {
@@ -23,15 +53,30 @@ namespace GameMod
 
             if (MPColliderSwap.selectedCollider != 0 && __instance.c_mesh_collider.GetComponent<MeshCollider>() == null)
             {
+                if (!MPColliderSwap.loaded) // this only needs to happen once
+                {
+                    MPColliderSwap.loadResources();
+                }
+
                 var mat_no_friction = __instance.c_mesh_collider.sharedMaterial;
                 Object.Destroy(__instance.c_mesh_collider);
-                GameObject go = Object.Instantiate(MPShips.selected.collider[MPColliderSwap.selectedCollider - 1]); // -1 since 0 is the "Stock" sphere
+                GameObject go = Object.Instantiate(MPColliderSwap.m_prefabs[MPColliderSwap.selectedCollider - 1]); // -1 since 0 is "Stock"
 
-                if (MPColliderSwap.visualizeMe && !__instance.c_player.m_spectator && __instance.netId != GameManager.m_local_player.c_player_ship.netId)
+                if (!__instance.c_player.m_spectator && __instance.netId != GameManager.m_local_player.c_player_ship.netId)
                 {
-                    MeshRenderer mr = go.AddComponent<MeshRenderer>();
-                    mr.sharedMaterial = UIManager.gm.m_energy_material;
-                    mr.enabled = true;
+                    if (MPColliderSwap.visualizeMe)
+                    {
+                        go.GetComponent<MeshRenderer>().sharedMaterial = UIManager.gm.m_energy_material;
+                        go.GetComponent<MeshRenderer>().enabled = true;
+                    }
+                    else
+                    {
+                        go.GetComponent<MeshRenderer>().enabled = false;
+                    }
+                }
+                else
+                {
+                    go.GetComponent<MeshRenderer>().enabled = false;
                 }
 
                 go.layer = 16;
@@ -41,14 +86,13 @@ namespace GameMod
 
                 __instance.c_mesh_collider = coll;
                 __instance.c_mesh_collider_trans = __instance.c_mesh_collider.transform;
-                __instance.c_flak_range_go.GetComponent<TriggerFlakRange>().player_collider = coll;
             }
         }
     }
 
     // replaces the original "PrepareForMP" method with one that can handle mesh vs. sphere colliders
     [HarmonyPatch(typeof(Player), "PrepareForMP")]
-    static class MPPlayer_PrepareForMP_ColliderSwap
+    internal class MPPlayer_PrepareForMP_ColliderSwap
     {
         static bool Prefix(Player __instance)
         {
@@ -69,6 +113,8 @@ namespace GameMod
             {
                 SphereCollider sphereCollider1 = (SphereCollider)__instance.c_player_ship.c_mesh_collider;
                 sphereCollider1.radius = 1f;
+
+                //Debug.Log("CCF - lol nope still a SphereCollider");
             }
 
             return false;
@@ -78,7 +124,7 @@ namespace GameMod
     // adds rotation syncing to the collider since it didn't matter with the sphere previously
     // this also happens once below and twice over in MPClientExtrapolation (look for c_transform.localRotation)
     [HarmonyPatch(typeof(Player), "LerpRemotePlayer")]
-    static class MPPlayer_LerpRemotePlayer_ColliderSwap
+    internal class MPPlayer_LerpRemotePlayer_ColliderSwap
     {
         static void Postfix(Player __instance)
         {
@@ -87,7 +133,7 @@ namespace GameMod
     }
 
     [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
-    static class MPPlayerShip_FixedUpdateProcessControlsInternal_ColliderSwap
+    internal class MPPlayerShip_FixedUpdateProcessControlsInternal_ColliderSwap
     {
         static void Postfix(PlayerShip __instance)
         {

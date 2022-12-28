@@ -459,7 +459,7 @@ namespace GameMod {
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEXT FOR AUDIO MESSAGES"), position, 7, MenuManager.GetTextForAudio(), Loc.LS("DISPLAYS ENGLISH TEXT FOR COMM AND LOG AUDIO MESSAGES"), 1.5f, false);
                     position.y += 62f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("COCKPIT SWAY"), position, 3, MenuManager.GetHUDSway(), Loc.LS("ADD MOTION TO COCKPIT WHEN MOVING"), 1.5f, false);
-                    
+
                     break;
                 case 1:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW SPEEDRUN TIMERS"), position, 8, (!MenuManager.opt_speedrun_timers) ? Loc.LS("NO") : Loc.LS("YES"), Loc.LS("SHOW CURRENT LEVEL AND MISSION TIME ON HUD"), 1.5f, false);
@@ -512,7 +512,7 @@ namespace GameMod {
                     case 13:
                         Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
-                        // Re-enables Reflex drops in classic spawn mode by default. 
+                        // Re-enables Reflex drops in classic spawn mode by default.
                         if (Menus.mms_classic_spawns)
                         {
                             MenuManager.mms_powerup_filter[2] = true;
@@ -575,7 +575,6 @@ namespace GameMod {
                         Menus.mms_collision_mesh = (4 + Menus.mms_collision_mesh + UIManager.m_select_dir) % 4;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
-
                 }
             }
             else if (MenuManager.m_menu_micro_state == 10)
@@ -786,12 +785,12 @@ namespace GameMod {
                         {
                             // Draws the Item slider for selecting an audio taunt
                             __instance.SelectAndDrawStringOptionItem("", position, 16 + i, MPAudioTaunts.AClient.local_taunts[i].name, string.Empty, 0.49f, false);
-                            
+
                             // Draws the buttons that play the selected audio taunt of the respective slot
                             position.x -= 171f;
                             __instance.TestMouseInRect(position, 25f, 25f, 1610 + i, true);
                             bool highlighted = UIManager.m_menu_selection == 1610 + i;
-                            if (highlighted) 
+                            if (highlighted)
                                 MenuManager.option_dir = false;
 
                             Color color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!__instance.m_fade_die) ? 0f : 0.5f));
@@ -1164,7 +1163,7 @@ namespace GameMod {
                                         if (MPAudioTaunts.AClient.initialized)
                                         {
                                             // do not allow the selected audiotaunts to change after the sharing of the taunts began
-                                            if(NetworkMatch.GetMatchState() != MatchState.PLAYING 
+                                            if(NetworkMatch.GetMatchState() != MatchState.PLAYING
                                                 & NetworkMatch.GetMatchState() != MatchState.LOBBY
                                                 & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN
                                                 & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOADING_SCENE
@@ -1698,7 +1697,7 @@ namespace GameMod {
                             }
                             MenuManager.UnReverseOption();
                         }
-                    }                    
+                    }
                 }
             }
             else if ((float)_MenuManager_m_menu_state_timer_Field.GetValue(null) > 0.25f)

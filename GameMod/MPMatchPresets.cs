@@ -148,11 +148,12 @@ namespace GameMod
                 teamCount = 2,
                 shipMeshCollider = 0,
                 damageNumbers = true,
+                shipMeshCollider = 0,
                 thunderboltPassthrough = false
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
-        }        
+        }
 
         class MPMatchPreset
         {
@@ -191,7 +192,7 @@ namespace GameMod
             public bool damageNumbers;
             public bool assistScoring = true;
             public int teamCount = 2;
-            public int shipMeshCollider = 0;
+            public int shipMeshCollider;
             public bool thunderboltPassthrough;
 
             public void Apply()
@@ -253,7 +254,7 @@ namespace GameMod
                 {
                     urls.Add(jUrl.Value<string>());
                 }
-            }            
+            }
 
             foreach (var url in urls)
             {
@@ -297,7 +298,7 @@ namespace GameMod
                 }
             }
         }
-        
+
         [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
         class MPMatchPresetDrawMpMatchSetup
         {
@@ -348,7 +349,7 @@ namespace GameMod
             }
 
         }
-        
+
         // Process slider input
         [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
         class MPMatchPresets_MenuManager_MpMatchSetup
