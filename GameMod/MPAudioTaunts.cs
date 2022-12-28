@@ -18,8 +18,7 @@ namespace GameMod
     {
 
         /* TODO:
-         * - Handle clients leaving
-         * - display the audio spectrum
+         * - create a reload function to add audiotaunts without having to restart
          * - write a handler that dynamically schedules downloads/uploads and adjusts the packet size based on the resend rate
          * - replace the AudioTaunt.received_packet list with a dynamically sized bool array 
          * - make joystick keys bindable
@@ -30,9 +29,9 @@ namespace GameMod
         public const int AMOUNT_OF_TAUNTS_PER_CLIENT = 6;
         public const float DEFAULT_TAUNT_COOLDOWN = 4f;             // defines the minimum interval between sending taunts for the client
         public const float TAUNT_PLAYTIME = 3f;                     // defines the time in seconds that taunts are allowed to play till they get cutoff on the client
-        public const float DEFAULT_SPECTRUM_UPDATE_COOLDOWN = 0.2f;
+        public const float DEFAULT_SPECTRUM_UPDATE_COOLDOWN = 0.07f;
         public static WaitForSecondsRealtime delay = new WaitForSecondsRealtime(0.008f);    // interval between sending packets
-        
+
 
         public class AudioTaunt
         {
@@ -47,7 +46,7 @@ namespace GameMod
             public bool ready_to_play;              // indicates wether the audio clip is in a playable state
             public bool requested_taunt;            // holds wether the client has requested the audiotaunt byte data for this.hash from the server
             public AudioClip audioclip;             // contains the playable taunt
-            
+
             // Server
             public List<int> providing_clients;     // holds the connection ids of clients that use the taunt and can provide this taunt 
             public List<int> requesting_clients;    // A list of all connection ids that have requested this audioclip
@@ -62,14 +61,14 @@ namespace GameMod
 
             public void UpdateFrequencyBand()
             {
-                if(source == null)
+                if (source == null)
                 {
                     Debug.Log("AudioSourceContainer.UpdateFrequencyBand: Had to reinstantiate the audio source!");
                     source = new GameObject().AddComponent<AudioSource>();
                 }
 
 
-                if(source.isPlaying)
+                if (source.isPlaying)
                 {
                     float[] samples = new float[512];
                     source.GetSpectrumData(samples, 0, FFTWindow.Rectangular);
@@ -94,7 +93,7 @@ namespace GameMod
                 }
                 else
                 {
-                    for(int i = 0; i < frequency_band.Length; i++)
+                    for (int i = 0; i < frequency_band.Length; i++)
                     {
                         frequency_band[i] = -1f;
                     }
@@ -148,7 +147,7 @@ namespace GameMod
 
                     if (!GameplayManager.IsDedicatedServer())
                     {
-                        for(int i = 0; i < asc.Length; i++)
+                        for (int i = 0; i < asc.Length; i++)
                         {
                             asc[i] = new AudioSourceContainer();
                         }
@@ -335,7 +334,7 @@ namespace GameMod
 
             public static bool IsKeyCodeAlreadyUsed(int keycode)
             {
-                for(int i = 0; i < keybinds.Length; i++)
+                for (int i = 0; i < keybinds.Length; i++)
                 {
                     if (keybinds[i] == keycode)
                         return true;
@@ -389,17 +388,19 @@ namespace GameMod
                 if (audio_taunt_volume == 0 | audioClip == null | !active)
                     return;
 
-                Debug.Log("Playing Audiotaunt");
+                //Debug.Log("Playing Audiotaunt");
 
                 int index = -1;
-                for (int i = 0; i < asc.Length; i++) {
+                for (int i = 0; i < asc.Length; i++)
+                {
                     if (asc[i].source == null)
                         asc[i].source = new GameObject().AddComponent<AudioSource>();
-                    
+
                     if (!asc[i].source.isPlaying) index = i;
                 }
 
-                if (index == -1) {
+                if (index == -1)
+                {
                     Debug.Log("Couldnt play Audio taunt. All audio sources are occupied!");
                     return;
                 }
@@ -409,25 +410,27 @@ namespace GameMod
                 else
                     asc[index].player_name = "EMPTY";
 
+                asc[index].source.priority = 10;
                 asc[index].source.clip = audioClip;
                 asc[index].source.volume = audio_taunt_volume / 100f;
-                asc[index].source.timeSamples = 0;
-                asc[index].source.bypassReverbZones = true;
-                asc[index].source.reverbZoneMix = 0f;
-                asc[index].source.PlayScheduled(AudioSettings.dspTime);
-                asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
+                //asc[index].source.timeSamples = 0;
+                //asc[index].source.bypassReverbZones = true;
+                //asc[index].source.reverbZoneMix = 0f;
+                asc[index].source.Play();//AudioSettings.dspTime);
+                //asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
 
-                if (GameplayManager.IsMultiplayer 
-                    && clip_id != null 
-                    && Client.GetClient() != null 
-                    && (NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY)) 
+                if (GameplayManager.IsMultiplayer
+                    && clip_id != null
+                    && Client.GetClient() != null
+                    && (NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY))
                 {
-                    Debug.Log("Client -> Server: Share the activation of "+clip_id);
-                    Client.GetClient().Send(MessageTypes.MsgPlayAudioTaunt,
-                                        new PlayAudioTaunt {
+                    //Debug.Log("Client -> Server: Share the activation of " + clip_id);
+                    Client.GetClient().SendByChannel(MessageTypes.MsgPlayAudioTaunt,
+                                        new PlayAudioTaunt
+                                        {
                                             hash = clip_id,
                                             sender_name = GameManager.m_local_player.m_mp_name
-                                        });
+                                        },0);
                 }
             }
 
@@ -440,7 +443,7 @@ namespace GameMod
 
                 for (int i = 0; i < AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
                 {
-                    if( local_taunts.Length < AMOUNT_OF_TAUNTS_PER_CLIENT | local_taunts[i] != null )
+                    if (local_taunts.Length < AMOUNT_OF_TAUNTS_PER_CLIENT | local_taunts[i] != null)
                     {
                         result += local_taunts[i].hash;
 
@@ -490,7 +493,7 @@ namespace GameMod
                 return new float[8];
             }
 
-            
+
 
 
             /*
@@ -516,8 +519,9 @@ namespace GameMod
             [HarmonyPatch(typeof(Client), "OnAcceptedToLobby")]
             class MPAudioTaunts_Client_OnAcceptedToLobby
             {
-                static void Postfix(){
-                    if (GameplayManager.IsDedicatedServer() | Client.GetClient() == null | !active) 
+                static void Postfix()
+                {
+                    if (GameplayManager.IsDedicatedServer() | Client.GetClient() == null | !active)
                         return;
 
 
@@ -534,11 +538,11 @@ namespace GameMod
                         }
                     }
 
-                    Client.GetClient().Send(MessageTypes.MsgShareAudioTauntIdentifiers,
+                    Client.GetClient().SendByChannel(MessageTypes.MsgShareAudioTauntIdentifiers,
                         new ShareAudioTauntIdentifiers
                         {
                             hashes = fileHashes
-                        });
+                        },0);
                 }
             }
 
@@ -570,7 +574,7 @@ namespace GameMod
 
                             for (int i = 0; i < 6; i++)
                             {
-                                if (remaining_cooldown <= 0f && keybinds[i] > 0 && Input.GetKeyDown((KeyCode)keybinds[i]))
+                                if (remaining_cooldown <= 0f && keybinds[i] > 0 && Input.GetKeyDown((KeyCode)keybinds[i]) && local_taunts[i].audioclip != null)
                                 {
                                     remaining_cooldown = DEFAULT_TAUNT_COOLDOWN;
                                     PlayAudioTauntFromAudioclip(local_taunts[i].audioclip, GameManager.m_local_player.m_mp_name, local_taunts[i].hash);
@@ -579,7 +583,7 @@ namespace GameMod
                             }
                         }
 
-                        if(display_audio_spectrum)
+                        if (display_audio_spectrum)
                         {
                             spectrum_update_cooldown -= Time.unscaledDeltaTime;
                             if (spectrum_update_cooldown <= 0f)
@@ -592,45 +596,53 @@ namespace GameMod
                             }
                         }
 
-                        
+
                     }
                 }
             }
 
-            [HarmonyPatch(typeof(UIElement), "DrawHUD")]
-            class MPAudioTaunts_UIElement_DrawHUD
+
+            public static void DrawVisualIndicator(UIElement __instance)
             {
-                static void Postfix(UIElement __instance)
+                // Draws an indicator of who is currently playing an audiotaunt
+                if ((NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY) & MenuManager.m_menu_state != MenuState.MP_OPTIONS)
                 {
-                    // Draws an indicator of who is currently playing an audiotaunt
-                    if ((NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY) & MenuManager.m_menu_state != MenuState.MP_OPTIONS)
+                    //uConsole.Log(UIManager.m_mouse_pos.x + " : " + UIManager.m_mouse_pos.y);
+
+                    int position = -1;
+                    for (int i = 0; i < asc.Length; i++)
                     {
-                        //uConsole.Log(UIManager.m_mouse_pos.x + " : " + UIManager.m_mouse_pos.y);
+                        if (asc[i].source == null)
+                            asc[i].source = new GameObject().AddComponent<AudioSource>();
 
-                        int position = -1;
-                        for (int i = 0; i < asc.Length; i++)
+                        if (asc[i].source != null & asc[i].player_name != null && asc[i].source.isPlaying)
                         {
-                            if (asc[i].source == null)
-                                asc[i].source = new GameObject().AddComponent<AudioSource>();
+                            position++;
 
-                            if (asc[i].source != null & asc[i].player_name != null && asc[i].source.isPlaying)
+
+                            // draw an indicator for actively playing audio taunts
+                            Vector2 pos = new Vector2(-600, -40);
+
+                            // shift the element down depending on how many audio sources are playing at the same time
+                            pos.y += position * 32;
+
+
+
+                            // draw the player name
+                            __instance.DrawStringSmall(asc[i].player_name + (display_audio_spectrum ? ":" : ""), pos, 0.32f, StringOffset.LEFT, UIManager.m_col_ui1, 1f, -1f);
+
+                            // draw the frequency band
+                            if (display_audio_spectrum)
                             {
-                                position++;
+                                // check wether there is a non zero change to the default values
+                                bool should_display = false;
+                                for (int x = 0; x < 8; x++)
+                                {
+                                    if (asc[i].frequency_band[x] != -1)
+                                        should_display = true;
+                                }
 
-
-                                // draw an indicator for actively playing audio taunts
-                                Vector2 pos = new Vector2(-600, -40);
-
-                                // shift the element down depending on how many audio sources are playing at the same time
-                                pos.y += position * 32;
-
-
-
-                                // draw the player name
-                                __instance.DrawStringSmall(asc[i].player_name + (display_audio_spectrum ? ":" : ""), pos, 0.32f, StringOffset.LEFT, UIManager.m_col_ui1, 1f, -1f);
-
-                                // draw the frequency band
-                                if (display_audio_spectrum)
+                                if (should_display)
                                 {
                                     pos.x += UIManager.GetStringWidth(asc[i].player_name + ":", 8f);
                                     pos.y += 3f;
@@ -641,15 +653,22 @@ namespace GameMod
                                         pos.x += 5.5f;
                                     }
                                 }
-
-
-
-
-
-
                             }
+
+
+
+
                         }
                     }
+                }
+            }
+
+            [HarmonyPatch(typeof(UIElement), "DrawHUD")]
+            class MPAudioTaunts_UIElement_DrawHUD
+            {
+                static void Postfix(UIElement __instance)
+                {
+                    DrawVisualIndicator(__instance);
                 }
 
             }
@@ -659,54 +678,7 @@ namespace GameMod
             {
                 static void Postfix(UIElement __instance)
                 {
-                    // Draws an indicator of who is currently playing an audiotaunt
-                    if ((NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY) & MenuManager.m_menu_state != MenuState.MP_OPTIONS)
-                    {
-                        //uConsole.Log(UIManager.m_mouse_pos.x + " : " + UIManager.m_mouse_pos.y);
-
-                        int position = -1;
-                        for (int i = 0; i < asc.Length; i++)
-                        {
-                            if (asc[i].source == null)
-                                asc[i].source = new GameObject().AddComponent<AudioSource>();
-
-                            if (asc[i].source != null & asc[i].player_name != null && asc[i].source.isPlaying)
-                            {
-                                position++;
-                                
-                                
-                                // draw an indicator for actively playing audio taunts
-                                Vector2 pos = new Vector2(-600, -40);
-                                
-                                // shift the element down depending on how many audio sources are playing at the same time
-                                pos.y += position * 32;
-
-
-
-                                // draw the player name
-                                __instance.DrawStringSmall(asc[i].player_name + (display_audio_spectrum ? ":" : ""), pos, 0.32f, StringOffset.LEFT, UIManager.m_col_ui1, 1f, -1f);
-
-                                // draw the frequency band
-                                if (display_audio_spectrum)
-                                {
-                                    pos.x += UIManager.GetStringWidth(asc[i].player_name+":", 8f);
-                                    pos.y += 3f;
-                                    for (int x = 0; x < 8; x++)
-                                    {
-                                        // new Vector2(1.7f, 1f)
-                                        UIManager.DrawBarVertical(pos, new Vector2(2f, 1.2f), asc[i].frequency_band[x] * 20f, Color.green * 0.7f, 199);//UIManager.DrawQuadBarVertical(pos, 6f, 1f, freqBand[i] * 50f, Color.yellow, 199); //(pos, new Vector2(pos.x, -freqBand[i] * 200f), 1f, 0f, Color.yellow, 4);
-                                        pos.x += 5.5f;
-                                    }
-                                }
-
-
-
-
-
-
-                            }
-                        }
-                    }
+                    DrawVisualIndicator(__instance);
                 }
             }
 
@@ -725,9 +697,9 @@ namespace GameMod
                     Debug.Log("[AudioTaunts]  Received AudioTauntIdentifiers from Server");
                     var msg = rawMsg.ReadMessage<ShareAudioTauntIdentifiers>();
                     List<string> file_hashes = msg.hashes.Split('/').ToList();
-                    
+
                     ImportAudioTaunts(ExternalAudioTauntDirectory, file_hashes);
-;
+                    
                     foreach (string hash in file_hashes)
                     {
 
@@ -735,40 +707,40 @@ namespace GameMod
                         if (!string.IsNullOrEmpty(hash) & !match_taunts.ContainsKey(hash))
                         {
 
-                                AudioTaunt taunt = taunts.Find(t => t.hash.Equals(hash));
-                                if (taunt != null)
+                            AudioTaunt taunt = taunts.Find(t => t.hash.Equals(hash));
+                            if (taunt != null)
+                            {
+                                Debug.Log("     [AudioTaunts]  Found Audiotaunt in the local data: " + hash);
+                                match_taunts.Add(hash, taunt);
+                            }
+                            else
+                            {
+                                Debug.Log("     [AudioTaunts]  Requesting Audiotaunt from Server: " + hash);
+                                if (Client.GetClient() == null)
                                 {
-                                    Debug.Log("     [AudioTaunts]  Found Audiotaunt in the local data: " + hash);
-                                    match_taunts.Add(hash, taunt);
+                                    Debug.Log("     [AudioTaunts]  MPAudioTaunts_Client_RegisterHandlers: no client?");
+                                    return;
                                 }
-                                else
+                                // to prepare for an incoming answer to our request we create a context to collect the bytes from the server
+                                match_taunts.Add(hash, new AudioTaunt
                                 {
-                                    Debug.Log("     [AudioTaunts]  Requesting Audiotaunt from Server: " + hash);
-                                    if (Client.GetClient() == null)
-                                    {
-                                        Debug.Log("     [AudioTaunts]  MPAudioTaunts_Client_RegisterHandlers: no client?");
-                                        return;
-                                    }
-                                    // to prepare for an incoming answer to our request we create a context to collect the bytes from the server
-                                    match_taunts.Add(hash, new AudioTaunt
-                                    {
-                                        hash = hash,
-                                        name = "",
-                                        audio_taunt_data = new byte[AUDIO_TAUNT_SIZE_LIMIT],
-                                        is_data_complete = false,
-                                        timestamp = -1,
-                                        ready_to_play = false,
-                                        requested_taunt = true
-                                    });
+                                    hash = hash,
+                                    name = "",
+                                    audio_taunt_data = new byte[AUDIO_TAUNT_SIZE_LIMIT],
+                                    is_data_complete = false,
+                                    timestamp = -1,
+                                    ready_to_play = false,
+                                    requested_taunt = true
+                                });
 
-                                    Client.GetClient().Send(MessageTypes.MsgRequestAudioTaunt,
-                                        new RequestAudioTaunt
-                                        {
-                                            hash = hash
-                                        });
+                                Client.GetClient().SendByChannel(MessageTypes.MsgRequestAudioTaunt,
+                                    new RequestAudioTaunt
+                                    {
+                                        hash = hash
+                                    },0);
 
-                                }
-                            
+                            }
+
                         }
                     }
                 }
@@ -777,7 +749,7 @@ namespace GameMod
                 {
                     if (!active) return;
 
-                    
+
                     var msg = rawMsg.ReadMessage<RequestAudioTaunt>();
                     Debug.Log("[AudioTaunts.Client]  Server requested audiotaunt: " + msg.hash);
 
@@ -790,9 +762,9 @@ namespace GameMod
                     }
 
                     // start the upload if we actually have the data
-                    if(index != -1)
+                    if (index != -1)
                     {
-                        if(local_taunts[index].is_data_complete)
+                        if (local_taunts[index].is_data_complete)
                         {
                             Debug.Log("[AudioTaunts]  starting the upload or putting it in the queue: " + msg.hash);
                             if (!isUploading)
@@ -845,7 +817,7 @@ namespace GameMod
                             data = to_send,//Convert.ToBase64String(to_send)
                         };
 
-                        Client.GetClient().connection.Send(MessageTypes.MsgAudioTauntPacket, packet);
+                        Client.GetClient().connection.SendByChannel(MessageTypes.MsgAudioTauntPacket, packet,0);
                         Debug.Log("[AudioTaunts]    upload: " + (position + index) + " / " + data.audio_taunt_data.Length + "  for " + data.hash);
                         yield return delay;
                         position += PACKET_PAYLOAD_SIZE;
@@ -861,14 +833,14 @@ namespace GameMod
 
 
 
-                
+
                 private static void OnAudioTauntPacket(NetworkMessage rawMsg)
                 {
                     if (!active)
                         return;
 
-                    Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
-                    
+                    //Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
+
                     try
                     {
                         var msg = rawMsg.ReadMessage<AudioTauntPacket>();
@@ -893,7 +865,7 @@ namespace GameMod
                                     match_taunts[msg.hash].audio_taunt_data[startindex + i] = msg.data[i];
                                 }
                                 match_taunts[msg.hash].received_packets.Add(msg.packet_id);
-                                Debug.Log("     Added the data of the fragment");
+                                //Debug.Log("     Added the data of the fragment");
 
                                 // if this completes the data then check wether there are unanswered requests
                                 if (match_taunts[msg.hash].received_packets.Count * PACKET_PAYLOAD_SIZE >= msg.filesize)
@@ -925,9 +897,9 @@ namespace GameMod
                             //DEBUG.MARKER Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:" + rawMsg.conn.connectionId);
                         }
                     }
-                    catch(FormatException fe)
+                    catch (FormatException fe)
                     {
-                        Debug.Log(" (Marker.UnusualEvent): Received a fragment with a payload that doesnt format into a Base64 String!\n"+fe);
+                        Debug.Log(" (Marker.UnusualEvent): Received a fragment with a payload that doesnt format into a Base64 String!\n" + fe);
                         return;
                     }
 
@@ -939,19 +911,17 @@ namespace GameMod
 
 
 
-                 private static void OnPlayAudioTaunt(NetworkMessage rawMsg)
-                 {
-                     if (!active) return;
+                private static void OnPlayAudioTaunt(NetworkMessage rawMsg)
+                {
+                    if (!active) return;
 
-                     var msg = rawMsg.ReadMessage<PlayAudioTaunt>();
-
-                     Debug.Log("[AudioTaunts] playing external audiotaunt: "+msg.hash);
+                    var msg = rawMsg.ReadMessage<PlayAudioTaunt>();
 
                     if (match_taunts.ContainsKey(msg.hash) && match_taunts[msg.hash].ready_to_play)
                     {
                         PlayAudioTauntFromAudioclip(match_taunts[msg.hash].audioclip, msg.sender_name);
                     }
-                 }
+                }
 
 
 
@@ -994,7 +964,7 @@ namespace GameMod
             public static bool active = true;
             public static bool server_supports_audiotaunts = false;
 
-            public static Dictionary<string,AudioTaunt> match_taunts = new Dictionary<string, AudioTaunt>();
+            public static Dictionary<string, AudioTaunt> match_taunts = new Dictionary<string, AudioTaunt>();
 
 
 
@@ -1003,21 +973,27 @@ namespace GameMod
             {
                 static void Prefix(NetworkMessage msg)
                 {
-                    if(msg == null || msg.conn == null)
+                    if (msg == null || msg.conn == null)
                     {
                         Debug.Log(" [Audiotaunts.Server] received a OnDisconnect event but the network message object didnt exist");
                         return;
                     }
 
-                    // stops the disconnected client from being seen as a valid provider/requester
-                    foreach ( var item in match_taunts )
+                    // remove taunts where this client is the sole provider from
+                    Dictionary<string, AudioTaunt> new_match_taunts = new Dictionary<string, AudioTaunt>();
+                    foreach (var item in match_taunts)
                     {
-                        if(match_taunts[item.Key].providing_clients.Contains(msg.conn.connectionId))
-                            match_taunts[item.Key].providing_clients.RemoveAll(i => i == msg.conn.connectionId);
+                        bool sole_provider = true;
+                        foreach (int provider in match_taunts[item.Key].providing_clients)
+                        {
+                            if (provider != msg.conn.connectionId)
+                                sole_provider = false;
+                        }
 
-                        if (match_taunts[item.Key].requesting_clients.Contains(msg.conn.connectionId))
-                            match_taunts[item.Key].requesting_clients.RemoveAll(i => i == msg.conn.connectionId);
+                        if (!sole_provider)
+                            new_match_taunts.Add(item.Key, item.Value);
                     }
+                    match_taunts = new_match_taunts;
                 }
             }
 
@@ -1031,7 +1007,17 @@ namespace GameMod
                         return;
 
 
-                    match_taunts.Clear();
+                    string content = "\n";
+                    foreach (var item in match_taunts)
+                    {
+                        content += "    " + item.Key + "\n";
+                    }
+
+                    //match_taunts.Clear();
+                    Debug.Log("[AudioTaunts] Initialisation: \n"
+                        + " current match_taunt's: " + match_taunts.Count
+                        + content
+                        );
                 }
             }
 
@@ -1043,51 +1029,88 @@ namespace GameMod
                     // Read the message
                     Debug.Log("[Audiotaunt] : Received AudioTauntIdentifiers from Client");
                     var msg = rawMsg.ReadMessage<ShareAudioTauntIdentifiers>();
-                    
-                    if(string.IsNullOrEmpty(msg.hashes))
+
+                    if (string.IsNullOrEmpty(msg.hashes))
                     {
                         Debug.Log(" (Marker:UnusualEvent) the OnShareAudioTauntIdentifiers message was empty!");
                         return;
                     }
 
                     // Split the string to retrieve the individual hashes
-                    string[] file_hashes = msg.hashes.Split('/');
-                   
+                    List<string> file_hashes = msg.hashes.Split('/').ToList();
+                    Debug.Log(file_hashes.Count);
+                    foreach (string hash in file_hashes)
+                    {
+                        Debug.Log(" hash:" + hash);
+                    }
+                    Debug.Log("\n");
 
                     // Update match_taunts
                     int index = 0;
-                    foreach (string hash in file_hashes){
+                    foreach (string hash in file_hashes)
+                    {
+                        if (hash == null)
+                            break;
 
-                        if (!string.IsNullOrEmpty(hash) & index < AMOUNT_OF_TAUNTS_PER_CLIENT){
-                            // this taunt already exists, add the sender as a possible provider
-                            if(match_taunts.ContainsKey(hash)){
-                                match_taunts[hash].providing_clients.Add(rawMsg.conn.connectionId);
-                                Debug.Log("  match_taunts:" + hash + "exists, added: " + rawMsg.conn.connectionId + " as a provider");
+                        if (hash.Length < 5)
+                            break;
+
+                        if (!string.IsNullOrEmpty(hash))
+                        {
+                            if (hash.StartsWith(" "))
+                                break;
+
+                            try
+                            {
+
+                                // this taunt already exists, add the sender as a possible provider
+                                if (match_taunts.ContainsKey(hash))
+                                {
+
+                                    if (match_taunts[hash].providing_clients == null)
+                                    {
+                                        match_taunts[hash].providing_clients = new List<int>();
+                                    }
+
+                                    match_taunts[hash].providing_clients.Add(rawMsg.conn.connectionId);
+                                    Debug.Log("  match_taunts:" + hash + " exists, added: " + rawMsg.conn.connectionId + " as a provider");
+                                }
+                                // this taunt doesnt exist, add it
+                                else
+                                {
+                                    AudioTaunt taunt = new AudioTaunt
+                                    {
+                                        hash = hash,
+                                        name = "EMPTY",
+                                        audio_taunt_data = new byte[AUDIO_TAUNT_SIZE_LIMIT],
+                                        is_data_complete = false,
+                                        timestamp = -1,
+                                        ready_to_play = false,
+                                        requested_taunt = false,
+                                        audioclip = null,
+                                        providing_clients = new List<int>(),
+                                        requesting_clients = new List<int>(),
+                                        received_packets = new List<int>()
+                                    };
+                                    taunt.providing_clients.Add(rawMsg.conn.connectionId);
+                                    match_taunts.Add(hash, taunt);
+                                    Debug.Log("  Added new context to match_taunts: " + hash);
+                                }
                             }
-                            // this taunt doesnt exist, add it
-                            else{
-                                AudioTaunt taunt = new AudioTaunt {
-                                    hash = hash,
-                                    name = "EMPTY",
-                                    audio_taunt_data = new byte[AUDIO_TAUNT_SIZE_LIMIT],
-                                    is_data_complete = false,
-                                    timestamp = -1,
-                                    ready_to_play = false,
-                                    requested_taunt = false,
-                                    audioclip = null,
-                                    providing_clients = new List<int>(),
-                                    requesting_clients = new List<int>(),
-                                    received_packets = new List<int>()
-                                };
-                                taunt.providing_clients.Add(rawMsg.conn.connectionId);
-                                match_taunts.Add(hash,taunt);
-                                Debug.Log("  Added new context to match_taunts: " + hash);
-                            } 
+                            catch (Exception ex)
+                            {
+                                Debug.Log("Server.OnShareAudioTaunts encountered an exception"
+                                    + "\n loop:" + index
+                                    + "\n hash:" + hash
+                                    + "\n Exception: " + ex
+                                    );
+                            }
+
                         }
                         index++;
                     }
 
-                    
+
                     string hashes = "";
                     int count = 0;
                     foreach (var t in match_taunts)
@@ -1097,56 +1120,67 @@ namespace GameMod
                         if (count < match_taunts.Count)
                             hashes += "/";
                     }
-                        
+
 
                     //Send the updated list of hashes to all connected clients that support audiotaunts
-                    foreach (NetworkConnection networkConnection in NetworkServer.connections) {
+                    foreach (NetworkConnection networkConnection in NetworkServer.connections)
+                    {
                         if (MPTweaks.ClientHasTweak(networkConnection.connectionId, "audiotaunts"))
                             networkConnection.Send(MessageTypes.MsgShareAudioTauntIdentifiers, new ShareAudioTauntIdentifiers { hashes = hashes });
                     }
 
                 }
 
-                
+
                 private static void OnAudioTauntRequest(NetworkMessage rawMsg)
                 {
-                    Debug.Log("[AudioTaunts] Received audio taunt file request");
-                    var msg = rawMsg.ReadMessage<RequestAudioTaunt>();
-
-                    if(match_taunts.ContainsKey(msg.hash))
+                    try
                     {
-                        // if its byte data is populated send that to the client that requested it
-                        if(match_taunts[msg.hash].is_data_complete)
-                        {
-                            // start upload
-                            GameManager.m_gm.StartCoroutine(UploadAudioTauntToClient(msg.hash, match_taunts[msg.hash].audio_taunt_data, rawMsg.conn.connectionId));
-                        }
+                        var msg = rawMsg.ReadMessage<RequestAudioTaunt>();
+                        Debug.Log("[AudioTaunts] Received audio taunt file request");
 
-                        // if it is not then request that data from the client the shared this audiotaunt
-                        // and add Client A to the request list
+                        if (match_taunts.ContainsKey(msg.hash))
+                        {
+                            // if its byte data is populated send that to the client that requested it
+                            if (match_taunts[msg.hash].is_data_complete)
+                            {
+                                // start upload
+                                GameManager.m_gm.StartCoroutine(UploadAudioTauntToClient(msg.hash, match_taunts[msg.hash].audio_taunt_data, rawMsg.conn.connectionId));
+                            }
+
+                            // if it is not then request that data from the client the shared this audiotaunt
+                            // and add Client A to the request list
+                            else
+                            {
+                                foreach (NetworkConnection networkConnection in NetworkServer.connections)
+                                {
+                                    if (match_taunts[msg.hash].providing_clients.Count > 0 && networkConnection.connectionId == match_taunts[msg.hash].providing_clients[0])
+                                    {
+                                        networkConnection.SendByChannel(MessageTypes.MsgRequestAudioTaunt, new RequestAudioTaunt { hash = msg.hash }, 0);
+                                        Debug.Log(" [SERVER]: Requested AudioTaunt data from: " + networkConnection.connectionId + " for: " + rawMsg.conn.connectionId);
+                                    }
+                                }
+                                if (match_taunts[msg.hash].requesting_clients == null)
+                                    match_taunts[msg.hash].requesting_clients = new List<int>();
+
+                                match_taunts[msg.hash].requesting_clients.Add(rawMsg.conn.connectionId);
+                            }
+                        }
                         else
                         {
-                            foreach (NetworkConnection networkConnection in NetworkServer.connections)
-                            {
-                                if (match_taunts[msg.hash].providing_clients.Count > 0 && networkConnection.connectionId == match_taunts[msg.hash].providing_clients[0])
-                                {
-                                    networkConnection.Send(MessageTypes.MsgRequestAudioTaunt, new RequestAudioTaunt { hash = msg.hash });
-                                    Debug.Log(" [SERVER]: Requested AudioTaunt data from: "+ networkConnection.connectionId+" for: "+rawMsg.conn.connectionId);
-                                }     
-                            }
-                            match_taunts[msg.hash].requesting_clients.Add(rawMsg.conn.connectionId);
+                            Debug.Log("  [SERVER]: A client requested an audiotaunt that has no context on the server");
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Debug.Log("  [SERVER]: A client requested an audiotaunt that has no context on the server");
+                        Debug.Log("[AudioTaunt] Exception when processing the network request: " + ex);
                     }
                 }
 
                 public static IEnumerator UploadAudioTauntToClient(string hash, byte[] data, int connectionId)
                 {
                     Debug.Log("[AudioTaunts] Started uploading AudioTaunt to client");
-                    if(data.Length < PACKET_PAYLOAD_SIZE)
+                    if (data.Length < PACKET_PAYLOAD_SIZE)
                     {
                         AudioTauntPacket packet = new AudioTauntPacket
                         {
@@ -1181,7 +1215,7 @@ namespace GameMod
                                 data = to_send,
                             };
                             NetworkServer.SendToClient(connectionId, MessageTypes.MsgAudioTauntPacket, packet);
-                            Debug.Log("[AudioTaunts]    packet: "+packet_id+" upload: " + (position + index) + " / " + data.Length + "  for " + hash);
+                            Debug.Log("[AudioTaunts]    packet: " + packet_id + " upload: " + (position + index) + " / " + data.Length + "  for " + hash);
                             position += PACKET_PAYLOAD_SIZE;
                             packet_id++;
                             yield return delay;
@@ -1197,19 +1231,22 @@ namespace GameMod
                     if (!active)
                         return;
 
-                    Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
+                    //Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
                     var msg = rawMsg.ReadMessage<AudioTauntPacket>();
 
-                    if(match_taunts.ContainsKey(msg.hash))
+                    if (msg.data == null)
+                        return;
+
+                    if (match_taunts.ContainsKey(msg.hash))
                     {
                         // initialise the array with the correct size
-                        if(match_taunts[msg.hash].timestamp == -1)
+                        if (match_taunts[msg.hash].timestamp == -1)
                         {
                             match_taunts[msg.hash].timestamp = Time.frameCount;
                             match_taunts[msg.hash].audio_taunt_data = new byte[msg.filesize];
                         }
 
-                        if(!match_taunts[msg.hash].received_packets.Contains(msg.packet_id))
+                        if (!match_taunts[msg.hash].received_packets.Contains(msg.packet_id))
                         {
                             // add data of the fragment to the context
                             int startindex = msg.packet_id * PACKET_PAYLOAD_SIZE;
@@ -1223,57 +1260,59 @@ namespace GameMod
                             // if this completes the data then check wether there are unanswered requests
                             if (match_taunts[msg.hash].received_packets.Count * PACKET_PAYLOAD_SIZE >= msg.filesize)
                             {
-                                Debug.Log("     This Fragment completed the audio taunt data");
+                                //Debug.Log("     This Fragment completed the audio taunt data");
                                 match_taunts[msg.hash].is_data_complete = true;
-                                foreach( int connectionId in match_taunts[msg.hash].requesting_clients)
+                                foreach (int connectionId in match_taunts[msg.hash].requesting_clients)
                                 {
-                                    Debug.Log("         Uploading Requested Taunt to: "+connectionId);
+                                    Debug.Log("         Uploading Requested Taunt to: " + connectionId);
                                     GameManager.m_gm.StartCoroutine(UploadAudioTauntToClient(msg.hash, match_taunts[msg.hash].audio_taunt_data, connectionId));
                                 }
                             }
                         }
                         else
                         {
-                            Debug.Log("     This Fragment is a duplicate. packet_id: "+msg.packet_id);
+                            Debug.Log("     This Fragment is a duplicate. packet_id: " + msg.packet_id);
                         }
 
                     }
                     else
                     {
-                        Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:"+rawMsg.conn.connectionId);
+                        Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:" + rawMsg.conn.connectionId);
                     }
                 }
 
 
                 private static void OnPlayAudioTaunt(NetworkMessage rawMsg)
                 {
-                    Debug.Log("     RECEIVED AUDIO TAUNT BEING PLAYED");
-                    var msg = rawMsg.ReadMessage<PlayAudioTaunt>();
-                   
-                    if(string.IsNullOrEmpty(msg.hash) | string.IsNullOrEmpty(msg.sender_name))
+                    try
                     {
-                        Debug.Log(" (Marker:UnusualEvent) the Server.OnPlayAudioTaunt msg was incomplete! client with a testversion ?: "+MPTweaks.ClientInfos[rawMsg.conn.connectionId]);
-                        return;
-                    }
+                        var msg = rawMsg.ReadMessage<PlayAudioTaunt>();
 
-                    Debug.Log("     msg.hash: " + msg.hash);
-                    
-                    if (match_taunts.ContainsKey(msg.hash))
-                    {
-                        // distribute it to all other clients
-                        PlayAudioTaunt packet = new PlayAudioTaunt
+                        if (string.IsNullOrEmpty(msg.hash) | string.IsNullOrEmpty(msg.sender_name))
                         {
-                            hash = msg.hash,
-                            sender_name = msg.sender_name
-                        };
-             
-                        foreach (NetworkConnection networkConnection in NetworkServer.connections)
+                            Debug.Log(" (Marker:UnusualEvent) the Server.OnPlayAudioTaunt msg was incomplete! client with a testversion ?: " + MPTweaks.ClientInfos[rawMsg.conn.connectionId]);
+                            return;
+                        }
+
+                        //Debug.Log("     msg.hash: " + msg.hash + "\n  msg.sender: " + msg.sender_name);
+
+                        if (match_taunts != null && match_taunts.ContainsKey(msg.hash))
                         {
-                            if (rawMsg.conn.connectionId != networkConnection.connectionId & MPTweaks.ClientHasTweak(networkConnection.connectionId, "audiotaunts"))
-                                networkConnection.Send(MessageTypes.MsgPlayAudioTaunt, packet);
+                            // distribute it to all other clients
+                            PlayAudioTaunt packet = new PlayAudioTaunt
+                            {
+                                hash = msg.hash,
+                                sender_name = msg.sender_name
+                            };
+
+                            foreach (NetworkConnection networkConnection in NetworkServer.connections)
+                            {
+                                if (networkConnection != null & rawMsg.conn.connectionId != networkConnection.connectionId & MPTweaks.ClientHasTweak(networkConnection.connectionId, "audiotaunts"))
+                                    networkConnection.SendByChannel(MessageTypes.MsgPlayAudioTaunt, packet, 0);
+                            }
                         }
                     }
-
+                    catch (Exception ex) { }
                 }
 
                 static void Postfix()
@@ -1327,10 +1366,15 @@ namespace GameMod
             }
             public override void Deserialize(NetworkReader reader)
             {
-                reader.SeekZero();
-                var msg = reader.ReadString().Split('/');
-                hash = msg[0];
-                sender_name = msg[1];
+                try
+                {
+                    reader.SeekZero();
+                    var msg = reader.ReadString().Split('/');
+                    hash = msg[0];
+                    sender_name = msg[1];
+                }
+                catch(Exception ex)
+                { }
             }
         }
 
@@ -1379,7 +1423,7 @@ namespace GameMod
                 string msg = reader.ReadString();
 
                 //Debug.Log("CONTENT OF PACKET:\n"+msg);
-                
+
                 int pos = msg.IndexOf("/");
                 packet_id = int.Parse(msg.Substring(0, pos));
                 msg = msg.Remove(0, pos + 1);
@@ -1395,8 +1439,15 @@ namespace GameMod
                 pos = msg.IndexOf("/");
                 hash = msg.Substring(0, pos);
                 msg = msg.Remove(0, pos + 1);
-
-                data = Convert.FromBase64String(msg);
+                try
+                {
+                    data = Convert.FromBase64String(msg);
+                }
+                catch(Exception ex)
+                {
+                    Debug.Log("[AudioTaunts] AudioTauntPacket.Deserialize: data couldnt format properly");
+                }
+                
             }
         }
 
@@ -1408,7 +1459,7 @@ namespace GameMod
 
 
 
-
+        /*
         // DEBUG
         [HarmonyPatch(typeof(GameManager), "Start")]
         internal class DebugCommandsPatch
@@ -1447,7 +1498,7 @@ namespace GameMod
                         );
             }
 
-        }
+        }*/
 
 
 
