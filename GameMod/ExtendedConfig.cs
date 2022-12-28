@@ -115,6 +115,8 @@ namespace GameMod
         // unknown sections get stored in ExtendedConfig.unknown_lines to reattach them to the end when saving
         private static void ReadConfigData(string filepath)
         {
+            List<string> completed = new List<string>();
+            
             uConsole.Log("ReadConfigData");
             using (StreamReader sr = new StreamReader(filepath))
             {
@@ -143,6 +145,7 @@ namespace GameMod
                         if (!current_section_id.Equals("unknown"))
                         {
                             PassSectionToFunction(current_section, current_section_id);
+                            completed.Add(current_section_id);
                             current_section_id = "unknown";
                             current_section.Clear();
                         }
@@ -162,6 +165,18 @@ namespace GameMod
                             current_section.Add(line);
                         }
                     }
+                }
+            }
+            
+            foreach (string s in known_sections)
+            {
+                // a section is missing from the config file, create it
+                if (!completed.Contains(s))
+                {
+                    List<string> l = new List<string>();
+                    l.Add("---");
+                    PassSectionToFunction(l, s);
+                    Debug.Log("Creating missing section \"" + s + "\" in pilot's .extendedconfig");
                 }
             }
         }
@@ -283,6 +298,7 @@ namespace GameMod
         private static List<string> known_sections = new List<string> {
             "[SECTION: AUTOSELECT]",
             "[SECTION: JOYSTICKCURVE]",
+            "[SECTION: WEAPONCYCLING]",
             //...
         };
 
@@ -296,6 +312,10 @@ namespace GameMod
             if (section_name.Equals(known_sections[1]))
             {
                 Section_JoystickCurve.Load(section);
+            }
+            if (section_name.Equals(known_sections[2]))
+            {
+                Section_WeaponCycling.Load(section);
             }
             //...
 
@@ -321,6 +341,9 @@ namespace GameMod
                     Section_JoystickCurve.Save(w);
                     w.WriteLine("[/END]");
 
+                    w.WriteLine("[SECTION: WEAPONCYCLING]");
+                    Section_WeaponCycling.Save(w);
+                    w.WriteLine("[/END]");
                     //...
 
                     if (unknown_sections != null)
@@ -342,13 +365,14 @@ namespace GameMod
         {
             Section_AutoSelect.Set();
             Section_JoystickCurve.SetDefault();
+            Section_WeaponCycling.Set();
 
         }
 
         public static void ApplyConfigData()
         {
             Section_AutoSelect.ApplySettings();
-
+            Section_WeaponCycling.ApplySettings();
         }
 
 
@@ -696,8 +720,105 @@ namespace GameMod
             }
         }
 
+        internal class Section_WeaponCycling
+        {
+            public static Dictionary<string, string> settings;
 
-        
+            public static void Load(List<string> section)
+            {
+                MPWeaponCycling.UpdateWeaponOrder();
+
+                settings = new Dictionary<string, string>();
+                string l;
+                foreach (string line in section)
+                {
+                    l = RemoveWhitespace(line);
+                    string[] res = l.Split(':');
+                    if (res.Length == 2)
+                    {
+                        settings.Add(res[0], res[1]);
+                    }
+                    else
+                    {
+                        Debug.Log("Error in ExtendedConfig.ProcessWeaponCyclingSection: unexpected line split: " + line + ", Setting Default Values.");
+                        Set();
+                        return;
+                    }
+                }
+                ApplySettings();
+            }
+
+            public static void Save(StreamWriter w)
+            {
+                if (settings != null)
+                {
+                    foreach (var setting in settings)
+                    {
+                        if (setting.Key != null && setting.Value != null)
+                        {
+                            w.WriteLine("   " + setting.Key + ": " + setting.Value);
+                        }
+                    }
+                }
+            }
+
+            // sets the values of the AutoSelect dictionary
+            //  mirror = false   sets the default values
+            //  mirror = true    sets the current MPWeaponCycling values
+            public static void Set(bool mirror = false)
+            {
+                
+                
+                settings = new Dictionary<string, string>();
+                settings.Add("p_cycle_0", mirror ? MPWeaponCycling.CPrimaries[0].ToString() : "true");
+                settings.Add("p_cycle_1", mirror ? MPWeaponCycling.CPrimaries[1].ToString() : "true");
+                settings.Add("p_cycle_2", mirror ? MPWeaponCycling.CPrimaries[2].ToString() : "true");
+                settings.Add("p_cycle_3", mirror ? MPWeaponCycling.CPrimaries[3].ToString() : "true");
+                settings.Add("p_cycle_4", mirror ? MPWeaponCycling.CPrimaries[4].ToString() : "true");
+                settings.Add("p_cycle_5", mirror ? MPWeaponCycling.CPrimaries[5].ToString() : "true");
+                settings.Add("p_cycle_6", mirror ? MPWeaponCycling.CPrimaries[6].ToString() : "true");
+                settings.Add("p_cycle_7", mirror ? MPWeaponCycling.CPrimaries[7].ToString() : "true");
+                settings.Add("s_cycle_0", mirror ? MPWeaponCycling.CSecondaries[0].ToString() : "true");
+                settings.Add("s_cycle_1", mirror ? MPWeaponCycling.CSecondaries[1].ToString() : "true");
+                settings.Add("s_cycle_2", mirror ? MPWeaponCycling.CSecondaries[2].ToString() : "true");
+                settings.Add("s_cycle_3", mirror ? MPWeaponCycling.CSecondaries[3].ToString() : "true");
+                settings.Add("s_cycle_4", mirror ? MPWeaponCycling.CSecondaries[4].ToString() : "true");
+                settings.Add("s_cycle_5", mirror ? MPWeaponCycling.CSecondaries[5].ToString() : "true");
+                settings.Add("s_cycle_6", mirror ? MPWeaponCycling.CSecondaries[6].ToString() : "true");
+                settings.Add("s_cycle_7", mirror ? MPWeaponCycling.CSecondaries[7].ToString() : "true");
+            }
+
+            public static void ApplySettings()
+            {
+                try
+                {
+                    MPWeaponCycling.CPrimaries[0] = Convert.ToBoolean(settings["p_cycle_0"]);
+                    MPWeaponCycling.CPrimaries[1] = Convert.ToBoolean(settings["p_cycle_1"]);
+                    MPWeaponCycling.CPrimaries[2] = Convert.ToBoolean(settings["p_cycle_2"]);
+                    MPWeaponCycling.CPrimaries[3] = Convert.ToBoolean(settings["p_cycle_3"]);
+                    MPWeaponCycling.CPrimaries[4] = Convert.ToBoolean(settings["p_cycle_4"]);
+                    MPWeaponCycling.CPrimaries[5] = Convert.ToBoolean(settings["p_cycle_5"]);
+                    MPWeaponCycling.CPrimaries[6] = Convert.ToBoolean(settings["p_cycle_6"]);
+                    MPWeaponCycling.CPrimaries[7] = Convert.ToBoolean(settings["p_cycle_7"]);
+                    MPWeaponCycling.CSecondaries[0] = Convert.ToBoolean(settings["s_cycle_0"]);
+                    MPWeaponCycling.CSecondaries[1] = Convert.ToBoolean(settings["s_cycle_1"]);
+                    MPWeaponCycling.CSecondaries[2] = Convert.ToBoolean(settings["s_cycle_2"]);
+                    MPWeaponCycling.CSecondaries[3] = Convert.ToBoolean(settings["s_cycle_3"]);
+                    MPWeaponCycling.CSecondaries[4] = Convert.ToBoolean(settings["s_cycle_4"]);
+                    MPWeaponCycling.CSecondaries[5] = Convert.ToBoolean(settings["s_cycle_5"]);
+                    MPWeaponCycling.CSecondaries[6] = Convert.ToBoolean(settings["s_cycle_6"]);
+                    MPWeaponCycling.CSecondaries[7] = Convert.ToBoolean(settings["s_cycle_7"]);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Error while parsing WeaponCycling settings. missing entry " + ex + "\nSetting Default values");
+                    Set();
+                    ApplySettings();
+                }
+            }
+
+        }
+
     }
 }
 

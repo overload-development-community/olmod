@@ -45,6 +45,7 @@ namespace GameMod {
         public static bool mms_team_color_default { get; set; } = true;
         public static int mms_team_color_self = 5;
         public static int mms_team_color_enemy = 6;
+        public static bool mms_creeper_colors { get; set; } = true;
 
         public static bool mms_team_health { get; set; } = true;
         public static MpTeam? mms_team_selection { get; set; } = null;
@@ -490,6 +491,11 @@ namespace GameMod {
                     case 13:
                         Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        // Re-enables Reflex drops in classic spawn mode by default. 
+                        if (Menus.mms_classic_spawns)
+                        {
+                            MenuManager.mms_powerup_filter[2] = true;
+                        }
                         break;
                     case 14:
                         Menus.mms_ctf_boost = !Menus.mms_ctf_boost;
@@ -703,6 +709,8 @@ namespace GameMod {
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW TEAM HEALTH"), position, 4, Menus.mms_team_health ? "ON" : "OFF", "SETS WHETHER THE HEALTH OF TEAMMATES SHOULD GET DISPLAYED", 1.5f, false);
                     position.y += 64;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHOW DAMAGE NUMBERS"), position, 5, Menus.mms_client_damage_numbers ? "ON" : "OFF", "SETS WHETHER DAMAGE NUMBERS ARE SHOWN IN GAMES WITH THEM ENABLED", 1.5f, false);
+                    position.y += 64;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("TEAM-COLORED CREEPERS"), position, 6, Menus.mms_creeper_colors ? "ON" : "OFF", "APPLIES THE CHOSEN TEAM COLORS TO CREEPER GLOW", 1.5f, false);
                     break;
                 case 2:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("LAG COMPENSATION"), position, 1, Menus.GetMMSLagCompensation(), "ENABLE LAG COMPENSATION FOR MULTIPLAYER GAMES", 1.5f, false);
@@ -790,7 +798,7 @@ namespace GameMod {
 
                         // Extra buttons on the right side
                         Vector2 right_side_position = new Vector2(478.4f, -178.7f);
-                        __instance.SelectAndDrawItem("Status: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), right_side_position, 2000, false, 0.27f, 0.4f);
+                        __instance.SelectAndDrawItem("Audio Taunts: " + (MPAudioTaunts.AClient.active ? "ON" : "OFF"), right_side_position, 2000, false, 0.27f, 0.4f);
                         right_side_position.y += 50f;
                         __instance.SelectAndDrawItem("Show Audio Spectrum: " + (MPAudioTaunts.AClient.display_audio_spectrum ? "ON" : "OFF"), right_side_position, 2001, false, 0.27f, 0.4f);
 
@@ -1059,6 +1067,10 @@ namespace GameMod {
                                         break;
                                     case 5:
                                         Menus.mms_client_damage_numbers = !Menus.mms_client_damage_numbers;
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 6:
+                                        Menus.mms_creeper_colors = !Menus.mms_creeper_colors;
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                 }
