@@ -1,10 +1,7 @@
 ﻿using HarmonyLib;
 using Overload;
 using System.IO;
-using System.Collections;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Resources;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -14,7 +11,7 @@ namespace GameMod
     {
         public static int selectedCollider = 0;
 
-        // there are 3 scales available in the assetbundle, 100 is same as ship, 105 and 115 are scaled up copies of the mesh
+        // there are 3 scales available in the assetbundle, 100 is same as ship, 105 and 110 are scaled up copies of the mesh
         public static string[] meshName = { "PlayershipCollider-100", "PlayershipCollider-105", "PlayershipCollider-110" };
         //public static string subName = "Pyro"; // :D Someday... It's *sorta* working.
 
