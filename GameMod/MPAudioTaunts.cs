@@ -416,8 +416,8 @@ namespace GameMod
                 //asc[index].source.timeSamples = 0;
                 //asc[index].source.bypassReverbZones = true;
                 //asc[index].source.reverbZoneMix = 0f;
-                asc[index].source.Play();//AudioSettings.dspTime);
-                //asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
+                asc[index].source.PlayScheduled(AudioSettings.dspTime);
+                asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
 
                 if (GameplayManager.IsMultiplayer
                     && clip_id != null
