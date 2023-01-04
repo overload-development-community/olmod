@@ -553,6 +553,21 @@ namespace GameMod
                 }
             }
 
+            // returns the index of a controller in Overload.Controls.m_controllers
+            static int FindControllerIndex(string controller_name)
+            {
+                int index = -1;
+                for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
+                {
+                    if (RemoveWhitespace(Overload.Controls.m_controllers[i].name).Equals(controller_name))
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                return index;
+            }
+
             public static void Load(List<string> section)
             {
                 for (int i = 0; i < section.Count; i++)
@@ -587,38 +602,76 @@ namespace GameMod
 
                 try
                 {
+                    // Mirror Overload.Controls.m_controllers devices with default configurations
                     SetDefault();
                     int index = -1;
+
+                    // read in the amount of controllers that are saved in this curve section
                     int.TryParse(section[++index], out int val);
                     int numControllers = val;
+
+                    List<Controller> inactive_devices = new List<Controller>();
+
+                    // read in the data of the devices and insert the populated devices at their right position
+                    // (controllers needs to be parallel to Overload.Controls.m_controllers)
                     for (int i = 0; i < numControllers; i++)
                     {
-                        string controllerName = section[++index];
+                        Controller device = new Controller();
+                        string controllerName = section[++index];//.Substring(3);
+
+                        device.name = controllerName;
+
+                        // read in the number of axes for this device
                         int.TryParse(section[++index], out int val2);
                         int numAxes = val2;
-                        if( i >= controllers.Count )
-                        {
-                            Controller c = new Controller();
-                            c.name = controllerName;
-                            for (int g = 0; g < numAxes; g++) c.axes.Add(new Controller.Axis());
-                            controllers.Add(c);
-                        }
+
+                        for (int g = 0; g < numAxes; g++) device.axes.Add(new Controller.Axis());
+
+
+
+                        // populate device with default or saved curve points
                         for (int j = 0; j < numAxes; j++)
                         {
-                            if(j >= controllers[i].axes.Count) {
-                                controllers[i].axes.Add(new Controller.Axis());
+                            if(j >= device.axes.Count) {
+                                device.axes.Add(new Controller.Axis());
                             }
                             float value = 0f;
-                            controllers[i].axes[j].curve_points = DefaultCurvePoints();
-                            controllers[i].axes[j].curve_points[0].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
-                            controllers[i].axes[j].curve_points[1].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
-                            controllers[i].axes[j].curve_points[1].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
-                            controllers[i].axes[j].curve_points[2].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
-                            controllers[i].axes[j].curve_points[2].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
-                            controllers[i].axes[j].curve_points[3].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
+                            device.axes[j].curve_points = DefaultCurvePoints();
+                            device.axes[j].curve_points[0].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
+                            device.axes[j].curve_points[1].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            device.axes[j].curve_points[1].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            device.axes[j].curve_points[2].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            device.axes[j].curve_points[2].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            device.axes[j].curve_points[3].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
+                            
+                            /*
+                            Debug.Log(" Added an axis: "+j);
+                            Debug.Log("     " + device.axes[j].curve_points[0].y);
+                            Debug.Log("     " + device.axes[j].curve_points[1].x);
+                            Debug.Log("     " + device.axes[j].curve_points[1].y);
+                            Debug.Log("     " + device.axes[j].curve_points[2].x);
+                            Debug.Log("     " + device.axes[j].curve_points[2].y);
+                            Debug.Log("     " + device.axes[j].curve_points[3].y);*/
 
-                            controllers[i].axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(controllers[i].axes[j].curve_points);
+                            // generate the lookup table
+                            device.axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(device.axes[j].curve_points);
                         }
+
+                        // insert the device at the correct spot
+                        int controller_pos = FindControllerIndex(controllerName);
+                        if(controller_pos != -1)
+                        {
+                            if (controller_pos >= controllers.Count){ 
+                                Debug.Log(" Extended.Config: OnLoad: JoystickCurveSection: controllers and m_controllers element count does not match "); 
+                            }
+                            //Debug.Log(" inserted at "+controller_pos+" device: "+device.name);
+                            controllers[controller_pos] = device;
+                        }
+                        else
+                        {
+                            inactive_devices.Add(device);
+                        }
+
                     }
                 }
                 catch (Exception ex)
@@ -627,6 +680,13 @@ namespace GameMod
                     controllers = copy_of_controllers;
 
                 }
+
+                /*
+                Debug.Log("\n device curve order   Overload | Olmod");
+                for (int i = 0; i < controllers.Count; i++)
+                {
+                    Debug.Log(Controls.m_controllers[i].name + " : " + controllers[i].name);
+                }*/
             }
 
             public static void Save(StreamWriter w)

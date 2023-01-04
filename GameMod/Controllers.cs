@@ -22,7 +22,6 @@ namespace GameMod
 
         public class Controller
         {
-            public bool m_active_device = false;
             public string m_device_name = ""; 
             public List<Axis> axes = new List<Axis>();
 
@@ -316,8 +315,6 @@ namespace GameMod
                             deadzone = (Controls.DEADZONE_ADDITIONAL[dz_index] / 0.5f) * 100f;
                         }
 
-                        Debug.Log("  created axis: "+j+"   sensitivity: "+sens+"   deadzone: "+deadzone);
-
                         device.axes.Add(new Controllers.Controller.Axis()
                         {
                             sensitivity = sens,
@@ -328,6 +325,7 @@ namespace GameMod
 
                     device.axes[j].deadzone = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
                     device.axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
+                    Debug.Log("  created axis: " + j + "   sensitivity: " + device.axes[j].sensitivity + "   deadzone: " + device.axes[j].deadzone);
                 }
 
                 int index = FindControllerIndex(controllerName);
@@ -344,7 +342,7 @@ namespace GameMod
             // add the sensitivities of disconnected controllers at the end
             foreach(Controllers.Controller c in unconnected_controllers)
             {
-                c.m_active_device = false;
+                Debug.Log("  readded inactive controller: "+c.m_device_name);
                 Controllers.controllers.Add(c);
             }
 
@@ -357,10 +355,11 @@ namespace GameMod
                 }
             }
 
-            for(int i = 0; i < Controllers.controllers.Count; i++)
-            {
-                Debug.Log(Controllers.controllers[i].m_device_name+" : "+Controls.m_controllers[i].name);
-            }
+            /*
+            Debug.Log("\n device order   Overload | Olmod");
+            for (int i = 0; i < Controllers.controllers.Count; i++) {
+                Debug.Log(Controls.m_controllers[i].name + " : "+Controllers.controllers[i].m_device_name);
+            }*/
 
 
             // Read any new bindings that are past the original CCInput bounds in our pilot .xconfigmod 
