@@ -346,12 +346,23 @@ namespace GameMod
                     Player player = NetworkManager.m_PlayersForScoreboard[list[j]];
 
                     GameMod.CTF.CTFStats ctfStats = new GameMod.CTF.CTFStats();
-                    if (GameMod.CTF.PlayerStats.ContainsKey(player.netId))
-                        ctfStats = GameMod.CTF.PlayerStats[player.netId];
 
                     if (player && !player.m_spectator)
                     {
-                        float num = (!player.gameObject.activeInHierarchy) ? 0.3f : 1f;
+                        float num;
+                        //float num = (!player.gameObject.activeInHierarchy) ? 0.3f : 1f;
+                        if (player.gameObject.activeInHierarchy)
+                        {
+                            num = 1f;
+                            if (GameMod.CTF.PlayerStats.ContainsKey(player.netId))
+                                ctfStats = GameMod.CTF.PlayerStats[player.netId];
+                        }
+                        else
+                        {
+                            num = 0.3f;
+                            if (GameMod.CTF.NameToID.ContainsKey(player.m_mp_name))
+                                ctfStats = GameMod.CTF.PlayerStats[GameMod.CTF.NameToID[player.m_mp_name]];
+                        }
                         if (j % 2 == 0)
                         {
                             UIManager.DrawQuadUI(pos, 400f, 13f, UIManager.m_col_ub0, m_alpha * num * 0.1f, 13);

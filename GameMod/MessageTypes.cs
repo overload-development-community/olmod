@@ -21,6 +21,7 @@ namespace GameMod
         public const short MsgCTFNotify = 125;
         public const short MsgLapCompleted = 126;
         public const short MsgSetFullMatchState = 127;
+        public const short MsgCTFJoinUpdate = 128;
 
         public const short MsgCreeperSync = 130;
         public const short MsgExplode = 131;
