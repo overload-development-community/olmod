@@ -174,6 +174,9 @@ namespace GameMod
                     {
 
                     }
+
+                    taunts.Sort((x, y) => x.name.CompareTo(y.name));
+
                     initialized = true;
                 }
 
@@ -230,7 +233,7 @@ namespace GameMod
             }
 
             [HarmonyPatch(typeof(MenuManager), "ApplySpeakerMode")]
-            internal class MPAudioTaunts_PlayerShip_UpdateReadImmediateControls
+            internal class MPAudioTaunts_MenuManager_ApplySpeakerMode
             {
                 private static AudioSpeakerMode speaker_mode;
 
@@ -270,6 +273,7 @@ namespace GameMod
                         AClient.keybinds[i] = -1;
                     }
                     AClient.LoadLocalAudioTauntsFromPilotPrefs();
+                    taunts.Sort((x, y) => x.name.CompareTo(y.name));
 
                     Debug.Log("Reload complete. amount of taunts: " + AClient.taunts.Count);
                 }
