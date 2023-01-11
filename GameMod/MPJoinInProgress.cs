@@ -569,7 +569,7 @@ namespace GameMod {
             {
                 if (cID != null && MPTweaks.ClientHasTweak(cID.connectionId, "jip"))
                 {
-                    Debug.Log("CCF Sending disconnect msg to " + cID.connectionId);
+                    //Debug.Log("CCF Sending disconnect msg to " + cID.connectionId);
                     NetworkServer.SendToClient(cID.connectionId, MessageTypes.MsgSetDisconnectedMatchState, dcmsg);
                 }
             }
