@@ -445,6 +445,7 @@ namespace GameMod {
                 yield break;
             }
 
+            // this doesn't seem to be necessary here and was breaking stuff so I just turned it off - CC
             /*if (!SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME, true, true)) {
                 yield break;
             }*/
@@ -472,26 +473,38 @@ namespace GameMod {
         {
             if (!CTF.IsActiveServer)
                 return;
+
             int conn_id = player.connectionToClient.connectionId;
+            var inv = NetworkInstanceId.Invalid;
+
+            // sync flag possession
             foreach (var x in CTF.PlayerHasFlag) {
-                //CTF.SendCTFPickup(conn_id, FindPlayerForEffect(x.Key), x.Value, FlagState.PICKEDUP);
-                SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = x.Value, m_destroy = true, m_timer = 0, m_mp_name = "", m_player_id = NetworkInstanceId.Invalid});
+                SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = x.Value, m_destroy = true, m_timer = 0, m_mp_name = "", m_player_id = inv, m_old_id = inv });
                 CTF.SendCTFPickup(conn_id, NetworkServer.FindLocalObject(x.Key).GetComponent<Player>(), x.Value, FlagState.PICKEDUP);
             }
+            
+            // sync any dropped flags and their timers
             for (int flag = 0; flag < TeamCount; flag++)
             {
                 if (FlagStates[flag] == FlagState.LOST)
                 {
-                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = true, m_timer = 0f, m_mp_name = "", m_player_id = NetworkInstanceId.Invalid });
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = true, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
                     CTF.SendCTFFlagUpdate(conn_id, NetworkInstanceId.Invalid, flag, FlagStates[flag]);
-                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 2, m_flag_id = flag, m_destroy = false, m_timer = CTF.FlagReturnTime[flag] - Time.time, m_mp_name = "", m_player_id = NetworkInstanceId.Invalid });
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 2, m_flag_id = flag, m_destroy = false, m_timer = CTF.FlagReturnTime[flag] - Time.time, m_mp_name = "", m_player_id = inv, m_old_id = inv });
                 }
                 else
                 {
-                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = false, m_timer = 0f, m_mp_name = "", m_player_id = NetworkInstanceId.Invalid });
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = false, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
                 }
             }
-            SendToClientOrAll(-1, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 0, m_flag_id = 0, m_destroy = false, m_timer = 0f, m_mp_name = player.m_mp_name, m_player_id = player.netId });
+
+            // sync the stats and make the client update the NameToID dictionary 
+            NetworkInstanceId old;
+            if (!CTF.NameToID.TryGetValue(player.m_mp_name, out old))
+            {
+                old = NetworkInstanceId.Invalid;
+            }
+            SendToClientOrAll(-1, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 0, m_flag_id = 0, m_destroy = false, m_timer = 0f, m_mp_name = player.m_mp_name, m_player_id = player.netId, m_old_id = old });
         }
 
         // return Player object for given net id if it should show an effect, i.e. not local player or headless
@@ -924,7 +937,9 @@ namespace GameMod {
             writer.Write(m_timer);
             writer.Write(m_mp_name);
             writer.Write(m_player_id);
+            writer.Write(m_old_id);
         }
+
         public override void Deserialize(NetworkReader reader)
         {
             var version = reader.ReadByte();
@@ -934,6 +949,7 @@ namespace GameMod {
             m_timer = reader.ReadSingle();
             m_mp_name = reader.ReadString();
             m_player_id = reader.ReadNetworkId();
+            m_old_id = reader.ReadNetworkId();
         }
         public byte m_mode;
         public int m_flag_id;
@@ -941,6 +957,7 @@ namespace GameMod {
         public float m_timer;
         public string m_mp_name;
         public NetworkInstanceId m_player_id;
+        public NetworkInstanceId m_old_id;
     }
 
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
@@ -1109,18 +1126,37 @@ namespace GameMod {
             switch (msg.m_mode)
             {
                 case 0: // player JIPed, update network IDs for scoreboard if needed
-                    if (CTF.NameToID.ContainsKey(msg.m_mp_name))
+                    if (msg.m_player_id == GameManager.m_local_player.netId) // this is a freshly created ID from OnMatchStart, which needs to be deleted for the JIP client to sync to the old one correctly. Would be better to do this on join if we had a way to tell client-side.
                     {
-                        NetworkInstanceId idx = CTF.NameToID[msg.m_mp_name];
-                        CTF.CTFStats old = CTF.PlayerStats[idx];
-                        CTF.PlayerStats.Remove(idx);
-                        CTF.NameToID[msg.m_mp_name] = msg.m_player_id;
-                        CTF.PlayerStats.Add(msg.m_player_id, old);
+                        //Debug.Log("CCF JoinUpdate deleting fresh entries due to JIP");
+                        CTF.PlayerStats.Remove(msg.m_player_id);
+                        CTF.NameToID.Remove(msg.m_mp_name);
                     }
-                    else if (GameManager.m_local_player.netId != msg.m_player_id) // already done on the local client
+
+                    if (CTF.NameToID.ContainsKey(msg.m_mp_name)) // found the old ID, sync up the player stats
+                    {                        
+                        //Debug.Log("CCF JoinUpdate existing player found, syncing");
+                        NetworkInstanceId idx = CTF.NameToID[msg.m_mp_name];
+                        CTF.NameToID[msg.m_mp_name] = msg.m_player_id;
+                        CTF.PlayerStats.Add(msg.m_player_id, CTF.PlayerStats[idx]);
+                        CTF.PlayerStats.Remove(idx);
+                    }
+                    else // didn't find it and need to create an entry
                     {
                         CTF.NameToID.Add(msg.m_mp_name, msg.m_player_id);
-                        CTF.PlayerStats.Add(msg.m_player_id, new CTF.CTFStats());
+
+                        if (CTF.PlayerStats.ContainsKey(msg.m_old_id)) // name doesn't exist yet but stats do
+                        {
+                            //Debug.Log("CCF JoinUpdate creating new player entry to sync with existing stats");
+                            CTF.PlayerStats.Add(msg.m_player_id, CTF.PlayerStats[msg.m_old_id]);
+                            CTF.PlayerStats.Remove(msg.m_old_id);
+                        }
+                        else // totally new player
+                        {
+                            //Debug.Log("CCF JoinUpdate creating new blank player entry");
+                            CTF.PlayerStats.Add(msg.m_player_id, new CTF.CTFStats());
+                        }
+
                     }
                     break;
 
@@ -1144,7 +1180,7 @@ namespace GameMod {
 
                 case 2: // update one of the flag timers for JIPed players to reflect a dropped flag
                     CTF.FlagReturnTime[msg.m_flag_id] = msg.m_timer + Time.time;
-                    Debug.Log("CCF timer: " + msg.m_timer + ", current time: " + Time.time + ", new FlagReturnTime: " + CTF.FlagReturnTime[msg.m_flag_id]);
+                    //Debug.Log("CCF timer: " + msg.m_timer + ", current time: " + Time.time + ", new FlagReturnTime: " + CTF.FlagReturnTime[msg.m_flag_id]);
                     break;
             }
         }
@@ -1300,10 +1336,12 @@ namespace GameMod {
 
             foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
             {
-                if (!CTF.PlayerStats.ContainsKey(player.netId))
+                //if (!CTF.PlayerStats.ContainsKey(player.netId))
+                if (!CTF.NameToID.ContainsKey(player.m_mp_name))
                 {
-                    CTF.PlayerStats.Add(player.netId, new CTF.CTFStats());
+                    //Debug.Log("CCF Adding OnMatchStart Stats");
                     CTF.NameToID.Add(player.m_mp_name, player.netId);
+                    CTF.PlayerStats.Add(player.netId, new CTF.CTFStats());
                 }
             }
         }
@@ -1319,6 +1357,7 @@ namespace GameMod {
             {
                 if (!CTF.PlayerStats.ContainsKey(mps.Key))
                 {
+                    //Debug.Log("CCF OnCTFPlayerStats firing, no key found");
                     // Likely JIP
                     CTF.PlayerStats.Add(mps.Key, new CTF.CTFStats
                     {
@@ -1330,14 +1369,20 @@ namespace GameMod {
                     });
                     foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
                     {
-                        if (player.netId == mps.Key)
+                        if (player.netId == mps.Key) // if this *doesn't* trigger, then we're on the joining client. Stats/Name will get properly updated with a CTFJoinUpdate momentarily
                         {
-                            CTF.NameToID.Add(player.m_mp_name, mps.Key);
+                            if (!CTF.NameToID.ContainsKey(player.m_mp_name) && player.m_mp_name != GameManager.m_local_player.m_mp_name)
+                            {
+                                // if this *doesn't* trigger, then we're on the joining client. Stats/Name will get properly updated with a CTFJoinUpdate momentarily
+                                //Debug.Log("CCF OnCTFPlayerStats adding name to NameToID");
+                                CTF.NameToID.Add(player.m_mp_name, mps.Key);
+                            }
                         }
                     }
                 }
                 else
                 {
+                    //Debug.Log("CCF OnCTFPlayerStats firing, key WAS found");
                     CTF.PlayerStats[mps.Key].Captures = mps.Value.Captures;
                     CTF.PlayerStats[mps.Key].CarrierKills = mps.Value.CarrierKills;
                     CTF.PlayerStats[mps.Key].Drops = mps.Value.Drops;
