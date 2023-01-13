@@ -1502,7 +1502,7 @@ namespace GameMod
 
     // if team-coloured creepers are on and friendly fire isn't, causes the player's creepers to blink periodically
     [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
-    static class MPTeams_Projectile_UpdateDynamic
+    static class MPTeams_Projectile_FixedUpdateDynamic
     {
         const float offTime = 0.2f;
         const float cycleTime = 1.2f;
@@ -1516,7 +1516,7 @@ namespace GameMod
         {
             if (GameplayManager.IsMultiplayerActive && Menus.mms_creeper_colors && MenuManager.mms_friendly_fire != 1 && __instance.m_type == ProjPrefab.missile_creeper && __instance.m_owner_player.isLocalPlayer)
             {
-                if (nextTime <= Time.time)
+                if (!__instance.m_robot_only_extra_mesh.activeSelf && nextTime <= Time.time)
                 {
                     if (!glowOn)
                     {
