@@ -33,10 +33,14 @@ namespace GameMod {
         public const float ReturnTimeAmountDefault = 30;
         public static float ReturnTimeAmount = ReturnTimeAmountDefault;
         public static bool ShowReturnTimer = false;
+        public static Item[] SpawnedFlags = new Item[TeamCount];
+        public static bool FlagWasHome = true;
         public static bool CarrierBoostEnabled = true;
         public static object FlagLock = new object();
         private static MethodInfo _Item_ItemIsReachable_Method = typeof(Item).GetMethod("ItemIsReachable", BindingFlags.NonPublic | BindingFlags.Instance);
         public static Dictionary<NetworkInstanceId, CTFStats> PlayerStats = new Dictionary<NetworkInstanceId, CTFStats>();
+        public static Dictionary<String, NetworkInstanceId> NameToID = new Dictionary<string, NetworkInstanceId>(); // this is hacky but avoids having to redo the PlayerStats dictionary by pilot name instead of network ID
+
         public class CTFStats
         {
             public int CarrierKills = 0;
@@ -90,27 +94,36 @@ namespace GameMod {
             var player_id = player.netId;
 
             lock (CTF.FlagLock) {
-                if (CTF.FlagStates[flag_id] == FlagState.PICKEDUP) {
-                    return false;
-                }
+                if (conn_id == -1)
+                {
+                    if (CTF.FlagStates[flag_id] == FlagState.PICKEDUP)
+                    {
+                        return false;
+                    }
 
-                // Recheck that the object is still there in case another player got the flag first.
-                if (!(bool)_Item_ItemIsReachable_Method.Invoke(item, new object[] { player.c_player_ship.c_mesh_collider })) {
-                    return false;
-                }
+                    // Recheck that the object is still there in case another player got the flag first.
+                    if (!(bool)_Item_ItemIsReachable_Method.Invoke(item, new object[] { player.c_player_ship.c_mesh_collider }))
+                    {
+                        return false;
+                    }
 
-                CTF.FlagStates[flag_id] = state;
-                
-                if (CTF.PlayerHasFlag.ContainsKey(player_id)) {
-                    return false;
-                }
+                    CTF.FlagStates[flag_id] = state;
 
-                if (item.c_go != null) {
-                    item.m_type = ItemType.NONE;
-                    UnityEngine.Object.Destroy(item.c_go);
-                }
+                    if (CTF.PlayerHasFlag.ContainsKey(player_id)) {
+                        return false;
+                    }
 
-                CTF.PlayerHasFlag.Add(player_id, flag_id);
+                    if (item != null) { //  && item.c_go != null
+                        item.m_type = ItemType.NONE;
+                        UnityEngine.Object.Destroy(item.c_go);
+                    }
+
+                    CTF.PlayerHasFlag.Add(player_id, flag_id);
+                }
+                else
+                {
+                    CTF.FlagStates[flag_id] = state;
+                }
                 SendToClientOrAll(conn_id, MessageTypes.MsgCTFPickup, new PlayerFlagMessage { m_player_id = player_id, m_flag_id = flag_id, m_flag_state = state });
             }
 
@@ -155,7 +168,8 @@ namespace GameMod {
         public static bool SendCTFFlagUpdate(int conn_id, NetworkInstanceId player_id, int flag_id, FlagState state, bool spawnFlagAtHome = false, Item item = null)
         {
             lock (CTF.FlagLock) {
-                if (CTF.FlagStates[flag_id] == state) {
+                if (conn_id == -1 && CTF.FlagStates[flag_id] == state)
+                {
                     return false;
                 }
 
@@ -241,10 +255,13 @@ namespace GameMod {
             FlagReturnTime = new float[TeamCount];
             ShowReturnTimer = false;
             PlayerStats = new Dictionary<NetworkInstanceId, CTFStats>();
+            NameToID = new Dictionary<string, NetworkInstanceId>();
             foreach (var timer in FlagReturnTimer)
                 if (timer != null)
                     GameManager.m_gm.StopCoroutine(timer);
             FlagReturnTimer = new IEnumerator[TeamCount];
+            SpawnedFlags = new Item[TeamCount];
+            FlagWasHome = true;
         }
 
         // pickup of flag item
@@ -307,6 +324,7 @@ namespace GameMod {
                 Debug.Log("CTF: No home spawn point for flag " + flag_id);
                 return;
             }
+            CTF.FlagWasHome = true;
             SpawnAt(flag_id, SpawnPoint[flag_id], Vector3.zero);
         }
 
@@ -329,10 +347,10 @@ namespace GameMod {
 
             flag.SetActive(true);
             NetworkServer.Spawn(flag);
-            var item = flag.GetComponent<Item>();
+            SpawnedFlags[flag_id] = flag.GetComponent<Item>();
             //item.m_spewed = true;
             //item.m_spawn_point = -1;
-            item.c_rigidbody.velocity = vel * item.m_push_multiplier;
+            SpawnedFlags[flag_id].c_rigidbody.velocity = vel * SpawnedFlags[flag_id].m_push_multiplier;
         }
 
         public static NetworkHash128 FlagAssetId(int flag)
@@ -427,10 +445,12 @@ namespace GameMod {
                 yield break;
             }
 
-            if (!SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME, true, true)) {
+            // this doesn't seem to be necessary here and was breaking stuff so I just turned it off - CC
+            /*if (!SendCTFLose(-1, default(NetworkInstanceId), flag, FlagState.HOME, true, true)) {
                 yield break;
-            }
+            }*/
 
+            SendCTFFlagUpdate(-1, NetworkInstanceId.Invalid, flag, FlagState.HOME, true, SpawnedFlags[flag]);
             NotifyAll(CTFEvent.RETURN, string.Format(Loc.LS("LOST {0} FLAG RETURNED AFTER TIMER EXPIRED!"), MPTeams.TeamName(MPTeams.AllTeams[flag])), null, flag);
             FlagReturnTimer[flag] = null;
         }
@@ -453,13 +473,38 @@ namespace GameMod {
         {
             if (!CTF.IsActiveServer)
                 return;
+
             int conn_id = player.connectionToClient.connectionId;
+            var inv = NetworkInstanceId.Invalid;
+
+            // sync flag possession
             foreach (var x in CTF.PlayerHasFlag) {
-                CTF.SendCTFPickup(conn_id, FindPlayerForEffect(x.Key), x.Value, FlagState.PICKEDUP);
+                SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = x.Value, m_destroy = true, m_timer = 0, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                CTF.SendCTFPickup(conn_id, NetworkServer.FindLocalObject(x.Key).GetComponent<Player>(), x.Value, FlagState.PICKEDUP);
             }
+            
+            // sync any dropped flags and their timers
             for (int flag = 0; flag < TeamCount; flag++)
+            {
                 if (FlagStates[flag] == FlagState.LOST)
+                {
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = true, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
                     CTF.SendCTFFlagUpdate(conn_id, NetworkInstanceId.Invalid, flag, FlagStates[flag]);
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 2, m_flag_id = flag, m_destroy = false, m_timer = CTF.FlagReturnTime[flag] - Time.time, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                }
+                else
+                {
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = false, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                }
+            }
+
+            // sync the stats and make the client update the NameToID dictionary 
+            NetworkInstanceId old;
+            if (!CTF.NameToID.TryGetValue(player.m_mp_name, out old))
+            {
+                old = NetworkInstanceId.Invalid;
+            }
+            SendToClientOrAll(-1, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 0, m_flag_id = 0, m_destroy = false, m_timer = 0f, m_mp_name = player.m_mp_name, m_player_id = player.netId, m_old_id = old });
         }
 
         // return Player object for given net id if it should show an effect, i.e. not local player or headless
@@ -475,7 +520,7 @@ namespace GameMod {
 
         public static void UpdateShipEffects(Player player)
         {
-            if (!CTF.PlayerHasFlag.ContainsKey(player.netId))
+            if (player == null || !CTF.PlayerHasFlag.ContainsKey(player.netId))
                 return;
 
             CTFCarrierGlow.ResetMats();
@@ -716,7 +761,9 @@ namespace GameMod {
         private static void SpawnFlags()
         {
             for (int i = 0; i < CTF.TeamCount; i++)
+            {
                 CTF.SpawnAtHome(i);
+            }
         }
 
         private static void Postfix()
@@ -879,6 +926,40 @@ namespace GameMod {
         public int m_flag_id;
     }
 
+    public class CTFJoinUpdateMessage : MessageBase
+    {
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write((byte)0); // version
+            writer.Write(m_mode);
+            writer.WritePackedUInt32((uint)m_flag_id);
+            writer.Write(m_destroy);
+            writer.Write(m_timer);
+            writer.Write(m_mp_name);
+            writer.Write(m_player_id);
+            writer.Write(m_old_id);
+        }
+
+        public override void Deserialize(NetworkReader reader)
+        {
+            var version = reader.ReadByte();
+            m_mode = reader.ReadByte();
+            m_flag_id = (int)reader.ReadPackedUInt32();
+            m_destroy = reader.ReadBoolean();
+            m_timer = reader.ReadSingle();
+            m_mp_name = reader.ReadString();
+            m_player_id = reader.ReadNetworkId();
+            m_old_id = reader.ReadNetworkId();
+        }
+        public byte m_mode;
+        public int m_flag_id;
+        public bool m_destroy;
+        public float m_timer;
+        public string m_mp_name;
+        public NetworkInstanceId m_player_id;
+        public NetworkInstanceId m_old_id;
+    }
+
     [HarmonyPatch(typeof(Client), "RegisterHandlers")]
     class CTFClientHandlers
     {
@@ -888,6 +969,10 @@ namespace GameMod {
 
             if (!CTF.IsActiveServer)
             {
+                if (CTF.FlagStates[msg.m_flag_id] == FlagState.HOME)
+                {
+                    CTF.FlagWasHome = true;
+                }
                 CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
                 if (CTF.PlayerHasFlag.ContainsKey(msg.m_player_id))
                     return;
@@ -901,7 +986,10 @@ namespace GameMod {
             }
 
             // copy flag ring effect to carrier ship
-            CTF.PlayerEnableRing(CTF.FindPlayerForEffect(msg.m_player_id), msg.m_flag_id);
+            if (!GameplayManager.IsDedicatedServer())
+            {
+                CTF.PlayerEnableRing(CTF.FindPlayerForEffect(msg.m_player_id), msg.m_flag_id);
+            }
         }
 
         private static void OnCTFLose(NetworkMessage rawMsg)
@@ -925,7 +1013,10 @@ namespace GameMod {
             }
 
             // remove flag ring effect from carrier ship
-            CTF.PlayerDisableRing(CTF.FindPlayerForEffect(msg.m_player_id));
+            if (!GameplayManager.IsDedicatedServer())
+            {
+                CTF.PlayerDisableRing(CTF.FindPlayerForEffect(msg.m_player_id));
+            }
         }
 
         private static void OnCTFNotifyOld(NetworkMessage rawMsg)
@@ -942,6 +1033,8 @@ namespace GameMod {
             if (!CTF.IsActiveServer)
             {
                 CTF.FlagStates[msg.m_flag_id] = msg.m_flag_state;
+                if (!msg.m_player_id.Equals(NetworkInstanceId.Invalid))
+                    CTF.UpdateShipEffects(CTF.FindPlayerForEffect(msg.m_player_id));
             }
         }
 
@@ -972,11 +1065,11 @@ namespace GameMod {
                             }
                             break;
                         case CTFEvent.PICKUP:
-                            var currentState = CTF.FlagStates[msg.m_flag_id];
-                            if (currentState == FlagState.HOME)
+                            if (CTF.FlagWasHome)
                             {
                                 message = string.Format(Loc.LS("{0} ({1}) PICKS UP THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
                                     MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                                CTF.FlagWasHome = false;
                             } else
                             {
                                 message = message = string.Format(Loc.LS("{0} ({1}) FINDS THE {2} FLAG AMONG SOME DEBRIS!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team),
@@ -984,7 +1077,14 @@ namespace GameMod {
                             }
                             break;
                         case CTFEvent.DROP:
-                            message = string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            if (msg.m_player_id == null || msg.m_player_id == default(NetworkInstanceId))
+                            {
+                                message = string.Format(Loc.LS("{0} ({1}) DROPPED THE {2} FLAG!"), player.m_mp_name, MPTeams.TeamName(player.m_mp_team), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]), player, msg.m_flag_id);
+                            }
+                            else // this seems to be the only message that can fire *after* a player disconnects
+                            {
+                                message = string.Format(Loc.LS("THE {0} FLAG HAS BEEN DROPPED!"), MPTeams.TeamName(MPTeams.AllTeams[msg.m_flag_id]));
+                            }
                             break;
                     }
                 }
@@ -1000,15 +1100,87 @@ namespace GameMod {
                     break;
                 case CTFEvent.DROP:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.cine_sfx_warning_2, 0.7f, 0f, 0f, false);
-                    CTF.PlayerStats[msg.m_player_id].Drops++;
+                    if (msg.m_player_id != null && msg.m_player_id != default(NetworkInstanceId))
+                    {
+                        CTF.PlayerStats[msg.m_player_id].Drops++;
+                    }
                     break;
                 case CTFEvent.RETURN:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.sfx_matcenter_warp_high1, 1.1f, 0f, 0f, false);
-                    CTF.PlayerStats[msg.m_player_id].Returns++;
+                    if (msg.m_player_id != null && msg.m_player_id != default(NetworkInstanceId))
+                    {
+                        CTF.PlayerStats[msg.m_player_id].Returns++;
+                    }
                     break;
                 case CTFEvent.SCORE:
                     SFXCueManager.PlayRawSoundEffect2D(SoundEffect.ui_upgrade, 1f, 0f, 0f, false);
                     CTF.PlayerStats[msg.m_player_id].Captures++;
+                    break;
+            }
+        }
+
+        // catch-all for problems encountered during JIP
+        private static void OnCTFJoinUpdate(NetworkMessage rawMsg)
+        {
+            var msg = rawMsg.ReadMessage<CTFJoinUpdateMessage>();
+            switch (msg.m_mode)
+            {
+                case 0: // player JIPed, update network IDs for scoreboard if needed
+                    if (msg.m_player_id == GameManager.m_local_player.netId) // this is a freshly created ID from OnMatchStart, which needs to be deleted for the JIP client to sync to the old one correctly. Would be better to do this on join if we had a way to tell client-side.
+                    {
+                        //Debug.Log("CCF JoinUpdate deleting fresh entries due to JIP");
+                        CTF.PlayerStats.Remove(msg.m_player_id);
+                        CTF.NameToID.Remove(msg.m_mp_name);
+                    }
+
+                    if (CTF.NameToID.ContainsKey(msg.m_mp_name)) // found the old ID, sync up the player stats
+                    {                        
+                        //Debug.Log("CCF JoinUpdate existing player found, syncing");
+                        NetworkInstanceId idx = CTF.NameToID[msg.m_mp_name];
+                        CTF.NameToID[msg.m_mp_name] = msg.m_player_id;
+                        CTF.PlayerStats.Add(msg.m_player_id, CTF.PlayerStats[idx]);
+                        CTF.PlayerStats.Remove(idx);
+                    }
+                    else // didn't find it and need to create an entry
+                    {
+                        CTF.NameToID.Add(msg.m_mp_name, msg.m_player_id);
+
+                        if (CTF.PlayerStats.ContainsKey(msg.m_old_id)) // name doesn't exist yet but stats do
+                        {
+                            //Debug.Log("CCF JoinUpdate creating new player entry to sync with existing stats");
+                            CTF.PlayerStats.Add(msg.m_player_id, CTF.PlayerStats[msg.m_old_id]);
+                            CTF.PlayerStats.Remove(msg.m_old_id);
+                        }
+                        else // totally new player
+                        {
+                            //Debug.Log("CCF JoinUpdate creating new blank player entry");
+                            CTF.PlayerStats.Add(msg.m_player_id, new CTF.CTFStats());
+                        }
+
+                    }
+                    break;
+
+                case 1: // update flag colors and remove duplicates if needed for JIPed player
+                    foreach (var item in GameObject.FindObjectsOfType<Item>())
+                    {
+                        if (item.m_type == ItemType.KEY_SECURITY && item.m_index == msg.m_flag_id)
+                        {
+                            if (msg.m_destroy)
+                            {
+                                item.m_type = ItemType.NONE;
+                                UnityEngine.Object.Destroy(item.gameObject);
+                            }
+                            else
+                            {
+                                CTF.UpdateFlagColor(item.c_go, item.m_index);
+                            }
+                        }
+                    }
+                    break;
+
+                case 2: // update one of the flag timers for JIPed players to reflect a dropped flag
+                    CTF.FlagReturnTime[msg.m_flag_id] = msg.m_timer + Time.time;
+                    //Debug.Log("CCF timer: " + msg.m_timer + ", current time: " + Time.time + ", new FlagReturnTime: " + CTF.FlagReturnTime[msg.m_flag_id]);
                     break;
             }
         }
@@ -1022,6 +1194,7 @@ namespace GameMod {
             Client.GetClient().RegisterHandler(MessageTypes.MsgCTFNotifyOld, OnCTFNotifyOld);
             Client.GetClient().RegisterHandler(MessageTypes.MsgCTFFlagUpdate, OnCTFFlagUpdate);
             Client.GetClient().RegisterHandler(MessageTypes.MsgCTFNotify, OnCTFNotify);
+            Client.GetClient().RegisterHandler(MessageTypes.MsgCTFJoinUpdate, OnCTFJoinUpdate);
         }
     }
 
@@ -1163,10 +1336,14 @@ namespace GameMod {
 
             foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
             {
-                if (!CTF.PlayerStats.ContainsKey(player.netId))
+                //if (!CTF.PlayerStats.ContainsKey(player.netId))
+                if (!CTF.NameToID.ContainsKey(player.m_mp_name))
+                {
+                    //Debug.Log("CCF Adding OnMatchStart Stats");
+                    CTF.NameToID.Add(player.m_mp_name, player.netId);
                     CTF.PlayerStats.Add(player.netId, new CTF.CTFStats());
+                }
             }
-
         }
     }
 
@@ -1180,6 +1357,7 @@ namespace GameMod {
             {
                 if (!CTF.PlayerStats.ContainsKey(mps.Key))
                 {
+                    //Debug.Log("CCF OnCTFPlayerStats firing, no key found");
                     // Likely JIP
                     CTF.PlayerStats.Add(mps.Key, new CTF.CTFStats
                     {
@@ -1189,9 +1367,22 @@ namespace GameMod {
                         Pickups = mps.Value.Pickups,
                         Returns = mps.Value.Returns
                     });
+                    foreach (var player in Overload.NetworkManager.m_PlayersForScoreboard)
+                    {
+                        if (player.netId == mps.Key) // if this *doesn't* trigger, then we're on the joining client. Stats/Name will get properly updated with a CTFJoinUpdate momentarily
+                        {
+                            if (!CTF.NameToID.ContainsKey(player.m_mp_name) && player.m_mp_name != GameManager.m_local_player.m_mp_name)
+                            {
+                                // if this *doesn't* trigger, then we're on the joining client. Stats/Name will get properly updated with a CTFJoinUpdate momentarily
+                                //Debug.Log("CCF OnCTFPlayerStats adding name to NameToID");
+                                CTF.NameToID.Add(player.m_mp_name, mps.Key);
+                            }
+                        }
+                    }
                 }
                 else
                 {
+                    //Debug.Log("CCF OnCTFPlayerStats firing, key WAS found");
                     CTF.PlayerStats[mps.Key].Captures = mps.Value.Captures;
                     CTF.PlayerStats[mps.Key].CarrierKills = mps.Value.CarrierKills;
                     CTF.PlayerStats[mps.Key].Drops = mps.Value.Drops;
