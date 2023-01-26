@@ -11,6 +11,7 @@ using UnityEngine.Events;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using UnityEngine.Audio;
 
 namespace GameMod
 {
@@ -173,8 +174,12 @@ namespace GameMod
                     {
 
                     }
+
+                    taunts.Sort((x, y) => x.name.CompareTo(y.name));
+
                     initialized = true;
                 }
+
 
 
                 // from https://github.com/derhass/olmod/commit/fa897b3384dfd6f228d4c95a385af6b7f37d99b5
@@ -227,14 +232,60 @@ namespace GameMod
                 }
             }
 
+            [HarmonyPatch(typeof(MenuManager), "ApplySpeakerMode")]
+            internal class MPAudioTaunts_MenuManager_ApplySpeakerMode
+            {
+                private static AudioSpeakerMode speaker_mode;
+
+                static void Prefix()
+                {
+                    speaker_mode = AudioSettings.speakerMode;
+                }
+
+                static void Postfix()
+                {
+                    if(speaker_mode != AudioSettings.speakerMode)
+                        Reload();
+                }
+            }
+
+            public static void Reload()
+            {
+                if (!GameplayManager.IsDedicatedServer())
+                {
+                    AClient.taunts = new List<AudioTaunt>();
+                    for (int i = 0; i < AClient.asc.Length; i++)
+                        AClient.asc[i] = new AudioSourceContainer();
+
+
+                    AClient.ImportAudioTaunts(AClient.LocalAudioTauntDirectory, new List<string>(), false, true);
+                    AClient.ImportAudioTaunts(AClient.ExternalAudioTauntDirectory, new List<string>(), true, true);
+                    for (int i = 0; i < 6; i++)
+                    {
+                        AClient.local_taunts[i] = new AudioTaunt
+                        {
+                            hash = "EMPTY",
+                            name = "EMPTY",
+                            audioclip = null,
+                            ready_to_play = false,
+                            requested_taunt = false
+                        };
+                        AClient.keybinds[i] = -1;
+                    }
+                    AClient.LoadLocalAudioTauntsFromPilotPrefs();
+                    taunts.Sort((x, y) => x.name.CompareTo(y.name));
+
+                    Debug.Log("Reload complete. amount of taunts: " + AClient.taunts.Count);
+                }
+            }
 
             // Imports either the in 'files_to_load' specified taunts or all taunts from that directory
             // (under the condition that they have yet to be imported and are valid formats and that their size is not beyond 128 kB) 
-            public static void ImportAudioTaunts(string path_to_directory, List<String> files_to_load, bool external_taunts = false)
+            public static void ImportAudioTaunts(string path_to_directory, List<String> files_to_load, bool external_taunts = false, bool silent = false)
             {
                 Debug.Log("Attempting to import AudioTaunts from: " + path_to_directory);
                 bool load_all_files = files_to_load == null | files_to_load.Count == 0;
-                Debug.Log(" load all files: " + load_all_files);
+                //Debug.Log(" load all files: " + load_all_files);
                 var fileInfo = new DirectoryInfo(path_to_directory).GetFiles();
                 foreach (FileInfo file in fileInfo)
                 {
@@ -253,7 +304,7 @@ namespace GameMod
                             ready_to_play = true,
                             requested_taunt = false
                         };
-
+                        
                         if (t.name.StartsWith(t.hash))
                         {
                             t.name = t.name.Remove(0, t.hash.Length + 1);
@@ -264,7 +315,8 @@ namespace GameMod
                         }
 
                         taunts.Add(t);
-                        Debug.Log("  Added " + file.Name + "  size: " + file.Length + " as an AudioTaunt");
+                        if(!silent)
+                            Debug.Log("  Added " + file.Name + "  size: " + file.Length + " as an AudioTaunt");
 
                     }
                 }
@@ -382,6 +434,8 @@ namespace GameMod
                 }
             }
 
+
+
             // the clip_id should only be added when the audioclip should be shared
             public static void PlayAudioTauntFromAudioclip(AudioClip audioClip, string player_name, string clip_id = null)
             {
@@ -410,14 +464,15 @@ namespace GameMod
                 else
                     asc[index].player_name = "EMPTY";
 
-                asc[index].source.priority = 10;
+
+                asc[index].source.enabled = true;
+                asc[index].source.priority = 0;
                 asc[index].source.clip = audioClip;
                 asc[index].source.volume = audio_taunt_volume / 100f;
-                //asc[index].source.timeSamples = 0;
-                //asc[index].source.bypassReverbZones = true;
-                //asc[index].source.reverbZoneMix = 0f;
-                asc[index].source.Play();//AudioSettings.dspTime);
-                //asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
+                asc[index].source.bypassReverbZones = true;
+                asc[index].source.reverbZoneMix = 0.001f;
+                asc[index].source.PlayScheduled(AudioSettings.dspTime);
+                asc[index].source.SetScheduledEndTime(AudioSettings.dspTime + TAUNT_PLAYTIME);
 
                 if (GameplayManager.IsMultiplayer
                     && clip_id != null
@@ -563,7 +618,6 @@ namespace GameMod
                             GameManager.m_gm.StartCoroutine(MPAudioTaunts_Client_RegisterHandlers.UploadAudioTauntToServer(MPAudioTaunts_Client_RegisterHandlers.queued_uploads[0]));
                             MPAudioTaunts_Client_RegisterHandlers.queued_uploads.Remove(MPAudioTaunts_Client_RegisterHandlers.queued_uploads[0]);
                         }
-
 
 
                         // Checks for Keyinput on this client for triggering the playing of an audio taunt
@@ -1378,7 +1432,6 @@ namespace GameMod
             }
         }
 
-        // Todo:
         public class Ack : MessageBase
         {
             public string identifier;
@@ -1399,7 +1452,6 @@ namespace GameMod
 
 
 
-        // Todo: test this
         public class AudioTauntPacket : MessageBase
         {
             public int filesize;
@@ -1450,63 +1502,6 @@ namespace GameMod
                 
             }
         }
-
-
-
-
-
-
-
-
-
-        /*
-        // DEBUG
-        [HarmonyPatch(typeof(GameManager), "Start")]
-        internal class DebugCommandsPatch
-        {
-            private static void Postfix(GameManager __instance)
-            {
-                uConsole.RegisterCommand("q", "lets you test shiny soundeffects", new uConsole.DebugCommand(CmdPlaySoundEffect));
-                uConsole.RegisterCommand("b1", "", new uConsole.DebugCommand(testBool1));
-                uConsole.RegisterCommand("b2", "", new uConsole.DebugCommand(testBool2));
-                uConsole.RegisterCommand("test", "", new uConsole.DebugCommand(testVar1));
-            }
-
-
-            private static void CmdPlaySoundEffect()
-            {
-                int effect_index = uConsole.GetInt();
-                GameManager.m_audio.PlayCue2D(effect_index, 0.5f, 0.07f, 0f, false);
-            }
-            private static void testBool1()
-            {
-                uConsole.Log((GameplayManager.m_gameplay_state == GameplayState.PLAYING).ToString());
-
-            }
-            private static void testBool2()
-            {
-                uConsole.Log("");
-            }
-            private static void testVar1()
-            {
-                
-                    uConsole.Log(
-                        "GameplayManager.IsMultiplayer: " + GameplayManager.IsMultiplayer.ToString()+"\n" +
-                        "Client.GetClient() != null: " + (Client.GetClient() != null).ToString() + "\n" +
-                        "GameplayManager.m_gameplay_state == GameplayState.PLAYING: " + (GameplayManager.m_gameplay_state == GameplayState.PLAYING).ToString() + "\n" +
-                        "MenuManager.m_menu_state == MenuState.MP_LOBBY: " + (MenuManager.m_menu_state == MenuState.MP_LOBBY).ToString() + "\n"
-                        );
-            }
-
-        }*/
-
-
-
-
-
-
-
-
 
 
 

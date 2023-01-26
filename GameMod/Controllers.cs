@@ -22,7 +22,7 @@ namespace GameMod
 
         public class Controller
         {
-
+            public string m_device_name = ""; 
             public List<Axis> axes = new List<Axis>();
 
             public class Axis
@@ -258,6 +258,19 @@ namespace GameMod
             }
         }
 
+        // returns the index of a controller in Overload.Controls.m_controllers
+        static int FindControllerIndex(string controller_name)
+        {
+            int index = -1;
+            for(int i = 0; i < Overload.Controls.m_controllers.Count; i++){
+                if(Overload.Controls.m_controllers[i].name.Equals(controller_name)){
+                    index = i;
+                    break;
+                }
+            }
+            return index;
+        }
+
         static void ReadControlDataFromStream(StreamReader sr)
         {
             string text = sr.ReadLine(); // 1
@@ -270,18 +283,85 @@ namespace GameMod
             bool flag = int.TryParse(text.Substring(Controls.CONFIG_KEY.Length), out num);
             int numControllers = int.Parse(sr.ReadLine());
             int[] controllers = new int[numControllers];
+
+            List<Controllers.Controller> unconnected_controllers = new List<Controllers.Controller>();
+            
             for (int i = 0; i < numControllers; i++)
             {
+                Controllers.Controller device = new Controllers.Controller();
+
                 string controllerName = sr.ReadLine();
                 int numAxes = int.Parse(sr.ReadLine());
+
+                device.m_device_name = controllerName;
+
+                Debug.Log("["+controllerName+"]: "+numAxes);
+                Debug.Log("controller at this position in Overload.Controls.m_controllers: "+ Controls.m_controllers[i].name);
                 for (int j = 0; j < numAxes; j++)
                 {
-                    Controllers.controllers[i].axes[j].deadzone = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
-                    Controllers.controllers[i].axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
+                    // create a default axis
+                    if (j >= device.axes.Count)
+                    {
+                        float sens = 17.24138f;
+                        float deadzone = 0f; // this should be 40 but the world becomes a better place if we default to 0
+
+                        // if there is a corresponding controller and axis then convert and use its sens/deadzone
+                        int device_pos = FindControllerIndex(controllerName);
+                        if (device_pos != -1 && j < Controls.m_controllers[device_pos].m_axis_count)
+                        {
+                            int dz_index = Controls.m_controllers[device_pos].GetAxisDeadzone(j);
+                            int sens_index = Controls.m_controllers[device_pos].GetAxisSensitivity(j);
+                            sens = ((RWInput.sens_multiplier[sens_index] - 0.75f) / 1.45f) * 100f;
+                            deadzone = (Controls.DEADZONE_ADDITIONAL[dz_index] / 0.5f) * 100f;
+                        }
+
+                        device.axes.Add(new Controllers.Controller.Axis()
+                        {
+                            sensitivity = sens,
+                            deadzone = deadzone
+                        });
+                    }
+
+
+                    device.axes[j].deadzone = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
+                    device.axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
+                    Debug.Log("  created axis: " + j + "   sensitivity: " + device.axes[j].sensitivity + "   deadzone: " + device.axes[j].deadzone);
+                }
+
+                int index = FindControllerIndex(controllerName);
+                if(index != -1){
+                    Controllers.controllers[index] = device;
+                }
+                else{
+                    unconnected_controllers.Add(device);
+                }
+
+                
+            }
+
+            // add the sensitivities of disconnected controllers at the end
+            foreach(Controllers.Controller c in unconnected_controllers)
+            {
+                Debug.Log("  readded inactive controller: "+c.m_device_name);
+                Controllers.controllers.Add(c);
+            }
+
+            for(int i = 0; i < Controls.m_controllers.Count;i++)
+            {
+                for(int j = 0; j < Controllers.controllers[i].axes.Count; j++)
+                {
                     Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
                     Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
                 }
             }
+
+            /*
+            Debug.Log("\n device order   Overload | Olmod");
+            for (int i = 0; i < Controllers.controllers.Count; i++) {
+                Debug.Log(Controls.m_controllers[i].name + " : "+Controllers.controllers[i].m_device_name);
+            }*/
+
+
             // Read any new bindings that are past the original CCInput bounds in our pilot .xconfigmod 
             while (!sr.EndOfStream)
             {
