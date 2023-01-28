@@ -29,7 +29,8 @@ namespace GameMod.VersionHandling {
 
                     // do not include revision unless explicitly set to non-zero in the assembly version
                     string maybeRevision = RunningVersion.Revision > 0 ? $".{RunningVersion.Revision}" : "";
-                    _fullVersionString = $"olmod {RunningVersion.ToString(3)}{maybeRevision}{(Modded ? " **MODDED**" : "")}";
+                    //_fullVersionString = $"olmod {RunningVersion.ToString(3)}{maybeRevision}{(Modded ? " **MODDED**" : "")}";
+                    _fullVersionString = "olmod 0.5.9-Collider";
                 }
                 return _fullVersionString;
             }
