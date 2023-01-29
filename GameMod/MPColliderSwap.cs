@@ -84,14 +84,48 @@ namespace GameMod
             body.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
             body.transform.localPosition = new Vector3(0f, -0.08f, 1f);
             body.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
-            //body.GetComponent<MeshRenderer>().sharedMaterial = null;
+            //temporary shader
+            //Material mat = body.GetComponent<MeshRenderer>().sharedMaterial;
+            //mat.shader = Shader.Find("Standard");
+            //mat.enableInstancing = true;
+            //mat.SetFloat("_Metallic", 0.2f);
+            //mat.SetFloat("_internal_brightness", 0.1f);
             //body.GetComponent<MeshRenderer>().sharedMaterial = ts.GetChild(0).gameObject.GetComponent<MeshRenderer>().sharedMaterial;
 
             MeshFilter mf = ps.m_thruster_trans[1].gameObject.GetComponent<MeshFilter>();
             mf.sharedMesh = ps.m_thruster_trans[0].gameObject.GetComponent<MeshFilter>().sharedMesh;
-            mf.gameObject.transform.localRotation = Quaternion.Euler(180f, 0f, 90f);
-            mf.gameObject.transform.localScale = new Vector3(2.5f, 2.3f, 2.5f);
-            mf.gameObject.transform.localPosition = new Vector3(0f, 0.08f, -0.3f);
+            ps.m_thruster_trans[1].localRotation = Quaternion.Euler(180f, 0f, 90f);
+            ps.m_thruster_trans[1].localScale = new Vector3(2.5f, 2.3f, 2.5f);
+            ps.m_thruster_trans[1].localPosition = new Vector3(0f, 0.08f, -0.3f);
+
+            ps.m_thruster_trans[0].localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            ps.m_thruster_trans[0].localPosition = new Vector3(0f, 0.18f, 0.43f);
+
+            ps.m_thruster_trans[2].localRotation = Quaternion.Euler(0f, 0f, 0f);
+            ps.m_thruster_trans[2].localPosition = new Vector3(0f, -0.09f, 1.25f);
+
+            ps.m_thruster_trans[3].localRotation = Quaternion.Euler(90f, 0f, 0f);
+            ps.m_thruster_trans[3].localPosition = new Vector3(0f, -0.28f, 0.84f);
+
+            ps.c_spawn_effect_mf = new MeshFilter[1];
+            ps.c_spawn_effect_mf[0] = body.GetComponent<MeshFilter>();
+
+            ps.m_weapon_mounts1[0].transform.parent.gameObject.SetActive(false); // ugh
+            ps.m_weapon_mounts2[0].transform.parent.gameObject.SetActive(false);
+
+            ts = ps.c_cockpit.transform.GetChild(1); // left weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, 36.6f);
+            ts.localPosition = new Vector3(-0.88f, 0.056f, 0.5f);
+            ts.gameObject.SetActive(false);
+
+            ts = ps.c_cockpit.transform.GetChild(2); // right weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, -36.6f);
+            ts.localPosition = new Vector3(0.88f, 0.056f, 0.5f);
+            ts.gameObject.SetActive(false);
+
+            ts = ps.c_cockpit.transform.GetChild(3); // center weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            ts.localPosition = new Vector3(0f, 0.37f, 1.35f);
 
             Debug.Log("CCF setting prefab");
             Debug.Log("CCF " + NetworkSpawnPlayer.m_player_prefab.name);
