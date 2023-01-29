@@ -152,6 +152,46 @@ namespace GameMod
         }
     }
 
+    [HarmonyPatch(typeof(Client), "OnRespawnMsg")]
+    internal class MPColliderSwap_Client_OnRespawnMsg
+    {
+        static void Postfix(NetworkMessage msg)
+        {
+            msg.reader.SeekZero();
+            RespawnMessage respawnMessage = msg.ReadMessage<RespawnMessage>();
+            Debug.Log("CCF OnRespawnMsg called for LobbyID " + respawnMessage.lobby_id);
+        }
+    }
+
+    [HarmonyPatch(typeof(Client), "OnSetLoadout")]
+    internal class MPColliderSwap_Client_OnSetLoadout
+    {
+        static void Postfix(NetworkMessage msg)
+        {
+            msg.reader.SeekZero();
+            LoadoutDataMessage loadoutDataMessage = msg.ReadMessage<LoadoutDataMessage>();
+            Debug.Log("CCF OnSetLoadout called for LobbyID " + loadoutDataMessage.lobby_id + " setting custom decal ID to " + loadoutDataMessage.mpc_decal_pattern + ", color to " + loadoutDataMessage.mpc_decal_color);
+        }
+    }
+
+    [HarmonyPatch(typeof(Client), "SendPlayerLoadoutToServer")]
+    internal class MPColliderSwap_Client_SendPlayerLoadoutToServer
+    {
+        static void Postfix()
+        {
+            Debug.Log("CCF SendPlayerLoadoutToServer called for LobbyID " + NetworkMatch.m_my_lobby_id + " setting custom decal ID to " + MenuManager.mpc_decal_pattern + ", color to " + MenuManager.mpc_decal_color);
+        }
+    }
+
+    [HarmonyPatch(typeof(NetworkSpawnPlayer), "SetMultiplayerCustomization")]
+    internal class MPColliderSwap_NetworkSpawnPlayer_SetMultiplayerCustomization
+    {
+        static void Prefix(LoadoutDataMessage loadout_data)
+        {
+            Debug.Log("CCF LobbyID " + loadout_data.lobby_id + " setting custom decal ID to " + loadout_data.mpc_decal_pattern + ", color to " + loadout_data.mpc_decal_color);
+        }
+    }
+
     // replaces the mesh when the PlayerShip object is started, provided that an accurate mesh has been selected instead of the default
     [HarmonyPatch(typeof(PlayerShip), "Start")]
     internal class MPColliderSwap_PlayerShip_Start

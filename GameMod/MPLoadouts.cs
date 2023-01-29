@@ -819,4 +819,14 @@ namespace GameMod
             }
         }
     }
+
+    // fixes the bug with ship customization not appearing properly
+    [HarmonyPatch(typeof(LoadoutDataMessage), MethodType.Constructor, new Type[] { typeof(LoadoutDataMessage) })]
+    internal class MPLoadouts_LoadoutDataMessage_Constructor
+    {
+        public static void Postfix(LoadoutDataMessage src, LoadoutDataMessage __instance)
+        {
+            __instance.lobby_id = src.lobby_id;
+        }
+    }
 }
