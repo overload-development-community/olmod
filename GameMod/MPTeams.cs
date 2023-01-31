@@ -1457,7 +1457,7 @@ namespace GameMod
 
                     __instance.c_go.GetComponent<Light>().color = teamcolor;
 
-                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>())
+                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>(includeInactive: true))
                     {
                         if (rend.name == "_glow" || rend.name == "extra_glow")
                         {
@@ -1479,7 +1479,7 @@ namespace GameMod
                 }
                 else
                 {
-                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>(includeInactive: true))
                     {
                         var m = x.main;
                         switch (x.name)
@@ -1495,6 +1495,45 @@ namespace GameMod
                                 break;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // if team-coloured creepers are on and friendly fire isn't, causes the player's creepers to blink periodically
+    [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
+    static class MPTeams_Projectile_FixedUpdateDynamic
+    {
+        const float offTime = 0.2f;
+        const float cycleTime = 1.2f;
+
+        static bool glowOn = false;
+        static float nextOff = offTime;
+        static float nextTime = 0f;
+        static float tempNext = 0f;
+
+        static void Postfix(Projectile __instance)
+        {
+            if (GameplayManager.IsMultiplayerActive && Menus.mms_creeper_colors && MenuManager.mms_friendly_fire != 1 && __instance.m_type == ProjPrefab.missile_creeper && __instance.m_owner_player.isLocalPlayer)
+            {
+                if (!__instance.m_robot_only_extra_mesh.activeSelf && nextTime <= Time.time)
+                {
+                    if (!glowOn)
+                    {
+                        nextOff = Time.time + offTime;
+                        tempNext = Time.time + cycleTime;
+                        glowOn = true;
+                    }
+                    __instance.m_robot_only_extra_mesh.SetActive(true);
+                }
+                if (__instance.m_robot_only_extra_mesh.activeSelf && nextOff <= Time.time)
+                {
+                    if (glowOn)
+                    {
+                        nextTime = tempNext;
+                        glowOn = false;
+                    }
+                    __instance.m_robot_only_extra_mesh.SetActive(false);
                 }
             }
         }

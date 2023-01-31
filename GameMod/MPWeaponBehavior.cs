@@ -84,12 +84,12 @@ namespace GameMod
 
                     private static Vector3 AdjustLeftPos(Vector3 muzzle_pos, Vector3 c_right)
                     {
-                        return GameplayManager.IsMultiplayerActive ? muzzle_pos + c_right * m_muzzle_adjust : muzzle_pos;
+                        return (GameplayManager.IsMultiplayerActive && !MPColliderSwap.FullPyro) ? muzzle_pos + c_right * m_muzzle_adjust : muzzle_pos;
                     }
 
                     private static Vector3 AdjustRightPos(Vector3 muzzle_pos, Vector3 c_right)
                     {
-                        return GameplayManager.IsMultiplayerActive ? muzzle_pos + c_right * -m_muzzle_adjust : muzzle_pos;
+                        return (GameplayManager.IsMultiplayerActive && !MPColliderSwap.FullPyro) ? muzzle_pos + c_right * -m_muzzle_adjust : muzzle_pos;
                     }
 
                     static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)

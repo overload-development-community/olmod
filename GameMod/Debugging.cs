@@ -147,6 +147,7 @@ namespace GameMod {
         }
     }
 
+    // CCF - Who left this on?!?
     // Temporary debugging to find a bug with SwitchVisibleWeapon
     [HarmonyPatch(typeof(PlayerShip), "SwitchVisibleWeapon")]
     class Debugging_PlayerShip_SwitchVisibleWeapon {
@@ -205,8 +206,10 @@ namespace GameMod {
             if (__instance.c_player.m_weapon_type == WeaponType.DRILLER || __instance.c_player.m_weapon_type == WeaponType.CYCLONE) {
                 Vector3 localPosition = __instance.m_muzzle_center.localPosition;
                 try {
-                    localPosition.y = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
-                    localPosition.z = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    localPosition.y = MPWeaponFirePoints.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition.z = MPWeaponFirePoints.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    //localPosition.y = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    //localPosition.z = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
                 } catch (Exception e) {
                     Debug.Log("Exception getting the firing points for the driller or cyclone.");
                     Debug.LogException(e);
@@ -215,9 +218,12 @@ namespace GameMod {
             } else {
                 Vector3 localPosition2 = __instance.m_muzzle_left.localPosition;
                 try {
-                    localPosition2.y = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
-                    localPosition2.z = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
-                } catch (Exception e) {
+                    localPosition2.y = MPWeaponFirePoints.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition2.z = MPWeaponFirePoints.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    //localPosition2.y = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    //localPosition2.z = PlayerShip.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                }
+                catch (Exception e) {
                     Debug.Log("Exception getting the firing points for other weapons.");
                     Debug.LogException(e);
                 }
