@@ -313,6 +313,7 @@ namespace GameMod {
             position.x += 300f;
         }
 
+        [HarmonyPriority(Priority.Normal - 9)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
@@ -629,6 +630,7 @@ namespace GameMod {
     class Menus_UIElement_DrawMpMatchSetup_ScaleRespawnTime
     {
         // Change fade parameter on respawn slider from MenuManager.mms_mode == MatchMode.MONSTERBALL to Menus.mms_scale_respawn
+        [HarmonyPriority(Priority.Normal - 10)] // set global order of transpilers for this function
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
