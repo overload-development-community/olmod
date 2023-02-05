@@ -13,27 +13,54 @@ namespace GameMod
     {
         public static List<Ship> Ships = new List<Ship>();
         public static Ship selected; // which prefab is currently active
-        private static int _idx = 0;
+        public static int selected_idx = 0;
 
-        public static int selected_idx
-        {
-            get { return _idx; }
-            set
-            {
-                _idx = value;
-                selected = Ships[value];
-            }
-        }
+        public static GameObject m_blank; // a single tiny untextured triangle for blanking out unused prefab components
+
+        // This method of doing this will need replacing at some point if multiple ships are ever going to coexist in the same game - otherwise, this works. See MaybeFireWeapon().
+        public static float QdiffRightX;
+        public static float QdiffLeftX;
+        public static float QdiffY;
+        public static float QdiffZ;
+
+        public static GameObject OriginalPrefab;
 
         public static bool loading = false; // set to true during the loading process
 
         public static void AddShips()
         {
-            // ship prefabs are explicitly added here
-            //Debug.Log("Adding Kodachi ship definition");
+            // ship prefabs are added here
+            Debug.Log("Adding Kodachi ship definition");
             Ships.Add(new Kodachi()); // Don't mess with this one or you're gonna break stuff.
+            Debug.Log("Adding Pyro ship definition");
+            Ships.Add(new PyroGX());
+            Debug.Log("Adding Pyro (Cosmetic) ship definition");
+            Ships.Add(new PyroGXCosmetic());
+        }
 
-            selected = Ships[selected_idx];
+        public static void SwitchPrefab(int idx)
+        {
+            if (idx < Ships.Count)
+            {
+                selected_idx = idx;
+                selected = Ships[idx];
+                Debug.Log("Switching ship Prefabs to " + selected.displayName);
+            }
+            else
+            {
+                selected_idx = 0;
+                selected = Ships[0];
+                Debug.Log("Attempted to switch to a non-existent ship Prefab, using " + selected.displayName +" instead");
+            }
+
+            selected.MakePrefab();
+
+            QdiffRightX = selected.QdiffRightX;
+            QdiffLeftX = selected.QdiffLeftX;
+            QdiffY = selected.QdiffY;
+            QdiffZ = selected.QdiffZ;
+
+            NetworkSpawnPlayer.m_player_prefab = selected.Prefab;
         }
 
         public static void LoadResources()
@@ -43,14 +70,23 @@ namespace GameMod
             {
                 var ab = AssetBundle.LoadFromStream(stream);
 
+                m_blank = Object.Instantiate(ab.LoadAsset<GameObject>("blankmesh")); // used for substituting sections of the ship that shouldn't be present but are expected to be in the effects array
+
                 foreach (Ship s in Ships)
                 {
+                    if (s.meshName != null)
+                    {
+                        s.mesh = Object.Instantiate(ab.LoadAsset<GameObject>(s.meshName));
+                        Debug.Log("Prefab mesh loaded: " + s.mesh.name);
+                    }
                     for (int i = 0; i < 3; i++)
                     {
                         s.collider[i] = Object.Instantiate(ab.LoadAsset<GameObject>(s.colliderNames[i]));
-                        Object.DontDestroyOnLoad(s.collider[i]);
+                        s.collider[i].GetComponent<MeshRenderer>().enabled = false;
+                        Object.DontDestroyOnLoad(s.collider[i]); // they keep despawning and causing NullReferences unless this is here. Grrr.
                         Debug.Log("MeshCollider loaded: " + s.collider[i].name);
                     }
+                    //s.MakePrefab();
                 }
                 ab.Unload(false);
             }
@@ -59,32 +95,56 @@ namespace GameMod
     }
 
     // ====================================================================
-    //
-    //
-    // ====================================================================
     // Ship Template
-    // ====================================================================
-    //
-    //
     // ====================================================================
 
     public abstract class Ship
     {
         public string displayName; // what it will show up as in menus and whatnot
         public string name; // the GameObject's new name string (if needed)
+        public string meshName; // the name of the mesh prefab -- if null, will be skipped (Kodachi comes to mind)
         public string[] colliderNames; // the 3 MeshCollider names
 
+        public GameObject Prefab; // the full ship prefab
+        public GameObject mesh; // the replacement mesh (if needed)
         public GameObject[] collider = new GameObject[3];
+
+        public bool customizations; // whether or not to use the Kodachi's custom wing and body meshes.
+
+        public Vector3[] FIRING_POINTS; // defines the LocalPosition of each primary weapon firepoint for this ship type. Must be 9 items in the array (see the Kodachi definition for an example)
+
+        // quad impulse adjusted firepoints
+        public float QdiffRightX;
+        public float QdiffLeftX;
+        public float QdiffY;
+        public float QdiffZ;
+
+        public abstract void MakePrefab();
+
+        public void InstantiatePrefab()
+        {
+            // This will be getting updated. Right now it only supports a 1-shot replacement at game launch.
+            // We need to figure out how to duplicate the prefab -WITHOUT- instantiating it... or alternatively,
+            // how to instantiate it without the game thinking it's the local player so the HUD and menu don't
+            // draw on the spawned but inactive "prefab" objects.
+
+            Prefab = NetworkSpawnPlayer.m_player_prefab;
+            Prefab.name = name;
+        }
+
+        protected void AdjustQuadFirepoints(PlayerShip ps)
+        {
+            float scale = ps.m_muzzle_right.parent.lossyScale.x; // 0.4f, unless some interesting stuff is happening
+
+            QdiffRightX = (FIRING_POINTS[8].x - FIRING_POINTS[0].x) * scale;
+            QdiffLeftX = -1 * QdiffRightX;
+            QdiffY = (FIRING_POINTS[8].y - FIRING_POINTS[0].y) * scale;
+            QdiffZ = (FIRING_POINTS[8].z - FIRING_POINTS[0].z) * scale;
+        }
     }
 
     // ====================================================================
-    //
-    //
-    // ====================================================================
     // Ship Definitions
-    // ====================================================================
-    //
-    //
     // ====================================================================
 
     // The Kodachi.
@@ -94,13 +154,216 @@ namespace GameMod
         {
             displayName = "Kodachi Gunship";
             name = "entity_special_player_ship";
+            meshName = null; // don't replace anything, we want the original
             colliderNames = new string[3] { "PlayershipCollider-100", "PlayershipCollider-105", "PlayershipCollider-110" };
+
+            customizations = true;
+
+            FIRING_POINTS = new Vector3[9]
+            {
+                new Vector3(1.675f, -1.13f, 2.38f),      // Impulse
+                new Vector3(0f, -2.08f, 2.08f),          // Cyclone
+                new Vector3(1.675f, -1.06f, 2.27f),      // Reflex
+                new Vector3(1.675f, -0.79f, 2.1f),       // Crusher
+                new Vector3(0f, -1.88f, 2.48f),          // Driller
+                new Vector3(1.675f, -0.79f, 2.18f),      // Flak
+                //new Vector3(1.675f, -0.99f, 2.35f),    // Thunderbolt -- original spacing
+                new Vector3(1.175f, -0.99f, 2.35f),      // Thunderbolt -- tighter spacing (0.2f world space adjustment, scaled at 0.4 for the ship local coordinates)
+                new Vector3(1.675f, -0.93f, 2.6f),       // Lancer
+                new Vector3(2.3f, -1.505f, 1.63f)        // Quad Impulse firepoint
+            };
+        }
+
+        public override void MakePrefab()
+        {
+            InstantiatePrefab();
+            // nothing needs to actually get created here, obviously, but we do need to handle creating the quad firepoints
+
+            AdjustQuadFirepoints(Prefab.GetComponent<PlayerShip>());
         }
     }
 
+    // in all its wingy glory
+    public class PyroGX : Ship
+    {
+        public PyroGX()
+        {
+            displayName = "Pyro GX";
+            name = "entity_special_player_pyro";
+            meshName = "Pyro";
+            colliderNames = new string[3] { "PyroCollider-100", "PyroCollider-105", "PyroCollider-110" };
 
+            customizations = false;
 
-    // ====================================================================
+            FIRING_POINTS = new Vector3[9]
+            {
+            new Vector3(1.512f, -1.23f, 1.55f),      // Impulse
+            new Vector3(0f, -1.275f, 1.5f),          // Cyclone
+            new Vector3(1.512f, -1.23f, 1.55f),      // Reflex
+            new Vector3(1.512f, -1.23f, 1.55f),      // Crusher
+            new Vector3(0f, -1.17f, 1.8f),           // Driller
+            new Vector3(1.512f, -1.23f, 1.55f),      // Flak
+            new Vector3(1.512f, -1.23f, 1.55f),      // Thunderbolt
+            new Vector3(1.512f, -1.23f, 1.55f),      // Lancer
+            new Vector3(2.5f, -1.68f, 2.3f)          // Quad Impulse firepoint
+            };
+        }
+
+        public override void MakePrefab()
+        {
+            InstantiatePrefab();
+
+            PlayerShip ps = Prefab.GetComponent<PlayerShip>();
+
+            // Hide everything but the main body GameObject
+            Transform ts = ps.c_external_ship.transform;
+            for (int i = 1; i < ts.childCount; i++)
+            {
+                ts.GetChild(i).gameObject.SetActive(false);
+                ts.GetChild(i).gameObject.GetComponent<MeshRenderer>().enabled = false;
+            }
+            GameObject body = ts.GetChild(0).gameObject;
+            GameObject blank = ts.GetChild(1).gameObject;
+
+            // Hide all internal cockpit components in a way that keeps them hidden when enabling/disabling cockpit
+            ts = ps.c_cockpit.transform.GetChild(0);
+            for (int i = 1; i < ts.childCount; i++)
+            {
+                ts.GetChild(i).gameObject.SetActive(false);
+                ts.GetChild(i).gameObject.GetComponent<MeshRenderer>().enabled = false;
+            }
+
+            // Hide all internal cockpit lights
+            ts = ps.c_cockpit_light.transform;
+            for (int i = 0; i < ts.childCount; i++)
+            {
+                ts.GetChild(i).gameObject.SetActive(false);
+            }
+
+            // Replace the body main mesh with our substitute and reposition it
+            body.GetComponent<MeshFilter>().sharedMesh = mesh.GetComponent<MeshFilter>().sharedMesh;
+            body.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            body.transform.localPosition = new Vector3(0f, -0.08f, 1f);
+            body.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
+
+            // Replace the second mesh with a single tiny triangle for use with the effects array
+            // (otherwise the shader gets applied 8x over on the main mesh or shows up where it's not supposed to)
+            blank.GetComponent<MeshFilter>().sharedMesh = MPShips.m_blank.GetComponent<MeshFilter>().sharedMesh;
+            blank.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            blank.transform.localPosition = new Vector3(0f, 0, 0f);
+            blank.transform.localScale = new Vector3(1f, 1f, 1f);
+
+            // Swap the rear thruster mesh with one that's better shaped and reposition them all appropriately
+            MeshFilter mf = ps.m_thruster_trans[1].gameObject.GetComponent<MeshFilter>();
+            mf.sharedMesh = ps.m_thruster_trans[0].gameObject.GetComponent<MeshFilter>().sharedMesh;
+            ps.m_thruster_trans[1].localRotation = Quaternion.Euler(180f, 0f, 90f);
+            ps.m_thruster_trans[1].localScale = new Vector3(2.5f, 2.3f, 2.5f);
+            ps.m_thruster_trans[1].localPosition = new Vector3(0f, 0.08f, -0.3f);
+
+            // top thruster
+            ps.m_thruster_trans[0].localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            ps.m_thruster_trans[0].localPosition = new Vector3(0f, 0.18f, 0.43f);
+
+            // front thruster
+            ps.m_thruster_trans[2].localRotation = Quaternion.Euler(0f, 0f, 0f);
+            ps.m_thruster_trans[2].localPosition = new Vector3(0f, -0.09f, 1.25f);
+
+            // bottom thruster
+            ps.m_thruster_trans[3].localRotation = Quaternion.Euler(90f, 0f, 0f);
+            ps.m_thruster_trans[3].localPosition = new Vector3(0f, -0.28f, 0.84f);
+
+            // Empty and repopulate the effects array with the only mesh we care about
+            ps.c_spawn_effect_mf = new MeshFilter[8];
+            ps.c_spawn_effect_mf[7] = body.GetComponent<MeshFilter>();
+
+            // Add that tiny triangle from earlier to the first 7 slots since the game needs them filled.
+            // The important ones start at 7, and transpiling gets ugly if we ever want to have a swappable prefab
+            ps.c_spawn_effect_mf[0] = blank.GetComponent<MeshFilter>();
+            ps.c_spawn_effect_mf[1] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[2] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[3] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[4] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[5] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[6] = ps.c_spawn_effect_mf[0];
+
+            // Hide all the weapon meshes on the side mounts
+            ps.m_weapon_mounts1[0].transform.parent.gameObject.SetActive(false);
+            ps.m_weapon_mounts2[0].transform.parent.gameObject.SetActive(false);
+
+            // Move the left weapon mesh locations so the Thunderbolt glow lines up right
+            // (also in case we ever reskin them and want to reenable them)
+            ts = ps.c_cockpit.transform.GetChild(1); // left weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, 36.6f);
+            ts.localPosition = new Vector3(-0.88f, 0.056f, 0.5f);
+            ts.gameObject.SetActive(false);
+
+            // Same with the right mesh locations
+            ts = ps.c_cockpit.transform.GetChild(2); // right weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, -36.6f);
+            ts.localPosition = new Vector3(0.88f, 0.056f, 0.5f);
+            ts.gameObject.SetActive(false);
+
+            // Move but don't hide the center weapon mesh locations so they stay correctly underslung
+            ts = ps.c_cockpit.transform.GetChild(3); // center weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            ts.localPosition = new Vector3(0f, 0.37f, 1.35f);
+
+            // move the actual firepoints as well. Should not be used on a stock server.
+            ps.m_muzzle_center.localPosition = new Vector3(0f, -1.25f, 2.5f); // center weapon firepoint
+            ps.m_muzzle_center2.localPosition = new Vector3(0f, -1.25f, 2.5f); // center missile firepoint
+
+            ps.m_muzzle_left.localPosition = new Vector3(-1.512f, -1.23f, 1.55f); // left weapon firepoint
+            ps.m_muzzle_right.localPosition = new Vector3(1.512f, -1.23f, 1.55f); // right weapon firepoint
+
+            AdjustQuadFirepoints(ps);
+        }
+    }
+
+    // A cosmetic-only version of the Pyro
+    public class PyroGXCosmetic : PyroGX
+    {
+        public PyroGXCosmetic()
+        {
+            displayName = "Pyro GX (Cosmetic)";
+            name = "entity_special_player_pyro_cosmetic";
+            meshName = "Pyro";
+            colliderNames = new string[3] { "PlayershipCollider-100", "PlayershipCollider-105", "PlayershipCollider-110" };
+
+            customizations = false;
+
+            // these are the Kodachi FIRING_POINTS
+            FIRING_POINTS = new Vector3[9]
+            {
+                new Vector3(1.675f, -1.13f, 2.38f),      // Impulse
+                new Vector3(0f, -2.08f, 2.08f),          // Cyclone
+                new Vector3(1.675f, -1.06f, 2.27f),      // Reflex
+                new Vector3(1.675f, -0.79f, 2.1f),       // Crusher
+                new Vector3(0f, -1.88f, 2.48f),          // Driller
+                new Vector3(1.675f, -0.79f, 2.18f),      // Flak
+                //new Vector3(1.675f, -0.99f, 2.35f),    // Thunderbolt -- original spacing
+                new Vector3(1.175f, -0.99f, 2.35f),      // Thunderbolt -- tighter spacing
+                new Vector3(1.675f, -0.93f, 2.6f),       // Lancer
+                new Vector3(2.3f, -1.505f, 1.63f)        // Quad Impulse firepoint
+            };
+        }
+
+        public override void MakePrefab()
+        {
+            base.MakePrefab();
+
+            PlayerShip ps = Prefab.GetComponent<PlayerShip>();
+
+            ps.m_muzzle_center.localPosition = new Vector3(0f, -1.926f, 2.485f); // center weapon firepoint
+            ps.m_muzzle_center2.localPosition = new Vector3(0f, -1.873f, 0f); // center missile firepoint
+
+            ps.m_muzzle_left.localPosition = new Vector3(-1.675f, -1.105f, 2.611f); // left weapon firepoint
+            ps.m_muzzle_right.localPosition = new Vector3(1.675f, -1.105f, 2.611f); // right weapon firepoint
+
+            AdjustQuadFirepoints(Prefab.GetComponent<PlayerShip>());
+        }
+    }
+
+    //
     //
     //
     // ====================================================================
@@ -108,18 +371,294 @@ namespace GameMod
     // ====================================================================
     //
     //
-    // ====================================================================
+    //
 
-
+    // This didn't work. We'll need a different approach to be able to change prefabs more than once.
+    /*
+    // Because we're instantiating the PlayerShip prefab early, we have to hijack the StartLocalPlayer call so the HUD and
+    // menus don't render on the inactive prefabs.
+    [HarmonyPatch(typeof(Player), "OnStartLocalPlayer")]
+    internal class MPShips_Player_OnStartLocalPlayer
+    {
+        public static bool Prefix(Player __instance)
+        {
+            if (MPShips.loading && __instance != GameManager.m_local_player)
+            {
+                Debug.Log("CCF OnStartLocalPlayer called on invalid, ignoring");
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+    }
+    */
 
     // Loads the new Prefabs
     [HarmonyPatch(typeof(NetworkSpawnPlayer), "Init")]
-    static class MPShips_NetworkSpawnPlayer_Init
+    internal class MPShips_NetworkSpawnPlayer_Init
     {
         public static void Postfix()
         {
+            MPShips.OriginalPrefab = NetworkSpawnPlayer.m_player_prefab; // keep the original to instantiate from
+
             MPShips.AddShips();
             MPShips.LoadResources();
+
+            // this part is temporary
+            string val;
+            if (Core.GameMod.FindArgVal("-ship", out val))
+            {
+                int idx;
+                if (int.TryParse(val, out idx))
+                {
+                    MPShips.SwitchPrefab(idx);
+                }
+                else
+                {
+                    Debug.Log("Invalid \"-ship\" argument, using stock ship prefab");
+                    MPShips.SwitchPrefab(0);
+                }
+            }
+            else
+            {
+                Debug.Log("No alternate ship specified, using stock ship prefab");
+                MPShips.SwitchPrefab(0);
+            }
+        }
+    }
+
+    // Hides the custom body panels if we're using a non-standard playership
+    [HarmonyPatch(typeof(PlayerShip), "SetCustomBody")]
+    static class MPShips_PlayerShip_SetCustomBody
+    {
+        static bool Prefix()
+        {
+            if (!MPShips.selected.customizations)
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    // Hides the custom wings if we're using a non-standard playership
+    [HarmonyPatch(typeof(PlayerShip), "SetCustomWings")]
+    static class MPShips_PlayerShip_SetCustomWings
+    {
+        static bool Prefix()
+        {
+            if (!MPShips.selected.customizations)
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    // moves the quad shot positions in the firing code.
+    // This method of doing this will need replacing at some point if multiple ships are ever going to coexist - otherwise, this works. See MaybeFireWeapon().
+    [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
+    static class MPShips_PlayerShip_MaybeFireWeapon
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            int state = 0;
+            int count = 0;
+            foreach (var code in codes)
+            {
+                if (count == 2)
+                {
+                    if (code.opcode == OpCodes.Ldc_R4 && state < 3) // right quad firing
+                    {
+                        switch ((float)code.operand)
+                        {
+                            case 0.25f:
+                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffRightX"));
+                                state++;
+                                break;
+                            case -0.15f:
+                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffY"));
+                                state++;
+                                break;
+                            case -0.3f:
+                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffZ"));
+                                state++;
+                                count++; //we're done here
+                                break;
+                            default:
+                                yield return code;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        yield return code;
+                    }
+                }
+                else if (count == 5)
+                {
+                    if (code.opcode == OpCodes.Ldc_R4 && state < 6) // left quad firing
+                    {
+                        switch ((float)code.operand)
+                        {
+                            case -0.25f:
+                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffLeftX"));
+                                state++;
+                                break;
+                            case -0.15f:
+                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffY"));
+                                state++;
+                                break;
+                            case -0.3f:
+                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffZ"));
+                                state++;
+                                count++; // we're done here
+                                break;
+                            default:
+                                yield return code;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        yield return code;
+                    }
+                }
+                else if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_muzzle_right"))
+                {
+                    count++;
+                    yield return code;
+                }
+                else if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_muzzle_left"))
+                {
+                    count++;
+                    yield return code;
+                }
+                else
+                {
+                    yield return code;
+                }
+            }
+        }
+    }
+
+    // Moved from Debugging.cs - replaces the SwitchVisibleWeapon method with one that uses Vector3 for positioning instead of Vector2.
+    // I am unsure if the exception catching is necessary or not anymore.
+    [HarmonyPatch(typeof(PlayerShip), "SwitchVisibleWeapon")]
+    class MPShips_PlayerShip_SwitchVisibleWeapon
+    {
+        static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM)
+        {
+            if (wt == WeaponType.NUM)
+            {
+                wt = __instance.c_player.m_weapon_type;
+            }
+            if (__instance.IsCockpitVisible || force_visible || !__instance.isLocalPlayer)
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    try
+                    {
+                        __instance.m_weapon_mounts1[i].SetActive(i == (int)wt);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.Log("Exception setting the first weapon mount's active state.");
+                        Debug.LogException(e);
+                    }
+                    if (__instance.c_player.m_cloaked && i == (int)wt)
+                    {
+                        MeshRenderer[] componentsInChildren = null;
+                        try
+                        {
+                            componentsInChildren = __instance.m_weapon_mounts1[i].GetComponentsInChildren<MeshRenderer>(includeInactive: true);
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.Log("Exception getting the first weapon mount's components.");
+                            Debug.LogException(e);
+                        }
+                        if (componentsInChildren != null)
+                        {
+                            foreach (MeshRenderer meshRenderer in componentsInChildren)
+                            {
+                                meshRenderer.enabled = false;
+                            }
+                        }
+                    }
+                    if (i == 4 || i == 1) // Cyclone or Driller
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        __instance.m_weapon_mounts2[i].SetActive(i == (int)wt);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.Log("Exception setting the second weapon mount's active state.");
+                        Debug.LogException(e);
+                    }
+                    if (__instance.c_player.m_cloaked && i == (int)wt)
+                    {
+                        MeshRenderer[] componentsInChildren2 = null;
+                        try
+                        {
+                            componentsInChildren2 = __instance.m_weapon_mounts2[i].GetComponentsInChildren<MeshRenderer>(includeInactive: true);
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.Log("Exception getting the second weapon mount's components.");
+                            Debug.LogException(e);
+                        }
+                        if (componentsInChildren2 != null)
+                        {
+                            foreach (MeshRenderer meshRenderer2 in componentsInChildren2)
+                            {
+                                meshRenderer2.enabled = false;
+                            }
+                        }
+                    }
+                }
+            }
+            if (__instance.c_player.m_weapon_type == WeaponType.DRILLER || __instance.c_player.m_weapon_type == WeaponType.CYCLONE)
+            {
+                Vector3 localPosition = __instance.m_muzzle_center.localPosition;
+                try
+                {
+                    localPosition.x = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition.y = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    localPosition.z = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].z;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.Log("Exception getting the firing points for the driller or cyclone.");
+                    Debug.LogException(e);
+                }
+                __instance.m_muzzle_center.localPosition = localPosition;
+            }
+            else
+            {
+                Vector3 localPosition2 = __instance.m_muzzle_right.localPosition;
+                try
+                {
+                    localPosition2.x = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition2.y = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    localPosition2.z = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].z;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.Log("Exception getting the firing points for other weapons.");
+                    Debug.LogException(e);
+                }
+                __instance.m_muzzle_right.localPosition = localPosition2;
+                localPosition2.x *= -1;
+                __instance.m_muzzle_left.localPosition = localPosition2;
+            }
+            return false;
         }
     }
 }

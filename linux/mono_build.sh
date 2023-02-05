@@ -48,7 +48,7 @@ mcs \
     -r:../GameMod/0Harmony.dll \
     -target:library \
     -sdk:2 \
-    -resource:../GameMod/Resources/playershipmeshcollider,GameMod.Resources.playershipmeshcollider \
+    -resource:../GameMod/Resources/playershipmeshcollider,GameMod.Resources.meshes \
     -out:GameMod.dll \
     ../GameMod/*.cs \
     ../GameMod/*/*.cs
