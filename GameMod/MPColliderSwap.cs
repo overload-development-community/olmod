@@ -8,9 +8,8 @@ namespace GameMod
     public static class MPColliderSwap
     {
         public static int selectedCollider = 0;
-        public static bool tightTBspacing = false;
 
-        public static bool visualizeMe = false;
+        public static bool visualizeMe = false; // For debugging. Turn this on to render the collider mesh.
     }
 
     // replaces the mesh when the PlayerShip object is started, provided that an accurate mesh has been selected instead of the default
@@ -52,6 +51,7 @@ namespace GameMod
 
                 __instance.c_mesh_collider = coll;
                 __instance.c_mesh_collider_trans = __instance.c_mesh_collider.transform;
+                __instance.c_flak_range_go.GetComponent<TriggerFlakRange>().player_collider = coll;
             }
         }
     }
