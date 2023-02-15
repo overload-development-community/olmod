@@ -167,6 +167,11 @@ namespace GameMod {
             }
         }
 
+        public static string GetMMSShipType()
+        {
+            return MPShips.Ships[mms_ship_type].displayName;
+        }
+
         public static string GetMMSLagCompensation()
         {
             switch (mms_lag_compensation)
@@ -260,6 +265,7 @@ namespace GameMod {
         public static bool mms_show_framerate = false;
         public static int mms_selected_loadout_idx = 0;
         public static int mms_collision_mesh = 0;
+        public static int mms_ship_type = 0;
     }
 
 
@@ -313,6 +319,9 @@ namespace GameMod {
 
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("COLLISION MESH"), position, 22, Menus.GetMMSCollisionMesh(), Loc.LS("COLLIDER TO USE FOR PROJECTILE->SHIP COLLISIONS"), 1f, false);
+
+            position.y += 55f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP TYPE"), position, 23, Menus.GetMMSShipType(), Loc.LS("SHIP TYPE TO USE FOR THIS MATCH"), 1f, false);
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -573,6 +582,10 @@ namespace GameMod {
                         break;
                     case 22:
                         Menus.mms_collision_mesh = (4 + Menus.mms_collision_mesh + UIManager.m_select_dir) % 4;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 23:
+                        Menus.mms_ship_type = (MPShips.Ships.Count + Menus.mms_ship_type + UIManager.m_select_dir) % MPShips.Ships.Count;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                 }

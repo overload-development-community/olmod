@@ -66,6 +66,7 @@ namespace GameMod
                 assistScoring = Menus.mms_assist_scoring,
                 teamCount = MPTeams.MenuManagerTeamCount,
                 shipMeshCollider = Menus.mms_collision_mesh,
+                shipType = Menus.mms_ship_type,
                 thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
             });
 
@@ -107,6 +108,7 @@ namespace GameMod
                 assistScoring = true,
                 teamCount = 2,
                 shipMeshCollider = 0,
+                shipType = 0,
                 thunderboltPassthrough = false
             });
 
@@ -149,10 +151,10 @@ namespace GameMod
                 shipMeshCollider = 0,
                 damageNumbers = true,
                 shipMeshCollider = 0,
+                shipType = 0,
                 thunderboltPassthrough = false
             });
 
-            /*
             presets.Add(new MPMatchPreset
             {
                 title = "PYRO HARDCORE",
@@ -190,10 +192,10 @@ namespace GameMod
                 damageNumbers = true,
                 assistScoring = true,
                 teamCount = 2,
-                shipMeshCollider = 1,
+                shipMeshCollider = 2,
+                shipType = 1,
                 thunderboltPassthrough = false
             });
-            */
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
         }
@@ -236,6 +238,7 @@ namespace GameMod
             public bool assistScoring = true;
             public int teamCount = 2;
             public int shipMeshCollider;
+            public int shipType;
             public bool thunderboltPassthrough;
 
             public void Apply()
@@ -282,6 +285,7 @@ namespace GameMod
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
                 Menus.mms_collision_mesh = this.shipMeshCollider;
+                Menus.mms_ship_type = this.shipType;
                 MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }

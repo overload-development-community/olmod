@@ -5,35 +5,42 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod
 {
     // Handles asset replacement for ships (well, -ship-, currently)
     public static class MPShips
     {
+        // public static Dictionary<NetworkInstanceId, int> Selected = new Dictionary<NetworkInstanceId, int>(); // not needed yet, but will be for multiple ships in a single round
+
         public static List<Ship> Ships = new List<Ship>();
         public static Ship selected; // which prefab is currently active
-        public static int selected_idx = 0;
+        private static int _idx = 0;
+
+        public static int selected_idx
+        {
+            get { return _idx; }
+            set
+            {
+                _idx = value;
+                selected = Ships[value];
+            }
+        }
 
         public static GameObject m_blank; // a single tiny untextured triangle for blanking out unused prefab components
-
-        // This method of doing this will need replacing at some point if multiple ships are ever going to coexist in the same game - otherwise, this works. See MaybeFireWeapon().
-        public static float QdiffRightX;
-        public static float QdiffLeftX;
-        public static float QdiffY;
-        public static float QdiffZ;
-
-        public static GameObject OriginalPrefab;
 
         public static bool loading = false; // set to true during the loading process
 
         public static void AddShips()
         {
-            // ship prefabs are added here
+            // ship prefabs are explicitly added here
             Debug.Log("Adding Kodachi ship definition");
             Ships.Add(new Kodachi()); // Don't mess with this one or you're gonna break stuff.
             Debug.Log("Adding Pyro ship definition");
             Ships.Add(new PyroGX());
+            Debug.Log("Adding Pyro (Slow) ship definition");
+            Ships.Add(new PyroGXSlow());
             Debug.Log("Adding Pyro (Cosmetic) ship definition");
             Ships.Add(new PyroGXCosmetic());
         }
@@ -50,17 +57,8 @@ namespace GameMod
             {
                 selected_idx = 0;
                 selected = Ships[0];
-                Debug.Log("Attempted to switch to a non-existent ship Prefab, using " + selected.displayName +" instead");
+                Debug.Log("Attempted to switch to a non-existent ship Prefab, using " + selected.displayName + " instead");
             }
-
-            selected.MakePrefab();
-
-            QdiffRightX = selected.QdiffRightX;
-            QdiffLeftX = selected.QdiffLeftX;
-            QdiffY = selected.QdiffY;
-            QdiffZ = selected.QdiffZ;
-
-            NetworkSpawnPlayer.m_player_prefab = selected.Prefab;
         }
 
         public static void LoadResources()
@@ -71,22 +69,23 @@ namespace GameMod
                 var ab = AssetBundle.LoadFromStream(stream);
 
                 m_blank = Object.Instantiate(ab.LoadAsset<GameObject>("blankmesh")); // used for substituting sections of the ship that shouldn't be present but are expected to be in the effects array
+                Object.DontDestroyOnLoad(m_blank); // they keep despawning and causing NullReferences unless this is here. Grrr.
+                Debug.Log("Blank replacement mesh loaded");
 
                 foreach (Ship s in Ships)
                 {
-                    if (s.meshName != null)
+                    if (s.meshName != null) // if it's null, we're planning to use using the Kodachi default mesh
                     {
                         s.mesh = Object.Instantiate(ab.LoadAsset<GameObject>(s.meshName));
-                        Debug.Log("Prefab mesh loaded: " + s.mesh.name);
+                        Object.DontDestroyOnLoad(s.mesh);
+                        Debug.Log("Prefab replacement mesh loaded: " + s.mesh.name);
                     }
                     for (int i = 0; i < 3; i++)
                     {
                         s.collider[i] = Object.Instantiate(ab.LoadAsset<GameObject>(s.colliderNames[i]));
-                        s.collider[i].GetComponent<MeshRenderer>().enabled = false;
-                        Object.DontDestroyOnLoad(s.collider[i]); // they keep despawning and causing NullReferences unless this is here. Grrr.
+                        Object.DontDestroyOnLoad(s.collider[i]);
                         Debug.Log("MeshCollider loaded: " + s.collider[i].name);
                     }
-                    //s.MakePrefab();
                 }
                 ab.Unload(false);
             }
@@ -95,7 +94,13 @@ namespace GameMod
     }
 
     // ====================================================================
+    //
+    //
+    // ====================================================================
     // Ship Template
+    // ====================================================================
+    //
+    //
     // ====================================================================
 
     public abstract class Ship
@@ -105,7 +110,6 @@ namespace GameMod
         public string meshName; // the name of the mesh prefab -- if null, will be skipped (Kodachi comes to mind)
         public string[] colliderNames; // the 3 MeshCollider names
 
-        public GameObject Prefab; // the full ship prefab
         public GameObject mesh; // the replacement mesh (if needed)
         public GameObject[] collider = new GameObject[3];
 
@@ -119,22 +123,50 @@ namespace GameMod
         public float QdiffY;
         public float QdiffZ;
 
-        public abstract void MakePrefab();
+        // ship scale factor (from Kodachi base of 1f)
+        public float shipScale;
 
-        public void InstantiatePrefab()
+        // shield scaling factor -- inversely applied to shield pickups
+        public float ShieldMultiplier;
+
+        // movement speed restrictor
+        public float[] m_slide_force_mp; // size 4 - We only care about the first 2 (1st is regular speed, 2nd is All-Way mod speed)
+
+        // turn speed restrictors
+        public float[] m_turn_speed_limit_acc; // size 5
+        public float[] m_turn_speed_limit_rb; // size 5
+
+        // This is where the ship customizations in each definition get applied to the instantiated GameObject.
+        // Override this in each Ship and call base.ApplyParameters() at the end of the method.
+        public virtual void ApplyParameters(GameObject go)
         {
-            // This will be getting updated. Right now it only supports a 1-shot replacement at game launch.
-            // We need to figure out how to duplicate the prefab -WITHOUT- instantiating it... or alternatively,
-            // how to instantiate it without the game thinking it's the local player so the HUD and menu don't
-            // draw on the spawned but inactive "prefab" objects.
+            Debug.Log("Switching ship Prefabs to " + displayName);
+            go.name = name;
+            PlayerShip ps = go.GetComponent<PlayerShip>();
 
-            Prefab = NetworkSpawnPlayer.m_player_prefab;
-            Prefab.name = name;
+            //SetScale(go);
+            SetQuadFirepoints(ps); // should really only fire once instead of this... but if the scale is changed, this needs an object to pull it from.
         }
 
-        protected void AdjustQuadFirepoints(PlayerShip ps)
+        // finish and test this -- don't use yet. -- Functional, but ship turning is still whacky. Why?? Rigidbody should not be scaled with this the way it is currently. Something weird is going on.
+        protected void SetScale(PlayerShip ps)
         {
-            float scale = ps.m_muzzle_right.parent.lossyScale.x; // 0.4f, unless some interesting stuff is happening
+            if (shipScale != 1f) // don't bother if we're not scaling
+            {
+                ps.c_main_ship_go.transform.localScale *= shipScale;
+                ((SphereCollider)ps.c_level_collider).radius *= shipScale;
+
+                for (int i = 0; i < 4; i++) // bring down the movement speeds too
+                {
+                    m_slide_force_mp[i] *= shipScale;
+                }
+            }
+        }
+
+        // translates the firepoint coordinates to world-scale adjustments like the game expects
+        protected void SetQuadFirepoints(PlayerShip ps)
+        {
+            float scale = ps.m_muzzle_right.parent.lossyScale.x; // 0.4f, unless some interesting stuff is happening -- this is different from the shipScale field
 
             QdiffRightX = (FIRING_POINTS[8].x - FIRING_POINTS[0].x) * scale;
             QdiffLeftX = -1 * QdiffRightX;
@@ -144,7 +176,13 @@ namespace GameMod
     }
 
     // ====================================================================
+    //
+    //
+    // ====================================================================
     // Ship Definitions
+    // ====================================================================
+    //
+    //
     // ====================================================================
 
     // The Kodachi.
@@ -172,16 +210,29 @@ namespace GameMod
                 new Vector3(1.675f, -0.93f, 2.6f),       // Lancer
                 new Vector3(2.3f, -1.505f, 1.63f)        // Quad Impulse firepoint
             };
+
+            ShieldMultiplier = 1f;
+
+            m_slide_force_mp = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
+            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
+            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
         }
 
-        public override void MakePrefab()
+        // nothing needs to actually get created here, obviously, we handle creating the quad firepoints in base.ApplyParameters()
+        /*
+        public override void ApplyParameters()
         {
-            InstantiatePrefab();
-            // nothing needs to actually get created here, obviously, but we do need to handle creating the quad firepoints
-
-            AdjustQuadFirepoints(Prefab.GetComponent<PlayerShip>());
+            base.ApplyParameters();
         }
+        */
     }
+
+    // ====================================================================
+    //
+    // ====================================================================
+    // ====================================================================
+    //
+    // ====================================================================
 
     // in all its wingy glory
     public class PyroGX : Ship
@@ -207,13 +258,17 @@ namespace GameMod
             new Vector3(1.512f, -1.23f, 1.55f),      // Lancer
             new Vector3(2.5f, -1.68f, 2.3f)          // Quad Impulse firepoint
             };
+
+            ShieldMultiplier = 1f;
+
+            m_slide_force_mp = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
+            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
+            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
         }
 
-        public override void MakePrefab()
+        public override void ApplyParameters(GameObject go)
         {
-            InstantiatePrefab();
-
-            PlayerShip ps = Prefab.GetComponent<PlayerShip>();
+            PlayerShip ps = go.GetComponent<PlayerShip>();
 
             // Hide everything but the main body GameObject
             Transform ts = ps.c_external_ship.transform;
@@ -241,21 +296,21 @@ namespace GameMod
             }
 
             // Replace the body main mesh with our substitute and reposition it
-            body.GetComponent<MeshFilter>().sharedMesh = mesh.GetComponent<MeshFilter>().sharedMesh;
+            body.GetComponent<MeshFilter>().mesh = mesh.GetComponent<MeshFilter>().sharedMesh;
             body.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
             body.transform.localPosition = new Vector3(0f, -0.08f, 1f);
             body.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
 
             // Replace the second mesh with a single tiny triangle for use with the effects array
             // (otherwise the shader gets applied 8x over on the main mesh or shows up where it's not supposed to)
-            blank.GetComponent<MeshFilter>().sharedMesh = MPShips.m_blank.GetComponent<MeshFilter>().sharedMesh;
+            blank.GetComponent<MeshFilter>().mesh = MPShips.m_blank.GetComponent<MeshFilter>().sharedMesh;
             blank.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
             blank.transform.localPosition = new Vector3(0f, 0, 0f);
             blank.transform.localScale = new Vector3(1f, 1f, 1f);
 
             // Swap the rear thruster mesh with one that's better shaped and reposition them all appropriately
             MeshFilter mf = ps.m_thruster_trans[1].gameObject.GetComponent<MeshFilter>();
-            mf.sharedMesh = ps.m_thruster_trans[0].gameObject.GetComponent<MeshFilter>().sharedMesh;
+            mf.mesh = ps.m_thruster_trans[0].gameObject.GetComponent<MeshFilter>().sharedMesh;
             ps.m_thruster_trans[1].localRotation = Quaternion.Euler(180f, 0f, 90f);
             ps.m_thruster_trans[1].localScale = new Vector3(2.5f, 2.3f, 2.5f);
             ps.m_thruster_trans[1].localPosition = new Vector3(0f, 0.08f, -0.3f);
@@ -315,9 +370,56 @@ namespace GameMod
             ps.m_muzzle_left.localPosition = new Vector3(-1.512f, -1.23f, 1.55f); // left weapon firepoint
             ps.m_muzzle_right.localPosition = new Vector3(1.512f, -1.23f, 1.55f); // right weapon firepoint
 
-            AdjustQuadFirepoints(ps);
+            base.ApplyParameters(go);
         }
     }
+
+    // ====================================================================
+    //
+    // ====================================================================
+    // ====================================================================
+    //
+    // ====================================================================
+
+    // Slower version of the Pyro
+    public class PyroGXSlow : PyroGX
+    {
+        public PyroGXSlow()
+        {
+            displayName = "Pyro GX (Slow)";
+            name = "entity_special_player_pyro_slow";
+            meshName = "Pyro";
+            colliderNames = new string[3] { "PyroCollider-100", "PyroCollider-105", "PyroCollider-110" };
+
+            customizations = false;
+
+            FIRING_POINTS = new Vector3[9]
+            {
+            new Vector3(1.512f, -1.23f, 1.55f),      // Impulse
+            new Vector3(0f, -1.275f, 1.5f),          // Cyclone
+            new Vector3(1.512f, -1.23f, 1.55f),      // Reflex
+            new Vector3(1.512f, -1.23f, 1.55f),      // Crusher
+            new Vector3(0f, -1.17f, 1.8f),           // Driller
+            new Vector3(1.512f, -1.23f, 1.55f),      // Flak
+            new Vector3(1.512f, -1.23f, 1.55f),      // Thunderbolt
+            new Vector3(1.512f, -1.23f, 1.55f),      // Lancer
+            new Vector3(2.5f, -1.68f, 2.3f)          // Quad Impulse firepoint
+            };
+
+            ShieldMultiplier = 1.1f;
+
+            m_slide_force_mp = new float[4] { 22.5f, 23.6f, 23.6f, 23.6f };
+            m_turn_speed_limit_acc = new float[5] { 1.84f, 2.6f, 3.6f, 4.8f, 100f };
+            m_turn_speed_limit_rb = new float[5] { 2f, 2.6f, 3.2f, 4.2f, 100f };
+        }
+    }
+
+    // ====================================================================
+    //
+    // ====================================================================
+    // ====================================================================
+    //
+    // ====================================================================
 
     // A cosmetic-only version of the Pyro
     public class PyroGXCosmetic : PyroGX
@@ -345,25 +447,35 @@ namespace GameMod
                 new Vector3(1.675f, -0.93f, 2.6f),       // Lancer
                 new Vector3(2.3f, -1.505f, 1.63f)        // Quad Impulse firepoint
             };
+
+            ShieldMultiplier = 1f;
+
+            m_slide_force_mp = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
+            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
+            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
         }
 
-        public override void MakePrefab()
+        public override void ApplyParameters(GameObject go)
         {
-            base.MakePrefab();
+            base.ApplyParameters(go);
 
-            PlayerShip ps = Prefab.GetComponent<PlayerShip>();
+            PlayerShip ps = go.GetComponent<PlayerShip>();
 
-            ps.m_muzzle_center.localPosition = new Vector3(0f, -1.926f, 2.485f); // center weapon firepoint
-            ps.m_muzzle_center2.localPosition = new Vector3(0f, -1.873f, 0f); // center missile firepoint
+            ps.m_muzzle_center.localPosition = new Vector3(0f, -1.926f, 2.485f); // center weapon firepoint back to the Kodachi's spot
+            ps.m_muzzle_center2.localPosition = new Vector3(0f, -1.873f, 0f); // center missile firepoint back to the Kodachi's spot
 
-            ps.m_muzzle_left.localPosition = new Vector3(-1.675f, -1.105f, 2.611f); // left weapon firepoint
-            ps.m_muzzle_right.localPosition = new Vector3(1.675f, -1.105f, 2.611f); // right weapon firepoint
+            ps.m_muzzle_left.localPosition = new Vector3(-1.675f, -1.105f, 2.611f); // left weapon firepoint back to the Kodachi's spot
+            ps.m_muzzle_right.localPosition = new Vector3(1.675f, -1.105f, 2.611f); // right weapon firepoint back to the Kodachi's spot
 
-            AdjustQuadFirepoints(Prefab.GetComponent<PlayerShip>());
+            // This is a little crude since we're 2 levels deep. Oh well.
+            go.name = name;
+            SetQuadFirepoints(ps); // gotta call it again because the first set of adjustments was for the full Pyro
         }
     }
 
-    //
+
+
+    // ====================================================================
     //
     //
     // ====================================================================
@@ -371,42 +483,22 @@ namespace GameMod
     // ====================================================================
     //
     //
-    //
+    // ====================================================================
 
-    // This didn't work. We'll need a different approach to be able to change prefabs more than once.
-    /*
-    // Because we're instantiating the PlayerShip prefab early, we have to hijack the StartLocalPlayer call so the HUD and
-    // menus don't render on the inactive prefabs.
-    [HarmonyPatch(typeof(Player), "OnStartLocalPlayer")]
-    internal class MPShips_Player_OnStartLocalPlayer
-    {
-        public static bool Prefix(Player __instance)
-        {
-            if (MPShips.loading && __instance != GameManager.m_local_player)
-            {
-                Debug.Log("CCF OnStartLocalPlayer called on invalid, ignoring");
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-    }
-    */
+
 
     // Loads the new Prefabs
     [HarmonyPatch(typeof(NetworkSpawnPlayer), "Init")]
-    internal class MPShips_NetworkSpawnPlayer_Init
+    static class MPShips_NetworkSpawnPlayer_Init
     {
         public static void Postfix()
         {
-            MPShips.OriginalPrefab = NetworkSpawnPlayer.m_player_prefab; // keep the original to instantiate from
+            //MPShips.OriginalPrefab = NetworkSpawnPlayer.m_player_prefab; // keep the original to instantiate from
 
             MPShips.AddShips();
             MPShips.LoadResources();
 
-            // this part is temporary
+            // this part is temporary -- and defunct now, with the round option stuff available
             string val;
             if (Core.GameMod.FindArgVal("-ship", out val))
             {
@@ -428,6 +520,19 @@ namespace GameMod
             }
         }
     }
+
+    // Assigns the chosen Ship definition's properties to the ship prefab at instantiation
+    [HarmonyPatch(typeof(NetworkSpawnPlayer), "InstantiatePlayer", new System.Type[] { typeof(GameObject), typeof(Vector3), typeof(Quaternion) })]
+    static class MPShips_NetworkSpawnPlayer_InstantiatePlayer
+    {
+        static void Postfix(GameObject __result)
+        {
+            //MPShips.Selected.Add(__result.GetComponent<PlayerShip>().netId, selected); ---- this needs to go in a network message, not here, and only if multiship rounds are implemented
+            MPShips.selected.ApplyParameters(__result);
+            Debug.Log("CCF C_transform attached to: " + __result.GetComponent<PlayerShip>().c_transform.gameObject.name);
+        }
+    }
+
 
     // Hides the custom body panels if we're using a non-standard playership
     [HarmonyPatch(typeof(PlayerShip), "SetCustomBody")]
@@ -457,84 +562,44 @@ namespace GameMod
         }
     }
 
-    // moves the quad shot positions in the firing code.
-    // This method of doing this will need replacing at some point if multiple ships are ever going to coexist - otherwise, this works. See MaybeFireWeapon().
+    // moves the quad shot positions in the PlayerShip firing code.
+    // Currently this pulls from the selected ship definition. If multiples are to exist in the -same- round, this will need updating again.
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
     static class MPShips_PlayerShip_MaybeFireWeapon
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
-            int count = 0;
             foreach (var code in codes)
             {
-                if (count == 2)
+                if (code.opcode == OpCodes.Ldc_R4 && state < 6)
                 {
-                    if (code.opcode == OpCodes.Ldc_R4 && state < 3) // right quad firing
+                    switch ((float)code.operand)
                     {
-                        switch ((float)code.operand)
-                        {
-                            case 0.25f:
-                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffRightX"));
-                                state++;
-                                break;
-                            case -0.15f:
-                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffY"));
-                                state++;
-                                break;
-                            case -0.3f:
-                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffZ"));
-                                state++;
-                                count++; //we're done here
-                                break;
-                            default:
-                                yield return code;
-                                break;
-                        }
+                        case 0.25f: // right quad
+                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffRightX"));
+                            state++;
+                            break;
+                        case -0.25f: // left quad
+                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffLeftX"));
+                            state++;
+                            break;
+                        case -0.15f:
+                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffY"));
+                            state++;
+                            break;
+                        case -0.3f:
+                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffZ"));
+                            state++;
+                            break;
+                        default:
+                            yield return code;
+                            break;
                     }
-                    else
-                    {
-                        yield return code;
-                    }
-                }
-                else if (count == 5)
-                {
-                    if (code.opcode == OpCodes.Ldc_R4 && state < 6) // left quad firing
-                    {
-                        switch ((float)code.operand)
-                        {
-                            case -0.25f:
-                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffLeftX"));
-                                state++;
-                                break;
-                            case -0.15f:
-                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffY"));
-                                state++;
-                                break;
-                            case -0.3f:
-                                yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "QdiffZ"));
-                                state++;
-                                count++; // we're done here
-                                break;
-                            default:
-                                yield return code;
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        yield return code;
-                    }
-                }
-                else if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_muzzle_right"))
-                {
-                    count++;
-                    yield return code;
-                }
-                else if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_muzzle_left"))
-                {
-                    count++;
-                    yield return code;
                 }
                 else
                 {
@@ -544,10 +609,10 @@ namespace GameMod
         }
     }
 
-    // Moved from Debugging.cs - replaces the SwitchVisibleWeapon method with one that uses Vector3 for positioning instead of Vector2.
+    // Moved from Debugging.cs and modified - replaces the SwitchVisibleWeapon method with one that uses Vector3 for positioning instead of Vector2.
     // I am unsure if the exception catching is necessary or not anymore.
     [HarmonyPatch(typeof(PlayerShip), "SwitchVisibleWeapon")]
-    class MPShips_PlayerShip_SwitchVisibleWeapon
+    static class MPShips_PlayerShip_SwitchVisibleWeapon
     {
         static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM)
         {
@@ -659,6 +724,60 @@ namespace GameMod
                 __instance.m_muzzle_left.localPosition = localPosition2;
             }
             return false;
+        }
+    }
+
+    // substitutes the PlayerShip's regular ship handling references with references to the Ship definition classes instead
+    [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
+    static class MPShips_PlayerShip_FixedUpdateProcessControlsInternal
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_slide_force_mp"))
+                {
+                    yield return new CodeInstruction(OpCodes.Pop); // there's a PlayerShip instance reference to clear out first
+                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_slide_force_mp"));
+                }
+                else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_acc"))
+                {
+                    CodeInstruction ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // original had a label on it
+                    ci.labels = code.labels;
+                    yield return ci;
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_acc"));
+                }
+                else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_rb"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_rb"));
+                }
+                else
+                {
+                    yield return code;
+                }
+            }
+        }
+    }
+
+    // handles shield strength scaling at the damage side
+    [HarmonyPatch(typeof(PlayerShip), "ApplyDamage")]
+    static class MPShips_PlayerShip_ApplyDamage
+    {
+        static void Prefix(ref DamageInfo di)
+        {
+            di.damage /= MPShips.selected.ShieldMultiplier;
+        }
+    }
+
+    // handles shield strength scaling at the pickup side
+    [HarmonyPatch(typeof(Player), "AddArmor")]
+    static class MPShips_Player_AddArmor
+    {
+        static void Prefix(ref float armor)
+        {
+            armor /= MPShips.selected.ShieldMultiplier;
         }
     }
 }

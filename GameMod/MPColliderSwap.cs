@@ -14,7 +14,7 @@ namespace GameMod
 
     // replaces the mesh when the PlayerShip object is started, provided that an accurate mesh has been selected instead of the default
     [HarmonyPatch(typeof(PlayerShip), "Start")]
-    internal class MPColliderSwap_PlayerShip_Start
+    static class MPColliderSwap_PlayerShip_Start
     {
         static void Postfix(PlayerShip __instance)
         {
@@ -27,21 +27,11 @@ namespace GameMod
                 Object.Destroy(__instance.c_mesh_collider);
                 GameObject go = Object.Instantiate(MPShips.selected.collider[MPColliderSwap.selectedCollider - 1]); // -1 since 0 is the "Stock" sphere
 
-                if (!__instance.c_player.m_spectator && __instance.netId != GameManager.m_local_player.c_player_ship.netId)
+                if (MPColliderSwap.visualizeMe && !__instance.c_player.m_spectator && __instance.netId != GameManager.m_local_player.c_player_ship.netId)
                 {
-                    if (MPColliderSwap.visualizeMe)
-                    {
-                        go.GetComponent<MeshRenderer>().sharedMaterial = UIManager.gm.m_energy_material;
-                        go.GetComponent<MeshRenderer>().enabled = true;
-                    }
-                    else
-                    {
-                        go.GetComponent<MeshRenderer>().enabled = false;
-                    }
-                }
-                else
-                {
-                    go.GetComponent<MeshRenderer>().enabled = false;
+                    go.AddComponent<MeshRenderer>();
+                    go.GetComponent<MeshRenderer>().sharedMaterial = UIManager.gm.m_energy_material;
+                    go.GetComponent<MeshRenderer>().enabled = true;
                 }
 
                 go.layer = 16;
@@ -58,7 +48,7 @@ namespace GameMod
 
     // replaces the original "PrepareForMP" method with one that can handle mesh vs. sphere colliders
     [HarmonyPatch(typeof(Player), "PrepareForMP")]
-    internal class MPPlayer_PrepareForMP_ColliderSwap
+    static class MPPlayer_PrepareForMP_ColliderSwap
     {
         static bool Prefix(Player __instance)
         {
@@ -79,8 +69,6 @@ namespace GameMod
             {
                 SphereCollider sphereCollider1 = (SphereCollider)__instance.c_player_ship.c_mesh_collider;
                 sphereCollider1.radius = 1f;
-
-                //Debug.Log("CCF - lol nope still a SphereCollider");
             }
 
             return false;
@@ -90,7 +78,7 @@ namespace GameMod
     // adds rotation syncing to the collider since it didn't matter with the sphere previously
     // this also happens once below and twice over in MPClientExtrapolation (look for c_transform.localRotation)
     [HarmonyPatch(typeof(Player), "LerpRemotePlayer")]
-    internal class MPPlayer_LerpRemotePlayer_ColliderSwap
+    static class MPPlayer_LerpRemotePlayer_ColliderSwap
     {
         static void Postfix(Player __instance)
         {
@@ -99,7 +87,7 @@ namespace GameMod
     }
 
     [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
-    internal class MPPlayerShip_FixedUpdateProcessControlsInternal_ColliderSwap
+    static class MPPlayerShip_FixedUpdateProcessControlsInternal_ColliderSwap
     {
         static void Postfix(PlayerShip __instance)
         {
