@@ -1,10 +1,7 @@
 ﻿using HarmonyLib;
 using Overload;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection.Emit;
-using System.Text;
 using UnityEngine;
 
 namespace GameMod
@@ -106,21 +103,6 @@ namespace GameMod
                 UpdateFrameLimiterSlider(UIManager.m_menu_selection);
             }
 
-            /*
-            // Handle menu selection just before MenuManager.UnReverseOption
-            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-            {
-                foreach (var code in codes)
-                {
-                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(MenuManager), "UnReverseOption"))
-                    {
-                        yield return new CodeInstruction(OpCodes.Ldloc_1) { labels = code.labels };
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FrameLimiter_GraphicsOptionsUpdate), "UpdateFrameLimiterSlider"));
-                        code.labels = null;
-                    }
-                    yield return code;
-                }
-            }*/
         }
         
     }
