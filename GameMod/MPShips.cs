@@ -39,10 +39,14 @@ namespace GameMod
             Ships.Add(new Kodachi()); // Don't mess with this one or you're gonna break stuff.
             Debug.Log("Adding Pyro ship definition");
             Ships.Add(new PyroGX());
+            Debug.Log("Adding Phoenix ship definition");
+            Ships.Add(new Phoenix());
             Debug.Log("Adding Pyro (Slow) ship definition");
             Ships.Add(new PyroGXSlow());
             Debug.Log("Adding Pyro (Cosmetic) ship definition");
             Ships.Add(new PyroGXCosmetic());
+
+            SwitchPrefab(0); // early game stuff goes weird otherwise, it needs one of them to be referenced
         }
 
         public static void SwitchPrefab(int idx)
@@ -86,6 +90,12 @@ namespace GameMod
                         Object.DontDestroyOnLoad(s.collider[i]);
                         Debug.Log("MeshCollider loaded: " + s.collider[i].name);
                     }
+                    for (int i = 0; i < s.extras.Length; i++)
+                    {
+                        s.extras[i] = Object.Instantiate(ab.LoadAsset<GameObject>(s.extraNames[i]));
+                        Object.DontDestroyOnLoad(s.extras[i]);
+                        Debug.Log("Extra mesh loaded: " + s.extras[i].name);
+                    }
                 }
                 ab.Unload(false);
             }
@@ -109,9 +119,11 @@ namespace GameMod
         public string name; // the GameObject's new name string (if needed)
         public string meshName; // the name of the mesh prefab -- if null, will be skipped (Kodachi comes to mind)
         public string[] colliderNames; // the 3 MeshCollider names
+        public string[] extraNames; // names of extra meshes to load
 
         public GameObject mesh; // the replacement mesh (if needed)
         public GameObject[] collider = new GameObject[3];
+        public GameObject[] extras = new GameObject[0]; // only used if needed
 
         public bool customizations; // whether or not to use the Kodachi's custom wing and body meshes.
 
@@ -135,6 +147,9 @@ namespace GameMod
         // turn speed restrictors
         public float[] m_turn_speed_limit_acc; // size 5
         public float[] m_turn_speed_limit_rb; // size 5
+
+        public float boostMulti; // speed multiplier for regular boost
+        public float boostMod; // speed multiplier for the Enhanced Boost mod
 
         // This is where the ship customizations in each definition get applied to the instantiated GameObject.
         // Override this in each Ship and call base.ApplyParameters() at the end of the method.
@@ -216,6 +231,9 @@ namespace GameMod
             m_slide_force_mp = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
             m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
             m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
+
+            boostMulti = 1.65f;
+            boostMod = 1.85f;
         }
 
         // nothing needs to actually get created here, obviously, we handle creating the quad firepoints in base.ApplyParameters()
@@ -264,6 +282,9 @@ namespace GameMod
             m_slide_force_mp = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
             m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
             m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
+
+            boostMulti = 1.65f;
+            boostMod = 1.85f;
         }
 
         public override void ApplyParameters(GameObject go)
@@ -411,6 +432,9 @@ namespace GameMod
             m_slide_force_mp = new float[4] { 22.5f, 23.6f, 23.6f, 23.6f };
             m_turn_speed_limit_acc = new float[5] { 1.84f, 2.6f, 3.6f, 4.8f, 100f };
             m_turn_speed_limit_rb = new float[5] { 2f, 2.6f, 3.2f, 4.2f, 100f };
+
+            boostMulti = 1.8f;
+            boostMod = 2.0f;
         }
     }
 
@@ -453,6 +477,9 @@ namespace GameMod
             m_slide_force_mp = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
             m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
             m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
+
+            boostMulti = 1.65f;
+            boostMod = 1.85f;
         }
 
         public override void ApplyParameters(GameObject go)
@@ -473,6 +500,167 @@ namespace GameMod
         }
     }
 
+    // ====================================================================
+    //
+    // ====================================================================
+    // ====================================================================
+    //
+    // ====================================================================
+
+    // gotta go fast
+    public class Phoenix : Ship
+    {
+        public Phoenix()
+        {
+            displayName = "Phoenix Interceptor";
+            name = "entity_special_player_phoenix";
+            meshName = "Phoenix";
+            colliderNames = new string[3] { "PhoenixCollider-100", "PhoenixCollider-105", "PhoenixCollider-110" };
+            
+            extras = new GameObject[1];
+            extraNames = new string[] { "PhoenixThruster" };
+
+            customizations = false;
+
+            FIRING_POINTS = new Vector3[9]
+            {
+            new Vector3(1.62f, -0.14f, -0.03f),      // Impulse
+            new Vector3(0f, -1.15f, 0.26f),           // Cyclone
+            new Vector3(1.62f, -0.14f, -0.03f),      // Reflex
+            new Vector3(2.51f, -1.35f, 0.44f),       // Crusher
+            new Vector3(0f, -1.0f, 0.57f),            // Driller
+            new Vector3(1.62f, -0.14f, -0.03f),      // Flak
+            new Vector3(1.62f, -0.14f, -0.03f),      // Thunderbolt
+            new Vector3(2.51f, -1.35f, 0.44f),       // Lancer
+            new Vector3(2.51f, -1.35f, 0.44f)        // Quad Impulse firepoint
+            };
+
+            ShieldMultiplier = 0.90f;
+            // still playing with these, needs some work.
+            m_slide_force_mp = new float[4] { 26f, 27.83f, 27.83f, 27.83f };
+            m_turn_speed_limit_acc = new float[5] { 2.4f, 3.35f, 4.65f, 6.2f, 100f };
+            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
+
+            boostMulti = 1.75f;
+            boostMod = 1.95f;
+        }
+
+        public override void ApplyParameters(GameObject go)
+        {
+            PlayerShip ps = go.GetComponent<PlayerShip>();
+
+            // Hide everything but the main body GameObject
+            Transform ts = ps.c_external_ship.transform;
+            for (int i = 1; i < ts.childCount; i++)
+            {
+                ts.GetChild(i).gameObject.SetActive(false);
+                ts.GetChild(i).gameObject.GetComponent<MeshRenderer>().enabled = false;
+            }
+            GameObject body = ts.GetChild(0).gameObject;
+            GameObject blank = ts.GetChild(1).gameObject;
+
+            // Hide all internal cockpit components in a way that keeps them hidden when enabling/disabling cockpit
+            ts = ps.c_cockpit.transform.GetChild(0);
+            for (int i = 1; i < ts.childCount; i++)
+            {
+                ts.GetChild(i).gameObject.SetActive(false);
+                ts.GetChild(i).gameObject.GetComponent<MeshRenderer>().enabled = false;
+            }
+
+            // Hide all internal cockpit lights
+            ts = ps.c_cockpit_light.transform;
+            for (int i = 0; i < ts.childCount; i++)
+            {
+                ts.GetChild(i).gameObject.SetActive(false);
+            }
+
+            // Replace the body main mesh with our substitute and reposition it
+            body.GetComponent<MeshFilter>().mesh = mesh.GetComponent<MeshFilter>().sharedMesh;
+            body.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            body.transform.localPosition = new Vector3(0f, -0.08f, 1f);
+            body.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
+
+            // Replace the second mesh with a single tiny triangle for use with the effects array
+            // (otherwise the shader gets applied 8x over on the main mesh or shows up where it's not supposed to)
+            blank.GetComponent<MeshFilter>().mesh = MPShips.m_blank.GetComponent<MeshFilter>().sharedMesh;
+            blank.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            blank.transform.localPosition = new Vector3(0f, 0, 0f);
+            blank.transform.localScale = new Vector3(1f, 1f, 1f);
+
+            // Swap the rear thruster mesh with our custom one
+            MeshFilter mf = ps.m_thruster_trans[1].gameObject.GetComponent<MeshFilter>();
+            mf.mesh = extras[0].GetComponent<MeshFilter>().sharedMesh;
+            ps.m_thruster_trans[1].localRotation = Quaternion.Euler(180f, 0f, 0f);
+            ps.m_thruster_trans[1].localScale = new Vector3(1.6f, 1.6f, 1.6f);
+            ps.m_thruster_trans[1].localPosition = new Vector3(0f, 0.463f, -0.465f);
+
+            // top thruster
+            ps.m_thruster_trans[0].localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            ps.m_thruster_trans[0].localPosition = new Vector3(0f, 0.313f, 0.025f);
+
+            // front thruster
+            ps.m_thruster_trans[2].localRotation = Quaternion.Euler(0f, 0f, 0f);
+            ps.m_thruster_trans[2].localPosition = new Vector3(0f, 0.29f, 0.46f);
+
+            // bottom thruster
+            ps.m_thruster_trans[3].localRotation = Quaternion.Euler(90f, 0f, 0f);
+            ps.m_thruster_trans[3].localPosition = new Vector3(0f, -0.145f, 1f);
+
+            // Empty and repopulate the effects array with the only mesh we care about
+            ps.c_spawn_effect_mf = new MeshFilter[8];
+            ps.c_spawn_effect_mf[7] = body.GetComponent<MeshFilter>();
+
+            // Add that tiny triangle from earlier to the first 7 slots since the game needs them filled.
+            // The important ones start at 7, and transpiling gets ugly if we ever want to have a swappable prefab
+            ps.c_spawn_effect_mf[0] = blank.GetComponent<MeshFilter>();
+            ps.c_spawn_effect_mf[1] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[2] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[3] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[4] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[5] = ps.c_spawn_effect_mf[0];
+            ps.c_spawn_effect_mf[6] = ps.c_spawn_effect_mf[0];
+
+            // Hide all the weapon meshes on the side mounts
+            ps.m_weapon_mounts1[0].transform.parent.gameObject.SetActive(false);
+            ps.m_weapon_mounts2[0].transform.parent.gameObject.SetActive(false);
+
+            // Move the left weapon mesh locations so the Thunderbolt glow lines up right
+            // (also in case we ever reskin them and want to reenable them)
+            ts = ps.c_cockpit.transform.GetChild(1); // left weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, 36.6f);
+            ts.localPosition = new Vector3(-0.95f, .77f, 0.68f);
+            ts.gameObject.SetActive(false);
+
+            // Same with the right mesh locations
+            ts = ps.c_cockpit.transform.GetChild(2); // right weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, -36.6f);
+            ts.localPosition = new Vector3(0.95f, .77f, 0.68f);
+            ts.gameObject.SetActive(false);
+
+            // Move but don't hide the center weapon mesh locations so they stay correctly underslung
+            ts = ps.c_cockpit.transform.GetChild(3); // center weapon mount
+            ts.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            ts.localPosition = new Vector3(0f, 0.46f, 0.52f);
+
+            // move the actual firepoints as well. Should not be used on a stock server.
+            ps.m_muzzle_center.localPosition = new Vector3(0f, -1.12f, 1.2f); // center weapon firepoint
+            ps.m_muzzle_center2.localPosition = new Vector3(0f, -1.12f, 1.2f); // center missile firepoint
+
+            ps.m_muzzle_left.localPosition = new Vector3(-1.62f, -0.14f, -0.03f); // left weapon firepoint
+            ps.m_muzzle_right.localPosition = new Vector3(1.62f, -0.14f, -0.03f); // right weapon firepoint
+
+            ps.m_muzzle_left2.localPosition = new Vector3(-1.25f, -1.04f, 1f); // left missile firepoint
+            ps.m_muzzle_right2.localPosition = new Vector3(1.25f, -1.04f, 1f); // right missile firepoint
+
+            // move the headlights
+            ts = ps.c_lights[0].transform; // right light
+            ts.localPosition = new Vector3(0.42f, 1.6f, -2.45f);
+            ts = ps.c_lights[1].transform; // left light
+            ts.localPosition = new Vector3(-0.42f, 1.6f, -2.45f);
+
+            base.ApplyParameters(go);
+        }
+    }
 
 
     // ====================================================================
@@ -493,31 +681,8 @@ namespace GameMod
     {
         public static void Postfix()
         {
-            //MPShips.OriginalPrefab = NetworkSpawnPlayer.m_player_prefab; // keep the original to instantiate from
-
             MPShips.AddShips();
             MPShips.LoadResources();
-
-            // this part is temporary -- and defunct now, with the round option stuff available
-            string val;
-            if (Core.GameMod.FindArgVal("-ship", out val))
-            {
-                int idx;
-                if (int.TryParse(val, out idx))
-                {
-                    MPShips.SwitchPrefab(idx);
-                }
-                else
-                {
-                    Debug.Log("Invalid \"-ship\" argument, using stock ship prefab");
-                    MPShips.SwitchPrefab(0);
-                }
-            }
-            else
-            {
-                Debug.Log("No alternate ship specified, using stock ship prefab");
-                MPShips.SwitchPrefab(0);
-            }
         }
     }
 
@@ -529,7 +694,6 @@ namespace GameMod
         {
             //MPShips.Selected.Add(__result.GetComponent<PlayerShip>().netId, selected); ---- this needs to go in a network message, not here, and only if multiship rounds are implemented
             MPShips.selected.ApplyParameters(__result);
-            Debug.Log("CCF C_transform attached to: " + __result.GetComponent<PlayerShip>().c_transform.gameObject.name);
         }
     }
 
@@ -733,6 +897,9 @@ namespace GameMod
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            bool boost_done = false;
+            CodeInstruction ci;
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_slide_force_mp"))
@@ -743,7 +910,7 @@ namespace GameMod
                 }
                 else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_acc"))
                 {
-                    CodeInstruction ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // original had a label on it
+                    ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // original had a label on it
                     ci.labels = code.labels;
                     yield return ci;
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_acc"));
@@ -752,6 +919,19 @@ namespace GameMod
                 {
                     yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_rb"));
+                }
+                else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.85f && !boost_done)
+                {
+                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMod"));
+                }
+                else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.65f && !boost_done)
+                {
+                    ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // more labels
+                    ci.labels = code.labels;
+                    yield return ci;
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMulti"));
+                    boost_done = true;
                 }
                 else
                 {

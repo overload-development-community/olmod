@@ -820,7 +820,7 @@ namespace GameMod
         }
     }
 
-    // fixes the bug with ship customization not appearing properly
+    // attempts to help with the bug with ship customization not appearing properly
     [HarmonyPatch(typeof(LoadoutDataMessage), MethodType.Constructor, new Type[] { typeof(LoadoutDataMessage) })]
     internal class MPLoadouts_LoadoutDataMessage_Constructor
     {

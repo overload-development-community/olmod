@@ -29,9 +29,9 @@ namespace GameMod
 
                 if (MPColliderSwap.visualizeMe && !__instance.c_player.m_spectator && __instance.netId != GameManager.m_local_player.c_player_ship.netId)
                 {
-                    go.AddComponent<MeshRenderer>();
-                    go.GetComponent<MeshRenderer>().sharedMaterial = UIManager.gm.m_energy_material;
-                    go.GetComponent<MeshRenderer>().enabled = true;
+                    MeshRenderer mr = go.AddComponent<MeshRenderer>();
+                    mr.sharedMaterial = UIManager.gm.m_energy_material;
+                    mr.enabled = true;
                 }
 
                 go.layer = 16;
