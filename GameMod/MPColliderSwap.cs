@@ -13,6 +13,7 @@ namespace GameMod
     }
 
     // replaces the mesh when the PlayerShip object is started, provided that an accurate mesh has been selected instead of the default
+    [HarmonyPriority(Priority.Last)]
     [HarmonyPatch(typeof(PlayerShip), "Start")]
     static class MPColliderSwap_PlayerShip_Start
     {
@@ -25,7 +26,9 @@ namespace GameMod
             {
                 var mat_no_friction = __instance.c_mesh_collider.sharedMaterial;
                 Object.Destroy(__instance.c_mesh_collider);
-                GameObject go = Object.Instantiate(MPShips.selected.collider[MPColliderSwap.selectedCollider - 1]); // -1 since 0 is the "Stock" sphere
+                //int id = GameplayManager.IsDedicatedServer() ? __instance.connectionToClient.connectionId : __instance.connectionToServer.connectionId;
+                GameObject go = Object.Instantiate(MPShips.GetShip(__instance).collider[MPColliderSwap.selectedCollider - 1]); // -1 since 0 is the "Stock" sphere
+                //GameObject go = Object.Instantiate(MPShips.SelectedShips[id].collider[MPColliderSwap.selectedCollider - 1]); // -1 since 0 is the "Stock" sphere
 
                 if (MPColliderSwap.visualizeMe && !__instance.c_player.m_spectator && __instance.netId != GameManager.m_local_player.c_player_ship.netId)
                 {

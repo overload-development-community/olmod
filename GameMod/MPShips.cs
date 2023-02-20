@@ -2,6 +2,7 @@
 using Overload;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
@@ -9,13 +10,21 @@ using UnityEngine.Networking;
 
 namespace GameMod
 {
+    // Ship selection messages are now being sent properly and received. Dictionary being written to. BUT... Instantiation isn't working with the right ID.
+
     // Handles asset replacement for ships (well, -ship-, currently)
     public static class MPShips
     {
-        // public static Dictionary<NetworkInstanceId, int> Selected = new Dictionary<NetworkInstanceId, int>(); // not needed yet, but will be for multiple ships in a single round
+        //public static Dictionary<int, Ship> SelectedShips = new Dictionary<int, Ship>(); // stores the PlayerShip's netId and the associated Ship reference
+        //public static KeyValuePair<int, Player> players = ;
+
+        public static Dictionary<NetworkInstanceId, Ship> SelectedShips = new Dictionary<NetworkInstanceId, Ship>(); // stores the PlayerShip's netId and the associated Ship reference
+        public static Dictionary<string, Ship> NameToShips = new Dictionary<string, Ship>(); // stores the player name and the associated ship for translation at instantiation
 
         public static List<Ship> Ships = new List<Ship>();
-        public static Ship selected; // which prefab is currently active
+        public static Ship sp_ship; // only used f
+
+
         private static int _idx = 0;
 
         public static int selected_idx
@@ -24,13 +33,14 @@ namespace GameMod
             set
             {
                 _idx = value;
-                selected = Ships[value];
+                //selected = Ships[value];
             }
         }
 
         public static GameObject m_blank; // a single tiny untextured triangle for blanking out unused prefab components
 
         public static bool loading = false; // set to true during the loading process
+
 
         public static void AddShips()
         {
@@ -46,23 +56,7 @@ namespace GameMod
             Debug.Log("Adding Pyro (Cosmetic) ship definition");
             Ships.Add(new PyroGXCosmetic());
 
-            SwitchPrefab(0); // early game stuff goes weird otherwise, it needs one of them to be referenced
-        }
-
-        public static void SwitchPrefab(int idx)
-        {
-            if (idx < Ships.Count)
-            {
-                selected_idx = idx;
-                selected = Ships[idx];
-                Debug.Log("Switching ship Prefabs to " + selected.displayName);
-            }
-            else
-            {
-                selected_idx = 0;
-                selected = Ships[0];
-                Debug.Log("Attempted to switch to a non-existent ship Prefab, using " + selected.displayName + " instead");
-            }
+            sp_ship = Ships[0]; // early game stuff goes weird otherwise, it needs one of them to be referenced
         }
 
         public static void LoadResources()
@@ -100,6 +94,172 @@ namespace GameMod
                 ab.Unload(false);
             }
             loading = false;
+        }
+
+        /*
+        //public static void AssignShip(int lobbyId, int idx)
+        public static void AssignShip(NetworkInstanceId lobbyId, int idx)
+        {
+            if (!SelectedShips.ContainsKey(lobbyId))
+            //if (!SelectedShips.ContainsKey(lobbyId))
+            {
+                if (idx >= Ships.Count)
+                {
+                    Debug.Log("Client attempted to assign a non-existent ship value, using Kodachi instead.");
+                    idx = 0;
+                }
+                Debug.Log("CCF Adding to list " + lobbyId + " on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
+                SelectedShips.Add(lobbyId, Ships[idx]);
+            }
+        }*/
+
+        public static void AssignShipToId(PlayerShip ps)
+        {
+            NetworkInstanceId id = ps.netId;
+            Ship s;
+            if (!NameToShips.ContainsKey(ps.c_player.m_mp_name))
+            {
+                Debug.Log("CCF playership for name " + ps.c_player.m_mp_name + " not found in NameToShips, adding stock values on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
+                s = sp_ship;
+            }
+            else
+            {
+                s = NameToShips[ps.c_player.m_mp_name];
+            }
+            SelectedShips.Add(id, s);
+        }
+
+        //public static void AssignShip(int lobbyId, int idx)
+        public static void AssignShipToName(string mp_name, int idx)
+        {
+            if (!NameToShips.ContainsKey(mp_name))
+            //if (!SelectedShips.ContainsKey(lobbyId))
+            {
+                if (idx >= Ships.Count)
+                {
+                    Debug.Log("Client attempted to assign a non-existent ship value, using Kodachi instead.");
+                    idx = 0;
+                }
+                Debug.Log("CCF Adding to list " + mp_name + " on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
+                NameToShips.Add(mp_name, Ships[idx]);
+            }
+        }
+
+
+        // takes either Players or PlayerShips, finds the right lobby_id, and returns the appropriate Ship item for that Player
+        public static Ship GetShip(PlayerShip ps)
+        {
+            Ship s;
+            /*if (GameplayManager.IsMultiplayerActive && (p.connectionToClient != null || p.connectionToServer != null))
+            {
+                //int id = GameplayManager.IsDedicatedServer() ? p.connectionToClient.connectionId : p.connectionToServer.connectionId;
+                NetworkInstanceId id = p.netId;
+                if (!SelectedShips.TryGetValue(id, out s))
+                {
+                    SelectedShips.Add(id, sp_ship);
+                    s = sp_ship;
+                }
+            }
+            else
+            {
+                s = sp_ship;
+            }*/
+
+            NetworkInstanceId id = ps.netId;
+            if (!SelectedShips.TryGetValue(id, out s))
+            {
+                //SelectedShips.Add(id, sp_ship);
+                s = sp_ship;
+            }
+            return s;
+            //return SelectedShips[ps.netId];
+        }
+
+        /*
+        // takes either Players or PlayerShips, finds the right lobby_id, and returns the appropriate Ship item for that Player
+        public static int GetId(NetworkBehaviour p)
+        {
+            int id = -1;
+            if (GameplayManager.IsMultiplayerActive && (p.connectionToClient != null || p.connectionToServer != null))
+            {
+                id = GameplayManager.IsDedicatedServer() ? p.connectionToClient.connectionId : p.connectionToServer.connectionId;
+            }
+            return id;
+        }
+        */
+
+        // takes either Players or PlayerShips, finds the right lobby_id, and returns the appropriate Ship item for that Player
+        public static NetworkInstanceId GetId(PlayerShip ps)
+        {
+            NetworkInstanceId id = ps.netId;
+            return id;
+        }
+
+        
+
+
+        public static void SendShipSelectionToServer()
+        {
+            if (Client.GetClient() == null)
+            {
+                Debug.LogErrorFormat("Null client in MPShips.SendShipSelectionToServer for player", new object[0]);
+                return;
+            }
+
+            ShipDataMessage shipDataMessage = new ShipDataMessage();
+            //shipDataMessage.lobbyId = NetworkMatch.m_my_lobby_id;
+            //shipDataMessage.lobbyId = GameManager.m_player_ship.netId;
+            shipDataMessage.mp_name = GameManager.m_local_player.m_mp_name;
+            shipDataMessage.selected_idx = 0; //Menus.mms_selected_ship;
+
+
+            string val;
+            if (Core.GameMod.FindArgVal("-ship", out val))
+            {
+                int idx;
+                if (int.TryParse(val, out idx))
+                {
+                    shipDataMessage.selected_idx = idx;
+                }
+                else
+                {
+                    Debug.Log("Invalid \"-ship\" argument, using stock ship prefab");
+                    shipDataMessage.selected_idx = 0;
+                }
+            }
+            else
+            {
+                Debug.Log("No alternate ship specified, using stock ship prefab");
+                shipDataMessage.selected_idx = 0;
+            }
+
+            Client.GetClient().Send(MessageTypes.MsgSetShip, shipDataMessage);
+        }
+
+
+        // for passing selected ships along with the loadout selection
+        public class ShipDataMessage : MessageBase
+        {
+            public override void Serialize(NetworkWriter writer)
+            {
+                //writer.WritePackedUInt32((uint)this.lobbyId);
+                //writer.Write(this.lobbyId);
+                writer.Write(this.mp_name);
+                writer.WritePackedUInt32((uint)this.selected_idx);
+            }
+
+            public override void Deserialize(NetworkReader reader)
+            {
+                //this.lobbyId = reader.ReadNetworkId();
+                //this.lobbyId = (int)reader.ReadPackedUInt32();
+                this.mp_name = reader.ReadString();
+                this.selected_idx = (int)reader.ReadPackedUInt32();
+            }
+
+            //public NetworkInstanceId lobbyId;
+            //public int lobbyId;
+            public string mp_name;
+            public int selected_idx;
         }
     }
 
@@ -516,7 +676,7 @@ namespace GameMod
             name = "entity_special_player_phoenix";
             meshName = "Phoenix";
             colliderNames = new string[3] { "PhoenixCollider-100", "PhoenixCollider-105", "PhoenixCollider-110" };
-            
+
             extras = new GameObject[1];
             extraNames = new string[] { "PhoenixThruster" };
 
@@ -663,6 +823,7 @@ namespace GameMod
     }
 
 
+
     // ====================================================================
     //
     //
@@ -692,19 +853,71 @@ namespace GameMod
     {
         static void Postfix(GameObject __result)
         {
-            //MPShips.Selected.Add(__result.GetComponent<PlayerShip>().netId, selected); ---- this needs to go in a network message, not here, and only if multiship rounds are implemented
-            MPShips.selected.ApplyParameters(__result);
+            /*
+            Ship s = MPShips.GetShip(__result.GetComponent<Player>());
+            Debug.Log("CCF Instantiate ship type " + s.displayName + " for lobby_id " + MPShips.GetId(__result.GetComponent<Player>()) + (GameplayManager.IsDedicatedServer() ? " on server" : " on client " + NetworkMatch.m_my_lobby_id));
+            s.ApplyParameters(__result);
+            
+
+            /*if (GameplayManager.IsMultiplayerActive)
+            {
+                Ship s = MPShips.GetShip(__result.GetComponent<Player>());
+                s.ApplyParameters(__result);
+                int id = GameplayManager.IsDedicatedServer() ? __result.GetComponent<Player>().connectionToClient.connectionId : __result.GetComponent<Player>().connectionToServer.connectionId;
+                //NetworkInstanceId id = __result.GetComponent<PlayerShip>().netId;
+                Debug.Log("CCF instantiate got net id " + id + (GameplayManager.IsDedicatedServer() ? " on server" : " on client " + NetworkMatch.m_my_lobby_id));
+                Ship selected;
+                if (!MPShips.SelectedShips.TryGetValue(id, out selected))
+                {
+                    Debug.Log("Tried to instantiate player lobbyId " + id + " with no ship type, using stock Kodachi");
+                    MPShips.AssignShip(id, 0);
+                    Debug.Log("CCF no value, assigned ship id to net id " + id + (GameplayManager.IsDedicatedServer() ? " on server" : " on client " + NetworkMatch.m_my_lobby_id));
+                    selected = MPShips.Ships[0];
+                }
+                Debug.Log("CCF applying parameter to net id " + id + (GameplayManager.IsDedicatedServer() ? " on server" : " on client " + NetworkMatch.m_my_lobby_id));
+                selected.ApplyParameters(__result);
+            }
+            else
+            {
+                MPShips.init.ApplyParameters(__result);
+            }
+            */
+            /*
+            PlayerShip ps = __result.GetComponent<PlayerShip>();
+
+            MPShips.AssignShipToId(ps);
+            Ship s = MPShips.GetShip(ps);
+            Debug.Log("CCF Instantiate ship type " + s.displayName + " for lobby_id " + MPShips.GetId(ps) + " name " + ps.c_player.m_mp_name + (GameplayManager.IsDedicatedServer() ? " on server" : " on client " + NetworkMatch.m_my_lobby_id));
+            s.ApplyParameters(__result);
+            */
         }
     }
+    
+    [HarmonyPatch(typeof(PlayerShip), "Start")]
+    static class MPShips_Player_Awake
+    {
+        static void Postfix(PlayerShip __instance)
+        {
+            MPShips.AssignShipToId(__instance);
+            Ship s = MPShips.GetShip(__instance);
+            Debug.Log("CCF Instantiate ship type " + s.displayName + " for lobby_id " + MPShips.GetId(__instance) + " name " + __instance.c_player.m_mp_name + (GameplayManager.IsDedicatedServer() ? " on server" : " on client " + NetworkMatch.m_my_lobby_id));
+            s.ApplyParameters(__instance.gameObject);
+        }
+    }
+    
 
-
-    // Hides the custom body panels if we're using a non-standard playership
+    // Hides the custom body panels if we're using a non-standard playership -- and we don't care if we're on the server
     [HarmonyPatch(typeof(PlayerShip), "SetCustomBody")]
     static class MPShips_PlayerShip_SetCustomBody
     {
-        static bool Prefix()
+        static bool Prefix(PlayerShip __instance)
         {
-            if (!MPShips.selected.customizations)
+            //Debug.Log("CCF listing output (body): " + MPShips.SelectedShips.Keys);
+            //Debug.Log("CCF (body) netId called: " + __instance.netId);
+
+            if (!MPShips.GetShip(__instance).customizations)
+            //if (!GameplayManager.IsDedicatedServer() && !MPShips.SelectedShips[__instance.connectionToClient.connectionId].customizations)
+            //if (!GameplayManager.IsDedicatedServer() && !MPShips.SelectedShips[__instance.netId].customizations)
             {
                 return false;
             }
@@ -712,13 +925,18 @@ namespace GameMod
         }
     }
 
-    // Hides the custom wings if we're using a non-standard playership
+    // Hides the custom wings if we're using a non-standard playership -- and we don't care if we're on the server
     [HarmonyPatch(typeof(PlayerShip), "SetCustomWings")]
     static class MPShips_PlayerShip_SetCustomWings
     {
-        static bool Prefix()
+        static bool Prefix(PlayerShip __instance)
         {
-            if (!MPShips.selected.customizations)
+            //Debug.Log("CCF listing output (wings): " + MPShips.SelectedShips.Keys);
+            //Debug.Log("CCF (wings) netId called: " + __instance.netId);
+
+            if (!MPShips.GetShip(__instance).customizations)
+            //if (!GameplayManager.IsDedicatedServer() && MPShips.SelectedShips[__instance.connectionToClient.connectionId].customizations)
+            //if (!GameplayManager.IsDedicatedServer() && !MPShips.SelectedShips[__instance.netId].customizations)
             {
                 return false;
             }
@@ -731,9 +949,25 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
     static class MPShips_PlayerShip_MaybeFireWeapon
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes, ILGenerator gen)
         {
             int state = 0;
+            int idx = gen.DeclareLocal(typeof(Ship)).LocalIndex;
+
+            // stores the player's ship from the static methods once at the start to avoid the lookup headaches
+            //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "SelectedShips"));
+            //yield return new CodeInstruction(OpCodes.Ldarg_0);
+            //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerShip), "c_player"));
+            //yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(NetworkBehaviour), "get_netId"));
+            //yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(NetworkBehaviour), "get_connectionToClient"));
+            //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(NetworkConnection), "connectionId"));
+            //yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Dictionary<int, Ship>), "get_Item"));
+            //yield return new CodeInstruction(OpCodes.Stloc_S, idx);
+
+            yield return new CodeInstruction(OpCodes.Ldarg_0);
+            yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPShips), "GetShip"));
+            yield return new CodeInstruction(OpCodes.Stloc_S, idx);
+
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Ldc_R4 && state < 6)
@@ -741,22 +975,26 @@ namespace GameMod
                     switch ((float)code.operand)
                     {
                         case 0.25f: // right quad
-                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                             yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffRightX"));
                             state++;
                             break;
                         case -0.25f: // left quad
-                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                             yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffLeftX"));
                             state++;
                             break;
                         case -0.15f:
-                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                             yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffY"));
                             state++;
                             break;
                         case -0.3f:
-                            yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                            yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                             yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "QdiffZ"));
                             state++;
                             break;
@@ -780,6 +1018,16 @@ namespace GameMod
     {
         static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM)
         {
+            Ship ship = MPShips.GetShip(__instance);
+            
+            /*if (!MPShips.SelectedShips.TryGetValue(__instance.connectionToClient.connectionId, out ship))
+            //if (!MPShips.SelectedShips.TryGetValue(__instance.netId, out ship))
+            {
+                Debug.Log("Falling back to Kodachi for this call on SwitchVisibleWeapon()");
+                ship = MPShips.Ships[0];
+            }*/
+
+
             if (wt == WeaponType.NUM)
             {
                 wt = __instance.c_player.m_weapon_type;
@@ -858,9 +1106,9 @@ namespace GameMod
                 Vector3 localPosition = __instance.m_muzzle_center.localPosition;
                 try
                 {
-                    localPosition.x = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
-                    localPosition.y = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
-                    localPosition.z = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].z;
+                    localPosition.x = ship.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition.y = ship.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    localPosition.z = ship.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].z;
                 }
                 catch (System.Exception e)
                 {
@@ -874,9 +1122,9 @@ namespace GameMod
                 Vector3 localPosition2 = __instance.m_muzzle_right.localPosition;
                 try
                 {
-                    localPosition2.x = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
-                    localPosition2.y = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
-                    localPosition2.z = MPShips.selected.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].z;
+                    localPosition2.x = ship.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].x;
+                    localPosition2.y = ship.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].y;
+                    localPosition2.z = ship.FIRING_POINTS[(int)__instance.c_player.m_weapon_type].z;
                 }
                 catch (System.Exception e)
                 {
@@ -895,39 +1143,60 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
     static class MPShips_PlayerShip_FixedUpdateProcessControlsInternal
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes, ILGenerator gen)
         {
             bool boost_done = false;
             CodeInstruction ci;
+
+            int idx = gen.DeclareLocal(typeof(Ship)).LocalIndex;
+
+            // stores the player's ship from the static methods once at the start to avoid the lookup headaches
+            //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "SelectedShips"));
+            //yield return new CodeInstruction(OpCodes.Ldarg_0);
+            //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerShip), "c_player"));
+            //yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(NetworkBehaviour), "get_netId"));
+            //yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(NetworkBehaviour), "get_connectionToClient"));
+            //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(NetworkConnection), "connectionId"));
+            //yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Dictionary<int, Ship>), "get_Item"));
+            //yield return new CodeInstruction(OpCodes.Stloc_S, idx);
+
+            yield return new CodeInstruction(OpCodes.Ldarg_0);
+            yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPShips), "GetShip"));
+            yield return new CodeInstruction(OpCodes.Stloc_S, idx);
 
             foreach (var code in codes)
             {
                 if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_slide_force_mp"))
                 {
                     yield return new CodeInstruction(OpCodes.Pop); // there's a PlayerShip instance reference to clear out first
-                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_slide_force_mp"));
                 }
                 else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_acc"))
                 {
-                    ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // original had a label on it
+                    //ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // original had a label on it
+                    ci = new CodeInstruction(OpCodes.Ldloc_S, idx);
                     ci.labels = code.labels;
                     yield return ci;
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_acc"));
                 }
                 else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_rb"))
                 {
-                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_rb"));
                 }
                 else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.85f && !boost_done)
                 {
-                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    //yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected"));
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMod"));
                 }
                 else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.65f && !boost_done)
                 {
                     ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // more labels
+                    ci = new CodeInstruction(OpCodes.Ldloc_S, idx);
                     ci.labels = code.labels;
                     yield return ci;
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMulti"));
@@ -945,9 +1214,11 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "ApplyDamage")]
     static class MPShips_PlayerShip_ApplyDamage
     {
-        static void Prefix(ref DamageInfo di)
+        static void Prefix(PlayerShip __instance, ref DamageInfo di)
         {
-            di.damage /= MPShips.selected.ShieldMultiplier;
+            //int id = GameplayManager.IsDedicatedServer() ? __instance.connectionToClient.connectionId : __instance.connectionToServer.connectionId;
+            //di.damage /= MPShips.SelectedShips[id].ShieldMultiplier;
+            di.damage /= MPShips.GetShip(__instance).ShieldMultiplier;
         }
     }
 
@@ -955,9 +1226,120 @@ namespace GameMod
     [HarmonyPatch(typeof(Player), "AddArmor")]
     static class MPShips_Player_AddArmor
     {
-        static void Prefix(ref float armor)
+        static void Prefix(Player __instance, ref float armor)
         {
-            armor /= MPShips.selected.ShieldMultiplier;
+            //armor /= MPShips.SelectedShips[__instance.c_player_ship.netId].ShieldMultiplier;
+            armor /= MPShips.GetShip(__instance.c_player_ship).ShieldMultiplier;
         }
     }
+
+
+
+    // ====================================================================
+    //
+    //
+    // ====================================================================
+    // Network Functions
+    // ====================================================================
+    //
+    //
+    // ====================================================================
+
+
+
+    // Server-side player ship selection handling
+    [HarmonyPatch(typeof(Server), "RegisterHandlers")]
+    public static class MPShips_Server_RegisterHandlers
+    {
+        static void Postfix()
+        {
+            NetworkServer.RegisterHandler(MessageTypes.MsgSetShip, OnSetShipMessage);
+        }
+
+        private static void OnSetShipMessage(NetworkMessage rawMsg)
+        {
+            if (rawMsg.conn.connectionId != 0)
+            {
+                var msg = rawMsg.ReadMessage<MPShips.ShipDataMessage>();
+                //MPShips.AssignShip(msg.lobbyId, msg.selected_idx);
+                MPShips.AssignShipToName(msg.mp_name, msg.selected_idx);
+                Debug.Log("CCF received ship (server), name " + msg.mp_name + ", ship idx " + msg.selected_idx);
+                NetworkServer.SendToAll(MessageTypes.MsgSetShip, msg);
+            }
+            //var msg = rawMsg.ReadMessage<MPShips.ShipDataMessage>();
+            //if rawMsg.conn
+            //MPShips.AssignShip(msg.lobbyId, msg.selected_idx);
+            //Debug.Log("CCF received ship (server), lobby_id " + msg.lobbyId + ", ship idx " + msg.selected_idx);
+            /*foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
+            {
+                if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "shipselection"))
+                {
+                    Debug.Log("CCF sending ship from server to client " + player.connectionToClient.connectionId);
+                    NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetShip, msg);
+                }
+            }*/
+            /*NetworkMatch.HostActiveMatchInfo myvalue = Traverse.Create(typeof(classname)).Field("fieldname").GetValue() as string;
+
+            foreach (var player in NetworkMatch.m_host.Where(x => x.connectionToClient.connectionId > 0))
+            {
+                NetworkServer.SendToAll(MessageTypes.MsgSetShip, msg);
+            }*/
+        }
+    }
+
+    // Client-side player ship selection handling
+    [HarmonyPatch(typeof(Client), "RegisterHandlers")]
+    public static class MPShips_Client_RegisterHandlers
+    {
+        static void Postfix()
+        {
+            if (Client.GetClient() == null)
+                return;
+
+            Client.GetClient().RegisterHandler(MessageTypes.MsgSetShip, OnSetShipDataMessage);
+        }
+
+        private static void OnSetShipDataMessage(NetworkMessage rawMsg)
+        {
+            var msg = rawMsg.ReadMessage<MPShips.ShipDataMessage>();
+            //MPShips.AssignShip(msg.lobbyId, msg.selected_idx);
+            MPShips.AssignShipToName(msg.mp_name, msg.selected_idx);
+            Debug.Log("CCF received ship (client), name " + msg.mp_name + ", ship idx " + msg.selected_idx);
+        }
+    }
+
+    
+    /*// Make sure to only send the custom loadout data to clients supporting 'customloadouts' tweak to not kill older clients
+    [HarmonyPatch(typeof(Server), "SendLoadoutDataToClients")]
+    internal class MPShips_Server_SendLoadoutDataToClients
+    {
+        static void Postfix()
+        {
+            foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
+            {
+                if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "shipselection"))
+                {
+                    new MPShips.ShipDataMessage
+                    {
+                        netId = player.
+            }
+                    NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgSetShip, new MPShips.ShipDataMessage.);
+                }
+            }
+        }
+    }
+
+    */
+
+    [HarmonyPatch(typeof(Client), "SendPlayerLoadoutToServer")]
+    internal class MPShips_Client_SendPlayerLoadoutToServer
+    {
+        static void Postfix()
+        {
+            Debug.Log("CCF sending ship");
+            MPShips.SendShipSelectionToServer();
+        }
+    }
+
+
 }
