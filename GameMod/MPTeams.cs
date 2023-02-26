@@ -1504,7 +1504,7 @@ namespace GameMod
     [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
     static class MPTeams_Projectile_FixedUpdateDynamic
     {
-        const float offTime = 0.2f;
+        const float offTime = 0.4f;
         const float cycleTime = 1.2f;
 
         static bool glowOn = false;
@@ -1524,16 +1524,44 @@ namespace GameMod
                         tempNext = Time.time + cycleTime;
                         glowOn = true;
                     }
-                    __instance.m_robot_only_extra_mesh.SetActive(true);
                 }
-                if (__instance.m_robot_only_extra_mesh.activeSelf && nextOff <= Time.time)
+                else if (__instance.m_robot_only_extra_mesh.activeSelf && nextOff <= Time.time)
                 {
                     if (glowOn)
                     {
                         nextTime = tempNext;
                         glowOn = false;
                     }
-                    __instance.m_robot_only_extra_mesh.SetActive(false);
+                }
+
+                // The idea here is that we are supposed to modify the alpha of the various color components to cause the glow to blink in analog, rather than the binary blinking in CCraigen/creeper-colors.  However, this doesn't work.  I'm not sure if alpha is ignored for these or what is going on.
+                if (glowOn)
+                {
+                    var color = __instance.c_go.GetComponent<Light>().color;
+                    var time = nextOff - Time.time;
+                    color.a = Math.Min(Math.Max(Math.Abs(time - offTime / 2) / (offTime / 2), 0), 1);
+
+                    __instance.c_go.GetComponent<Light>().color = color;
+
+                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>(includeInactive: true))
+                    {
+                        if (rend.name == "_glow" || rend.name == "extra_glow")
+                        {
+                            foreach (var mat in rend.materials)
+                            {
+                                if (mat.name == "_glow_superbright1_yellow" || mat.name == "enemy_creeper1")
+                                {
+                                    mat.color = color;
+                                    mat.SetColor("_EmissionColor", color);
+                                }
+                            }
+                        }
+                    }
+                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                    {
+                        var m = x.main;
+                        m.startColor = color;
+                    }
                 }
             }
         }
