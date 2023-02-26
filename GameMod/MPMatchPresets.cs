@@ -65,6 +65,7 @@ namespace GameMod
                 damageNumbers = Menus.mms_damage_numbers,
                 assistScoring = Menus.mms_assist_scoring,
                 teamCount = MPTeams.MenuManagerTeamCount,
+                shipMeshCollider = Menus.mms_collision_mesh,
                 thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
             });
 
@@ -105,6 +106,7 @@ namespace GameMod
                 damageNumbers = true,
                 assistScoring = true,
                 teamCount = 2,
+                shipMeshCollider = 0,
                 thunderboltPassthrough = false
             });
 
@@ -144,6 +146,7 @@ namespace GameMod
                 allowSmash = false,
                 assistScoring = true,
                 teamCount = 2,
+                shipMeshCollider = 0,
                 damageNumbers = true,
                 thunderboltPassthrough = false
             });
@@ -188,6 +191,7 @@ namespace GameMod
             public bool damageNumbers;
             public bool assistScoring = true;
             public int teamCount = 2;
+            public int shipMeshCollider = 0;
             public bool thunderboltPassthrough;
 
             public void Apply()
@@ -233,6 +237,7 @@ namespace GameMod
                 Menus.mms_damage_numbers = this.damageNumbers;
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
+                Menus.mms_collision_mesh = this.shipMeshCollider;
                 MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }
