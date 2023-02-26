@@ -1504,64 +1504,25 @@ namespace GameMod
     [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
     static class MPTeams_Projectile_FixedUpdateDynamic
     {
-        const float offTime = 0.4f;
-        const float cycleTime = 1.2f;
-
-        static bool glowOn = false;
-        static float nextOff = offTime;
-        static float nextTime = 0f;
-        static float tempNext = 0f;
+        const float freq = 12f;
 
         static void Postfix(Projectile __instance)
         {
             if (GameplayManager.IsMultiplayerActive && Menus.mms_creeper_colors && MenuManager.mms_friendly_fire != 1 && __instance.m_type == ProjPrefab.missile_creeper && __instance.m_owner_player.isLocalPlayer)
             {
-                if (!__instance.m_robot_only_extra_mesh.activeSelf && nextTime <= Time.time)
-                {
-                    if (!glowOn)
-                    {
-                        nextOff = Time.time + offTime;
-                        tempNext = Time.time + cycleTime;
-                        glowOn = true;
-                    }
-                }
-                else if (__instance.m_robot_only_extra_mesh.activeSelf && nextOff <= Time.time)
-                {
-                    if (glowOn)
-                    {
-                        nextTime = tempNext;
-                        glowOn = false;
-                    }
-                }
+                // 0f ... 1f value
+                float pulse = (1 + Mathf.Sin(__instance.RemainingLifetime() * freq)) / 2f;
 
-                // The idea here is that we are supposed to modify the alpha of the various color components to cause the glow to blink in analog, rather than the binary blinking in CCraigen/creeper-colors.  However, this doesn't work.  I'm not sure if alpha is ignored for these or what is going on.
-                if (glowOn)
+                // Team color creeper light
+                var color = __instance.c_go.GetComponent<Light>().color;
+                color.a = pulse;
+                
+                foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
                 {
-                    var color = __instance.c_go.GetComponent<Light>().color;
-                    var time = nextOff - Time.time;
-                    color.a = Math.Min(Math.Max(Math.Abs(time - offTime / 2) / (offTime / 2), 0), 1);
-
-                    __instance.c_go.GetComponent<Light>().color = color;
-
-                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>(includeInactive: true))
-                    {
-                        if (rend.name == "_glow" || rend.name == "extra_glow")
-                        {
-                            foreach (var mat in rend.materials)
-                            {
-                                if (mat.name == "_glow_superbright1_yellow" || mat.name == "enemy_creeper1")
-                                {
-                                    mat.color = color;
-                                    mat.SetColor("_EmissionColor", color);
-                                }
-                            }
-                        }
-                    }
-                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
-                    {
-                        var m = x.main;
-                        m.startColor = color;
-                    }
+                    var m = x.main;
+                    m.startColor = color;
+                    var col = x.colorOverLifetime;
+                    col.color = color;
                 }
             }
         }
