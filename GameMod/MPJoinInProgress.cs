@@ -656,6 +656,7 @@ namespace GameMod {
             uie.DrawMenuToolTip(position + Vector2.up * 40f);
         }
 
+        [HarmonyPriority(Priority.Normal - 7)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var jipMatchSetup_DrawMpMatchCreateOpen_Method = AccessTools.Method(typeof(JIPMatchSetup), "DrawMpMatchCreateOpen");

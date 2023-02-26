@@ -287,6 +287,7 @@ namespace GameMod {
             return !Core.GameMod.HasInternetMatch();
         }
 
+        [HarmonyPriority(Priority.Normal - 5)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var mpInternet_PasswordFieldName_Method = AccessTools.Method(typeof(MPInternet), "PasswordFieldName");
@@ -311,6 +312,7 @@ namespace GameMod {
             return Core.GameMod.HasInternetMatch();
         }
 
+        [HarmonyPriority(Priority.Normal - 6)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0; // 0 before olmod text, 1 waiting for position reset, 2 after position reset
