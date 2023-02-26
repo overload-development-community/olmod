@@ -242,9 +242,10 @@ namespace GameMod {
         private static void HandleConsoleToggle()
         {
             if (MenuManager.m_menu_sub_state == MenuSubState.ACTIVE &&
-                (UIManager.PushedSelect(100) || UIManager.PushedDir()) && 
                 MenuManager.m_menu_micro_state == 2 &&
-                UIManager.m_menu_selection == 9)
+                UIManager.m_menu_selection == 9 &&
+                (UIManager.PushedSelect(100) || UIManager.PushedDir())
+                )
             {
                 Console.KeyEnabled = !Console.KeyEnabled;
                 MenuManager.PlayCycleSound(1f);
