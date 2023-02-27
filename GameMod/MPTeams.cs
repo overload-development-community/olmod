@@ -1517,7 +1517,7 @@ namespace GameMod
                 var color = __instance.c_go.GetComponent<Light>().color;
                 color.a = pulse;
                 
-                foreach (var ps in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                foreach (var ps in __instance.c_go.GetComponentsInChildren<ParticleSystem>().Where(x => x.name == "_glow"))
                 {
                     var col = ps.colorOverLifetime;
                     col.color = color;
