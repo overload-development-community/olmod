@@ -1504,19 +1504,23 @@ namespace GameMod
     [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
     static class MPTeams_Projectile_FixedUpdateDynamic
     {
-        const float freq = 12f;
+        const float offTime = 0.75f;
+        const float cycleTime = 1f;
 
         static void Postfix(Projectile __instance)
         {
             if (GameplayManager.IsMultiplayerActive && Menus.mms_creeper_colors && MenuManager.mms_friendly_fire != 1 && __instance.m_type == ProjPrefab.missile_creeper && __instance.m_owner_player.isLocalPlayer)
             {
+                var time = Time.time % cycleTime;
+
                 // 0f ... 1f value
-                float pulse = (1 + Mathf.Sin(__instance.RemainingLifetime() * freq)) / 2f;
+                var pulse = Mathf.Clamp(Math.Abs(time - offTime / 2) / (offTime / 2), 0, 1);
 
                 // Team color creeper light
                 var color = __instance.c_go.GetComponent<Light>().color;
                 color.a = pulse;
-                
+
+                __instance.c_go.GetComponent<Light>().intensity = 0.25f + pulse * 0.75f;
                 foreach (var ps in __instance.c_go.GetComponentsInChildren<ParticleSystem>().Where(x => x.name == "_glow"))
                 {
                     var col = ps.colorOverLifetime;
