@@ -1516,6 +1516,28 @@ namespace GameMod
                 // 0f ... 1f value
                 var pulse = Mathf.Clamp(Math.Abs(time - offTime / 2) / (offTime / 2), 0, 1);
 
+                // Enemy creeper light
+                __instance.m_robot_only_extra_mesh.SetActive(pulse < 1f);
+
+                if (pulse < 1f)
+                {
+                    foreach (var rend in __instance.m_robot_only_extra_mesh.GetComponentsInChildren<Renderer>(includeInactive: true))
+                    {
+                        if (rend.name == "extra_glow")
+                        {
+                            foreach (var mat in rend.materials)
+                            {
+                                
+                                if (mat.name == "enemy_creeper1 (Instance)")
+                                {
+                                    mat.SetFloat("_EdgePower", 5f - 4f * (1f - pulse));
+                                    mat.SetFloat("_EdgeStrength", 3f * (1f - pulse));
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Team color creeper light
                 var color = __instance.c_go.GetComponent<Light>().color;
                 color.a = pulse;
