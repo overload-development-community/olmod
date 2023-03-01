@@ -50,7 +50,8 @@ namespace GameMod
         public const short MsgPlayAudioTaunt = 152;
         public const short MsgAudioTauntPacket = 153;
 
-        public const short MsgSetShip = 160;
+        public const short MsgShipDataToServer = 160;
+        public const short MsgShipDataToClient = 161;
 
         // Do not use 400, it is in use by Mod-Projdata.dll.
     }

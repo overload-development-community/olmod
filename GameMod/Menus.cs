@@ -167,9 +167,40 @@ namespace GameMod {
             }
         }
 
+        public static string GetMMSShipsAllowed()
+        {
+            string ret;
+            switch (mms_ships_allowed)
+            {
+                case 0:
+                    ret = "OFF";
+                    break;
+                case 1:
+                    ret = "ON";
+                    break;
+                default:
+                    ret = MPShips.Ships[mms_ships_allowed - 2].displayName;
+                    break;
+            }
+            return ret;
+        }
+
         public static string GetMMSShipType()
         {
-            return MPShips.Ships[mms_ship_type].displayName;
+            return MPShips.Ships[MPShips.selected_idx].displayName;
+        }
+
+        public static string GetMMSShipDescription(int line)
+        {
+            string[] lines = MPShips.Ships[MPShips.selected_idx].description;
+            if (line < lines.Length)
+            {
+                return lines[line];
+            }
+            else
+            {
+                return "";
+            }
         }
 
         public static string GetMMSLagCompensation()
@@ -265,7 +296,7 @@ namespace GameMod {
         public static bool mms_show_framerate = false;
         public static int mms_selected_loadout_idx = 0;
         public static int mms_collision_mesh = 0;
-        public static int mms_ship_type = 0;
+        public static int mms_ships_allowed = 0;
     }
 
 
@@ -321,7 +352,7 @@ namespace GameMod {
             uie.SelectAndDrawStringOptionItem(Loc.LS("COLLISION MESH"), position, 22, Menus.GetMMSCollisionMesh(), Loc.LS("COLLIDER TO USE FOR PROJECTILE->SHIP COLLISIONS"), 1f, false);
 
             position.y += 55f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP TYPE"), position, 23, Menus.GetMMSShipType(), Loc.LS("SHIP TYPE TO USE FOR THIS MATCH"), 1f, false);
+            uie.SelectAndDrawStringOptionItem(Loc.LS("CUSTOM SHIPS"), position, 23, Menus.GetMMSShipsAllowed(), Loc.LS("ALLOW PLAYERS TO CHOOSE THEIR SHIP TYPE"), 1f, false);
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -585,7 +616,7 @@ namespace GameMod {
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                     case 23:
-                        Menus.mms_ship_type = (MPShips.Ships.Count + Menus.mms_ship_type + UIManager.m_select_dir) % MPShips.Ships.Count;
+                        Menus.mms_ships_allowed = (MPShips.Ships.Count + 2 + Menus.mms_ships_allowed + UIManager.m_select_dir) % (MPShips.Ships.Count + 2);
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                 }
@@ -1815,6 +1846,18 @@ namespace GameMod {
                     DrawMpLoadout(__instance, position, 1);
                     position.y += 95f;
                     DrawMpLoadout(__instance, position, 3);
+
+                    // CCF ship selection
+                    position.x = 0f;
+                    position.y += 105f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("PREFERRED SHIP TYPE"), position, 4, Menus.GetMMSShipType(), Loc.LS("SHIP TYPE TO USE (IF PERMITTED)"), 1.2f, false);
+
+                    position.y += 50f;
+                    __instance.DrawStringSmall(Menus.GetMMSShipDescription(0), position, 0.45f, StringOffset.CENTER, UIManager.m_col_ui4, 1f);
+                    position.y += 22f;
+                    __instance.DrawStringSmall(Menus.GetMMSShipDescription(1), position, 0.45f, StringOffset.CENTER, UIManager.m_col_ui4, 1f);
+                    position.y += 22f;
+                    __instance.DrawStringSmall(Menus.GetMMSShipDescription(2), position, 0.45f, StringOffset.CENTER, UIManager.m_col_ui4, 1f);
                 }
                 position.x = 0f;
                 position.y = 280f;
@@ -2137,6 +2180,11 @@ namespace GameMod {
                                     int menu_selection3 = UIManager.m_menu_selection;
                                     switch (menu_selection3)
                                     {
+                                        case 4:
+                                            // ship selection
+                                            MPShips.selected_idx = (MPShips.Ships.Count + MPShips.selected_idx + UIManager.m_select_dir) % MPShips.Ships.Count;
+                                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                            break;
                                         case 10:
                                             MPLoadouts.MpCycleWeapon(0, 0);
                                             MenuManager.PlayCycleSound(1f, 1f);

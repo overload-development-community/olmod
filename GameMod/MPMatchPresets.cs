@@ -66,7 +66,7 @@ namespace GameMod
                 assistScoring = Menus.mms_assist_scoring,
                 teamCount = MPTeams.MenuManagerTeamCount,
                 shipMeshCollider = Menus.mms_collision_mesh,
-                shipType = Menus.mms_ship_type,
+                shipsAllowed = Menus.mms_ships_allowed,
                 thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
             });
 
@@ -108,9 +108,9 @@ namespace GameMod
                 assistScoring = true,
                 teamCount = 2,
                 shipMeshCollider = 0,
-                shipType = 0,
+                shipsAllowed = 1, // CCF this is temporary
                 thunderboltPassthrough = false
-            });
+            }) ;
 
             presets.Add(new MPMatchPreset
             {
@@ -151,13 +151,13 @@ namespace GameMod
                 shipMeshCollider = 0,
                 damageNumbers = true,
                 shipMeshCollider = 0,
-                shipType = 0,
+                shipsAllowed = 1, // CCF this is temporary
                 thunderboltPassthrough = false
             });
 
             presets.Add(new MPMatchPreset
             {
-                title = "PYRO HARDCORE",
+                title = "MULTISHIP",
                 matchMode = MatchMode.ANARCHY,
                 maxPlayers = 16,
                 friendlyFire = 0,
@@ -193,7 +193,7 @@ namespace GameMod
                 assistScoring = true,
                 teamCount = 2,
                 shipMeshCollider = 2,
-                shipType = 1,
+                shipsAllowed = 1,
                 thunderboltPassthrough = false
             });
 
@@ -238,7 +238,7 @@ namespace GameMod
             public bool assistScoring = true;
             public int teamCount = 2;
             public int shipMeshCollider;
-            public int shipType;
+            public int shipsAllowed;
             public bool thunderboltPassthrough;
 
             public void Apply()
@@ -285,7 +285,7 @@ namespace GameMod
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
                 Menus.mms_collision_mesh = this.shipMeshCollider;
-                Menus.mms_ship_type = this.shipType;
+                Menus.mms_ships_allowed = this.shipsAllowed;
                 MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }

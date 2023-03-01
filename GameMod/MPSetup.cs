@@ -293,6 +293,8 @@ namespace GameMod {
                     MPAudioTaunts.AClient.keybinds[i] = ModPrefs.GetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), -1);}
                 MPAudioTaunts.AClient.display_audio_spectrum = ModPrefs.GetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", true);
 
+                MPShips.allowed = ModPrefs.GetInt("MP_SHIPS_ALLOWED", 1);
+                MPShips.selected_idx = ModPrefs.GetInt("MP_SHIP_TYPE", 0);
             }
             else // for compatibility with old olmod, no need to add new settings
             {
@@ -384,6 +386,9 @@ namespace GameMod {
             for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++){
                 ModPrefs.SetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), MPAudioTaunts.AClient.keybinds[i]);}
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
+
+            ModPrefs.SetInt("MP_SHIPS_ALLOWED", MPShips.allowed);
+            ModPrefs.SetInt("MP_SHIP_TYPE", MPShips.selected_idx);
 
             ModPrefs.Flush(filename + "mod");
         }
