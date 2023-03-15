@@ -80,7 +80,9 @@ namespace GameMod {
     [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
     class MPSpew_PlayerShip_SpewItemsOnDeath {
         static void Prefix(PlayerShip __instance) {
-            if (!NetworkManager.IsServer()) {
+            if (!NetworkManager.IsServer() || MPShips.allowed != 0)
+            //if (!NetworkManager.IsServer())
+            {
                 return;
             }
 

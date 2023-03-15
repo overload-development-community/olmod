@@ -55,7 +55,7 @@ namespace GameMod
                 // Override self-damage ramping
                 static float GetSelfChargeDamage(float num, PlayerShip playerShip)
                 {
-                    return GetThunderboltSelfDamageMultiplier() * num;
+                    return GetThunderboltSelfDamageMultiplier() * num * (MPShips.GetShip(playerShip).triTB ? 1.5f : 1f); // if you're running triple TB, you'd better watch your charge.
                 }
 
                 static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)

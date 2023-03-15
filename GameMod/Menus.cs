@@ -42,7 +42,21 @@ namespace GameMod {
         public static bool mms_damage_numbers { get; set; }
         public static bool mms_client_damage_numbers { get; set; } = true;
         public static bool mms_assist_scoring { get; set; } = true;
-        public static bool mms_team_color_default { get; set; } = true;
+
+        // adjusted to keep team default colors in CTF due to the map colors not changing to match the custom teams
+        private static bool _team_color_default = true;
+        public static bool mms_team_color_default
+        {
+            get
+            {
+                return (MPModPrivateData.MatchMode == ExtMatchMode.CTF) ? true : _team_color_default;
+            }
+            set
+            {
+                _team_color_default = value;
+            }
+        }
+
         public static int mms_team_color_self = 5;
         public static int mms_team_color_enemy = 6;
         public static bool mms_creeper_colors { get; set; } = true;

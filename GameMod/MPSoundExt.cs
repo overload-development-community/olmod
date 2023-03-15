@@ -12,18 +12,22 @@ namespace GameMod
 {
     // not ready yet
 
-    /*public enum NewSounds
+    public enum NewSounds
     {
         // last index in the original table is 486, we start there. Add new clips before num and bump the counts up.
-        tbbolt = 486,
-        novathrust = 487,
-        devthrust = 488,
+        LancerCharge3s = 486,
+        LancerCharge2s5 = 487,
+        LancerCharge2s = 488,
         NUM = 489
-    }*/
+        //tbbolt = 486,
+        //novathrust = 487,
+        //devthrust = 488,
+        //NUM = 489
+    }
 
     public static class MPSoundExt
     {
-        //public static AssetBundle ab;
+        public static AssetBundle ab;
         public static GameObject[] m_a_object = new GameObject[512];
         public static AudioSource[] m_a_source = new AudioSource[512];
         public static AudioLowPassFilter[] m_a_filter = new AudioLowPassFilter[512];
@@ -31,7 +35,7 @@ namespace GameMod
 
     // not ready yet
 
-    /*
+    
     // loads additional sounds added to the "audio" assetbundle and listed in the NewSounds enum.
     [HarmonyPatch(typeof(UnityAudio), "LoadSoundEffects")]
     internal class MPSoundExt_UnityAudio_LoadSoundEffects
@@ -76,15 +80,11 @@ namespace GameMod
                 if (code.opcode == OpCodes.Ldc_I4 && (int)code.operand == 486)
                 {
                     code.operand = (int)NewSounds.NUM;
-                    yield return code;
                 }
-                else
-                {
-                    yield return code;
-                }
+                yield return code;
             }
         }
-    }*/
+    }
 
     /*
      * *************************************************

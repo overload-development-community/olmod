@@ -112,8 +112,13 @@ namespace GameMod
                 return;
             }
 
-            // Filter out lancer if we shouldn't spawn it.
-            var spawnLancer = SpawnLancer();
+            var spawnLancer = true;
+            if (MPShips.allowed != 0)
+            {
+                // Filter out lancer if we shouldn't spawn it.
+                spawnLancer = SpawnLancer();
+                
+            }
             var filteredBudget = Budget.Where(b => b.Type != WeaponType.LANCER || spawnLancer);
 
             // Get the total budget and the total remaining.

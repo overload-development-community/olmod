@@ -49,6 +49,7 @@ mcs \
     -target:library \
     -sdk:2 \
     -resource:../GameMod/Resources/meshes,GameMod.Resources.meshes \
+	-resource:../GameMod/Resources/audio,GameMod.Resources.audio \
     -out:GameMod.dll \
     ../GameMod/*.cs \
     ../GameMod/*/*.cs

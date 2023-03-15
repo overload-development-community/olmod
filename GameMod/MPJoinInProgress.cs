@@ -456,16 +456,13 @@ namespace GameMod {
                 MPJoinInProgress.SetReady(newPlayer, false, true); // special case: do not disable the player completely, as this would prevent this player to be sent to new clients joining before we finally switch to ready
             }
 
-            pregameWait = SendPreGame(connectionId, pregameWait);
-            yield return new WaitForSeconds(pregameWait);
-
-            Server.SendLoadoutDataToClients();
-
             // CCF SEND THE THINGS
             if (MPTweaks.ClientHasTweak(connectionId, "shipselection"))
             {
                 foreach (var player in Overload.NetworkManager.m_Players.Where(x => (x.connectionToClient.connectionId > 0 && x.connectionToClient.connectionId != connectionId)))
                 {
+                    //Debug.Log("CCF JIP SEND STEP --------------------");
+
                     var msg = new MPShips.ShipDataToClientMessage
                     {
                         netId = player.c_player_ship.netId,
@@ -475,36 +472,12 @@ namespace GameMod {
                     Debug.Log("CCF JIP sending message to client " + connectionId + " for player " + msg.netId + " selected_idx " + msg.selected_idx);
                     NetworkServer.SendToClient(connectionId, MessageTypes.MsgShipDataToClient, msg);
                 }
-                /*
-                foreach (int idx in NetworkMatch.m_players.Keys)
-                {
-                    var msg = new MPShips.ShipDataToClientMessage
-                    {
-                        netId = netId,
-                        lobbyId = player.connectionToClient.connectionId,
-                        selected_idx = MPShips.LobbyShips[player.connectionToClient.connectionId] // error checking for missing stuff needs to happen here
-                    };
-                    Debug.Log("CCF JIP sending message to client " + connectionId + " for player " + msg.netId + " selected_idx " + msg.selected_idx);
-                    NetworkServer.SendToClient(connectionId, MessageTypes.MsgShipDataToClient, msg);
-                }
-                
-
-                foreach (int idx in NetworkMatch.m_players.Keys)
-                {
-                    if (idx != 0 && MPTweaks.ClientHasTweak(idx, "shipselection"))
-                    {
-                        var msg = new MPShips.ShipDataToClientMessage
-                        {
-                            netId = net_id,
-                            lobbyId = lobby_id,
-                            selected_idx = MPShips.LobbyShips[lobby_id] // error checking for missing stuff needs to happen here
-                        };
-                        Debug.Log("CCF sending message to client id " + lobby_id + " selected_idx " + msg.selected_idx);
-                        NetworkServer.SendToClient(idx, MessageTypes.MsgShipDataToClient, msg);
-                    }
-                }
-                */
             }
+
+            pregameWait = SendPreGame(connectionId, pregameWait);
+            yield return new WaitForSeconds(pregameWait);
+
+            Server.SendLoadoutDataToClients();
 
             if (newPlayer.m_mp_name.StartsWith("OBSERVER"))
             {

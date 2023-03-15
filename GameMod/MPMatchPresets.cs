@@ -148,7 +148,6 @@ namespace GameMod
                 allowSmash = false,
                 assistScoring = true,
                 teamCount = 2,
-                shipMeshCollider = 0,
                 damageNumbers = true,
                 shipMeshCollider = 0,
                 shipsAllowed = 1, // CCF this is temporary

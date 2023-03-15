@@ -234,7 +234,8 @@ namespace GameMod
                     case ItemType.WEAPON_FLAK:
                     case ItemType.WEAPON_THUNDERBOLT:
                     case ItemType.WEAPON_LANCER:
-                        __result = 0.25f;
+                        //__result = 0.25f;
+                        __result = 1f; // let them sit a while
                         return false;
                     default:
                         return true;

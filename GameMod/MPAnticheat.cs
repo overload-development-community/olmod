@@ -9,7 +9,7 @@ namespace GameMod
     {
         private static bool CanFire(PlayerShip __instance)
         {
-            return !__instance.m_boosting && __instance.m_wheel_select_state == WheelSelectState.NONE;
+            return (MPShips.FireWhileBoost || !__instance.m_boosting) && __instance.m_wheel_select_state == WheelSelectState.NONE;
         }
 
         private static void Prefix(PlayerShip __instance)
@@ -19,6 +19,7 @@ namespace GameMod
                 return;
             }
 
+            //if (!__instance.c_player.JustPressed(CCInput.FIRE_WEAPON))
             if (!(__instance.c_player.JustPressed(CCInput.FIRE_WEAPON) && CanFire(__instance)))
             {
                 return;

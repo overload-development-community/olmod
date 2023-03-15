@@ -21,6 +21,7 @@ namespace GameMod
         public static Ship sp_ship; // used in cases where there is no assigned ship type
 
         public static int allowed = 0; // which ships are allowed (0 is stock, 1 is all, the rest are locked ship types)
+        public static bool FireWhileBoost = true; // ++++ this needs to have a menu option added
 
         private static int _idx = 0;
         public static int selected_idx // the player's preferred ship type
@@ -44,7 +45,7 @@ namespace GameMod
 
         public static bool loading = false; // set to true during the loading process
 
-        public static float masterscale = 1f;
+        public static float masterscale = 1f; // for debugging
 
 
         public static void AddShips()
@@ -52,8 +53,6 @@ namespace GameMod
             // ship prefabs are explicitly added here
             //Debug.Log("Adding Kodachi ship definition");
             //Ships.Add(new Kodachi()); // Don't mess with this one or you're gonna break stuff.
-            //Debug.Log("Adding Kodachi100 ship definition");
-            //Ships.Add(new Kodachi100());
             Debug.Log("Adding Kodachi85 ship definition");
             Ships.Add(new Kodachi85());
             //Debug.Log("Adding Kodachi75 ship definition");
@@ -64,15 +63,15 @@ namespace GameMod
             Ships.Add(new Phoenix());
             Debug.Log("Adding Magnum ship definition");
             Ships.Add(new Magnum());
-            //Debug.Log("Adding Pyro (Slow) ship definition");
-            //Ships.Add(new PyroGXSlow());
             //Debug.Log("Adding Pyro (Cosmetic) ship definition");
             //Ships.Add(new PyroGXCosmetic());
 
             sp_ship = Ships[0];
 
             //DEBUG
-            uConsole.RegisterCommand("scale", "Set ship scale (between 0.2 and 2", new uConsole.DebugCommand(SetScaleDebug));
+            //uConsole.RegisterCommand("accel", "Set ship accel", new uConsole.DebugCommand(SetAccelDebug));
+            //uConsole.RegisterCommand("lvol", "Lancer extra sound volume", new uConsole.DebugCommand(MPWeapons.SetLancerVol));
+            //uConsole.RegisterCommand("lrefire", "Lancer refire wait", new uConsole.DebugCommand(MPWeapons.SetLancerRefire));
         }
 
 
@@ -142,6 +141,7 @@ namespace GameMod
             {
                 Debug.Log("CCF did not find lobby_id " + lobbyId + " in AssignShip " + (GameplayManager.IsDedicatedServer() ? "on server" : "on client " + NetworkMatch.m_my_lobby_id));
                 idx = 0;
+                LobbyShips[lobbyId] = idx;
             }
 
             switch (allowed)
@@ -155,13 +155,14 @@ namespace GameMod
                     idx = allowed - 2;
                     break;
             }
-            SelectedShips[netId] = Ships[idx];
+            SelectedShips[netId] = Ships[idx].Copy();
         }
 
 
+        // assigns the ship index to the 
         public static void AssignLobbyShip(int lobby_id, int idx)
         {
-            LobbyShips[lobby_id] = idx;
+            //LobbyShips[lobby_id] = idx;
             if (idx >= Ships.Count)
             {
                 Debug.Log("Client attempted to assign a non-existent ship value, using Kodachi instead.");
@@ -180,7 +181,7 @@ namespace GameMod
             NetworkInstanceId id = ps.netId;
             if (!SelectedShips.TryGetValue(id, out s))
             {
-                s = sp_ship;
+                s = sp_ship.Copy();
             }
             return s;
         }
@@ -335,7 +336,6 @@ namespace GameMod
         public Vector3 TRIFIRE_POINT; // temporary way to do the triTB firepoint
         public bool triTB = false;
 
-
         // quad impulse adjusted firepoints
         public float QdiffRightX;
         public float QdiffLeftX;
@@ -349,33 +349,37 @@ namespace GameMod
         public float ShieldMultiplier;
 
         // movement speed restrictor
-        //public float[] m_slide_force_mp_nonscaled; // size 4 - We only care about the first 2 (1st is regular speed, 2nd is All-Way mod speed)
-        public float[] m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
+        public float[] m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f }; // We only care about the first 2 (1st is regular speed, 2nd is All-Way mod speed)
         public float[] m_slide_force_mp = new float[4]; // scaled movement values calculated at instantiation -- don't fill this directly
 
         // turn speed restrictors
-        //public float[] m_turn_speed_limit_acc; // size 5
-        public float[] m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-        //public float[] m_turn_speed_limit_rb; // size 5
-        public float[] m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
+        public float[] m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f }; // turning acceleration (I think)
+        public float[] m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f }; // turning deceleration??? Not actually sure on this one.
 
+        public float AccelMulti = 1f; // multiplies both the drag and the thruster force by this amount for more kick without affecting top speed
         public float MoveMulti = 1f; // movement multiplier
         public float TurnMulti = 1f; // turn speed multiplier
         public float boostMulti; // speed multiplier for regular boost
         public float boostMod; // speed multiplier for the Enhanced Boost mod
 
+        public float boostBurst = 0f; // how much burst to apply at the start of a fresh boost (under 10% heat with normal boost) - as the extra percentage over 100%, expressed as decimal
+
+
+        // makes a shallow copy of the Ship object for use with a specific player (for essentially "injecting" instance fields into a PlayerShip)
+        public Ship Copy()
+        {
+            return (Ship)MemberwiseClone();
+        }
+
         // should get called once with the Ship's constructor. If it's not called, the Ship will have Kodachi handling.
         protected void SetHandling()
         {
             int i;
-            for (i = 0; i < 3; i++)
+            for (i = 0; i < 4; i++)
             {
-                m_slide_force_mp_nonscaled[i] *= MoveMulti;
-            }
-            for (i = 0; i < 4; i++) // the 5th turn array element should stay at 100f for unlocked turning
-            {
-                m_turn_speed_limit_acc[i] *= TurnMulti;
-                m_turn_speed_limit_rb[i] *= TurnMulti;
+                m_slide_force_mp_nonscaled[i] *= MoveMulti *= AccelMulti;
+                m_turn_speed_limit_acc[i] *= TurnMulti; // the 5th turn array element should stay at 100f for unlocked turning
+                m_turn_speed_limit_rb[i] *= TurnMulti; // the 5th turn array element should stay at 100f for unlocked turning
             }
         }
 
@@ -387,14 +391,17 @@ namespace GameMod
             go.name = name;
             PlayerShip ps = go.GetComponent<PlayerShip>();
 
+            ps.c_rigidbody.drag *= AccelMulti;
+            Debug.Log("CCF setting drag to " + ps.c_rigidbody.drag);
+
+            MPColliderSwap.SwapCollider(ps);
             SetScale(ps);
             SetQuadFirepoints(ps); // should really only fire once instead of this... but if the scale is changed, this needs an object to pull it from.
         }
 
-        // finish and test this -- don't use yet. -- Functional, but ship turning is still whacky. Why?? Rigidbody should not be scaled with this the way it is currently. Something weird is going on.
+        // Scales the visible and shootable portion of the ship down or up by some amount.
         protected void SetScale(PlayerShip ps)
         {
-            //if (MPShips.allowed != 0 && shipScale != 1f) // don't bother if multiship is off or if we're not scaling this particular ship
             if (MPShips.allowed != 0 && shipScale != 1f) // don't bother if multiship is off or if we're not scaling this particular ship
             {
                 ps.c_main_ship_go.transform.localScale = new Vector3(shipScale, shipScale, shipScale); // only scales visible components, not the level collider. We don't want to squeeze places we shouldn't.
@@ -424,6 +431,26 @@ namespace GameMod
             QdiffLeftX = -1 * QdiffRightX;
             QdiffY = (FIRING_POINTS[8].y - FIRING_POINTS[0].y) * scale;
             QdiffZ = (FIRING_POINTS[8].z - FIRING_POINTS[0].z) * scale;
+        }
+
+        public float GetBoostMulti(float m_boost_heat)
+        {
+            float extraBoost = 0f;
+            if (m_boost_heat < 0.5f)
+            {
+                extraBoost = boostBurst * 2f * (0.5f - m_boost_heat);
+            }
+            return boostMulti + extraBoost;
+        }
+
+        public float GetBoostMod(float m_boost_heat)
+        {
+            float extraBoost = 0f;
+            if (m_boost_heat < 0.5f)
+            {
+                extraBoost = boostBurst * 2f * (0.5f - m_boost_heat);
+            }
+            return boostMod + extraBoost;
         }
     }
 
@@ -473,11 +500,6 @@ namespace GameMod
             };
 
             ShieldMultiplier = 1f;
-            /*
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
 
             boostMulti = 1.65f;
             boostMod = 1.85f;
@@ -492,64 +514,7 @@ namespace GameMod
         */
     }
 
-    // The Kodachi.
-    public class Kodachi100 : Ship
-    {
-        public Kodachi100()
-        {
-            displayName = "Kodachi Gunship (100%)";
-            name = "entity_special_player_ship";
-            description = new string[3]
-            {
-                "A short-range enforcement ship. Surprisingly well-armed and shielded.",
-                "Its low mass and small size trade overall speed for maneuvering performance.",
-                "Because of this, the Kodachi is able to out-turn any of its competitors."
-            };
-
-            meshName = null; // don't replace anything, we want the original
-            colliderNames = new string[3] { "PlayershipCollider-100", "PlayershipCollider-105", "PlayershipCollider-110" };
-
-            customizations = true;
-
-            shipScale = 1f;
-
-            FIRING_POINTS = new Vector3[9]
-            {
-                new Vector3(1.675f, -1.13f, 2.38f),      // Impulse
-                new Vector3(0f, -2.08f, 2.08f),          // Cyclone
-                new Vector3(1.675f, -1.06f, 2.27f),      // Reflex
-                new Vector3(1.675f, -0.79f, 2.1f),       // Crusher
-                new Vector3(0f, -1.88f, 2.48f),          // Driller
-                new Vector3(1.675f, -0.79f, 2.18f),      // Flak
-                //new Vector3(1.675f, -0.99f, 2.35f),    // Thunderbolt -- original spacing
-                new Vector3(1.175f, -0.99f, 2.35f),      // Thunderbolt -- tighter spacing (0.2f world space adjustment, scaled at 0.4 for the ship local coordinates)
-                new Vector3(1.675f, -0.93f, 2.6f),       // Lancer
-                new Vector3(2.3f, -1.505f, 1.63f)        // Quad Impulse firepoint
-            };
-
-            ShieldMultiplier = 1f;
-
-            /*
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
-
-            boostMulti = 1.65f;
-            boostMod = 1.85f;
-        }
-
-        // nothing needs to actually get created here, obviously, we handle creating the quad firepoints in base.ApplyParameters()
-        /*
-        public override void ApplyParameters()
-        {
-            base.ApplyParameters();
-        }
-        */
-    }
-
-
-    // The Kodachi.
+    // The Kodachi, smaller.
     public class Kodachi85 : Ship
     {
         public Kodachi85()
@@ -586,12 +551,6 @@ namespace GameMod
 
             ShieldMultiplier = 1f;
 
-            /*
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
-
             boostMulti = 1.7f;
             boostMod = 1.9f;
         }
@@ -606,7 +565,7 @@ namespace GameMod
     }
 
 
-    // The Kodachi.
+    // The Kodachi, smaller still.
     public class Kodachi75 : Ship
     {
         public Kodachi75()
@@ -642,12 +601,6 @@ namespace GameMod
             };
 
             ShieldMultiplier = 1f;
-
-            /*
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
 
             boostMulti = 1.75f;
             boostMod = 1.95f;
@@ -704,25 +657,15 @@ namespace GameMod
             new Vector3(2.5f, -1.68f, 2.3f)          // Quad Impulse firepoint
             };
 
-            ShieldMultiplier = 1f;
-
-            /* Stock Kodachi values
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
-
-            /*
-            m_slide_force_mp_nonscaled = new float[4] { 23.75f, 24.94f, 24.94f, 24.94f };
-            m_turn_speed_limit_acc = new float[5] { 2.07f, 2.88f, 4.05f, 5.4f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.25f, 2.88f, 3.6f, 4.68f, 100f };
-            */
+            ShieldMultiplier = 1.1f;
 
             MoveMulti = 0.95f;
             TurnMulti = 0.9f;
 
             boostMulti = 1.65f;
             boostMod = 1.85f;
+
+            boostBurst = 0.2f;
 
             SetHandling();
         }
@@ -844,51 +787,6 @@ namespace GameMod
         }
     }
 
-    /*
-
-    // ====================================================================
-    //
-    // ====================================================================
-    // ====================================================================
-    //
-    // ====================================================================
-
-    // Slower version of the Pyro
-    public class PyroGXSlow : PyroGX
-    {
-        public PyroGXSlow()
-        {
-            displayName = "Pyro GX (Slow)";
-            name = "entity_special_player_pyro_slow";
-            meshName = "Pyro";
-            colliderNames = new string[3] { "PyroCollider-100", "PyroCollider-105", "PyroCollider-110" };
-
-            customizations = false;
-
-            FIRING_POINTS = new Vector3[9]
-            {
-            new Vector3(1.512f, -1.23f, 1.55f),      // Impulse
-            new Vector3(0f, -1.275f, 1.5f),          // Cyclone
-            new Vector3(1.512f, -1.23f, 1.55f),      // Reflex
-            new Vector3(1.512f, -1.23f, 1.55f),      // Crusher
-            new Vector3(0f, -1.17f, 1.8f),           // Driller
-            new Vector3(1.512f, -1.23f, 1.55f),      // Flak
-            new Vector3(1.512f, -1.23f, 1.55f),      // Thunderbolt
-            new Vector3(1.512f, -1.23f, 1.55f),      // Lancer
-            new Vector3(2.5f, -1.68f, 2.3f)          // Quad Impulse firepoint
-            };
-
-            ShieldMultiplier = 1.1f;
-
-            m_slide_force_mp_nonscaled = new float[4] { 22.5f, 23.6f, 23.6f, 23.6f };
-            m_turn_speed_limit_acc = new float[5] { 1.84f, 2.6f, 3.6f, 4.8f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2f, 2.6f, 3.2f, 4.2f, 100f };
-
-            boostMulti = 1.8f;
-            boostMod = 2.0f;
-        }
-    }
-
     // ====================================================================
     //
     // ====================================================================
@@ -951,8 +849,6 @@ namespace GameMod
         }
     }
 
-    */
-
     // ====================================================================
     //
     // ====================================================================
@@ -997,19 +893,7 @@ namespace GameMod
 
             ShieldMultiplier = 0.9f;
 
-            /* Stock Kodachi values
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
-
-            /*
-            // still playing with these, needs some work.
-            m_slide_force_mp_nonscaled = new float[4] { 26f, 27.83f, 27.83f, 27.83f };
-            m_turn_speed_limit_acc = new float[5] { 1.955f, 2.72f, 3.825f, 5.1f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.125f, 2.72f, 3.4f, 4.42f, 100f };
-            */
-
+            AccelMulti = 0.85f;
             MoveMulti = 1.05f;
             TurnMulti = 0.8f;
 
@@ -1135,11 +1019,25 @@ namespace GameMod
             ps.m_muzzle_left2.localPosition = new Vector3(-1.25f, -1.04f, 1f); // left missile firepoint
             ps.m_muzzle_right2.localPosition = new Vector3(1.25f, -1.04f, 1f); // right missile firepoint
 
-            // move the headlights
+            // move the lights
+            ts = ps.c_lights[0].transform.parent; // root lights object, which for some reason is like 10 units off-center
+            ts.localPosition = Vector3.zero;
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
             ts = ps.c_lights[0].transform; // right light
-            ts.localPosition = new Vector3(0.42f, 1.6f, -2.45f);
+            ts.localPosition = new Vector3(0.56f, -0.19f, 0.52f);
+            ts.localRotation = Quaternion.Euler(9.7f, 18.8f, 0f);
             ts = ps.c_lights[1].transform; // left light
-            ts.localPosition = new Vector3(-0.42f, 1.6f, -2.45f);
+            ts.localPosition = new Vector3(-0.56f, -0.19f, 0.52f);
+            ts.localRotation = Quaternion.Euler(9.7f, -18.8f, 0f);
+            ts = ps.c_lights[2].transform; // far light
+            ts.localPosition = new Vector3(0f, -0.31f, 0.95f);
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            ts = ps.c_lights[3].transform; // boost light
+            ts.localPosition = new Vector3(0f, 0.036f, -0.92f);
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            ts = ps.c_lights[4].transform; // thunderbolt light
+            ts.localPosition = new Vector3(0f, 0.18f, -0.25f);
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
             base.ApplyParameters(go);
         }
@@ -1197,26 +1095,16 @@ namespace GameMod
             triTB = true;
 
             ShieldMultiplier = 1.25f;
-            // still playing with these, needs some work.
 
-            /* Stock Kodachi values
-            m_slide_force_mp_nonscaled = new float[4] { 25f, 26.25f, 26.25f, 26.25f };
-            m_turn_speed_limit_acc = new float[5] { 2.3f, 3.2f, 4.5f, 6f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 2.5f, 3.2f, 4f, 5.2f, 100f };
-            */
+            //MoveMulti = 0.85f;
+            AccelMulti = 1.12f;
+            MoveMulti = 0.82f;
+            TurnMulti = 0.68f;
 
-            /*
-            m_slide_force_mp_nonscaled = new float[4] { 21.25f, 22.31f, 22.31f, 22.31f };
-            // 75% turn values
-            m_turn_speed_limit_acc = new float[5] { 1.725f, 2.4f, 3.375f, 4.5f, 100f };
-            m_turn_speed_limit_rb = new float[5] { 1.875f, 2.4f, 3f, 3.9f, 100f };
-            */
+            boostMulti = 1.8f;
+            boostMod = 2f;
 
-            MoveMulti = 0.85f;
-            TurnMulti = 0.65f;
-
-            boostMulti = 1.85f;
-            boostMod = 2.1f;
+            boostBurst = 0.8f;
 
             SetHandling();
         }
@@ -1225,7 +1113,7 @@ namespace GameMod
         {
             PlayerShip ps = go.GetComponent<PlayerShip>();
 
-            // Hide everything but the main body GameObject
+            // Hide everything but the main body GameObject (and an addition object for the detail mesh)
             Transform ts = ps.c_external_ship.transform;
             for (int i = 2; i < ts.childCount; i++)
             {
@@ -1351,15 +1239,25 @@ namespace GameMod
             ps.m_muzzle_left2.localPosition = new Vector3(-1.96f, -0.39f, 0.43f); // left missile firepoint
             ps.m_muzzle_right2.localPosition = new Vector3(1.96f, -0.39f, 0.43f); // right missile firepoint
 
-            // move the headlights
-            ts = ps.c_lights[0].transform; // right light
-            ts.localPosition = new Vector3(0.31f, 1.6f, -3.42f);
-            ts = ps.c_lights[1].transform; // left light
-            ts.localPosition = new Vector3(-0.31f, 1.6f, -2.58f);
+            // move the lights
+            ts = ps.c_lights[0].transform.parent; // root lights GameObject, which for some reason is like 10 units off-center
+            ts.localPosition = Vector3.zero;
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            ts = ps.c_lights[1].transform; // right light
+            ts.localPosition = new Vector3(0.42f, -0.2f, 0.65f);
+            ts.localRotation = Quaternion.Euler(9.74f, 18.8f, 0f);
+            ts = ps.c_lights[0].transform; // left light
+            ts.localPosition = new Vector3(-0.42f, -0.2f, 0.65f);
+            ts.localRotation = Quaternion.Euler(9.74f, -18.8f, 0f);
+            ts = ps.c_lights[2].transform; // far light
+            ts.localPosition = new Vector3(0.5f, -0.44f, 0.66f);
+            ts.localRotation = Quaternion.Euler(-0.05f, -2.9f, 0.1f);
             ts = ps.c_lights[3].transform; // boost light
-            ts.localPosition = new Vector3(-2.04f, 1.62f, -3f);
+            ts.localPosition = new Vector3(0f, -0.18f, -1.1f);
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
             ts = ps.c_lights[4].transform; // thunderbolt light
-            ts.localPosition = new Vector3(-0.015f, 1.2f, 3f);
+            ts.localPosition = new Vector3(0f, -0.95f, 0.52f);
+            ts.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
             base.ApplyParameters(go);
         }
@@ -1375,7 +1273,6 @@ namespace GameMod
     //
     //
     // ====================================================================
-
 
 
     // Loads the new Prefabs at game launch
@@ -1452,7 +1349,6 @@ namespace GameMod
 
                     Ship s = MPShips.SelectedShips[net_id];
                     s.ApplyParameters(__instance.gameObject);
-                    return;
                 }
                 else
                 {
@@ -1464,7 +1360,28 @@ namespace GameMod
                         MPShips.DeferredShips.Remove(__instance.netId);
                     }
                 }
+
+                System.Type t = typeof(PlayerShip);
+                FieldInfo hl1Rot = t.GetField("_headlight1Rot", BindingFlags.NonPublic | BindingFlags.Instance);
+                FieldInfo hl2Rot = t.GetField("_headlight2Rot", BindingFlags.NonPublic | BindingFlags.Instance);
+                FieldInfo hlFRot = t.GetField("_headlightFarRot", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                // light rotation is screwy and needs to have references reassigned
+                hl1Rot.SetValue(__instance, __instance.c_lights[0].transform.localRotation);
+                hl2Rot.SetValue(__instance, __instance.c_lights[1].transform.localRotation);
+                hlFRot.SetValue(__instance, __instance.c_lights[2].transform.localRotation);
             }
+        }
+    }
+
+    // Assigns the chosen Ship definition's properties to the ship object at instantiation on the server
+    [HarmonyPatch(typeof(Player), "RestorePlayerShipDataAfterRespawn")]
+    static class MPShips_PlayerShip_RestorePlayerShipDataAfterRespawn
+    {
+        static void Postfix(PlayerShip ___c_player_ship)
+        {
+            ___c_player_ship.c_rigidbody.drag *= MPShips.GetShip(___c_player_ship).AccelMulti;
+            Debug.Log("CCF Restoring drag to " + ___c_player_ship.c_rigidbody.drag);
         }
     }
 
@@ -1576,6 +1493,8 @@ namespace GameMod
         static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM)
         {
             Ship ship = MPShips.GetShip(__instance);
+
+            __instance.m_refire_time = 0.5f; // NOT the right place to do this... but it works!
 
             if (wt == WeaponType.NUM)
             {
@@ -1705,6 +1624,59 @@ namespace GameMod
         }
     }
 
+
+    // allows shooting while boost is pressed (if enabled) -- also present in MPAnticheat
+    [HarmonyPatch(typeof(PlayerShip), "CanFire")]
+    static class MPShips_PlayerShip_CanFire
+    {
+        static bool Prefix(ref bool __result, PlayerShip __instance)
+        {
+            __result = (MPShips.FireWhileBoost || !__instance.m_boosting) && __instance.m_wheel_select_state == WheelSelectState.NONE;
+            return false;
+        }
+    }
+
+
+    // kill the HUD dimming while boosting if shoot while boost is enabled
+    [HarmonyPatch(typeof(PlayerShip), "Update")]
+    static class MPShips_PlayerShip_Update
+    {
+        // disable the check if FireWhileBoost is on
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes, ILGenerator gen)
+        {
+            Label label1 = gen.DefineLabel();
+            Label label2 = gen.DefineLabel();
+
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_boost_zoom"))
+                {
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "FireWhileBoost"));
+                    yield return new CodeInstruction(OpCodes.Brtrue, label1);
+                    
+                }
+                else if (code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_boost_ui_fade"))
+                {
+                    yield return new CodeInstruction(OpCodes.Br, label2); // jump over the HUD fading cancellation if it's not turned on
+                    CodeInstruction jump = new CodeInstruction(OpCodes.Ldarg_0);
+                    jump.labels.Add(label1);
+                    yield return jump;
+                    label1 = gen.DefineLabel(); // fresh label for the second set of calls
+                    yield return new CodeInstruction(OpCodes.Ldc_R4, 0f);
+                    code.labels.Add(label2);
+                    yield return code;
+                    label2 = gen.DefineLabel(); // fresh label for the second set of calls
+                }
+                else
+                {
+                    yield return code;
+                }
+            }
+        }
+    }
+
+
     // substitutes the PlayerShip's regular ship handling references with references to the Ship definition classes instead
     [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
     static class MPShips_PlayerShip_FixedUpdateProcessControlsInternal
@@ -1712,47 +1684,76 @@ namespace GameMod
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes, ILGenerator gen)
         {
             bool boost_done = false;
+            bool turn_found = false;
             CodeInstruction ci;
-            int idx = gen.DeclareLocal(typeof(Ship)).LocalIndex;
+            int CurrentShip = gen.DeclareLocal(typeof(Ship)).LocalIndex;
 
             // stores the player's ship from the static methods -once- at the start to avoid the lookup headaches
             yield return new CodeInstruction(OpCodes.Ldarg_0);
             yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPShips), "GetShip"));
-            yield return new CodeInstruction(OpCodes.Stloc_S, idx);
+            yield return new CodeInstruction(OpCodes.Stloc_S, CurrentShip);
 
             foreach (var code in codes)
             {
+                // slide force
                 if (code.opcode == OpCodes.Ldfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_slide_force_mp"))
                 {
                     yield return new CodeInstruction(OpCodes.Pop); // there's a PlayerShip instance reference to clear out first
-                    yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, CurrentShip);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_slide_force_mp"));
                 }
+                // turn speed acceleration
                 else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_acc"))
                 {
-                    ci = new CodeInstruction(OpCodes.Ldloc_S, idx); // original had a label on it
+                    ci = new CodeInstruction(OpCodes.Ldloc_S, CurrentShip); // original had a label on it
                     ci.labels = code.labels;
                     yield return ci;
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_acc"));
                 }
+                // turn speed rigidbody something something
                 else if (code.opcode == OpCodes.Ldsfld && code.operand == AccessTools.Field(typeof(PlayerShip), "m_turn_speed_limit_rb"))
                 {
-                    yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, CurrentShip);
                     yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "m_turn_speed_limit_rb"));
                 }
+                // modded boost multiplier
                 else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.85f && !boost_done)
                 {
-                    yield return new CodeInstruction(OpCodes.Ldloc_S, idx);
-                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMod"));
+                    //yield return new CodeInstruction(OpCodes.Ldloc_S, CurrentShip);
+                    //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMod"));
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, CurrentShip);
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerShip), "m_boost_heat"));
+                    //yield return new CodeInstruction(OpCodes.Ldloc_S, WasBoosting);
+                    yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Ship),"GetBoostMod"));
                 }
+                // regular boost multiplier
                 else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.65f && !boost_done)
                 {
-                    ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // more labels
-                    ci = new CodeInstruction(OpCodes.Ldloc_S, idx);
+                    //ci = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MPShips), "selected")); // more labels
+                    //ci = new CodeInstruction(OpCodes.Ldloc_S, CurrentShip); // more labels
+                    ci = new CodeInstruction(OpCodes.Ldloc_S, CurrentShip);
                     ci.labels = code.labels;
                     yield return ci;
-                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMulti"));
+                    //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "boostMulti"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(PlayerShip), "m_boost_heat"));
+                    //yield return new CodeInstruction(OpCodes.Ldloc_S, WasBoosting);
+                    yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Ship), "GetBoostMulti"));
                     boost_done = true;
+                }
+                // allow disabling of the turn speed boost that comes with overdrive -- TODO - make this toggleable
+                else if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.05f)
+                {
+                    turn_found = true;
+                    code.operand = 1f;
+                    yield return code;
+                }
+                else if (turn_found && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 1.2f)
+                {
+                    turn_found = false;
+                    code.operand = 1f;
+                    yield return code;
                 }
                 else
                 {
@@ -1850,7 +1851,20 @@ namespace GameMod
         }
     }
 
-
+    /*
+    // TODO - fix this. Ships detonating set of a burst or two of minidev. This should be flagged as "misc" damage.
+    [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
+    class MPSpew_PlayerShip_SpewItemsOnDeath
+    {
+        static void Postfix(PlayerShip __instance)
+        {
+            Player p = __instance.c_player;
+            Vector3 pos = __instance.c_transform_position;
+            Quaternion rot = __instance.c_transform_rotation;
+            ParticleElement pe1 = ProjectileManager.PlayerFire(p, ProjPrefab.missile_devastator_mini, pos, rot, 0f, WeaponUnlock.LEVEL_2B, false);
+        }
+    }
+    */
 
     // ====================================================================
     //
@@ -1923,9 +1937,9 @@ namespace GameMod
             {
                 Ship s = MPShips.GetShip(ps);
                 Debug.Log("CCF Starting ship type " + s.displayName + " for netId " + ps.netId + " name " + ps.c_player.m_mp_name + " on client " + NetworkMatch.m_my_lobby_id);
-                s.ApplyParameters(ps.gameObject);
+                s.ApplyParameters(ps.gameObject
             }
-            else // ship hasn't been instantiated yet, store it for the start stage
+            else // ship hasn't been instantiated yet, store it for the Start() stage
             {
                 Debug.Log("CCF Ship not found for netId " + msg.netId + " name on client " + NetworkMatch.m_my_lobby_id + ", storing for Start()");
                 MPShips.DeferredShips.Add(msg.netId);

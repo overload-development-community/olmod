@@ -63,7 +63,7 @@ namespace GameMod
             }
             else if (GameplayManager.IsMultiplayer)
             {
-                return MPModPrivateData.DEFAULT_PROJ_DATA;
+                return (MPShips.allowed == 0 ? MPModPrivateData.DEFAULT_PROJ_DATA : MPModPrivateData.MULTISHIP_PROJ_DATA);
             }
             else
             {
