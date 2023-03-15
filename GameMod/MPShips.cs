@@ -1937,7 +1937,7 @@ namespace GameMod
             {
                 Ship s = MPShips.GetShip(ps);
                 Debug.Log("CCF Starting ship type " + s.displayName + " for netId " + ps.netId + " name " + ps.c_player.m_mp_name + " on client " + NetworkMatch.m_my_lobby_id);
-                s.ApplyParameters(ps.gameObject
+                s.ApplyParameters(ps.gameObject);
             }
             else // ship hasn't been instantiated yet, store it for the Start() stage
             {
