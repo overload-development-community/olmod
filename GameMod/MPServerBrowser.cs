@@ -982,6 +982,7 @@ namespace GameMod
             position.y += 62f;
         }
 
+        [HarmonyPriority(Priority.Normal - 3)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var mpServerBrowser_UIElement_DrawMpMatchSetup_DrawMatchNotes_Method = AccessTools.Method(typeof(MPServerBrowser_UIElement_DrawMpMatchSetup), "DrawMatchNotes");

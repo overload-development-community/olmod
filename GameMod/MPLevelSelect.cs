@@ -9,9 +9,41 @@ namespace GameMod {
     {
         public static int[] LevelIndex;
         public static bool OTL;
+        private static string filter = null;
+        private static bool filterAll = false;
+        private static bool filterNotFound = false;
+
+        private static bool LevelMatchFilter(int idx)
+        {
+            if (String.IsNullOrEmpty(filter)) {
+                return true;
+            }
+            string name = GameManager.MultiplayerMission.GetLevelDisplayName(idx).ToUpper();
+            int pos = name.IndexOf(filter);
+            if (pos == 0 || (pos > 0 && filterAll)) {
+                return true;
+            }
+            return false;
+        }
+
+        private static int CountFilteredLevels()
+        {
+            int totalCnt = GameManager.MultiplayerMission.NumLevels;
+            int cnt = 0;
+            for (int i = 0; i < totalCnt; i++) {
+                if (LevelMatchFilter(i)) {
+                    cnt++;
+                }
+            }
+            return cnt;
+        }
 
         public static void InitList()
         {
+            int curMapIndex = -1;
+            if (LevelIndex != null && MenuManager.mms_level_num >= 0 && MenuManager.mms_level_num < LevelIndex.Length) {
+                curMapIndex = LevelIndex[MenuManager.mms_level_num];
+            }
             if (OTL)
             {
                 int stock = 11;
@@ -24,9 +56,25 @@ namespace GameMod {
             }
             else
             {
-                LevelIndex = new int[GameManager.MultiplayerMission.NumLevels];
-                for (int i = 0; i < MPLevelSelect.LevelIndex.Length; i++)
-                    LevelIndex[i] = i;
+                if (String.IsNullOrEmpty(filter)) {
+                    LevelIndex = new int[GameManager.MultiplayerMission.NumLevels];
+                    for (int i = 0; i < MPLevelSelect.LevelIndex.Length; i++)
+                        LevelIndex[i] = i;
+                } else {
+                    int totalCnt = GameManager.MultiplayerMission.NumLevels;
+                    int cnt = CountFilteredLevels();
+                    LevelIndex = new int[cnt];
+                    cnt = 0;
+                    for (int i = 0; i < totalCnt; i++) {
+                        if (LevelMatchFilter(i)) {
+                            LevelIndex[cnt] = i;
+                            if (i == curMapIndex) {
+                                MenuManager.mms_level_num = i;
+                            }
+                            cnt++;
+                        }
+                    }
+                }
             }
             int cur = Math.Min(LevelIndex.Length - 1, MenuManager.mms_level_num); 
             MenuManager.m_selected_mission = null; //GameManager.MultiplayerMission;
@@ -38,6 +86,63 @@ namespace GameMod {
                 MenuManager.m_list_items_total_count) - 1;
             MenuManager.m_list_item_paging = MenuManager.m_list_items_total_count > MenuManager.m_list_items_max_per_page;
         }
+
+        public static void ResetFilter()
+        {
+            filter = null;
+            filterAll = false;
+            filterNotFound = false;
+            InitList();
+        }
+
+        public static void UpdateFilter(string addPart)
+        {
+            if (String.IsNullOrEmpty(addPart)) {
+                return;
+            }
+
+            string prevFilter = filter;
+
+            foreach (char c in addPart) {
+                if (c == 8) {
+                    // Backspace
+                    if (filter != null && filter.Length > 1) {
+                        filter = filter.Substring(0, filter.Length-1);
+                    } else {
+                        filter = null;
+                    }
+                } else if (c == '*') {
+                    filterAll = !filterAll;
+                } else if (c >= 32) {
+                    // Normal Chars
+                    if (filter == null) {
+                        filter = c.ToString();
+                    } else {
+                        filter = filter + c.ToString();
+                    }
+                }
+            }
+            if (!String.IsNullOrEmpty(filter)) {
+                filter = filter.ToUpper();
+            }
+
+            if (CountFilteredLevels() > 0) {
+                InitList();
+                filterNotFound = false;
+            } else {
+                filter = prevFilter;
+                filterNotFound = true;
+            }
+        }
+
+        public static string GetSymbolicFilterName()
+        {
+            if (String.IsNullOrEmpty(filter)) {
+                return null;
+            }
+            return (filterAll?"*":"") + filter + "*";
+        }
+
     }
 
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
@@ -74,7 +179,12 @@ namespace GameMod {
             UIManager.X_SCALE = 0.35f;
             uie.DrawMenuBG();
             uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 30f), Loc.LS("MULTIPLAYER LEVEL SELECT"), 265f);
+            string filter = MPLevelSelect.GetSymbolicFilterName();
             Vector2 position = uie.m_position;
+            if (!String.IsNullOrEmpty(filter)) {
+              position.y = UIManager.UI_TOP + 90f;
+              uie.DrawTextLineSmall("Filter: '" + filter + "'", position);
+            }
             position.y = UIManager.UI_TOP + 85f;
             // is this useful?
             //uie.SelectAndDrawStringOptionItem(Loc.LS("LEVEL SET"), position, 4, MPLevelSelect.OTL ? "OTL" : "LOCAL", string.Empty, 1.5f, false);
@@ -166,7 +276,7 @@ namespace GameMod {
                 MenuManager.mms_level_num = MenuManager.mms_level_num == 0 ? GameManager.MultiplayerMission.NumLevels - 1 : MenuManager.mms_level_num - 1;
 
                 MenuManager.SetDefaultSelection(0);
-                MPLevelSelect.InitList();
+                MPLevelSelect.ResetFilter();
                 MenuManager.m_menu_micro_state = 8;
                 MenuManager.UIPulse(2f);
                 MenuManager.PlaySelectSound(1f);
@@ -178,12 +288,17 @@ namespace GameMod {
         {
             if (MenuManager.m_menu_micro_state != 8 || MenuManager.m_menu_sub_state != MenuSubState.ACTIVE)
                 return true;
+            MPLevelSelect.UpdateFilter(Input.inputString);
             UIManager.MouseSelectUpdate();
 
             UIManager.ControllerMenu();
             if (UIManager.m_menu_selection >= 1000)
             {
-                int idx = MPLevelSelect.LevelIndex[UIManager.m_menu_selection - 1000];
+                int selIdx = UIManager.m_menu_selection - 1000;
+                int idx = -1;
+                if (selIdx < MPLevelSelect.LevelIndex.Length) {
+                    idx = MPLevelSelect.LevelIndex[selIdx];
+                }
                 if (idx >= 0)
                     UIManager.SetLevelTexture(GameManager.MultiplayerMission, idx);
                 else

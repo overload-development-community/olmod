@@ -105,6 +105,8 @@
     <Compile Include="AmbientUnload.cs" />
     <Compile Include="AxisCountFix.cs" />
     <Compile Include="FramerateLimiter.cs" />
+    <Compile Include="MPShips.cs" />
+    <Compile Include="MPColliderSwap.cs" />
     <Compile Include="MPPacketStatus.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Console.cs" />
@@ -236,6 +238,7 @@
   <ItemGroup>
     <None Include="Directory.Build.targets" />
     <None Include="olmodsettings.json" />
+    <EmbeddedResource Include="Resources\meshes" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

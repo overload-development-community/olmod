@@ -151,6 +151,22 @@ namespace GameMod {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_assist_scoring));
         }
 
+        public static string GetMMSCollisionMesh()
+        {
+            switch (mms_collision_mesh)
+            {
+                case 0:
+                default:
+                    return "Sphere (Stock)";
+                case 1:
+                    return "100% Mesh";
+                case 2:
+                    return "105% Mesh";
+                case 3:
+                    return "110% Mesh";
+            }
+        }
+
         public static string GetMMSLagCompensation()
         {
             switch (mms_lag_compensation)
@@ -243,6 +259,7 @@ namespace GameMod {
         public static bool mms_reduced_ship_explosions = true;
         public static bool mms_show_framerate = false;
         public static int mms_selected_loadout_idx = 0;
+        public static int mms_collision_mesh = 0;
     }
 
 
@@ -293,6 +310,9 @@ namespace GameMod {
             uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
+
+            position.y += 55f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("COLLISION MESH"), position, 22, Menus.GetMMSCollisionMesh(), Loc.LS("COLLIDER TO USE FOR PROJECTILE->SHIP COLLISIONS"), 1f, false);
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -313,6 +333,7 @@ namespace GameMod {
             position.x += 300f;
         }
 
+        [HarmonyPriority(Priority.Normal - 9)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
@@ -550,6 +571,10 @@ namespace GameMod {
                         Menus.mms_damage_numbers = !Menus.mms_damage_numbers;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
+                    case 22:
+                        Menus.mms_collision_mesh = (4 + Menus.mms_collision_mesh + UIManager.m_select_dir) % 4;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
 
                 }
             }
@@ -629,6 +654,7 @@ namespace GameMod {
     class Menus_UIElement_DrawMpMatchSetup_ScaleRespawnTime
     {
         // Change fade parameter on respawn slider from MenuManager.mms_mode == MatchMode.MONSTERBALL to Menus.mms_scale_respawn
+        [HarmonyPriority(Priority.Normal - 10)] // set global order of transpilers for this function
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;

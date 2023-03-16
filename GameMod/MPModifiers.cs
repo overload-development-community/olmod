@@ -93,6 +93,7 @@ namespace GameMod
                 uie.SelectAndDrawItem("ALLOWED MODIFIERS", position, 8, false, 1f, 0.75f);
             }
 
+            [HarmonyPriority(Priority.Normal - 2)] // set global order of transpilers for this function
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
             {
                 int state = 0;

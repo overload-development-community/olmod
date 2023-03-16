@@ -994,6 +994,7 @@ namespace GameMod
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
     class MPTeamsMenuDraw
     {
+        [HarmonyPriority(Priority.Normal - 8)] // set global order of transpilers for this function
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> cs)
         {
             var vector2_y_Field = AccessTools.Field(typeof(Vector2), "y");

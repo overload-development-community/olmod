@@ -139,6 +139,7 @@ namespace GameMod
             position.y += 62f;
         }
 
+        [HarmonyPriority(Priority.Normal - 4)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var powerupFound = false;
