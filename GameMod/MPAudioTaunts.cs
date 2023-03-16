@@ -1422,7 +1422,10 @@ namespace GameMod
                             }
                         }
                     }
-                    catch (Exception ex) { }
+                    catch (Exception)
+                    {
+                        // TODO: Do we really need a try catch here?  If so, should we log anything?  If not, there should be a comment here explaining why.
+                    }
                 }
 
                 static void Postfix()
@@ -1483,8 +1486,10 @@ namespace GameMod
                     hash = msg[0];
                     sender_name = msg[1];
                 }
-                catch(Exception ex)
-                { }
+                catch(Exception)
+                {
+                    // TODO: Do we really need a try catch here?  If so, should we log anything?  If not, there should be a comment here explaining why.
+                }
             }
         }
 
@@ -1553,7 +1558,7 @@ namespace GameMod
                 }
                 catch(Exception ex)
                 {
-                    Debug.Log("[AudioTaunts] AudioTauntPacket.Deserialize: data couldnt format properly");
+                    Debug.Log($"[AudioTaunts] AudioTauntPacket.Deserialize: data couldn't format properly: {ex.ToString()}");
                 }
                 
             }
