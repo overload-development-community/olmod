@@ -170,10 +170,20 @@ namespace GameMod
         // Action for input binding "Toggle Loadout Primary"
         public static void ToggleLoadoutPrimary(Player player)
         {
-            var nextWeapon = WeaponType.NUM;
-            if (NetworkMatch.m_force_loadout == 1 && NetworkMatch.m_force_w2 != WeaponType.NUM)
+            if (Menus.mms_classic_spawns)
+                return;
+
+                var nextWeapon = WeaponType.NUM;
+            if (NetworkMatch.m_force_loadout == 1)
             {
-                nextWeapon = NetworkMatch.m_force_w1 == player.m_weapon_type ? NetworkMatch.m_force_w2 : NetworkMatch.m_force_w1;
+                if (NetworkMatch.m_force_w2 == WeaponType.NUM)
+                {
+                    nextWeapon = NetworkMatch.m_force_w1;
+                }
+                else
+                {
+                    nextWeapon = NetworkMatch.m_force_w1 == player.m_weapon_type ? NetworkMatch.m_force_w2 : NetworkMatch.m_force_w1;
+                }
             }
             else
             {

@@ -477,9 +477,14 @@ namespace GameMod {
             int conn_id = player.connectionToClient.connectionId;
             var inv = NetworkInstanceId.Invalid;
 
+            bool JoinUpdateSupported = MPTweaks.ClientHasTweak(conn_id, "ctfjoin"); // don't send the new JoinUpdate message to old clients
+
             // sync flag possession
             foreach (var x in CTF.PlayerHasFlag) {
-                SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = x.Value, m_destroy = true, m_timer = 0, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                if (JoinUpdateSupported)
+                {
+                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = x.Value, m_destroy = true, m_timer = 0, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                }
                 CTF.SendCTFPickup(conn_id, NetworkServer.FindLocalObject(x.Key).GetComponent<Player>(), x.Value, FlagState.PICKEDUP);
             }
             
@@ -488,13 +493,24 @@ namespace GameMod {
             {
                 if (FlagStates[flag] == FlagState.LOST)
                 {
-                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = true, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                    if (JoinUpdateSupported)
+                    {
+                        SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = true, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                    }
+
                     CTF.SendCTFFlagUpdate(conn_id, NetworkInstanceId.Invalid, flag, FlagStates[flag]);
-                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 2, m_flag_id = flag, m_destroy = false, m_timer = CTF.FlagReturnTime[flag] - Time.time, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                    
+                    if (JoinUpdateSupported)
+                    {
+                        SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 2, m_flag_id = flag, m_destroy = false, m_timer = CTF.FlagReturnTime[flag] - Time.time, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                    }
                 }
                 else
                 {
-                    SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = false, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                    if (JoinUpdateSupported)
+                    {
+                        SendToClientOrAll(conn_id, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 1, m_flag_id = flag, m_destroy = false, m_timer = 0f, m_mp_name = "", m_player_id = inv, m_old_id = inv });
+                    }
                 }
             }
 
@@ -504,7 +520,10 @@ namespace GameMod {
             {
                 old = NetworkInstanceId.Invalid;
             }
-            SendToClientOrAll(-1, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 0, m_flag_id = 0, m_destroy = false, m_timer = 0f, m_mp_name = player.m_mp_name, m_player_id = player.netId, m_old_id = old });
+            if (JoinUpdateSupported)
+            {
+                SendToClientOrAll(-1, MessageTypes.MsgCTFJoinUpdate, new CTFJoinUpdateMessage { m_mode = 0, m_flag_id = 0, m_destroy = false, m_timer = 0f, m_mp_name = player.m_mp_name, m_player_id = player.netId, m_old_id = old });
+            }
         }
 
         // return Player object for given net id if it should show an effect, i.e. not local player or headless
