@@ -10,11 +10,22 @@ namespace GameMod {
             if (GameplayManager.IsDedicatedServer()) {
                 Application.targetFrameRate = 120;
             } else {
-                if (GameManager.m_game_state == GameManager.GameState.GAMEPLAY) {
-                    Application.targetFrameRate = -1;
-                } else {
-                    Application.targetFrameRate = 120;
+                if(FramerateLimiter.target_framerate != 0)
+                {
+                    Application.targetFrameRate = FramerateLimiter.target_framerate;
                 }
+                else
+                {
+                    if (GameManager.m_game_state == GameManager.GameState.GAMEPLAY)
+                    {
+                        Application.targetFrameRate = -1;
+                    }
+                    else
+                    {
+                        Application.targetFrameRate = 120;
+                    }
+                }
+
             }
             return false;
         }
