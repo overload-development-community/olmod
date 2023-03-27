@@ -484,6 +484,7 @@ namespace GameMod {
             player.c_player_ship.c_transform.localPosition = Vector3.LerpUnclamped(A.m_pos, B.m_pos, t);
             player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(A.m_rot, B.m_rot, t);
             player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
+            player.c_player_ship.c_mesh_collider_trans.localRotation = player.c_player_ship.c_transform.localRotation;
         }
 
         public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t){
@@ -526,6 +527,7 @@ namespace GameMod {
             player.c_player_ship.c_transform.localPosition = newPos;
             player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot*Quaternion.Euler(snapshot.m_vrot), t);
             player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
+            player.c_player_ship.c_mesh_collider_trans.localRotation = player.c_player_ship.c_transform.localRotation;
         }
 
         // Called per frame, moves ships along their interpolation/extrapolation motions

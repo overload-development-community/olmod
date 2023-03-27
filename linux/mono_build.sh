@@ -48,6 +48,7 @@ mcs \
     -r:../GameMod/0Harmony.dll \
     -target:library \
     -sdk:2 \
+    -resource:../GameMod/Resources/meshes,GameMod.Resources.meshes \
     -out:GameMod.dll \
     ../GameMod/*.cs \
     ../GameMod/*/*.cs

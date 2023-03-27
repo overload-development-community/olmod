@@ -1520,7 +1520,7 @@ namespace GameMod
             {
                 __instance.m_missile_type = value;
 
-                if (__instance.isLocalPlayer && __instance.m_missile_ammo[(int)value] > 0)
+                if (__instance.isLocalPlayer && value != MissileType.NUM && __instance.m_missile_ammo[(int)value] > 0)
                 {
                     Client.GetClient().Send(MessageTypes.MsgPlayerWeaponSynchronization, new PlayerWeaponSynchronizationMessage
                     {
