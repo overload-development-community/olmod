@@ -1457,7 +1457,7 @@ namespace GameMod
 
                     __instance.c_go.GetComponent<Light>().color = teamcolor;
 
-                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>())
+                    foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>(includeInactive: true))
                     {
                         if (rend.name == "_glow" || rend.name == "extra_glow")
                         {
@@ -1479,7 +1479,7 @@ namespace GameMod
                 }
                 else
                 {
-                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>())
+                    foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>(includeInactive: true))
                     {
                         var m = x.main;
                         switch (x.name)
@@ -1495,6 +1495,58 @@ namespace GameMod
                                 break;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // if team-coloured creepers are on and friendly fire isn't, causes the player's creepers to blink periodically
+    [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
+    static class MPTeams_Projectile_FixedUpdateDynamic
+    {
+        const float offTime = 0.75f;
+        const float cycleTime = 1f;
+
+        static void Postfix(Projectile __instance)
+        {
+            if (GameplayManager.IsMultiplayerActive && Menus.mms_creeper_colors && MenuManager.mms_friendly_fire != 1 && __instance.m_type == ProjPrefab.missile_creeper && __instance.m_owner_player.isLocalPlayer)
+            {
+                var time = Time.time % cycleTime;
+
+                // 0f ... 1f value
+                var pulse = Mathf.Clamp(Math.Abs(time - offTime / 2) / (offTime / 2), 0, 1);
+
+                // Enemy creeper light
+                __instance.m_robot_only_extra_mesh.SetActive(pulse < 1f);
+
+                if (pulse < 1f)
+                {
+                    foreach (var rend in __instance.m_robot_only_extra_mesh.GetComponentsInChildren<Renderer>(includeInactive: true))
+                    {
+                        if (rend.name == "extra_glow")
+                        {
+                            foreach (var mat in rend.materials)
+                            {
+                                
+                                if (mat.name == "enemy_creeper1 (Instance)")
+                                {
+                                    mat.SetFloat("_EdgePower", 5f - 4f * (1f - pulse));
+                                    mat.SetFloat("_EdgeStrength", 3f * (1f - pulse));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Team color creeper light
+                var color = __instance.c_go.GetComponent<Light>().color;
+                color.a = pulse;
+
+                __instance.c_go.GetComponent<Light>().intensity = 0.25f + pulse * 0.75f;
+                foreach (var ps in __instance.c_go.GetComponentsInChildren<ParticleSystem>().Where(x => x.name == "_glow"))
+                {
+                    var col = ps.colorOverLifetime;
+                    col.color = color;
                 }
             }
         }

@@ -291,6 +291,8 @@ namespace GameMod {
                 MPAudioTaunts.AClient.audio_taunt_volume = ModPrefs.GetInt("MP_AUDIOTAUNT_VOLUME", 50);
                 MPAudioTaunts.AClient.display_audio_spectrum = ModPrefs.GetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", true);
 
+                FramerateLimiter.target_framerate = ModPrefs.GetInt("TARGET_FRAMERATE", 0);
+
             }
             else // for compatibility with old olmod, no need to add new settings
             {
@@ -380,6 +382,7 @@ namespace GameMod {
             ModPrefs.SetString("MP_LOCAL_AUDIOTAUNTS", MPAudioTaunts.AClient.ChainTogetherHashesOfLocalTaunts());
             ModPrefs.SetInt("MP_AUDIOTAUNT_VOLUME", MPAudioTaunts.AClient.audio_taunt_volume);
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
+            ModPrefs.SetInt("TARGET_FRAMERATE", FramerateLimiter.target_framerate);
 
             ModPrefs.Flush(filename + "mod");
         }

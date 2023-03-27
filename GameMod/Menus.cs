@@ -1366,13 +1366,13 @@ namespace GameMod {
         private static void DrawAdditionalSoundOptions(UIElement uie, ref Vector2 position)
         {
             position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("AUDIO OCCLUSION STRENGTH"), position, 6, Menus.GetMMSAudioOcclusionStrength(), Loc.LS("SOUND EFFECTS OUT OF LINE-OF-SIGHT WILL BE FILTERED DEPENDING ON DISTANCE"));
+            uie.SelectAndDrawStringOptionItem(Loc.LS("AUDIO OCCLUSION STRENGTH"), position, 5, Menus.GetMMSAudioOcclusionStrength(), Loc.LS("SOUND EFFECTS OUT OF LINE-OF-SIGHT WILL BE FILTERED DEPENDING ON DISTANCE"));
             position.y += 62f;
-            uie.SelectAndDrawStringOptionItem(Loc.LS("DIRECTIONAL HOMING WARNINGS"), position, 7, Menus.GetMMSDirectionalWarnings(), Loc.LS("PLAYS HOMING WARNINGS FROM THE DIRECTION OF THE INCOMING PROJECTILE"));
+            uie.SelectAndDrawStringOptionItem(Loc.LS("DIRECTIONAL HOMING WARNINGS"), position, 6, Menus.GetMMSDirectionalWarnings(), Loc.LS("PLAYS HOMING WARNINGS FROM THE DIRECTION OF THE INCOMING PROJECTILE"));
             position.y += 62f;
-            uie.SelectAndDrawSliderItem("AUDIO TAUNT VOLUME", position, 8, MPAudioTaunts.AClient.audio_taunt_volume / 100f);
+            uie.SelectAndDrawSliderItem("AUDIO TAUNT VOLUME", position, 7, MPAudioTaunts.AClient.audio_taunt_volume / 100f);
             position.y += 62f;
-            uie.SelectAndDrawItem("REINITIALIZE AUDIO DEVICE", position, 5, false);
+            uie.SelectAndDrawItem("REINITIALIZE AUDIO DEVICE", position, 8, false);
         }
 
         // First SelectAndDrawStringOptionItem() after "SPEAKER MODE" string, draw our menu
@@ -1413,10 +1413,6 @@ namespace GameMod {
             switch (menu_selection)
             {
                 case 5:
-                    AudioSettings.Reset(AudioSettings.GetConfiguration());
-                    MenuManager.PlaySelectSound(1f);
-                    break;
-                case 6:
                     Menus.mms_audio_occlusion_strength = (Menus.mms_audio_occlusion_strength + UIManager.m_select_dir) % 4;
                     if (Menus.mms_audio_occlusion_strength < 0)
                     {
@@ -1424,16 +1420,23 @@ namespace GameMod {
                     }
                     MenuManager.PlaySelectSound(1f);
                     break;
-                case 7:
+                case 6:
                     Menus.mms_directional_warnings = !Menus.mms_directional_warnings;
                     MenuManager.PlaySelectSound(1f);
                     break;
-                case 8:
+                case 7:
                     MPAudioTaunts.AClient.audio_taunt_volume = (int)(UIElement.SliderPos * 100);
                     if (Input.GetMouseButtonDown(0))
                         MenuManager.PlaySelectSound(1f);
                     break;
-
+                case 8:
+                    AudioSettings.Reset(AudioSettings.GetConfiguration());
+                    GameManager.m_audio.SFXVolume = MenuManager.opt_volume_sfx;
+                    GameManager.m_audio.MusicVolume = MenuManager.opt_volume_music;
+                    GameManager.m_audio.VoiceVolume = MenuManager.opt_volume_voice;
+                    GameManager.m_audio.AmbientVolume = MenuManager.opt_volume_ambient;
+                    MenuManager.PlaySelectSound(1f);
+                    break;
             }
         }
 
