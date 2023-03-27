@@ -289,8 +289,6 @@ namespace GameMod {
                 MPAudioTaunts.AClient.loaded_local_taunts = ModPrefs.GetString("MP_LOCAL_AUDIOTAUNTS", MPAudioTaunts.AClient.loaded_local_taunts);
                 MPAudioTaunts.AClient.LoadLocalAudioTauntsFromPilotPrefs();
                 MPAudioTaunts.AClient.audio_taunt_volume = ModPrefs.GetInt("MP_AUDIOTAUNT_VOLUME", 50);
-                for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++){
-                    MPAudioTaunts.AClient.keybinds[i] = ModPrefs.GetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), -1);}
                 MPAudioTaunts.AClient.display_audio_spectrum = ModPrefs.GetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", true);
 
             }
@@ -381,8 +379,6 @@ namespace GameMod {
             ModPrefs.SetBool("MP_AUDIOTAUNTS_ACTIVE", MPAudioTaunts.AClient.active);
             ModPrefs.SetString("MP_LOCAL_AUDIOTAUNTS", MPAudioTaunts.AClient.ChainTogetherHashesOfLocalTaunts());
             ModPrefs.SetInt("MP_AUDIOTAUNT_VOLUME", MPAudioTaunts.AClient.audio_taunt_volume);
-            for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++){
-                ModPrefs.SetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), MPAudioTaunts.AClient.keybinds[i]);}
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
 
             ModPrefs.Flush(filename + "mod");

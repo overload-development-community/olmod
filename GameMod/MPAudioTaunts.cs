@@ -166,14 +166,10 @@ namespace GameMod
                                 ready_to_play = false,
                                 requested_taunt = false
                             };
-                            keybinds[i] = -1;
                         }
                         LoadLocalAudioTauntsFromPilotPrefs();
                     }
-                    else
-                    {
 
-                    }
 
                     taunts.Sort((x, y) => x.name.CompareTo(y.name));
 
@@ -289,7 +285,6 @@ namespace GameMod
                             ready_to_play = false,
                             requested_taunt = false
                         };
-                        AClient.keybinds[i] = -1;
                     }
                     AClient.LoadLocalAudioTauntsFromPilotPrefs();
                     taunts.Sort((x, y) => x.name.CompareTo(y.name));
