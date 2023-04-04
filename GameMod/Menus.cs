@@ -1425,9 +1425,7 @@ namespace GameMod {
                     MenuManager.PlaySelectSound(1f);
                     break;
                 case 7:
-                    MPAudioTaunts.AClient.audio_taunt_volume = (int)(UIElement.SliderPos * 100);
-                    if (Input.GetMouseButtonDown(0))
-                        MenuManager.PlaySelectSound(1f);
+                    MPAudioTaunts.AClient.audio_taunt_volume = UpdateVolume(MPAudioTaunts.AClient.audio_taunt_volume);
                     break;
                 case 8:
                     AudioSettings.Reset(AudioSettings.GetConfiguration());
@@ -1438,6 +1436,24 @@ namespace GameMod {
                     MenuManager.PlaySelectSound(1f);
                     break;
             }
+        }
+
+        public static int UpdateVolume(int cur_volume)
+        {
+            if (!UIManager.m_menu_use_mouse)
+            {
+                MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                return MenuManager.AdjustVolume(UIManager.m_select_dir, cur_volume);
+            }
+            if (UIElement.SliderValid)
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    MenuManager.PlayCycleSound(1f, UIElement.SliderPos * 5f - 3f);
+                }
+                return (int)(UIElement.SliderPos * 100f);
+            }
+            return cur_volume;
         }
 
         // Handle menu selection just before MenuManager.UnReverseOption
