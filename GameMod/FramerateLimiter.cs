@@ -77,22 +77,21 @@ namespace GameMod
                 switch (menu_selection)
                 {
                     case 282:
-                        if (Input.GetMouseButtonUp(0))
-                        {
-                            FramerateLimiter.target_framerate = (int)(UIElement.SliderPos * maximum_framerate);
-                            MenuManager.PlaySelectSound(1f);
-
-                            if (target_framerate == 0)
-                                Application.targetFrameRate = 0;
-                            else
-                                Application.targetFrameRate = FramerateLimiter.target_framerate;
-
+                        if (MenuManager.option_dir && UIManager.PushedDir()){
+                            target_framerate += UIManager.m_select_dir;
+                            Application.targetFrameRate = FramerateLimiter.target_framerate;
+                            MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                             uConsole.Log("Set the target framerate to " + FramerateLimiter.target_framerate);
-
                         }
-                        else if(Input.GetMouseButton(0))
-                        {
-                            FramerateLimiter.target_framerate = (int)(UIElement.SliderPos * maximum_framerate);
+                        else{
+                            if (Input.GetMouseButtonUp(0)){
+                                target_framerate = (int)(UIElement.SliderPos * maximum_framerate);
+                                Application.targetFrameRate = FramerateLimiter.target_framerate;
+                                MenuManager.PlaySelectSound(1f);
+                                uConsole.Log("Set the target framerate to " + FramerateLimiter.target_framerate);
+                            }
+                            else if (Input.GetMouseButton(0))
+                                target_framerate = (int)(UIElement.SliderPos * maximum_framerate);
                         }
                         break;
                 }

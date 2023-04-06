@@ -299,6 +299,7 @@ namespace GameMod
             "[SECTION: AUTOSELECT]",
             "[SECTION: JOYSTICKCURVE]",
             "[SECTION: WEAPONCYCLING]",
+            "[SECTION: AUDIOTAUNT_KEYBINDS]",
             //...
         };
 
@@ -317,6 +318,11 @@ namespace GameMod
             {
                 Section_WeaponCycling.Load(section);
             }
+            if (section_name.Equals(known_sections[3]))
+            {
+                Section_Audiotaunt_Keybinds.Load(section);
+            }
+
             //...
 
         }
@@ -344,6 +350,11 @@ namespace GameMod
                     w.WriteLine("[SECTION: WEAPONCYCLING]");
                     Section_WeaponCycling.Save(w);
                     w.WriteLine("[/END]");
+
+                    w.WriteLine("[SECTION: AUDIOTAUNT_KEYBINDS]");
+                    Section_Audiotaunt_Keybinds.Save(w);
+                    w.WriteLine("[/END]");
+                    
                     //...
 
                     if (unknown_sections != null)
@@ -366,7 +377,7 @@ namespace GameMod
             Section_AutoSelect.Set();
             Section_JoystickCurve.SetDefault();
             Section_WeaponCycling.Set();
-
+            Section_Audiotaunt_Keybinds.SetDefaultKeybinds();
         }
 
         public static void ApplyConfigData()
@@ -524,7 +535,6 @@ namespace GameMod
             }
 
         }
-
 
         internal class Section_JoystickCurve
         {
@@ -878,6 +888,47 @@ namespace GameMod
             }
 
         }
+
+        internal class Section_Audiotaunt_Keybinds
+        {
+            public static void Load(List<string> section)
+            {
+                string l;
+                for(int i = 0; i < section.Count; i++)
+                {
+                    if (i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT)
+                    {
+                        l = RemoveWhitespace(section[i]);
+                        int.TryParse(l, out int val);
+
+                        if (val >= -1)
+                        {
+                            MPAudioTaunts.AClient.keybinds[i] = val;
+                        }
+                    }
+
+                }
+            }
+
+            public static void Save(StreamWriter w)
+            {
+                for(int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
+                {
+                    w.WriteLine("   " + MPAudioTaunts.AClient.keybinds[i]);
+                }
+            }
+
+            // -1 = no keycode set
+            public static void SetDefaultKeybinds()
+            {
+                for (int i = 0; i < MPAudioTaunts.AClient.keybinds.Length; i++)
+                {
+                    MPAudioTaunts.AClient.keybinds[i] = -1;
+                } 
+            }
+        }
+
+
 
     }
 }

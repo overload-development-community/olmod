@@ -18,8 +18,7 @@ namespace GameMod
     class MPAudioTaunts
     {
 
-        /* TODO:
-         * - create a reload function to add audiotaunts without having to restart
+        /* 
          * - write a handler that dynamically schedules downloads/uploads and adjusts the packet size based on the resend rate
          * - replace the AudioTaunt.received_packet list with a dynamically sized bool array 
          * - make joystick keys bindable
@@ -166,14 +165,10 @@ namespace GameMod
                                 ready_to_play = false,
                                 requested_taunt = false
                             };
-                            keybinds[i] = -1;
                         }
                         LoadLocalAudioTauntsFromPilotPrefs();
                     }
-                    else
-                    {
 
-                    }
 
                     taunts.Sort((x, y) => x.name.CompareTo(y.name));
 
@@ -289,7 +284,6 @@ namespace GameMod
                             ready_to_play = false,
                             requested_taunt = false
                         };
-                        AClient.keybinds[i] = -1;
                     }
                     AClient.LoadLocalAudioTauntsFromPilotPrefs();
                     taunts.Sort((x, y) => x.name.CompareTo(y.name));
@@ -1424,7 +1418,7 @@ namespace GameMod
                     }
                     catch (Exception)
                     {
-                        // TODO: Do we really need a try catch here?  If so, should we log anything?  If not, there should be a comment here explaining why.
+                        // This is necessary because there are 7 test versions in circulation with different formatting for their network messages
                     }
                 }
 
@@ -1488,7 +1482,7 @@ namespace GameMod
                 }
                 catch(Exception)
                 {
-                    // TODO: Do we really need a try catch here?  If so, should we log anything?  If not, there should be a comment here explaining why.
+                    // This is necessary because there are 7 test versions in circulation with different formatting for their network messages
                 }
             }
         }
