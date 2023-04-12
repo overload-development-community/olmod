@@ -619,7 +619,7 @@ namespace GameMod
 
 
                         // Checks for Keyinput on this client for triggering the playing of an audio taunt
-                        if (AServer.server_supports_audiotaunts)
+                        if (AServer.server_supports_audiotaunts & !PlayerShip.m_typing_in_chat)
                         {
                             if (remaining_cooldown > 0f)
                                 remaining_cooldown -= Time.unscaledDeltaTime;
