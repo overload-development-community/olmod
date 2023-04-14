@@ -31,7 +31,7 @@ namespace GameMod
         public const float DEFAULT_TAUNT_COOLDOWN = 4f;             // defines the minimum interval between sending taunts for the client
         public const float TAUNT_PLAYTIME = 3f;                     // defines the time in seconds that taunts are allowed to play till they get cutoff on the client
         public const float DEFAULT_SPECTRUM_UPDATE_COOLDOWN = 0.07f;
-        public static WaitForSecondsRealtime delay = new WaitForSecondsRealtime(0.008f);    // interval between sending packets
+        //public static WaitForSecondsRealtime delay = new WaitForSecondsRealtime(0.008f);    // interval between sending packets
 
 
         public class AudioTaunt
@@ -449,7 +449,7 @@ namespace GameMod
                 {
                     if (index < 6)
                     {
-                        AudioTaunt at = taunts.Find(t => t.hash.Equals(hash));
+                        AudioTaunt at = taunts.Find(t => t.hash.Equals(hash) && !t.is_external_taunt);
                         if (at == null)
                         {
                             at = new AudioTaunt
@@ -749,6 +749,17 @@ namespace GameMod
             }
 
 
+            [HarmonyPatch(typeof(UIElement), "DrawMpMiniScoreboard")]
+            class MPDeathReview_UIElement_DrawMpMiniScoreboard
+            {
+                static void Postfix(UIElement __instance)
+                {
+                    if(GameManager.m_local_player.c_player_ship.m_dead & (!MPDeathReview.stickyDeathReview |!MPDeathReview.showDeathReviewDetails))
+                        DrawVisualIndicator(__instance);
+                }
+            }
+
+
             [HarmonyPatch(typeof(Client), "RegisterHandlers")]
             class MPAudioTaunts_Client_RegisterHandlers
             {
@@ -884,8 +895,8 @@ namespace GameMod
                         };
 
                         Client.GetClient().connection.SendByChannel(MessageTypes.MsgAudioTauntPacket, packet,0);
-                        UnityEngine.Debug.Log("[AudioTaunts]    upload: " + (position + index) + " / " + data.audio_taunt_data.Length + "  for " + data.hash);
-                        yield return delay;
+                        uConsole.Log("[AudioTaunts]    upload: " + (position + index) + " / " + data.audio_taunt_data.Length + "  for " + data.hash);
+                        yield return null;
                         position += PACKET_PAYLOAD_SIZE;
                         _packet_id++;
                     }
@@ -1318,7 +1329,7 @@ namespace GameMod
                             UnityEngine.Debug.Log("[AudioTaunts]    packet: " + packet_id + " upload: " + (position + index) + " / " + data.Length + "  for " + hash);
                             position += PACKET_PAYLOAD_SIZE;
                             packet_id++;
-                            yield return delay;
+                            yield return null;
                         }
                     }
                     if (!ended_early)
