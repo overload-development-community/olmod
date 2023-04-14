@@ -754,7 +754,7 @@ namespace GameMod
             {
                 static void Postfix(UIElement __instance)
                 {
-                    if(GameManager.m_local_player.c_player_ship.m_dead & (!MPDeathReview.stickyDeathReview |!MPDeathReview.showDeathReviewDetails))
+                    if(GameManager.m_local_player.c_player_ship.m_dead & (!MPDeathReview.stickyDeathReview | !MPDeathReview.showDeathReviewDetails))
                         DrawVisualIndicator(__instance);
                 }
             }

@@ -374,7 +374,7 @@ namespace GameMod
                 if (device.m_joystick_id != -1)
                 {
                     int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name == device.m_device_name && c.joystickID == device.m_joystick_id);
-                    Debug.Log("[1] Matching devices: ("+device.m_device_name+":"+device.m_joystick_id+") to "+ (index == -1 ? "UNCONNECTED" : index.ToString()));
+                    Debug.Log("[1S] Matching devices: ("+device.m_device_name+":"+device.m_joystick_id+") to "+ (index == -1 ? "UNCONNECTED" : index.ToString()));
                     if (index == -1)
                         unconnected_controllers.Add(device);
                     else
@@ -393,7 +393,7 @@ namespace GameMod
                             if (matching_device_indexes.Length > 0 && matching_device_indexes.Length > controller_types[device.m_device_name])
                             {
                                 Controllers.controllers[matching_device_indexes[controller_types[device.m_device_name]]] = device;
-                                Debug.Log("[2] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
+                                Debug.Log("[2S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
                             }
                             controller_types[device.m_device_name]++;
                         }
