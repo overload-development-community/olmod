@@ -1264,6 +1264,41 @@ namespace GameMod {
                         }
                         MenuManager.UnReverseOption();
                     }
+                    else
+                    {
+                        switch (MenuManager.m_menu_micro_state)
+                        {
+                            case 3:
+                                switch (UIManager.m_menu_selection)
+                                {
+                                    case 16:
+                                    case 17:
+                                    case 18:
+                                    case 19:
+                                    case 20:
+                                    case 21:
+                                        if (Input.GetKeyDown(KeyCode.Delete))
+                                            MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16] = new MPAudioTaunts.AudioTaunt
+                                            {
+                                            hash = "EMPTY",
+                                            name = "EMPTY",
+                                            audioclip = null,
+                                            ready_to_play = false
+                                            };
+                                        break;
+                                    case 1810:
+                                    case 1811:
+                                    case 1812:
+                                    case 1813:
+                                    case 1814:
+                                    case 1815:
+                                        if (Input.GetKeyDown(KeyCode.Delete))
+                                            MPAudioTaunts.AClient.keybinds[UIManager.m_menu_selection - 1810] = -1;
+                                        break;
+                                }
+                                break;
+                        }
+                    }
                 }
                 else if (menu_sub_state == MenuSubState.GET_INPUT)
                 {
