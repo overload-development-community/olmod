@@ -976,7 +976,10 @@ namespace GameMod {
             {
                 if (menu_sub_state == MenuSubState.ACTIVE)
                 {
-                    UIManager.ControllerMenu();
+                    if(!(!UIManager.PushedSelect(100) & MenuManager.m_menu_micro_state == 3 & UIManager.m_menu_selection > 15 & UIManager.m_menu_selection < 22 ) 
+                        | (!Input.inputString.ToUpper().Contains('W') & !Input.inputString.ToUpper().Contains('A') 
+                          &!Input.inputString.ToUpper().Contains('S') & !Input.inputString.ToUpper().Contains('D')))
+                        UIManager.ControllerMenu();
                     if (Controls.JustPressed(CCInput.MENU_SECONDARY))
                     {
                         MenuManager.m_mp_status_minimized = !MenuManager.m_mp_status_minimized;
@@ -1170,46 +1173,37 @@ namespace GameMod {
                                                 & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOADING_SCENE
                                                 & NetworkMatch.GetMatchState() != MatchState.PREGAME)
                                             {
-
-
                                                 int index = MPAudioTaunts.AClient.taunts.IndexOf(MPAudioTaunts.AClient.local_taunts[menu_selection - 16]);
                                                 if (MPAudioTaunts.AClient.taunts.Count > 0)
                                                 {
-                                                    int next_index;
-                                                    if (index != -1)
-                                                        next_index = MPAudioTaunts.AClient.GetNextSelectableAudioTauntIndex(index, UIManager.m_select_dir);
-                                                    else
-                                                    {
-                                                        next_index = MPAudioTaunts.AClient.GetNextSelectableAudioTauntIndex(0, 1);
-                                                        if (next_index == -1)
+
+                                                        int next_index;
+                                                        if (index != -1)
+                                                            next_index = MPAudioTaunts.AClient.GetNextSelectableAudioTauntIndex(index, UIManager.m_select_dir);
+                                                        else
                                                         {
-                                                            MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = new MPAudioTaunts.AudioTaunt
-                                                            {
-                                                                hash = "EMPTY",
-                                                                name = "EMPTY",
-                                                                audioclip = null,
-                                                                ready_to_play = false
-                                                            };
+                                                            next_index = MPAudioTaunts.AClient.GetNextSelectableAudioTauntIndex(0, 1);
+                                                            if (next_index == -1)
+                                                                MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = new MPAudioTaunts.AudioTaunt
+                                                                {
+                                                                    hash = "EMPTY",
+                                                                    name = "EMPTY",
+                                                                    audioclip = null,
+                                                                    ready_to_play = false
+                                                                };
                                                         }
-                                                    }
+                                                        if (next_index != -1)
+                                                            MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[next_index];
 
+                                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                    
 
-                                                    if (next_index != -1)
-                                                    {
-                                                        MPAudioTaunts.AClient.local_taunts[menu_selection - 16] = MPAudioTaunts.AClient.taunts[next_index];
-                                                    }
-                                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                                 }
                                                 else
-                                                {
                                                     GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
-                                                }
-
                                             }
                                             else
-                                            {
                                                 GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
-                                            }
 
                                         }
                                         goto AVOID_INPUTMAPPING_DIALOG;
@@ -1277,15 +1271,52 @@ namespace GameMod {
                                     case 19:
                                     case 20:
                                     case 21:
-                                        if (Input.GetKeyDown(KeyCode.Delete))
-                                            MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16] = new MPAudioTaunts.AudioTaunt
+                                        if (MPAudioTaunts.AClient.initialized)
+                                        {
+                                            if (Input.GetKeyDown(KeyCode.Delete))
+                                                MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16] = new MPAudioTaunts.AudioTaunt
+                                                {
+                                                    hash = "EMPTY",
+                                                    name = "EMPTY",
+                                                    audioclip = null,
+                                                    ready_to_play = false
+                                                };
+                                            else
                                             {
-                                            hash = "EMPTY",
-                                            name = "EMPTY",
-                                            audioclip = null,
-                                            ready_to_play = false
-                                            };
-                                        break;
+                                                // do not allow the selected audiotaunts to change after the sharing of the taunts began
+                                                if (NetworkMatch.GetMatchState() != MatchState.PLAYING
+                                                    & NetworkMatch.GetMatchState() != MatchState.LOBBY
+                                                    & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN
+                                                    & NetworkMatch.GetMatchState() != MatchState.LOBBY_LOADING_SCENE
+                                                    & NetworkMatch.GetMatchState() != MatchState.PREGAME)
+                                                {
+                                                    int index = MPAudioTaunts.AClient.taunts.IndexOf(MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16]);
+                                                    if (MPAudioTaunts.AClient.taunts.Count > 0)
+                                                    {
+                                                        if (index != -1)
+                                                        {
+                                                            int next_index = -1;
+                                                            if (Input.inputString.Length > 0)
+                                                            {
+                                                                next_index = MPAudioTaunts.AClient.GetNextIndexThatStartsWithStringSequence(0, index, Input.inputString);
+                                                                if (next_index != -1 & next_index != index)
+                                                                {
+                                                                    MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16] = MPAudioTaunts.AClient.taunts[next_index];
+                                                                    MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                        GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
+                                                }
+                                                else
+                                                    GameManager.m_audio.PlayCue2D(133, 1f, 0.07f, 0.31f, false);
+
+                                            }
+                                            Controls.m_disable_menu_letter_keys = false;
+                                        }
+                                break;
                                     case 1810:
                                     case 1811:
                                     case 1812:

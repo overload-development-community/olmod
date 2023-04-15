@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using UnityEngine.Audio;
+using Debug = UnityEngine.Debug;
 
 namespace GameMod
 {
@@ -64,7 +65,7 @@ namespace GameMod
             {
                 if (source == null)
                 {
-                   UnityEngine.Debug.Log("AudioSourceContainer.UpdateFrequencyBand: Had to reinstantiate the audio source!");
+                   Debug.Log("AudioSourceContainer.UpdateFrequencyBand: Had to reinstantiate the audio source!");
                     source = new GameObject().AddComponent<AudioSource>();
                 }
 
@@ -134,14 +135,14 @@ namespace GameMod
 
                         if (!Directory.Exists(LocalAudioTauntDirectory))
                         {
-                            UnityEngine.Debug.Log("Did not find a directory for local audiotaunts, creating one at: " + LocalAudioTauntDirectory);
+                            Debug.Log("Did not find a directory for local audiotaunts, creating one at: " + LocalAudioTauntDirectory);
                             Directory.CreateDirectory(LocalAudioTauntDirectory);
                         }
 
                         ExternalAudioTauntDirectory = Path.Combine(LocalAudioTauntDirectory, "external");
                         if (!Directory.Exists(ExternalAudioTauntDirectory))
                         {
-                            UnityEngine.Debug.Log("Did not find a directory for external audiotaunts, creating one at: " + ExternalAudioTauntDirectory);
+                            Debug.Log("Did not find a directory for external audiotaunts, creating one at: " + ExternalAudioTauntDirectory);
                             Directory.CreateDirectory(ExternalAudioTauntDirectory);
                         }
                     }
@@ -254,14 +255,14 @@ namespace GameMod
 
                     if (!Directory.Exists(LocalAudioTauntDirectory))
                     {
-                        UnityEngine.Debug.Log("Did not find a directory for local audiotaunts, creating one at: " + LocalAudioTauntDirectory);
+                        Debug.Log("Did not find a directory for local audiotaunts, creating one at: " + LocalAudioTauntDirectory);
                         Directory.CreateDirectory(LocalAudioTauntDirectory);
                     }
 
                     ExternalAudioTauntDirectory = Path.Combine(LocalAudioTauntDirectory, "external");
                     if (!Directory.Exists(ExternalAudioTauntDirectory))
                     {
-                        UnityEngine.Debug.Log("Did not find a directory for external audiotaunts, creating one at: " + ExternalAudioTauntDirectory);
+                        Debug.Log("Did not find a directory for external audiotaunts, creating one at: " + ExternalAudioTauntDirectory);
                         Directory.CreateDirectory(ExternalAudioTauntDirectory);
                     }
                 }
@@ -289,7 +290,7 @@ namespace GameMod
                     AClient.LoadLocalAudioTauntsFromPilotPrefs();
                     taunts.Sort((x, y) => x.name.CompareTo(y.name));
 
-                    UnityEngine.Debug.Log("Reload complete. amount of taunts: " + AClient.taunts.Count);
+                    Debug.Log("Reload complete. amount of taunts: " + AClient.taunts.Count);
                 }
             }
 
@@ -297,13 +298,13 @@ namespace GameMod
             // (under the condition that they have yet to be imported and are valid formats and that their size is not beyond 128 kB) 
             public static void ImportAudioTaunts(string path_to_directory, List<String> files_to_load, bool external_taunts = false, bool silent = false)
             {
-                UnityEngine.Debug.Log("Attempting to import AudioTaunts from: " + path_to_directory);
+                Debug.Log("Attempting to import AudioTaunts from: " + path_to_directory);
 
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
 
                 bool load_all_files = files_to_load == null | files_to_load.Count == 0;
-                //UnityEngine.Debug.Log(" load all files: " + load_all_files);
+                //Debug.Log(" load all files: " + load_all_files);
                 var fileInfo = new DirectoryInfo(path_to_directory).GetFiles();
                 foreach (FileInfo file in fileInfo)
                 {
@@ -335,7 +336,7 @@ namespace GameMod
                         taunts.Add(t);
                         if(!silent)
                         {
-                            UnityEngine.Debug.Log(string.Format("  Added {0,-67}  size: {1,6} as an AudioTaunt",
+                            Debug.Log(string.Format("  Added {0,-67}  size: {1,6} as an AudioTaunt",
                             file.Name,
                             file.Length
                             ));
@@ -346,7 +347,7 @@ namespace GameMod
                 stopwatch.Stop();
                 long elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
 
-                UnityEngine.Debug.Log("Loading the taunts took "+ (stopwatch.ElapsedMilliseconds/1000f).ToString("0.0000")+"s");
+                Debug.Log("Loading the taunts took "+ (stopwatch.ElapsedMilliseconds/1000f).ToString("0.0000")+"s");
             }
 
             // finds the next client audiotaunt in the taunts list.
@@ -382,6 +383,25 @@ namespace GameMod
                 return -1;
             }
 
+            public static int GetNextIndexThatStartsWithStringSequence(int start_index, int current_index,string start_sequence)
+            {
+                if (start_index < 0 | start_index >= taunts.Count | current_index < 0 | current_index >= taunts.Count)
+                    return -1;
+
+                if (taunts[current_index].name.ToUpper().StartsWith(start_sequence.ToUpper()))
+                {
+                    int next_index = GetNextSelectableAudioTauntIndex(current_index, 1);
+                    if(taunts[next_index].name.ToUpper().StartsWith(start_sequence.ToUpper()))
+                    return next_index;
+                }
+
+                for (int i = 0; i < taunts.Count; i++)
+                    if(taunts[i].name.ToUpper().StartsWith(start_sequence.ToUpper()) & !taunts[i].is_external_taunt)
+                        return i;
+
+                return -1;
+            }
+
             public static bool IsContainedInLocalTaunts(string hash)
             {
                 if (String.IsNullOrEmpty(hash))
@@ -401,7 +421,7 @@ namespace GameMod
 
             private static AudioClip LoadAsAudioClip(string filename, string directory_path)
             {
-                //UnityEngine.Debug.Log("  Attempting to load file as audio clip: " + filename);
+                //Debug.Log("  Attempting to load file as audio clip: " + filename);
                 string path = Path.Combine(directory_path, filename);
                 if (path != null)
                 {
@@ -411,7 +431,7 @@ namespace GameMod
                     {
                         return www.GetAudioClip(true, false);
                     }
-                    else UnityEngine.Debug.Log("Error in 'LoadAsAudioClip': " + www.error + " : " + filename + " : " + directory_path);
+                    else Debug.Log("Error in 'LoadAsAudioClip': " + www.error + " : " + filename + " : " + directory_path);
                 }
                 return null;
             }
@@ -474,7 +494,7 @@ namespace GameMod
                 if (audio_taunt_volume == 0 | audioClip == null | !active)
                     return;
 
-                //UnityEngine.Debug.Log("Playing Audiotaunt");
+                //Debug.Log("Playing Audiotaunt");
 
                 int index = -1;
                 for (int i = 0; i < asc.Length; i++)
@@ -487,7 +507,7 @@ namespace GameMod
 
                 if (index == -1)
                 {
-                    UnityEngine.Debug.Log("Couldnt play Audio taunt. All audio sources are occupied!");
+                    Debug.Log("Couldnt play Audio taunt. All audio sources are occupied!");
                     return;
                 }
 
@@ -511,7 +531,7 @@ namespace GameMod
                     && Client.GetClient() != null
                     && (NetworkMatch.GetMatchState() == MatchState.PLAYING | NetworkMatch.GetMatchState() == MatchState.LOBBY))
                 {
-                    //UnityEngine.Debug.Log("Client -> Server: Share the activation of " + clip_id);
+                    //Debug.Log("Client -> Server: Share the activation of " + clip_id);
                     Client.GetClient().SendByChannel(MessageTypes.MsgPlayAudioTaunt,
                                         new PlayAudioTaunt
                                         {
@@ -580,7 +600,26 @@ namespace GameMod
                 return new float[8];
             }
 
+            
+            [HarmonyPatch(typeof(UIManager), "PushedDir")]
+            class MPAudioTaunts_UIManager_PushedDir
+            {
+                static bool Prefix(ref bool __result)
+                {
+                    if (MenuManager.m_menu_state == MenuState.MP_OPTIONS & !UIManager.PushedSelect(100) & MenuManager.m_menu_micro_state == 3 & UIManager.m_menu_selection > 15 & UIManager.m_menu_selection < 22)
+                    {
+                        if (Input.inputString.ToUpper().Contains('A') | Input.inputString.ToUpper().Contains('D'))//Input.GetKeyDown((KeyCode)'A') | Input.GetKeyDown((KeyCode)'D'))
+                        {
+                            __result = false;
+                            return false; 
+                        }
+                        else
+                            return true;
 
+                    }
+                    return true;
+                }
+            }
 
             // Send the file names of your audio taunts to the server when entering a game // Client OnAcceptedToLobby OnMatchStart
             [HarmonyPatch(typeof(Client), "OnAcceptedToLobby")]
@@ -612,8 +651,6 @@ namespace GameMod
                         },0);
                 }
             }
-
-
 
 
 
@@ -772,7 +809,7 @@ namespace GameMod
                 {
                     if (!active) return;
 
-                    UnityEngine.Debug.Log("[AudioTaunts]  Received AudioTauntIdentifiers from Server");
+                    Debug.Log("[AudioTaunts]  Received AudioTauntIdentifiers from Server");
                     var msg = rawMsg.ReadMessage<ShareAudioTauntIdentifiers>();
                     List<string> file_hashes = msg.hashes.Split('/').ToList();
 
@@ -788,15 +825,15 @@ namespace GameMod
                             AudioTaunt taunt = taunts.Find(t => t.hash.Equals(hash));
                             if (taunt != null)
                             {
-                                UnityEngine.Debug.Log("     [AudioTaunts]  Found Audiotaunt in the local data: " + hash);
+                                Debug.Log("     [AudioTaunts]  Found Audiotaunt in the local data: " + hash);
                                 match_taunts.Add(hash, taunt);
                             }
                             else
                             {
-                                UnityEngine.Debug.Log("     [AudioTaunts]  Requesting Audiotaunt from Server: " + hash);
+                                Debug.Log("     [AudioTaunts]  Requesting Audiotaunt from Server: " + hash);
                                 if (Client.GetClient() == null)
                                 {
-                                    UnityEngine.Debug.Log("     [AudioTaunts]  MPAudioTaunts_Client_RegisterHandlers: no client?");
+                                    Debug.Log("     [AudioTaunts]  MPAudioTaunts_Client_RegisterHandlers: no client?");
                                     continue;
                                 }
                                 // to prepare for an incoming answer to our request we create a context to collect the bytes from the server
@@ -829,7 +866,7 @@ namespace GameMod
 
 
                     var msg = rawMsg.ReadMessage<RequestAudioTaunt>();
-                    UnityEngine.Debug.Log("[AudioTaunts.Client]  Server requested audiotaunt: " + msg.hash);
+                    Debug.Log("[AudioTaunts.Client]  Server requested audiotaunt: " + msg.hash);
 
                     // find the audiotaunt data that the server requested
                     int index = -1;
@@ -844,7 +881,7 @@ namespace GameMod
                     {
                         if (local_taunts[index].is_data_complete)
                         {
-                            UnityEngine.Debug.Log("[AudioTaunts]  starting the upload or putting it in the queue: " + msg.hash);
+                            Debug.Log("[AudioTaunts]  starting the upload or putting it in the queue: " + msg.hash);
                             if (!isUploading)
                                 GameManager.m_gm.StartCoroutine(UploadAudioTauntToServer(new AudioTaunt
                                 {
@@ -860,19 +897,19 @@ namespace GameMod
                         }
                         else
                         {
-                            UnityEngine.Debug.Log(" Local taunt byte data is declared as incomplete!");
+                            Debug.Log(" Local taunt byte data is declared as incomplete!");
                         }
                     }
                     else
                     {
-                        UnityEngine.Debug.Log(" The requested audiotaunt isnt part of the selected local taunts");
+                        Debug.Log(" The requested audiotaunt isnt part of the selected local taunts");
                     }
                 }
 
                 public static IEnumerator UploadAudioTauntToServer(AudioTaunt data)
                 {
                     isUploading = true;
-                    UnityEngine.Debug.Log("[AudioTaunts] Started uploading an AudioTaunt to server");
+                    Debug.Log("[AudioTaunts] Started uploading an AudioTaunt to server");
                     int _packet_id = 0;
                     int position = 0;
                     while (position < data.audio_taunt_data.Length)
@@ -917,7 +954,7 @@ namespace GameMod
                     if (!active)
                         return;
 
-                    //UnityEngine.Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
+                    //Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
 
                     try
                     {
@@ -943,12 +980,12 @@ namespace GameMod
                                     match_taunts[msg.hash].audio_taunt_data[startindex + i] = msg.data[i];
                                 }
                                 match_taunts[msg.hash].received_packets.Add(msg.packet_id);
-                                //UnityEngine.Debug.Log("     Added the data of the fragment");
+                                //Debug.Log("     Added the data of the fragment");
 
                                 // if this completes the data then check wether there are unanswered requests
                                 if (match_taunts[msg.hash].received_packets.Count * PACKET_PAYLOAD_SIZE >= msg.filesize)
                                 {
-                                    //DEBUG.MARKER UnityEngine.Debug.Log("     This Fragment completed the audio taunt data");
+                                    //DEBUG.MARKER Debug.Log("     This Fragment completed the audio taunt data");
                                     match_taunts[msg.hash].is_data_complete = true;
 
 
@@ -966,18 +1003,18 @@ namespace GameMod
                             }
                             else
                             {
-                                //DEBUG.MARKER UnityEngine.Debug.Log("     This Fragment is a duplicate. packet_id: " + msg.packet_id);
+                                //DEBUG.MARKER Debug.Log("     This Fragment is a duplicate. packet_id: " + msg.packet_id);
                             }
 
                         }
                         else
                         {
-                            //DEBUG.MARKER UnityEngine.Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:" + rawMsg.conn.connectionId);
+                            //DEBUG.MARKER Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:" + rawMsg.conn.connectionId);
                         }
                     }
                     catch (FormatException fe)
                     {
-                        UnityEngine.Debug.Log(" (Marker.UnusualEvent): Received a fragment with a payload that doesnt format into a Base64 String!\n" + fe);
+                        Debug.Log(" (Marker.UnusualEvent): Received a fragment with a payload that doesnt format into a Base64 String!\n" + fe);
                         return;
                     }
 
@@ -1002,7 +1039,7 @@ namespace GameMod
                     // If someone tries to play a taunt that we dont even know existed before then we missed the ShareAudioTauntIdentifiers packet
                     else if (!match_taunts.ContainsKey(msg.hash))
                     {
-                        UnityEngine.Debug.Log("[AudioTaunts] Client was unaware of a taunts existence. Resending MsgShareAudioTauntIdentifiers!");
+                        Debug.Log("[AudioTaunts] Client was unaware of a taunts existence. Resending MsgShareAudioTauntIdentifiers!");
                         string fileHashes = "";
                         for (int i = 0; i < local_taunts.Length; i++)
                         {
@@ -1031,7 +1068,7 @@ namespace GameMod
 
                     if (Client.GetClient() == null)
                     {
-                        UnityEngine.Debug.Log("Couldnt setup MessageHandlers for Audiotaunts on the Client");
+                        Debug.Log("Couldnt setup MessageHandlers for Audiotaunts on the Client");
                         return;
                     }
 
@@ -1074,7 +1111,7 @@ namespace GameMod
                 {
                     if (msg == null || msg.conn == null)
                     {
-                        UnityEngine.Debug.Log(" [Audiotaunts.Server] received a OnDisconnect event but the network message object didnt exist");
+                        Debug.Log(" [Audiotaunts.Server] received a OnDisconnect event but the network message object didnt exist");
                         return;
                     }
 
@@ -1121,7 +1158,7 @@ namespace GameMod
                     }
 
                     //match_taunts.Clear();
-                    UnityEngine.Debug.Log("[AudioTaunts] Initialisation: \n"
+                    Debug.Log("[AudioTaunts] Initialisation: \n"
                         + " current match_taunt's: " + match_taunts.Count
                         + content
                         );
@@ -1138,24 +1175,24 @@ namespace GameMod
                     try
                     {
                         // Read the message
-                        UnityEngine.Debug.Log("[Audiotaunt] : Received AudioTauntIdentifiers from Client");
+                        Debug.Log("[Audiotaunt] : Received AudioTauntIdentifiers from Client");
                         var msg = rawMsg.ReadMessage<ShareAudioTauntIdentifiers>();
 
 
                         if (string.IsNullOrEmpty(msg.hashes))
                         {
-                            UnityEngine.Debug.Log(" (Marker:UnusualEvent) the OnShareAudioTauntIdentifiers message was empty!");
+                            Debug.Log(" (Marker:UnusualEvent) the OnShareAudioTauntIdentifiers message was empty!");
                             return;
                         }
 
                         // Split the string to retrieve the individual hashes
                         List<string> file_hashes = msg.hashes.Split('/').ToList();
-                        UnityEngine.Debug.Log(file_hashes.Count);
+                        Debug.Log(file_hashes.Count);
                         foreach (string hash in file_hashes)
                         {
-                            UnityEngine.Debug.Log(" hash:" + hash);
+                            Debug.Log(" hash:" + hash);
                         }
-                        UnityEngine.Debug.Log("");
+                        Debug.Log("");
 
                         // Update match_taunts
                         int index = 0;
@@ -1183,7 +1220,7 @@ namespace GameMod
                                         if(!match_taunts[hash].providing_clients.Contains(rawMsg.conn.connectionId))
                                         {
                                             match_taunts[hash].providing_clients.Add(rawMsg.conn.connectionId);
-                                            UnityEngine.Debug.Log("  match_taunts:" + hash + " exists, added: " + rawMsg.conn.connectionId + " as a provider");
+                                            Debug.Log("  match_taunts:" + hash + " exists, added: " + rawMsg.conn.connectionId + " as a provider");
                                         } 
                                     }
                                     // this taunt doesnt exist, add it
@@ -1205,12 +1242,12 @@ namespace GameMod
                                         };
                                         taunt.providing_clients.Add(rawMsg.conn.connectionId);
                                         match_taunts.Add(hash, taunt);
-                                        UnityEngine.Debug.Log("  Added new context to match_taunts: " + hash);
+                                        Debug.Log("  Added new context to match_taunts: " + hash);
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    UnityEngine.Debug.Log("Server.OnShareAudioTaunts encountered an exception"
+                                    Debug.Log("Server.OnShareAudioTaunts encountered an exception"
                                         + "\n loop:" + index
                                         + "\n hash:" + hash
                                         + "\n Exception: " + ex
@@ -1236,7 +1273,7 @@ namespace GameMod
                                 }
                                 else
                                 {
-                                    UnityEngine.Debug.Log("Server.OnShareAudiotaunts: encountered an empty element in the match taunts");
+                                    Debug.Log("Server.OnShareAudiotaunts: encountered an empty element in the match taunts");
                                 }
                             }
 
@@ -1249,7 +1286,7 @@ namespace GameMod
                         }
                         catch(Exception ex)
                         {
-                            UnityEngine.Debug.Log(" (Marker:UnusualEvent[ 1 ]) in Server.OnShareAudioTauntIdentifiers: " + ex);
+                            Debug.Log(" (Marker:UnusualEvent[ 1 ]) in Server.OnShareAudioTauntIdentifiers: " + ex);
                         }
 
 
@@ -1258,7 +1295,7 @@ namespace GameMod
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.Log(" (Marker:UnusualEvent[ 2 ]) in Server.OnShareAudioTauntIdentifiers: "+ex);
+                        Debug.Log(" (Marker:UnusualEvent[ 2 ]) in Server.OnShareAudioTauntIdentifiers: "+ex);
                         return;
                     }
 
@@ -1271,7 +1308,7 @@ namespace GameMod
                     try
                     {
                         var msg = rawMsg.ReadMessage<RequestAudioTaunt>();
-                        UnityEngine.Debug.Log("[AudioTaunts] Received audio taunt file request");
+                        Debug.Log("[AudioTaunts] Received audio taunt file request");
                         string hash = msg.hash;
 
                         AudioTaunt taunt = null;
@@ -1304,7 +1341,7 @@ namespace GameMod
                                     if (networkConnection != null && taunt.providing_clients.Count > 0 && networkConnection.connectionId == taunt.providing_clients[0])
                                     {
                                         networkConnection.SendByChannel(MessageTypes.MsgRequestAudioTaunt, new RequestAudioTaunt { hash = hash }, 0);
-                                        UnityEngine.Debug.Log(" [SERVER]: Requested AudioTaunt data from: " + networkConnection.connectionId + " for: " + rawMsg.conn.connectionId + " hash: "+hash );
+                                        Debug.Log(" [SERVER]: Requested AudioTaunt data from: " + networkConnection.connectionId + " for: " + rawMsg.conn.connectionId + " hash: "+hash );
                                     }
                                 }
                                 if (taunt.requesting_clients == null)
@@ -1315,18 +1352,18 @@ namespace GameMod
                         }
                         else
                         {
-                            UnityEngine.Debug.Log("  [SERVER]: A client requested an audiotaunt that has no context on the server");
+                            Debug.Log("  [SERVER]: A client requested an audiotaunt that has no context on the server");
                         }
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.Log(" (Marker:UnusualEvent) encountered an exception when processing the network request: " + ex);
+                        Debug.Log(" (Marker:UnusualEvent) encountered an exception when processing the network request: " + ex);
                     }
                 }
 
                 public static IEnumerator UploadAudioTauntToClient(string hash, byte[] data, int connectionId)
                 {
-                    UnityEngine.Debug.Log("[AudioTaunts] Started uploading AudioTaunt to client");
+                    Debug.Log("[AudioTaunts] Started uploading AudioTaunt to client");
                     bool ended_early = false;
                     if (data.Length < PACKET_PAYLOAD_SIZE)
                     {
@@ -1370,16 +1407,16 @@ namespace GameMod
                                 data = to_send,
                             };
                             NetworkServer.SendToClient(connectionId, MessageTypes.MsgAudioTauntPacket, packet);
-                            UnityEngine.Debug.Log("[AudioTaunts]    packet: " + packet_id + " upload: " + (position + index) + " / " + data.Length + "  for " + hash);
+                            Debug.Log("[AudioTaunts]    packet: " + packet_id + " upload: " + (position + index) + " / " + data.Length + "  for " + hash);
                             position += PACKET_PAYLOAD_SIZE;
                             packet_id++;
                             yield return null;
                         }
                     }
                     if (!ended_early)
-                        UnityEngine.Debug.Log("[AudioTaunts] successfully transmitted taunt to client" + hash);
+                        Debug.Log("[AudioTaunts] successfully transmitted taunt to client" + hash);
                     else
-                        UnityEngine.Debug.Log("[AudioTaunts] stopped the transmission of an audiotaunt due to reaching the end of the match "+hash);               
+                        Debug.Log("[AudioTaunts] stopped the transmission of an audiotaunt due to reaching the end of the match "+hash);               
                 }
 
 
@@ -1391,7 +1428,7 @@ namespace GameMod
                     try
                     {
 
-                        //UnityEngine.Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
+                        //Debug.Log("[AudioTaunts]        Received a Fragment of an Audiotaunt");
                         var msg = rawMsg.ReadMessage<AudioTauntPacket>();
 
                         if (msg.data == null)
@@ -1415,12 +1452,12 @@ namespace GameMod
                                     match_taunts[msg.hash].audio_taunt_data[startindex + i] = msg.data[i];
                                 }
                                 match_taunts[msg.hash].received_packets.Add(msg.packet_id);
-                                //UnityEngine.Debug.Log("     Added the data of the fragment");
+                                //Debug.Log("     Added the data of the fragment");
 
                                 // if this completes the data then check wether there are unanswered requests
                                 if (match_taunts[msg.hash].received_packets.Count * PACKET_PAYLOAD_SIZE >= msg.filesize)
                                 {
-                                    //UnityEngine.Debug.Log("     This Fragment completed the audio taunt data");
+                                    //Debug.Log("     This Fragment completed the audio taunt data");
                                     match_taunts[msg.hash].is_data_complete = true;
 
 
@@ -1430,7 +1467,7 @@ namespace GameMod
                                         if(!duplicate_free_requests.Contains(connectionId))
                                         {
                                             duplicate_free_requests.Add(connectionId);
-                                            UnityEngine.Debug.Log("         Uploading Requested Taunt to: " + connectionId);
+                                            Debug.Log("         Uploading Requested Taunt to: " + connectionId);
                                             GameManager.m_gm.StartCoroutine(UploadAudioTauntToClient(msg.hash, match_taunts[msg.hash].audio_taunt_data, connectionId));
                                         }
                                     }
@@ -1439,18 +1476,18 @@ namespace GameMod
                             }
                             else
                             {
-                                UnityEngine.Debug.Log("     This Fragment is a duplicate. packet_id: " + msg.packet_id);
+                                Debug.Log("     This Fragment is a duplicate. packet_id: " + msg.packet_id);
                             }
 
                         }
                         else
                         {
-                            UnityEngine.Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:" + rawMsg.conn.connectionId);
+                            Debug.Log(" There is no context for this audiotaunt, ignoring the fragment, connectionID:" + rawMsg.conn.connectionId);
                         }
                     }
                     catch(Exception ex)
                     {
-                        UnityEngine.Debug.Log(" (Marker:UnusualEvent) encountered an exception in Server.OnAudioTauntPacket: " + ex);
+                        Debug.Log(" (Marker:UnusualEvent) encountered an exception in Server.OnAudioTauntPacket: " + ex);
                     }
                 }
 
@@ -1463,11 +1500,11 @@ namespace GameMod
 
                         if (string.IsNullOrEmpty(msg.hash) | string.IsNullOrEmpty(msg.sender_name))
                         {
-                            UnityEngine.Debug.Log(" (Marker:UnusualEvent) the Server.OnPlayAudioTaunt msg was incomplete! client with a testversion ?: " + MPTweaks.ClientInfos[rawMsg.conn.connectionId]);
+                            Debug.Log(" (Marker:UnusualEvent) the Server.OnPlayAudioTaunt msg was incomplete! client with a testversion ?: " + MPTweaks.ClientInfos[rawMsg.conn.connectionId]);
                             return;
                         }
 
-                        //UnityEngine.Debug.Log("     msg.hash: " + msg.hash + "\n  msg.sender: " + msg.sender_name);
+                        //Debug.Log("     msg.hash: " + msg.hash + "\n  msg.sender: " + msg.sender_name);
 
                         if (match_taunts != null && match_taunts.ContainsKey(msg.hash))
                         {
@@ -1598,7 +1635,7 @@ namespace GameMod
                 //reader.SeekZero();
                 string msg = reader.ReadString();
 
-                //UnityEngine.Debug.Log("CONTENT OF PACKET:\n"+msg);
+                //Debug.Log("CONTENT OF PACKET:\n"+msg);
 
                 int pos = msg.IndexOf("/");
                 packet_id = int.Parse(msg.Substring(0, pos));
@@ -1621,7 +1658,7 @@ namespace GameMod
                 }
                 catch(Exception ex)
                 {
-                    UnityEngine.Debug.Log($"[AudioTaunts] AudioTauntPacket.Deserialize: data couldn't format properly: {ex.ToString()}");
+                    Debug.Log($"[AudioTaunts] AudioTauntPacket.Deserialize: data couldn't format properly: {ex.ToString()}");
                 }
                 
             }
