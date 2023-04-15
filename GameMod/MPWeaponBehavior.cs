@@ -18,7 +18,7 @@ namespace GameMod
             private static float m_tb_overchargedamage_multiplier = 4f; // 4.0dps self-damage instead of stock 1.0dps)
             //public static float m_muzzle_adjust = 0.2f; // Projectile exit point offsets -- now handled by the definitions in MPShips using local object scaling
 
-            private static void StopThunderboltSelfDamageLoop()
+            public static void StopThunderboltSelfDamageLoop()
             {
                 if (m_charge_loop_index != -1)
                 {

@@ -55,6 +55,7 @@ namespace GameMod
             {
                 __instance.m_weapon_picked_up[(int)wt] = picked_up;
                 if (__instance.WeaponUsesAmmo(wt))
+                //if (MPWeapons.WeaponUsesAmmo(MPShips.GetShip(__instance.c_player_ship), wt))
                 {
                     __instance.AddAmmo(200, true, false, true);
                 }

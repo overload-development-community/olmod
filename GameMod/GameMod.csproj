@@ -222,6 +222,10 @@
     <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
+    <Compile Include="Ships\Magnum.cs" />
+    <Compile Include="Ships\Phoenix.cs" />
+    <Compile Include="Ships\PyroGX.cs" />
+    <Compile Include="Ships\Kodachi.cs" />
     <Compile Include="WarperOrientation.cs" />
     <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
@@ -231,6 +235,14 @@
     <Compile Include="VSync.cs" />
     <Compile Include="Boss2B.cs" />
     <Compile Include="MatcenHp.cs" />
+    <Compile Include="Weapons\Thunderbolt.cs" />
+    <Compile Include="Weapons\Reflex.cs" />
+    <Compile Include="Weapons\Lancer.cs" />
+    <Compile Include="Weapons\Impulse.cs" />
+    <Compile Include="Weapons\Flak.cs" />
+    <Compile Include="Weapons\Driller.cs" />
+    <Compile Include="Weapons\Cyclone.cs" />
+    <Compile Include="Weapons\Crusher.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
@@ -241,5 +253,6 @@
     <EmbeddedResource Include="Resources\meshes" />
     <EmbeddedResource Include="Resources\audio" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

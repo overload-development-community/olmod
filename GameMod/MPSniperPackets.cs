@@ -13,7 +13,7 @@ namespace GameMod
     /// <summary>
     /// Revamps multiplayer networking in olmod to better trust the client when it comes to things like weapon firing position/rotation, selected primary/secondary, and resource amounts (except armor, that is still handled server-side).  The goal is to provide a more consistent game experience for the pilot when it comes to what they see firing on their screen and what actually happens with their fire on the server.  This also fixes several super annoying synchronization bugs that have been brought up by the community.
     /// </summary>
-    internal class MPSniperPackets
+    public class MPSniperPackets
     {
         public const int NET_VERSION_SNIPER_PACKETS = 1;
 
@@ -66,7 +66,7 @@ namespace GameMod
         /// Replacement function for Server.IsActive() in MaybeFireWeapon and other places that need to deduct from the player's energy pool regardless if the function is called on client or server.
         /// </summary>
         /// <returns></returns>
-        static bool AlwaysUseEnergy()
+        public static bool AlwaysUseEnergy()
         {
             if (!enabled) return Server.IsActive();
 
@@ -86,7 +86,7 @@ namespace GameMod
         /// <param name="slot"></param>
         /// <param name="force_id"></param>
         /// <returns></returns>
-        static ParticleElement MaybePlayerFire(Player player, ProjPrefab type, Vector3 pos, Quaternion rot, float strength = 0, WeaponUnlock upgrade_lvl = WeaponUnlock.LEVEL_0, bool no_sound = false, int slot = -1, int force_id = -1)
+        public static ParticleElement MaybePlayerFire(Player player, ProjPrefab type, Vector3 pos, Quaternion rot, float strength = 0, WeaponUnlock upgrade_lvl = WeaponUnlock.LEVEL_0, bool no_sound = false, int slot = -1, int force_id = -1)
         {
             if (!enabled) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
             if (!GameplayManager.IsMultiplayerActive) return ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
