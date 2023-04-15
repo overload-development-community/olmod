@@ -662,7 +662,6 @@ namespace GameMod
                             }
                         }
 
-
                     }
                 }
             }
@@ -754,8 +753,10 @@ namespace GameMod
             {
                 static void Postfix(UIElement __instance)
                 {
-                    if(GameManager.m_local_player.c_player_ship.m_dead & (!MPDeathReview.stickyDeathReview | !MPDeathReview.showDeathReviewDetails))
+                    if (!MPDeathReview.stickyDeathReview | !MPDeathReview.showDeathReviewDetails)
+                    {
                         DrawVisualIndicator(__instance);
+                    }
                 }
             }
 
@@ -1042,7 +1043,7 @@ namespace GameMod
             public static bool server_supports_audiotaunts = false;
 
             public static Dictionary<string, AudioTaunt> match_taunts = new Dictionary<string, AudioTaunt>();
-
+            public static Dictionary<string, AudioTaunt> taunt_buffer = new Dictionary<string, AudioTaunt>(); // this holds taunts whose data has been uploaded 
 
 
             [HarmonyPatch(typeof(Server), "OnDisconnect")]
@@ -1068,7 +1069,15 @@ namespace GameMod
                         }
 
                         if (!sole_provider)
+                        {
                             new_match_taunts.Add(item.Key, item.Value);
+                        }
+                        if (item.Value.is_data_complete)
+                        {
+                            item.Value.providing_clients = new List<int>;
+                            taunt_buffer.Add(item.Key, item.Value);
+                        }
+
                     }
                     match_taunts = new_match_taunts;
                 }
@@ -1242,13 +1251,25 @@ namespace GameMod
                         UnityEngine.Debug.Log("[AudioTaunts] Received audio taunt file request");
                         string hash = msg.hash;
 
+                        AudioTaunt taunt = null;
                         if (match_taunts.ContainsKey(hash))
                         {
+                            taunt = match_taunts[hash];
+                        }
+                        else if (taunt_buffer.ContainsKey(hash))
+                        {
+                            taunt = taunt_buffer[hash];
+                        }
+
+
+
+                        if (taunt != null)
+                        {
                             // if its byte data is populated send that to the client that requested it
-                            if (match_taunts[hash].is_data_complete)
+                            if (taunt.is_data_complete)
                             {
                                 // start upload
-                                GameManager.m_gm.StartCoroutine(UploadAudioTauntToClient(hash, match_taunts[hash].audio_taunt_data, rawMsg.conn.connectionId));
+                                GameManager.m_gm.StartCoroutine(UploadAudioTauntToClient(hash, taunt.audio_taunt_data, rawMsg.conn.connectionId));
                             }
 
                             // if it is not then request that data from the client the shared this audiotaunt
@@ -1257,16 +1278,16 @@ namespace GameMod
                             {
                                 foreach (NetworkConnection networkConnection in NetworkServer.connections)
                                 {
-                                    if (networkConnection != null && match_taunts[hash].providing_clients.Count > 0 && networkConnection.connectionId == match_taunts[hash].providing_clients[0])
+                                    if (networkConnection != null && taunt.providing_clients.Count > 0 && networkConnection.connectionId == taunt.providing_clients[0])
                                     {
                                         networkConnection.SendByChannel(MessageTypes.MsgRequestAudioTaunt, new RequestAudioTaunt { hash = hash }, 0);
                                         UnityEngine.Debug.Log(" [SERVER]: Requested AudioTaunt data from: " + networkConnection.connectionId + " for: " + rawMsg.conn.connectionId + " hash: "+hash );
                                     }
                                 }
-                                if (match_taunts[hash].requesting_clients == null)
-                                    match_taunts[hash].requesting_clients = new List<int>();
+                                if (taunt.requesting_clients == null)
+                                    taunt.requesting_clients = new List<int>();
 
-                                match_taunts[hash].requesting_clients.Add(rawMsg.conn.connectionId);
+                                taunt.requesting_clients.Add(rawMsg.conn.connectionId);
                             }
                         }
                         else
