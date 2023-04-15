@@ -999,6 +999,27 @@ namespace GameMod
                     {
                         PlayAudioTauntFromAudioclip(match_taunts[msg.hash].audioclip, msg.sender_name);
                     }
+                    // If someone tries to play a taunt that we dont even know existed before then we missed the ShareAudioTauntIdentifiers packet
+                    else if (!match_taunts.ContainsKey(msg.hash))
+                    {
+                        UnityEngine.Debug.Log("[AudioTaunts] Client was unaware of a taunts existence. Resending MsgShareAudioTauntIdentifiers!");
+                        string fileHashes = "";
+                        for (int i = 0; i < local_taunts.Length; i++)
+                        {
+                            if (local_taunts[i].hash != null && !local_taunts[i].hash.Equals("EMPTY"))
+                            {
+                                fileHashes += local_taunts[i].hash;
+                                if (i != local_taunts.Length - 1)
+                                    fileHashes += "/";
+                            }
+                        }
+
+                        Client.GetClient().SendByChannel(MessageTypes.MsgShareAudioTauntIdentifiers,
+                            new ShareAudioTauntIdentifiers
+                            {
+                                hashes = fileHashes
+                            }, 0);
+                    }
                 }
 
 
@@ -1074,7 +1095,7 @@ namespace GameMod
                         }
                         if (item.Value.is_data_complete)
                         {
-                            item.Value.providing_clients = new List<int>;
+                            item.Value.providing_clients = new List<int>();
                             taunt_buffer.Add(item.Key, item.Value);
                         }
 
@@ -1159,9 +1180,11 @@ namespace GameMod
                                         {
                                             match_taunts[hash].providing_clients = new List<int>();
                                         }
-
-                                        match_taunts[hash].providing_clients.Add(rawMsg.conn.connectionId);
-                                        UnityEngine.Debug.Log("  match_taunts:" + hash + " exists, added: " + rawMsg.conn.connectionId + " as a provider");
+                                        if(!match_taunts[hash].providing_clients.Contains(rawMsg.conn.connectionId))
+                                        {
+                                            match_taunts[hash].providing_clients.Add(rawMsg.conn.connectionId);
+                                            UnityEngine.Debug.Log("  match_taunts:" + hash + " exists, added: " + rawMsg.conn.connectionId + " as a provider");
+                                        } 
                                     }
                                     // this taunt doesnt exist, add it
                                     else
