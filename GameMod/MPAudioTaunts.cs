@@ -1126,14 +1126,9 @@ namespace GameMod
                                 sole_provider = false;
                         }
 
-                        if (!sole_provider)
+                        if (!sole_provider & !new_match_taunts.ContainsKey(item.Key))
                         {
                             new_match_taunts.Add(item.Key, item.Value);
-                        }
-                        if (item.Value.is_data_complete)
-                        {
-                            item.Value.providing_clients = new List<int>();
-                            taunt_buffer.Add(item.Key, item.Value);
                         }
 
                     }
@@ -1157,10 +1152,18 @@ namespace GameMod
                         content += "    " + item.Key + "\n";
                     }
 
-                    //match_taunts.Clear();
-                    Debug.Log("[AudioTaunts] Initialisation: \n"
-                        + " current match_taunt's: " + match_taunts.Count
-                        + content
+                    string content2 = "\n";
+                    foreach (var item in taunt_buffer)
+                    {
+                        content2 += "    " + item.Key + "\n";
+                    }
+
+                    match_taunts.Clear();
+                    Debug.Log("[AudioTaunts] Initialisation:"
+                        + "\n[match_taunt]: " + match_taunts.Count
+                        + "\n" + content
+                        + "\n[buffered taunts]: " + taunt_buffer.Count
+                        + "\n" + content2
                         );
                 }
             }
@@ -1460,6 +1463,22 @@ namespace GameMod
                                     //Debug.Log("     This Fragment completed the audio taunt data");
                                     match_taunts[msg.hash].is_data_complete = true;
 
+                                    Debug.Log("Added a taunt to the taunt buffer: "+msg.hash);
+                                    if(!taunt_buffer.ContainsKey(msg.hash))
+                                    {
+                                        taunt_buffer.Add(msg.hash, new AudioTaunt
+                                        {
+                                            hash = msg.hash,
+                                            name = "",
+                                            audio_taunt_data = match_taunts[msg.hash].audio_taunt_data,
+                                            is_data_complete = true,
+                                            timestamp = -1,
+                                            ready_to_play = false,
+                                            requested_taunt = false
+                                        });
+                                    }
+                                    else
+                                        Debug.Log(" BUG: The taunt was already added to the buffer! This should not happen: " + msg.hash);
 
                                     List<int> duplicate_free_requests = new List<int>();
                                     foreach (int connectionId in match_taunts[msg.hash].requesting_clients)
