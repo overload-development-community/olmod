@@ -615,12 +615,12 @@ namespace GameMod
                             &&(!controllers[i].name.Equals(Controls.m_controllers[i].name))
                             )
                         {
-                            Debug.Log("Found a mismatch in the "+i+"th device: "+ controllers[i].name+" : "+ Controls.m_controllers[i].name);
+                            //Debug.Log("Found a mismatch in the "+i+"th device: "+ controllers[i].name+" : "+ Controls.m_controllers[i].name);
                             // check if there is an exact match
                             int index = controllers.FindIndex((Controller c) => c.name == Controls.m_controllers[i].name && Controls.m_controllers[i].joystickID == c.id);
                             if(index != -1)
                             {
-                                Debug.Log(" Found an exact match");
+                                //Debug.Log(" Found an exact match");
                                 Controller tmp = controllers[i];
                                 controllers[i] = controllers[controllers.Count - 1];
                                 controllers[controllers.Count - 1] = tmp;
@@ -632,13 +632,13 @@ namespace GameMod
                     Debug.Log("\nSection_Joystickcurve.controllers Order");
                     for (int i = 0; i < controllers.Count; i++)
                     {
-                        Debug.Log(""+controllers[i].name+":"+controllers[i].id);
+                        Debug.Log("     "+controllers[i].name+":"+controllers[i].id);
                     }
 
                     Debug.Log("\nControls.m_controllers Order");
                     for (int i = 0; i < Controls.m_controllers.Count; i++)
                     {
-                        Debug.Log("" + Controls.m_controllers[i].name + ":" + Controls.m_controllers[i].joystickID);
+                        Debug.Log("     " + Controls.m_controllers[i].name + ":" + Controls.m_controllers[i].joystickID);
                     }
                 }
             }

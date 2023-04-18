@@ -132,7 +132,6 @@ namespace GameMod
                     if (String.IsNullOrEmpty(LocalAudioTauntDirectory))
                     {
                         LocalAudioTauntDirectory = Path.Combine(Application.persistentDataPath, "AudioTaunts");
-
                         if (!Directory.Exists(LocalAudioTauntDirectory))
                         {
                             Debug.Log("Did not find a directory for local audiotaunts, creating one at: " + LocalAudioTauntDirectory);
@@ -668,16 +667,17 @@ namespace GameMod
                             MPAudioTaunts_Client_RegisterHandlers.queued_uploads.Remove(MPAudioTaunts_Client_RegisterHandlers.queued_uploads[0]);
                         }
 
+                        //uConsole.Log("Menustate: "+ MenuManager.m_menu_state.ToString());
 
                         // Checks for Keyinput on this client for triggering the playing of an audio taunt
-                        if (AServer.server_supports_audiotaunts & !PlayerShip.m_typing_in_chat)
+                        if (AServer.server_supports_audiotaunts & !PlayerShip.m_typing_in_chat & (GameplayManager.IsMultiplayerActive | MenuManager.m_menu_state == MenuState.MP_PRE_MATCH_MENU))
                         {
                             if (remaining_cooldown > 0f)
                                 remaining_cooldown -= Time.unscaledDeltaTime;
 
                             for (int i = 0; i < 6; i++)
                             {
-                                if (remaining_cooldown <= 0f && keybinds[i] > 0 && Input.GetKeyDown((KeyCode)keybinds[i]) && local_taunts[i].audioclip != null)
+                                if (remaining_cooldown <= 0f && keybinds[i] > 0 && (Input.GetKeyDown((KeyCode)keybinds[i]) && local_taunts[i].audioclip != null || Controls.JustPressed((CCInput)(61+i))))
                                 {
                                     remaining_cooldown = DEFAULT_TAUNT_COOLDOWN;
                                     PlayAudioTauntFromAudioclip(local_taunts[i].audioclip, GameManager.m_local_player.m_mp_name, local_taunts[i].hash);
