@@ -32,7 +32,7 @@ namespace GameMod
         public const float DEFAULT_TAUNT_COOLDOWN = 4f;             // defines the minimum interval between sending taunts for the client
         public const float TAUNT_PLAYTIME = 3f;                     // defines the time in seconds that taunts are allowed to play till they get cutoff on the client
         public const float DEFAULT_SPECTRUM_UPDATE_COOLDOWN = 0.07f;
-        //public static WaitForSecondsRealtime delay = new WaitForSecondsRealtime(0.008f);    // interval between sending packets
+        public static WaitForSecondsRealtime delay = new WaitForSecondsRealtime(0.016f);    // interval between sending packets
 
 
         public class AudioTaunt
@@ -933,12 +933,12 @@ namespace GameMod
                         };
 
                         Client.GetClient().connection.SendByChannel(MessageTypes.MsgAudioTauntPacket, packet,0);
-                        uConsole.Log("[AudioTaunts]    upload: " + (position + index) + " / " + data.audio_taunt_data.Length + "  for " + data.hash);
-                        yield return null;
+                       
+                        yield return delay;
                         position += PACKET_PAYLOAD_SIZE;
                         _packet_id++;
                     }
-
+                    uConsole.Log("[AudioTaunts]    completed the upload for " + data.hash);
                     isUploading = false;
                 }
 
@@ -1315,15 +1315,14 @@ namespace GameMod
                         string hash = msg.hash;
 
                         AudioTaunt taunt = null;
-                        if (match_taunts.ContainsKey(hash))
-                        {
-                            taunt = match_taunts[hash];
-                        }
-                        else if (taunt_buffer.ContainsKey(hash))
+                        if (taunt_buffer.ContainsKey(hash))
                         {
                             taunt = taunt_buffer[hash];
                         }
-
+                        else if (match_taunts.ContainsKey(hash))
+                        {
+                            taunt = match_taunts[hash];
+                        }
 
 
                         if (taunt != null)
@@ -1410,11 +1409,11 @@ namespace GameMod
                                 data = to_send,
                             };
                             NetworkServer.SendToClient(connectionId, MessageTypes.MsgAudioTauntPacket, packet);
-                            Debug.Log("[AudioTaunts]    packet: " + packet_id + " upload: " + (position + index) + " / " + data.Length + "  for " + hash);
                             position += PACKET_PAYLOAD_SIZE;
                             packet_id++;
                             yield return null;
                         }
+                        Debug.Log("[AudioTaunts]   completed the upload to "+connectionId+" for " + hash);
                     }
                     if (!ended_early)
                         Debug.Log("[AudioTaunts] successfully transmitted taunt to client" + hash);
