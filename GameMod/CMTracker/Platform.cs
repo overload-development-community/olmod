@@ -11,7 +11,7 @@ using UnityEngine.Networking;
 namespace GameMod.CMTracker
 {
     [HarmonyPatch(typeof(Platform), "Init")]
-    internal static class CMTracker_Platform_Init
+    internal class CMTracker_Platform_Init
     {
         static void Postfix()
         {
@@ -20,7 +20,7 @@ namespace GameMod.CMTracker
     }
 
     [HarmonyPatch(typeof(Platform), "UserName", MethodType.Getter)]
-    public static class CMTracker_Platform_UserName
+    internal class CMTracker_Platform_UserName
     {
         static void Postfix(ref string __result)
         {
@@ -29,7 +29,7 @@ namespace GameMod.CMTracker
     }
 
     [HarmonyPatch(typeof(Platform), "PlatformName", MethodType.Getter)]
-    public static class CMTracker_Platform_PlatformName
+    internal class CMTracker_Platform_PlatformName
     {
         public static void Postfix(ref string __result)
         {
@@ -38,7 +38,7 @@ namespace GameMod.CMTracker
     }
 
     [HarmonyPatch(typeof(Platform), "StatsAvailable", MethodType.Getter)]
-    static class CMTracker_Platform_PlatformStatsAvailable
+    internal class CMTracker_Platform_PlatformStatsAvailable
     {
         public static void Postfix(ref bool __result)
         {
@@ -46,8 +46,17 @@ namespace GameMod.CMTracker
         }
     }
 
+    [HarmonyPatch(typeof(Platform), "OnlineErrorMessage", MethodType.Getter)]
+    internal class CMTracker_Platform_OnlineErrorMessage
+    {
+        public static void Postfix(ref string __result)
+        {
+            __result = null;
+        }
+    }
+
     [HarmonyPatch(typeof(Platform), "GetLeaderboardData")]
-    static class CMTracker_Platform_GetLeaderboardData
+    internal class CMTracker_Platform_GetLeaderboardData
     {
         public static void Postfix(ref LeaderboardEntry[] __result, out int leaderboard_length, out int user_index, out Platform.LeaderboardDataState result)
         {
@@ -116,7 +125,7 @@ namespace GameMod.CMTracker
     }
 
     [HarmonyPatch(typeof(Platform), "RequestChallengeLeaderboardData")]
-    public static class CMRequestChallengeLeaderboardData
+    internal static class CMRequestChallengeLeaderboardData
     {
         public static CloudDataYield Postfix(CloudDataYield __result, string level_name, bool submode, int difficulty_level, int range_start, int num_entries, bool friends)
         {
