@@ -134,7 +134,7 @@ namespace GameMod.CMTracker
 
         static IEnumerator DownloadLeaderboard(string levelName, string levelHash, int modeId, int difficultyLevelId)
         {
-            var url = $"{Config.Settings.Value<string>("trackerBaseUrl")}/api/challengemodeleaderboard?levelHash={UnityWebRequest.EscapeURL(levelHash)}&difficultyLevelId={difficultyLevelId}&modeId={modeId}";
+            var url = $"{Config.Settings.Value<string>("trackerBaseUrl")}/api/challengemodeleaderboard?levelHash={levelHash}&difficultyLevelId={difficultyLevelId}&modeId={modeId}";
             
             UnityWebRequest www = UnityWebRequest.Get(url);
             yield return www.SendWebRequest();
