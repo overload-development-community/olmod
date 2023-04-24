@@ -20,6 +20,80 @@ namespace GameMod {
                 GameManager.ChallengeMission.NumLevels + " cm, " + GameManager.MultiplayerMission.NumLevels + " mp)");
         }
 
+        static void MutePlayer()
+        {
+            string player_name = uConsole.GetString();
+
+            if (string.IsNullOrEmpty(player_name))
+            {
+                Debug.Log("You didn't add the name of the player you want to mute!\nSyntax: mute <player_name>");
+                return;
+            }
+
+            if(!GameplayManager.IsMultiplayerActive)
+            {
+                Debug.Log("You need to be in the same game as the person that you want to mute!");
+                return;
+            }
+
+            player_name = player_name.ToUpper();
+            foreach (PlayerLobbyData pld in NetworkMatch.m_players.Values)
+            {
+                if (pld.m_name.ToUpper().Equals(player_name))
+                {
+                    if (ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Contains(pld.m_player_id))
+                    {
+                        Debug.Log("This player is already muted! If you want to unmute that player use the unmute command.");
+                        return;
+                    }
+                    else
+                    {
+                        ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Add(pld.m_player_id);
+                        Debug.Log("Muted "+pld.m_name);
+                        return;
+                    }
+                        
+                }
+            }
+        }
+
+        static void UnmutePlayer()
+        {
+            string player_name = uConsole.GetString();
+
+            if (string.IsNullOrEmpty(player_name))
+            {
+                Debug.Log("You didn't add the name of the player you want to unmute!\nSyntax: unmute <player_name>");
+                return;
+            }
+
+            if (!GameplayManager.IsMultiplayerActive)
+            {
+                Debug.Log("You need to be in the same game as the person that you want to unmute!");
+                return;
+            }
+
+            player_name = player_name.ToUpper();
+            foreach (PlayerLobbyData pld in NetworkMatch.m_players.Values)
+            {
+                if (pld.m_name.ToUpper().Equals(player_name))
+                {
+                    if (!ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Contains(pld.m_player_id))
+                    {
+                        Debug.Log("This player is not muted! If you want to mute that player use the mute command.");
+                        return;
+                    }
+                    else
+                    {
+                        ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Remove(pld.m_player_id);
+                        Debug.Log("Unmuted " + pld.m_name);
+                        return;
+                    }
+
+                }
+            }
+        }
+
         static void CmdXP()
         {
             int xp = uConsole.GetInt();
@@ -161,6 +235,8 @@ namespace GameMod {
 
         public static void RegisterCommands()
         {
+            uConsole.RegisterCommand("mute", "Mute a specific player", new uConsole.DebugCommand(MutePlayer));
+            uConsole.RegisterCommand("unmute", "Unmute a specific player", new uConsole.DebugCommand(UnmutePlayer));
             uConsole.RegisterCommand("dump_segments", "Dump segment data", new uConsole.DebugCommand(CmdDumpSegments));
             uConsole.RegisterCommand("mipmap_bias", "Set Mipmap bias (-16 ... 15.99)", new uConsole.DebugCommand(CmdMipmapBias));
             uConsole.RegisterCommand("reload_missions", "Reload missions", new uConsole.DebugCommand(CmdReloadMissions));

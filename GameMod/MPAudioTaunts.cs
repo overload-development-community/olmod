@@ -485,12 +485,24 @@ namespace GameMod
                 }
             }
 
+            public static bool IsPlayerMuted(string player_name)
+            {
+                if (string.IsNullOrEmpty(player_name))
+                    return false;
 
+                player_name = player_name.ToUpper();
+                foreach(PlayerLobbyData pld in NetworkMatch.m_players.Values)
+                {
+                    if (pld.m_name.ToUpper().Equals(player_name) & ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Contains(pld.m_player_id))
+                        return true;
+                }
+                return false;
+            }
 
             // the clip_id should only be added when the activation of this audioclip should be shared in a multiplayer match
             public static void PlayAudioTauntFromAudioclip(AudioClip audioClip, string player_name, string clip_id = null)
             {
-                if (audio_taunt_volume == 0 | audioClip == null | !active)
+                if (audio_taunt_volume == 0 | audioClip == null | !active | IsPlayerMuted(player_name))
                     return;
 
                 //Debug.Log("Playing Audiotaunt");
@@ -648,6 +660,69 @@ namespace GameMod
                         {
                             hashes = fileHashes
                         },0);
+                }
+            }
+
+            [HarmonyPatch(typeof(UIElement), "DrawPlayerName")]
+            class MPAudioTaunts_UIElement_DrawPlayerName
+            {
+                static void Postfix(UIElement __instance, Vector2 pos, PlayerLobbyData pld, bool bg_bar, float highlight_width, float name_offset, float max_width = -1f)
+                {
+                    if (!active | string.IsNullOrEmpty(pld.m_player_id) | pld.m_name.ToUpper().Equals(GameManager.m_local_player.m_mp_name.ToUpper()))
+                        return;
+
+                    bool muted = ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Contains(pld.m_player_id);
+                    DrawMuteIcon(__instance, pos + (Vector2.right * 20f) + Vector2.right * (-name_offset - 5f), pld, muted); // 20
+                }
+            }
+
+            public static void DrawMuteIcon(UIElement uie, Vector2 pos, PlayerLobbyData pld, bool muted)
+            {
+                uie.TestMouseInRect(pos, 17f, 17f, 20000 + pld.m_id, true);
+                bool highlighted = UIManager.m_menu_selection == 20000 + pld.m_id;
+
+                Color color = Color.green;
+                if (muted) color = Color.red;
+                if (highlighted) color = Color.white;
+
+                // 81 = triangle, 131 = cross, 199 = block, 41 = shortest_line, [6,7,34] = border, 11 = clean block
+                if (!muted)
+                {
+                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f,-3.7f), 0.15f, 0.15f, 5.93412f, color, 0.5f, 41);
+                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0.3f), 0.15f, 0.15f, 0f, color, 0.5f, 41);
+                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 4.3f), 0.15f, 0.15f, 0.38966f, color, 0.5f, 41);
+                }
+                else
+                {
+                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0f), 0.15f, 0.15f, 5.497790f, color, 0.5f, 41);
+                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0f), 0.15f, 0.15f, 0.785398f, color, 0.5f, 41);
+                    //UIManager.DrawSpriteUI(pos, 0.2f, 0.2f, Color.red, 0.5f, 131);
+                }
+
+                UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 199);
+                pos.x += 3.6f;
+                UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 81);
+            }
+
+            [HarmonyPatch(typeof(MenuManager), "MpPreMatchMenuUpdate")]
+            class MPAudioTaunts_MenuManager_MpPreMatchMenuUpdate
+            {
+                static void Postfix()
+                {
+                    foreach(PlayerLobbyData p in NetworkMatch.m_players.Values)
+                    {
+                        if(UIManager.PushedSelect(100) && UIManager.m_menu_selection == 20000 + p.m_id)
+                        {
+                            if (string.IsNullOrEmpty(p.m_player_id))
+                                continue;
+
+                            if (ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Contains(p.m_player_id))
+                                ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Remove(p.m_player_id);
+                            else
+                                ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Add(p.m_player_id);
+                            MenuManager.PlaySelectSound(1f);
+                        }
+                    }
                 }
             }
 
@@ -942,13 +1017,6 @@ namespace GameMod
                     isUploading = false;
                 }
 
-
-
-
-
-
-
-
                 private static void OnAudioTauntPacket(NetworkMessage rawMsg)
                 {
                     if (!active)
@@ -1020,11 +1088,6 @@ namespace GameMod
 
 
                 }
-
-
-
-
-
 
                 private static void OnPlayAudioTaunt(NetworkMessage rawMsg)
                 {

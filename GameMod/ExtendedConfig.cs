@@ -179,7 +179,6 @@ namespace GameMod
                 if (!completed.Contains(s))
                 {
                     List<string> l = new List<string>();
-                    l.Add("---");
                     PassSectionToFunction(l, s);
                     Debug.Log("Creating missing section \"" + s + "\" in pilot's .extendedconfig");
                 }
@@ -305,6 +304,7 @@ namespace GameMod
             "[SECTION: JOYSTICKCURVE]",
             "[SECTION: WEAPONCYCLING]",
             "[SECTION: AUDIOTAUNT_KEYBINDS]",
+            "[SECTION: AUDIOTAUNT_MUTED_PLAYERS]",
             //...
         };
 
@@ -314,20 +314,33 @@ namespace GameMod
             if (section_name.Equals(known_sections[0]))
             {
                 Section_AutoSelect.Load(section);
+                return;
             }
             if (section_name.Equals(known_sections[1]))
             {
                 Section_JoystickCurve.Load(section);
+                return;
             }
             if (section_name.Equals(known_sections[2]))
             {
                 Section_WeaponCycling.Load(section);
+                return;
             }
             if (section_name.Equals(known_sections[3]))
             {
-                Section_Audiotaunt_Keybinds.Load(section);
+                Section_AudiotauntKeybinds.Load(section);
+                return;
             }
-
+            if (section_name.Equals(known_sections[3]))
+            {
+                Section_AudiotauntKeybinds.Load(section);
+                return;
+            }
+            if (section_name.Equals(known_sections[4]))
+            {
+                Section_AudiotauntMutedPlayers.Load(section);
+                return;
+            }
             //...
 
         }
@@ -357,7 +370,11 @@ namespace GameMod
                     w.WriteLine("[/END]");
 
                     w.WriteLine("[SECTION: AUDIOTAUNT_KEYBINDS]");
-                    Section_Audiotaunt_Keybinds.Save(w);
+                    Section_AudiotauntKeybinds.Save(w);
+                    w.WriteLine("[/END]");
+
+                    w.WriteLine("[SECTION: AUDIOTAUNT_MUTED_PLAYERS]");
+                    Section_AudiotauntMutedPlayers.Save(w);
                     w.WriteLine("[/END]");
 
                     //...
@@ -382,7 +399,7 @@ namespace GameMod
             Section_AutoSelect.Set();
             Section_JoystickCurve.SetDefault();
             Section_WeaponCycling.Set();
-            Section_Audiotaunt_Keybinds.SetDefaultKeybinds();
+            Section_AudiotauntKeybinds.SetDefaultKeybinds();
         }
 
         public static void ApplyConfigData()
@@ -1010,7 +1027,7 @@ namespace GameMod
 
         }
 
-        internal class Section_Audiotaunt_Keybinds
+        internal class Section_AudiotauntKeybinds
         {
             public static void Load(List<string> section)
             {
@@ -1049,7 +1066,23 @@ namespace GameMod
             }
         }
 
+        internal class Section_AudiotauntMutedPlayers
+        {
+            public static HashSet<string> ids = new HashSet<string>();
 
+            public static void Load(List<string> section)
+            {
+                for (int i = 0; i < section.Count; i++)
+                   ids.Add(RemoveWhitespace(section[i]));
+            }
+
+            public static void Save(StreamWriter w)
+            {
+                foreach(string id in ids)
+                    w.WriteLine("   " + id);
+            }
+
+        }
 
     }
 }
