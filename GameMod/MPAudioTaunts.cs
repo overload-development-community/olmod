@@ -663,6 +663,28 @@ namespace GameMod
                 }
             }
 
+            public static List<Vector2> CalculatePointsOnASphericalCurve(Vector2 start, Vector2 end, Vector2 center, int amt_lines)
+            {
+                List<Vector2> points = new List<Vector2>();
+                points.Add(start);
+
+                float radius = (float)Math.Sqrt(Math.Pow(start.x - center.x, 2) + Math.Pow(start.y - center.y, 2));
+                float angle1 = (float)Math.Atan2(start.y - center.y, start.x - center.x);
+                float angle2 = (float)Math.Atan2(end.y - center.y, end.x - center.x);
+                float angleDelta = (angle2 - angle1) / amt_lines;
+
+                for (int i = 0; i < amt_lines; i++)
+                {
+                    float angle = angle1 + i * angleDelta;
+                    float x = center.x + radius * (float)Math.Cos(angle);
+                    float y = center.y + radius * (float)Math.Sin(angle);
+                    Vector2 point = new Vector2(x, y);
+                    points.Add(point);
+                }
+                points.Add(end);
+                return points;
+            }
+
             [HarmonyPatch(typeof(UIElement), "DrawPlayerName")]
             class MPAudioTaunts_UIElement_DrawPlayerName
             {
@@ -674,35 +696,45 @@ namespace GameMod
                     bool muted = ExtendedConfig.Section_AudiotauntMutedPlayers.ids.Contains(pld.m_player_id);
                     DrawMuteIcon(__instance, pos + (Vector2.right * 20f) + Vector2.right * (-name_offset - 5f), pld, muted); // 20
                 }
+
+                public static void DrawMuteIcon(UIElement uie, Vector2 pos, PlayerLobbyData pld, bool muted)
+                {
+                    uie.TestMouseInRect(pos + new Vector2(5f, 0f), 23f, 15f, 20000 + pld.m_id, true);
+                    bool highlighted = UIManager.m_menu_selection == 20000 + pld.m_id;
+
+                    Color color = Color.green;
+                    if (muted) color = Color.red;
+                    if (highlighted) color = Color.white;
+                    
+                    if (!muted)
+                    {
+                        List<Vector2> points = CalculatePointsOnASphericalCurve(pos + new Vector2(12, -3), pos + new Vector2(12, 3), pos + new Vector2(3, 0), 5);
+                        for (int i = 1; i < points.Count; i++)
+                            UIManager.DrawQuadCenterLine(points[i - 1], points[i], 0.5f, 0f, color, 4);
+
+                        points = CalculatePointsOnASphericalCurve(pos + new Vector2(15, -5.5f), pos + new Vector2(15, 5.5f), pos + new Vector2(3, 0), 7);
+                        for (int i = 1; i < points.Count; i++)
+                            UIManager.DrawQuadCenterLine(points[i - 1], points[i], 0.5f, 0f, color, 4);
+
+                        points = CalculatePointsOnASphericalCurve(pos + new Vector2(18, -8), pos + new Vector2(18, 8), pos + new Vector2(3, 0), 9);
+                        for (int i = 1; i < points.Count; i++)
+                            UIManager.DrawQuadCenterLine(points[i - 1], points[i], 0.5f, 0f, color, 4);
+                    }
+                    else
+                    {
+                        // 5.497790f = 315°, 0.785398f = 45°
+                        UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0f), 0.15f, 0.15f, 5.497790f, color, 0.5f, 41);
+                        UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0f), 0.15f, 0.15f, 0.785398f, color, 0.5f, 41);
+                    }
+
+                    // 81 = triangle, 131 = cross, 199 = block, 41 = shortest_line, [6,7,34] = border, 11 = clean block
+                    UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 199);
+                    pos.x += 3f;
+                    UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 81);
+                }
             }
 
-            public static void DrawMuteIcon(UIElement uie, Vector2 pos, PlayerLobbyData pld, bool muted)
-            {
-                uie.TestMouseInRect(pos, 17f, 17f, 20000 + pld.m_id, true);
-                bool highlighted = UIManager.m_menu_selection == 20000 + pld.m_id;
-
-                Color color = Color.green;
-                if (muted) color = Color.red;
-                if (highlighted) color = Color.white;
-
-                // 81 = triangle, 131 = cross, 199 = block, 41 = shortest_line, [6,7,34] = border, 11 = clean block
-                if (!muted)
-                {
-                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f,-3.7f), 0.15f, 0.15f, 5.93412f, color, 0.5f, 41);
-                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0.3f), 0.15f, 0.15f, 0f, color, 0.5f, 41);
-                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 4.3f), 0.15f, 0.15f, 0.38966f, color, 0.5f, 41);
-                }
-                else
-                {
-                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0f), 0.15f, 0.15f, 5.497790f, color, 0.5f, 41);
-                    UIManager.DrawSpriteUIRotated(pos + new Vector2(12.4f, 0f), 0.15f, 0.15f, 0.785398f, color, 0.5f, 41);
-                    //UIManager.DrawSpriteUI(pos, 0.2f, 0.2f, Color.red, 0.5f, 131);
-                }
-
-                UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 199);
-                pos.x += 3.6f;
-                UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 81);
-            }
+            
 
             [HarmonyPatch(typeof(MenuManager), "MpPreMatchMenuUpdate")]
             class MPAudioTaunts_MenuManager_MpPreMatchMenuUpdate
