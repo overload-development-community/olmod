@@ -50,6 +50,7 @@ namespace GameMod.CMTracker
         {
             var request = new Models.Run
             {
+                PlayerId = PlayerPrefs.GetString("UserID"),
                 PilotName = PilotManager.PilotName,
                 RobotsDestroyed = (int)ChallengeManager.ChallengeRobotsDestroyed,
                 AliveTime = GameplayManager.AliveTime,
