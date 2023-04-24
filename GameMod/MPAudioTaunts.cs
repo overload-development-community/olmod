@@ -782,7 +782,7 @@ namespace GameMod
                         //uConsole.Log("Menustate: "+ MenuManager.m_menu_state.ToString());
 
                         // Checks for Keyinput on this client for triggering the playing of an audio taunt
-                        if (AServer.server_supports_audiotaunts & !PlayerShip.m_typing_in_chat & (GameplayManager.IsMultiplayerActive | MenuManager.m_menu_state == MenuState.MP_PRE_MATCH_MENU))
+                        if (!uConsole.IsOn() & AServer.server_supports_audiotaunts & !PlayerShip.m_typing_in_chat & (GameplayManager.IsMultiplayerActive | MenuManager.m_menu_state == MenuState.MP_PRE_MATCH_MENU))
                         {
                             if (remaining_cooldown > 0f)
                                 remaining_cooldown -= Time.unscaledDeltaTime;

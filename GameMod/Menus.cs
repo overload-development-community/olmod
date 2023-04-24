@@ -1319,9 +1319,9 @@ namespace GameMod {
                                                     & NetworkMatch.GetMatchState() != MatchState.PREGAME)
                                                 {
                                                     int index = MPAudioTaunts.AClient.taunts.IndexOf(MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16]);
-                                                    if (MPAudioTaunts.AClient.taunts.Count > 0 & index != -1 & Input.inputString.Length > 0)
+                                                    if (MPAudioTaunts.AClient.taunts.Count > 0 & Input.inputString.Length > 0)
                                                     {
-                                                        int next_index = MPAudioTaunts.AClient.GetNextIndexThatStartsWithStringSequence(0, index, Input.inputString);
+                                                        int next_index = MPAudioTaunts.AClient.GetNextIndexThatStartsWithStringSequence(0, index == -1 ? 0 : index, Input.inputString);
                                                         if (next_index != -1 & next_index != index)
                                                         {
                                                             MPAudioTaunts.AClient.local_taunts[UIManager.m_menu_selection - 16] = MPAudioTaunts.AClient.taunts[next_index];
