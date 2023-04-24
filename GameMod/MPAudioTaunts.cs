@@ -663,31 +663,17 @@ namespace GameMod
                 }
             }
 
-            public static List<Vector2> CalculatePointsOnASphericalCurve(Vector2 start, Vector2 end, Vector2 center, int amt_lines)
-            {
-                List<Vector2> points = new List<Vector2>();
-                points.Add(start);
+            
 
-                float radius = (float)Math.Sqrt(Math.Pow(start.x - center.x, 2) + Math.Pow(start.y - center.y, 2));
-                float angle1 = (float)Math.Atan2(start.y - center.y, start.x - center.x);
-                float angle2 = (float)Math.Atan2(end.y - center.y, end.x - center.x);
-                float angleDelta = (angle2 - angle1) / amt_lines;
 
-                for (int i = 0; i < amt_lines; i++)
-                {
-                    float angle = angle1 + i * angleDelta;
-                    float x = center.x + radius * (float)Math.Cos(angle);
-                    float y = center.y + radius * (float)Math.Sin(angle);
-                    Vector2 point = new Vector2(x, y);
-                    points.Add(point);
-                }
-                points.Add(end);
-                return points;
-            }
-
+            
             [HarmonyPatch(typeof(UIElement), "DrawPlayerName")]
             class MPAudioTaunts_UIElement_DrawPlayerName
             {
+                public static List<Vector2> curve1 = CalculatePointsOnASphericalCurve(new Vector2(12, -3), new Vector2(12, 3), new Vector2(3, 0), 5);
+                public static List<Vector2> curve2 = CalculatePointsOnASphericalCurve(new Vector2(15, -5.5f), new Vector2(15, 5.5f), new Vector2(3, 0), 7);
+                public static List<Vector2> curve3 = CalculatePointsOnASphericalCurve(new Vector2(18, -8), new Vector2(18, 8), new Vector2(3, 0), 9);
+
                 static void Postfix(UIElement __instance, Vector2 pos, PlayerLobbyData pld, bool bg_bar, float highlight_width, float name_offset, float max_width = -1f)
                 {
                     if (!active | string.IsNullOrEmpty(pld.m_player_id) | pld.m_name.ToUpper().Equals(GameManager.m_local_player.m_mp_name.ToUpper()))
@@ -708,17 +694,14 @@ namespace GameMod
                     
                     if (!muted)
                     {
-                        List<Vector2> points = CalculatePointsOnASphericalCurve(pos + new Vector2(12, -3), pos + new Vector2(12, 3), pos + new Vector2(3, 0), 5);
-                        for (int i = 1; i < points.Count; i++)
-                            UIManager.DrawQuadCenterLine(points[i - 1], points[i], 0.5f, 0f, color, 4);
+                        for (int i = 1; i < curve1.Count; i++)
+                            UIManager.DrawQuadCenterLine(pos + curve1[i - 1], pos + curve1[i], 0.5f, 0f, color, 4);
 
-                        points = CalculatePointsOnASphericalCurve(pos + new Vector2(15, -5.5f), pos + new Vector2(15, 5.5f), pos + new Vector2(3, 0), 7);
-                        for (int i = 1; i < points.Count; i++)
-                            UIManager.DrawQuadCenterLine(points[i - 1], points[i], 0.5f, 0f, color, 4);
-
-                        points = CalculatePointsOnASphericalCurve(pos + new Vector2(18, -8), pos + new Vector2(18, 8), pos + new Vector2(3, 0), 9);
-                        for (int i = 1; i < points.Count; i++)
-                            UIManager.DrawQuadCenterLine(points[i - 1], points[i], 0.5f, 0f, color, 4);
+                        for (int i = 1; i < curve2.Count; i++)
+                            UIManager.DrawQuadCenterLine(pos + curve2[i - 1], pos + curve2[i], 0.5f, 0f, color, 4);
+                        
+                        for (int i = 1; i < curve3.Count; i++)
+                            UIManager.DrawQuadCenterLine(pos + curve3[i - 1], pos + curve3[i], 0.5f, 0f, color, 4);
                     }
                     else
                     {
@@ -731,6 +714,28 @@ namespace GameMod
                     UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 199);
                     pos.x += 3f;
                     UIManager.DrawSpriteUI(pos, 0.18f, 0.18f, color, 0.5f, 81);
+                }
+
+                public static List<Vector2> CalculatePointsOnASphericalCurve(Vector2 start, Vector2 end, Vector2 center, int amt_lines)
+                {
+                    List<Vector2> points = new List<Vector2>();
+                    points.Add(start);
+
+                    float radius = (float)Math.Sqrt(Math.Pow(start.x - center.x, 2) + Math.Pow(start.y - center.y, 2));
+                    float angle1 = (float)Math.Atan2(start.y - center.y, start.x - center.x);
+                    float angle2 = (float)Math.Atan2(end.y - center.y, end.x - center.x);
+                    float angleDelta = (angle2 - angle1) / amt_lines;
+
+                    for (int i = 0; i < amt_lines; i++)
+                    {
+                        float angle = angle1 + i * angleDelta;
+                        float x = center.x + radius * (float)Math.Cos(angle);
+                        float y = center.y + radius * (float)Math.Sin(angle);
+                        Vector2 point = new Vector2(x, y);
+                        points.Add(point);
+                    }
+                    points.Add(end);
+                    return points;
                 }
             }
 
