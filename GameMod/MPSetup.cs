@@ -294,6 +294,7 @@ namespace GameMod {
                 FramerateLimiter.target_framerate = ModPrefs.GetInt("TARGET_FRAMERATE", 0);
 
                 Menus.mms_collision_mesh = ModPrefs.GetInt("MP_COLLIDER_MESH", 0);
+                CMTracker.CMTracker.mms_cm_runs_visible_in_tracker = ModPrefs.GetBool("CM_RUNS_VISIBLE_IN_TRACKER", true);
             }
             else // for compatibility with old olmod, no need to add new settings
             {
@@ -385,6 +386,7 @@ namespace GameMod {
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
             ModPrefs.SetInt("TARGET_FRAMERATE", FramerateLimiter.target_framerate);
             ModPrefs.SetInt("MP_COLLIDER_MESH", Menus.mms_collision_mesh);
+            ModPrefs.SetBool("CM_RUNS_VISIBLE_IN_TRACKER", CMTracker.CMTracker.mms_cm_runs_visible_in_tracker);
 
             ModPrefs.Flush(filename + "mod");
         }

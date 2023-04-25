@@ -52,6 +52,7 @@ namespace GameMod.CMTracker
             {
                 PlayerId = PlayerPrefs.GetString("UserID"),
                 PilotName = PilotManager.PilotName,
+                DisplayOnTracker = CMTracker.mms_cm_runs_visible_in_tracker,
                 RobotsDestroyed = (int)ChallengeManager.ChallengeRobotsDestroyed,
                 AliveTime = GameplayManager.AliveTime,
                 Score = (int)ChallengeManager.ChallengeScore,

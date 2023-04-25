@@ -6,6 +6,7 @@ namespace GameMod.CMTracker.Models
     {
         public string PlayerId { get; set; }
         public string PilotName { get; set; }
+        public bool DisplayOnTracker { get; set; }
         public string LevelName { get; set; }
         public string LevelHash { get; set; }
         public int KillerId { get; set; }
