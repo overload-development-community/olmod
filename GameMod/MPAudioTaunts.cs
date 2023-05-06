@@ -552,26 +552,6 @@ namespace GameMod
                 }
             }
 
-            public static string ChainTogetherHashesOfLocalTaunts()
-            {
-                string result = "";
-                if (GameplayManager.IsDedicatedServer())
-                    return result;
-
-
-                for (int i = 0; i < AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
-                {
-                    if (local_taunts.Length < AMOUNT_OF_TAUNTS_PER_CLIENT | local_taunts[i] != null)
-                    {
-                        result += local_taunts[i].hash;
-
-                        if (i < AMOUNT_OF_TAUNTS_PER_CLIENT - 1)
-                            result += "/";
-                    }
-                }
-                return result;
-            }
-
             public static float[] calculateFrequencyBand()
             {
                 float[] freqBand = new float[8];

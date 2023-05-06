@@ -305,6 +305,7 @@ namespace GameMod
             "[SECTION: WEAPONCYCLING]",
             "[SECTION: AUDIOTAUNT_KEYBINDS]",
             "[SECTION: AUDIOTAUNT_MUTED_PLAYERS]",
+            "[SECTION: AUDIOTAUNT_SELECTED_TAUNTS]",
             //...
         };
 
@@ -341,6 +342,11 @@ namespace GameMod
                 Section_AudiotauntMutedPlayers.Load(section);
                 return;
             }
+            if (section_name.Equals(known_sections[5]))
+            {
+                Section_AudiotauntSelectedTaunts.Load(section);
+                return;
+            }
             //...
 
         }
@@ -375,6 +381,10 @@ namespace GameMod
 
                     w.WriteLine("[SECTION: AUDIOTAUNT_MUTED_PLAYERS]");
                     Section_AudiotauntMutedPlayers.Save(w);
+                    w.WriteLine("[/END]");
+
+                    w.WriteLine("[SECTION: AUDIOTAUNT_SELECTED_TAUNTS]");
+                    Section_AudiotauntSelectedTaunts.Save(w);
                     w.WriteLine("[/END]");
 
                     //...
@@ -1063,6 +1073,29 @@ namespace GameMod
                 {
                     MPAudioTaunts.AClient.keybinds[i] = -1;
                 }
+            }
+        }
+
+        internal class Section_AudiotauntSelectedTaunts
+        {
+            public static void Load(List<string> section){  
+                string hashes = "", l = "";
+                for (int i = 0; i < section.Count; i++){
+                    if (i != 0)
+                        hashes += "/";
+                    if (i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT){
+                        l = RemoveWhitespace(section[i]);
+                        hashes += l;
+                    }
+                }
+                MPAudioTaunts.AClient.loaded_local_taunts = hashes;
+                MPAudioTaunts.AClient.LoadLocalAudioTauntsFromPilotPrefs();
+            }
+
+            public static void Save(StreamWriter w){
+                for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
+                    if (MPAudioTaunts.AClient.local_taunts.Length > i && MPAudioTaunts.AClient.local_taunts[i] != null)
+                        w.WriteLine("   " + MPAudioTaunts.AClient.local_taunts[i].hash);
             }
         }
 
