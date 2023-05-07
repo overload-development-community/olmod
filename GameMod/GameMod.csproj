@@ -253,6 +253,8 @@
     <EmbeddedResource Include="Resources\meshes" />
     <EmbeddedResource Include="Resources\audio" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Secondaries\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -5,17 +5,17 @@ using UnityEngine;
 
 namespace GameMod
 {
-    public class Reflex : Weapon
+    public class Reflex : PrimaryWeapon
     {
-        public Reflex(Ship s)
+        public Reflex()
         {
-            ship = s;
-
             displayName = "REFLEX";
+            Tag2A = "RF";
+            Tag2B = "L";
             UsesEnergy = true;
         }
 
-        public override void Fire(Player player, float refire_multiplier)
+        public override void Fire(float refire_multiplier)
         {
             player.c_player_ship.FiringVolumeModifier = 0.75f;
             ProjPrefab type = ProjPrefab.proj_reflex;

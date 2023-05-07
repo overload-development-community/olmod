@@ -5,20 +5,21 @@ using UnityEngine;
 
 namespace GameMod
 {
-    public class Driller : Weapon
+    public class Driller : PrimaryWeapon
     {
-        public Driller(Ship s)
+        public Driller()
         {
-            ship = s;
-
             displayName = "DRILLER";
+            Tag2A = "DX";
+            Tag2B = "M";
             UsesAmmo = true;
         }
 
-        public override void Fire(Player player, float refire_multiplier)
+        public override void Fire(float refire_multiplier)
         {
-            Vector3 c_right = (Vector3)c_right_Field.GetValue(player.c_player_ship);
-            Vector3 c_up = (Vector3)c_up_Field.GetValue(player.c_player_ship);
+            Vector3 c_right = ship.c_right;
+            Vector3 c_up = ship.c_up;
+            //Vector3 c_forward = ship.c_forward;
 
             player.c_player_ship.FiringVolumeModifier = 0.75f;
             if (player.m_weapon_level[(int)player.m_weapon_type] == WeaponUnlock.LEVEL_2B)

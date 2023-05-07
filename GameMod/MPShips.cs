@@ -386,9 +386,22 @@ namespace GameMod
             return (Ship)MemberwiseClone();
         }
 
-        // for now, populates a fixed set of weapons. Will become dynamic soon.
+        // Copies the match set of weapons to the Ship objects for use
         protected void SetWeapons()
         {
+            primaries = new PrimaryWeapon[8];
+            secondaries = new SecondaryWeapon[8];
+
+
+            for (int i = 0; i < 8; i++)
+            {
+                primaries[i] = (PrimaryWeapon)MPWeapons.primaries[i].Copy();
+                //secondaries[i] = (SecondaryWeapon)MPWeapons.secondaries[i].Copy();
+                primaries[i].SetShip(this);
+                //secondaries[i].SetShip(this);
+            }
+
+            /*
             primaries = new Weapon[8]
             {
                 new Impulse(this),
@@ -402,6 +415,7 @@ namespace GameMod
             };
 
             secondaries = new Weapon[8];
+            */
         }
 
         // should get called once with the Ship's constructor. If it's not called, the Ship will have Kodachi handling.
@@ -489,11 +503,13 @@ namespace GameMod
         }
 
         // ====================================================================
-        // PlayerShip replacement instance methods
+        // PlayerShip replacement instance methods/fields
         // ====================================================================
 
-
-
+        public Vector3 c_forward;
+        public Vector3 c_up;
+        public Vector3 c_right;
+        public int flak_fire_count;
     }
 
 

@@ -11,204 +11,46 @@ namespace GameMod
 {
     public static class MPWeapons
     {
-        [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
-        internal class MPWeapons_PlayerShip_MaybeFireWeapon
+        public static PrimaryWeapon[] primaries = new PrimaryWeapon[8]
         {
-            static bool Prefix(PlayerShip __instance)
+            new Impulse(),
+            new Cyclone(),
+            new Reflex(),
+            new Crusher(),
+            new Driller(),
+            new Flak(),
+            new Thunderbolt(),
+            new Lancer()
+        };
+
+        public static SecondaryWeapon[] secondaries = new SecondaryWeapon[8];
+
+        public static bool NeedsUpdate = true;
+
+        // THIS NEEDS FINISHING
+        public static bool CycleWeapon(Player p, bool prev = false)
+        {
+            int curr = (int)p.m_weapon_type;
+            int next = curr;
+
+            for (int i = 0; i < 9; i++) // try all 8 slots then give up and go back to the first
             {
-                Player player = __instance.c_player;
+                next = (next + ((!prev) ? 1 : 7)) % 8;
 
-                if (!(__instance.m_refire_time <= 0f) || __instance.c_player.m_spectator)
-                {
-                    return false;
-                }
-
-                Ship ship = MPShips.GetShip(__instance);
-
-                bool flag = false;
-                if (!CanFireWeaponAmmo(ship, player))
-                {
-                    if ((float)player.m_energy <= 0f)
-                    {
-                        if ((int)player.m_ammo <= 0)
-                        {
-                            if (WeaponUsesAmmo(ship, player.m_weapon_type))
-                            {
-                                SwitchToEnergyWeapon(ship, player);
-                            }
-                            flag = true;
-                        }
-                        else if (!SwitchToAmmoWeapon(ship, player))
-                        {
-                            flag = true;
-                        }
-                    }
-                    else
-                    {
-                        SwitchToEnergyWeapon(ship, player);
-                    }
-                    if (!flag)
-                    {
-                        __instance.m_refire_time = 0.5f;
-                        return false;
-                    }
-                }
-                if (GameplayManager.IsMultiplayerActive && player.m_spawn_invul_active)
-                {
-                    player.m_timer_invuln = (float)player.m_timer_invuln - (float)NetworkMatch.m_respawn_shield_seconds;
-                }
-                __instance.m_alternating_fire = !__instance.m_alternating_fire;
-                float refire_multiplier = ((!flag) ? 1f : 3f);
-                __instance.FiringVolumeModifier = 1f;
-                __instance.FiringPitchModifier = 0f;
-
-                ship.primaries[(int)player.m_weapon_type].Fire(player, refire_multiplier);
-
-                /*
-                Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
-                {
-                    m_player_id = player.netId,
-                    m_type = type,
-                    m_pos = player.pos,
-                    m_rot = player.rot,
-                    m_strength = strength,
-                    m_upgrade_lvl = upgrade_lvl,
-                    m_no_sound = no_sound,
-                    m_slot = slot,
-                    m_force_id = force_id
-                });
-                */
-
-                if (__instance.m_refire_time < 0.01f)
-                {
-                    __instance.m_refire_time = 0.01f;
-                }
-
-                return false;
+                //if (primaries[MPWeaponCycling.pPos[i]])
             }
+            next = (next + ((!prev) ? 1 : 7)) % 8;
+
+            return false;
         }
 
-
-        // references in OLmod all changed - but WeaponUsesAmmo2 needs addressing
-        // TODO - references in Overload
-        public static bool WeaponUsesAmmo(Ship s, WeaponType wt = WeaponType.NUM)
+        public static void SetWeapon(Player p, WeaponType wt)
         {
-            if (wt == WeaponType.NUM)
-            {
-                wt = s.player.m_weapon_type;
-            }
-            return s.primaries[(int)wt].UsesAmmo;
-        }
-
-        // TODO - references in Overload
-        public static bool WeaponUsesEnergy(Ship s, WeaponType wt = WeaponType.NUM)
-        {
-            if (wt == WeaponType.NUM)
-            {
-                wt = s.player.m_weapon_type;
-            }
-            return s.primaries[(int)wt].UsesEnergy;
-        }
-
-        // TODO - references in Overload
-        public static bool CanFireWeaponAmmo(Ship s, Player p)
-        {
-            if (p.m_overdrive || Player.CheatUnlimited)
-            {
-                return true;
-            }
-            if (s.primaries[(int)p.m_weapon_type].UsesEnergy && p.m_energy > 0f)
-            {
-                return true;
-            }
-            else if (s.primaries[(int)p.m_weapon_type].UsesAmmo && p.m_ammo > 0f)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        // TODO - bring in changes from MPAutoSelection
-        // - bring in changes from MPSniperPackets
-        // - bring in changes from MPWeaponCycling
-        // - references in Overload
-        public static bool SwitchToAmmoWeapon(Ship s, Player p)
-        {
-            bool res = false; 
-            MPWeaponCycling.PBypass = true;
-            
-            for (int i = 0; i < s.primaries.Length; i++)
-            {
-                if (s.primaries[i].UsesAmmo)
-                {
-                    p.Networkm_weapon_type = (WeaponType)i;
-                    p.NextWeapon();
-                    res = true;
-                    break;
-                }
-            }
-
-            MPWeaponCycling.PBypass = false;
-            return res;
-        }
-
-        // TODO - bring in changes from MPAutoSelection
-        // - bring in changes from MPSniperPackets
-        // - bring in changes from MPWeaponCycling
-        // - references in Overload
-        public static void SwitchToEnergyWeapon(Ship s, Player p)
-        {
-            /*if (MenuManager.opt_primary_autoswitch == 0 && MPAutoSelection.primarySwapFlag)
-            {
-                if (p == GameManager.m_local_player)
-                {
-
-                    MPAutoSelection.maybeSwapPrimary();
-                    if (MPAutoSelection.swap_failed)
-                    {
-                        uConsole.Log("-AUTOSELECT- [EB] swap failed on trying to switch to an energy weapon");
-                        MPAutoSelection.swap_failed = false;
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-            }*/
-
-            MPWeaponCycling.PBypass = true;
-
-            for (int i = s.primaries.Length - 1; i >= 0; i--)
-            {
-                if (s.primaries[i].UsesEnergy)
-                {
-                    p.Networkm_weapon_type = (WeaponType)i;
-                }
-                p.NextWeapon();
-                break;
-            }
-
-            MPWeaponCycling.PBypass = false;
-        }
-
-        // MPWeaponCycling - 1 reference to change
-        // TODO - Overload references
-        public static bool OnlyAmmoWeapons(Ship s, Player p)
-        {
-            bool res = true;
-            for (int i = 0; i < s.primaries.Length; i++)
-            {
-                if (s.primaries[i].UsesEnergy && p.m_weapon_level[i] != WeaponUnlock.LOCKED)
-                {
-                    res = false;
-                    break;
-                }
-            }
-            return res;
+            p.m_weapon_type_prev = p.m_weapon_type;
+            p.Networkm_weapon_type = wt;
+            p.CallCmdSetCurrentWeapon(p.m_weapon_type);
+            p.c_player_ship.WeaponSelectFX();
+            p.UpdateCurrentWeaponName();
         }
 
         // ================================================================
@@ -253,24 +95,31 @@ namespace GameMod
     public abstract class Weapon
     {
         public string displayName;
+        public string Tag2A;
+        public string Tag2B;
 
-        protected Ship ship;
+        public Ship ship;
+        public PlayerShip ps;
+        public Player player;
 
-        public bool UsesAmmo;
-        public bool UsesEnergy;
-
-
-        protected FieldInfo c_right_Field = AccessTools.Field(typeof(PlayerShip), "c_right");
-        protected FieldInfo c_up_Field = AccessTools.Field(typeof(PlayerShip), "c_up");
+        //protected FieldInfo c_right_Field = AccessTools.Field(typeof(PlayerShip), "c_right");
+        //protected FieldInfo c_up_Field = AccessTools.Field(typeof(PlayerShip), "c_up");
 
         //temporary
-        public abstract void Fire(Player player, float refire_multiplier);
+        public abstract void Fire(float refire_multiplier);
         //public abstract void ServerFire(Player player, float refire_multiplier);
 
 
         //public abstract void FirePressed();
 
         //public abstract void FireReleased();
+
+        public void SetShip(Ship s)
+        {
+            ship = s;
+            ps = s.ps;
+            player = s.player;
+        }
 
         protected Quaternion AngleRandomize(Quaternion rot, float angle, Vector3 c_up, Vector3 c_right)
         {
@@ -295,9 +144,341 @@ namespace GameMod
             Quaternion quaternion = Quaternion.AngleAxis(angle, c_forward);
             return quaternion * rot;
         }
+
+        // makes a shallow copy of the Weapon object for use with a specific player
+        public Weapon Copy()
+        {
+            return (Weapon)MemberwiseClone();
+        }
+    }
+
+    public abstract class PrimaryWeapon : Weapon
+    {
+        public bool UsesAmmo;
+        public bool UsesEnergy;
+    }
+
+    public abstract class SecondaryWeapon : Weapon
+    {
+        public string displayNamePlural;
+        public int ammo;
+        public int ammoUp;
+        public int ammoSuper;
     }
 
 
+    // ====================================================================
+    //
+    //
+    // ====================================================================
+    // Utility Functions
+    // ====================================================================
+    //
+    //
+    // ====================================================================
+
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
+    static class MPWeapons_PlayerShip_MaybeFireWeapon
+    {
+        static bool Prefix(PlayerShip __instance, Vector3 ___c_forward, Vector3 ___c_up, Vector3 ___c_right, ref int ___flak_fire_count)
+        {
+            if (!(__instance.m_refire_time <= 0f) || __instance.c_player.m_spectator)
+            {
+                return false;
+            }
+
+            Player player = __instance.c_player;
+
+            // get the Ship reference and update the replacement fields
+            Ship ship = MPShips.GetShip(__instance);
+            ship.c_forward = ___c_forward;
+            ship.c_up = ___c_up;
+            ship.c_right = ___c_right;
+            ship.flak_fire_count = ___flak_fire_count;
+
+            bool flag = false;
+            if (!player.CanFireWeaponAmmo())
+            {
+                if ((float)player.m_energy <= 0f)
+                {
+                    if ((int)player.m_ammo <= 0)
+                    {
+                        if (player.WeaponUsesAmmo(player.m_weapon_type))
+                        {
+                            player.SwitchToEnergyWeapon();
+                        }
+                        flag = true;
+                    }
+                    else if (!player.SwitchToAmmoWeapon())
+                    {
+                        flag = true;
+                    }
+                }
+                else
+                {
+                    player.SwitchToEnergyWeapon();
+                }
+                if (!flag)
+                {
+                    __instance.m_refire_time = 0.5f;
+                    return false;
+                }
+            }
+            if (GameplayManager.IsMultiplayerActive && player.m_spawn_invul_active)
+            {
+                player.m_timer_invuln = (float)player.m_timer_invuln - (float)NetworkMatch.m_respawn_shield_seconds;
+            }
+            __instance.m_alternating_fire = !__instance.m_alternating_fire;
+            float refire_multiplier = ((!flag) ? 1f : 3f);
+            __instance.FiringVolumeModifier = 1f;
+            __instance.FiringPitchModifier = 0f;
+
+            ship.primaries[(int)player.m_weapon_type].Fire(refire_multiplier);
+
+            /*
+            Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
+            {
+                m_player_id = player.netId,
+                m_type = type,
+                m_pos = player.pos,
+                m_rot = player.rot,
+                m_strength = strength,
+                m_upgrade_lvl = upgrade_lvl,
+                m_no_sound = no_sound,
+                m_slot = slot,
+                m_force_id = force_id
+            });
+            */
+
+            if (__instance.m_refire_time < 0.01f)
+            {
+                __instance.m_refire_time = 0.01f;
+            }
+
+            // update the flak counter since it's used elsewhere
+            ___flak_fire_count = ship.flak_fire_count;
+
+            return false;
+        }
+    }
+
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(Player), "WeaponUsesAmmo")]
+    static class MPWeapons_Player_WeaponUsesAmmo
+    {
+        public static bool Prefix(ref bool __result, Player __instance, WeaponType wt)
+        {
+            if (wt == WeaponType.NUM)
+            {
+                wt = __instance.m_weapon_type;
+            }
+
+            __result = MPWeapons.primaries[(int)wt].UsesAmmo;
+
+            return false;
+        }
+    }
+
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(Player), "WeaponUsesAmmo2")]
+    static class MPWeapons_Player_WeaponUsesAmmo2
+    {
+        public static bool Prefix(ref bool __result, WeaponType wt)
+        {
+            __result = MPWeapons.primaries[(int)wt].UsesAmmo;
+
+            return false;
+        }
+    }
+
+
+    //CCF NEEDS REBUILDING STILL - WILL NEED TO REDO AUTOSELECT TO DO THIS PROPERLY AAAERGFGGGHHH
+    /*
+    // Rebuilt to handle modular weapons, autoselect ordering, and weapon exclusion
+    [HarmonyPatch(typeof(Player), "NextWeapon")]
+    static class MPWeapons_Player_NextWeapon
+    {
+        public static bool Prefix(Player __instance, bool prev = false)
+        {
+            if (__instance.CanFireWeapon())
+            {
+            }
+
+            return false;
+        }
+    }
+    */
+
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(Player), "CanFireWeapon")]
+    static class MPWeapons_Player_CanFireWeapon
+    {
+        public static bool Prefix(ref bool __result, Player __instance)
+        {
+            if ((int)__instance.m_ammo > 0 && __instance.AnyAmmoWeapons())
+            {
+                if (__instance.WeaponUsesAmmo(__instance.m_weapon_type))
+                {
+                    __result = true;
+                    return false;
+                }
+                __result = (float)__instance.m_energy > 0f;
+                return false;
+            }
+            if (__instance.WeaponUsesAmmo(__instance.m_weapon_type))
+            {
+                __result = false;
+                return false;
+            }
+            __result = true;
+            return false;
+        }
+    }
+
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(Player), "CanFireWeaponAmmo")]
+    static class MPWeapons_Player_CanFireWeaponAmmo
+    {
+        public static bool Prefix(ref bool __result, Player __instance)
+        {
+            if (__instance.m_overdrive || Player.CheatUnlimited)
+            {
+                __result = true;
+                return false;
+            }
+            if (MPWeapons.primaries[(int)__instance.m_weapon_type].UsesEnergy && __instance.m_energy > 0f)
+            {
+                __result = true;
+                return false;
+            }
+            else if (MPWeapons.primaries[(int)__instance.m_weapon_type].UsesAmmo && __instance.m_ammo > 0f)
+            {
+                __result = true;
+                return false;
+            }
+            else
+            {
+                __result = false;
+                return false;
+            }
+        }
+    }
+
+    // THESE 2 METHODS NEED AN OVERHAUL -- NEXTWEAPON NEEDS REIMPLEMENTING WITH AUTOSELECT STUFF REWRITTEN
+    /*
+    // TODO - bring in changes from MPAutoSelection
+    // - bring in changes from MPSniperPackets
+    // - bring in changes from MPWeaponCycling
+    // NEEDS VERIFYING AGAIN
+    [HarmonyPatch(typeof(Player), "SwitchToAmmoWeapon")]
+    static class MPWeapons_Player_SwitchToAmmoWeapon
+    {
+        public static bool Prefix(ref bool __result, Player __instance)
+        {
+            __result = false;
+            MPWeaponCycling.PBypass = true;
+
+            for (int i = 0; i < 8; i++)
+            {
+                if (MPWeapons.primaries[i].UsesAmmo)
+                {
+                    __instance.Networkm_weapon_type = (WeaponType)i;
+                    __instance.NextWeapon();
+                    __result = true;
+                    break;
+                }
+            }
+
+            MPWeaponCycling.PBypass = false;
+
+            return false;
+
+            for (int i = 0; i < 8; i++)
+            {
+
+
+            }
+        }
+    }
+
+
+    // TODO - bring in changes from MPAutoSelection
+    // - bring in changes from MPSniperPackets
+    // - bring in changes from MPWeaponCycling
+    // NEEDS VERIFYING AGAIN
+    [HarmonyPatch(typeof(Player), "SwitchToEnergyWeapon")]
+    static class MPWeapons_Player_SwitchToEnergyWeapon
+    {
+        public static bool Prefix(Player __instance)
+        {
+            MPWeaponCycling.PBypass = true;
+
+            for (int i = 7; i >= 0; i--)
+            {
+                if (MPWeapons.primaries[i].UsesEnergy)
+                {
+                    __instance.Networkm_weapon_type = (WeaponType)i;
+                }
+                __instance.NextWeapon();
+                break;
+            }
+
+            MPWeaponCycling.PBypass = false;
+
+            return false;
+        }
+    }
+    */
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(Player), "AnyAmmoWeapons")]
+    static class MPWeapons_Player_AnyAmmoWeapons
+    {
+        public static bool Prefix(ref bool __result, Player __instance)
+        {
+            __result = false;
+            for (int i = 0; i < 8; i++)
+            {
+                if (MPWeapons.primaries[i].UsesAmmo && __instance.m_weapon_level[i] != WeaponUnlock.LOCKED)
+                {
+                    __result = true;
+                    break;
+                }
+            }
+
+            return false;
+        }
+    }
+
+
+    // CCF VERIFIED
+    [HarmonyPatch(typeof(Player), "OnlyAmmoWeapons")]
+    static class MPWeapons_Player_OnlyAmmoWeapons
+    {
+        public static bool Prefix(ref bool __result, Player __instance)
+        {
+            __result = true;
+            for (int i = 0; i < 8; i++)
+            {
+                if (MPWeapons.primaries[i].UsesEnergy && __instance.m_weapon_level[i] != WeaponUnlock.LOCKED)
+                {
+                    __result = false;
+                    break;
+                }
+            }
+
+            return false;
+        }
+    }
+
+
+    // hooks in to allow weapons to physically punch ships in multiplayer
     [HarmonyPatch(typeof(PlayerShip), "ApplyDamage")]
     static class MPWeapons_PlayerShip_ApplyDamage
     {
@@ -317,8 +498,103 @@ namespace GameMod
         }
     }
 
+
+    // name replacement for primaries
+    [HarmonyPatch(typeof(Player.WeaponNamesType), "Refresh")]
+    static class MPWeapons_Player_WeaponNamesType_Refresh
+    {
+        // Postfix instead of Pre(false) to allow the array to be created properly in the original before the values are replaced
+        public static void Postfix(ref string[] ___m_values)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                ___m_values[i] = Loc.LS(MPWeapons.primaries[i].displayName);
+            }
+        }
+    }
+
+    /*
+    // name replacement for secondaries
+    [HarmonyPatch(typeof(Player.MissileNamesType), "Refresh")]
+    static class MPWeapons_Player_MissileNamesType_Refresh
+    {
+        // Postfix instead of Pre(false) to allow the array to be created properly in the original
+        public static void Postfix(ref string[] ___m_values)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                ___m_values[i] = Loc.LS(MPWeapons.secondaries[i].displayName);
+            }
+        }
+    }
+
+    // name replacement for secondaries, plural version
+    [HarmonyPatch(typeof(Player.MissileNamesPluralType), "Refresh")]
+    static class MPWeapons_Player_MissileNamesPluralType_Refresh
+    {
+        // Postfix instead of Pre(false) to allow the array to be created properly in the original
+        public static void Postfix(ref string[] ___m_values)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                ___m_values[i] = Loc.LS(MPWeapons.secondaries[i].displayNamePlural);
+            }
+        }
+    }
+    */
+
+    // missile limit and weapon tag changes
+    [HarmonyPatch(typeof(Player), MethodType.Constructor)]
+    static class MPWeapons_Player_Constructor
+    {
+        // readonly fields
+        static FieldInfo MAX_MISSILE_AMMO = typeof(Player).GetField("MAX_MISSILE_AMMO", BindingFlags.NonPublic | BindingFlags.Static);
+        static FieldInfo MAX_MISSILE_AMMO_UP = typeof(Player).GetField("MAX_MISSILE_AMMO_UP", BindingFlags.NonPublic | BindingFlags.Static);
+        static FieldInfo SUPER_MISSILE_AMMO_MP = typeof(Player).GetField("SUPER_MISSILE_AMMO_MP", BindingFlags.NonPublic | BindingFlags.Static);
+
+        public static void Postfix()
+        {
+            if (MPWeapons.NeedsUpdate)
+            {
+                MPWeapons.NeedsUpdate = false;
+
+                int[] max = new int[8];
+                int[] max_up = new int[8];
+                int[] super = new int[8];
+
+                for (int i = 0; i < 8; i++)
+                {
+                    Player.WEAPON_2A_TAG[i] = MPWeapons.primaries[i].Tag2A;
+                    Player.WEAPON_2B_TAG[i] = MPWeapons.primaries[i].Tag2B;
+                    //Player.MISSILE_2A_TAG[i] = MPWeapons.secondaries[i].Tag2A;
+                    //Player.MISSILE_2B_TAG[i] = MPWeapons.secondaries[i].Tag2B;
+
+                    //max[i] = MPWeapons.secondaries[i].ammo;
+                    //max_up[i] = MPWeapons.secondaries[i].ammoUp;
+                    //super[i] = MPWeapons.secondaries[i].ammoSuper;
+                }
+
+                //MAX_MISSILE_AMMO.SetValue(typeof(int[]), max);
+                //MAX_MISSILE_AMMO_UP.SetValue(typeof(int[]), max_up);
+                //SUPER_MISSILE_AMMO_MP.SetValue(typeof(int[]), super);
+            }
+        }
+    }
+
+
+    // ====================================================================
+    //
+    //
+    // ====================================================================
+    // Temp Lancer Functions
+    // ====================================================================
+    //
+    //
+    // ====================================================================
+
+    /*
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
-    static class MPWeapons_PlayerShip_MaybeFireWeapon
+    static class MPWeapons_PlayerShip_MaybeFireWeapon_LANCER
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes, ILGenerator gen)
         {
@@ -385,7 +661,7 @@ namespace GameMod
             }
         }
     }
-
+    */
     [HarmonyPatch(typeof(Player), "AddEnergyDefault")]
     public static class MPWeapons_Player_AddEnergyDefault
     {

@@ -5,34 +5,33 @@ using UnityEngine;
 
 namespace GameMod
 {
-    public class Impulse : Weapon
+    public class Impulse : PrimaryWeapon
     {
-        public Impulse(Ship s)
+        public Impulse()
         {
-            ship = s;
-
             displayName = "IMPULSE";
+            Tag2A = "Q";
+            Tag2B = "RF";
             UsesEnergy = true;
         }
 
-        public override void Fire(Player player, float refire_multiplier)
+        public override void Fire(float refire_multiplier)
         {
-            Vector3 c_right = (Vector3)c_right_Field.GetValue(player.c_player_ship);
-            Vector3 c_up = (Vector3)c_up_Field.GetValue(player.c_player_ship);
-            Vector3 vector = player.c_player_ship.c_forward;
-            Vector3 vector2 = c_right;
-            Vector3 vector3 = c_up;
+            Vector3 c_right = ship.c_right;
+            Vector3 c_up = ship.c_up;
+            Vector3 c_forward = ship.c_forward;
 
             player.c_player_ship.FiringVolumeModifier = 0.75f;
             ProjPrefab type = ProjPrefab.proj_impulse;
+
             if (player.m_weapon_level[(int)player.m_weapon_type] == WeaponUnlock.LEVEL_2A || (GameplayManager.IsMultiplayer && !MPClassic.matchEnabled)) //GameplayManager.IsMultiplayerActive)
             {
                 Quaternion localRotation = player.c_player_ship.c_transform.localRotation;
                 // originally ProjectileManager.PlayerFire()
                 MPSniperPackets.MaybePlayerFire(player, type, player.c_player_ship.m_muzzle_right.position, localRotation, 0f, WeaponUnlock.LEVEL_2A, true, 0);
-                MPSniperPackets.MaybePlayerFire(player, type, player.c_player_ship.m_muzzle_right.position + vector2 * ship.QdiffRightX + vector3 * ship.QdiffY + vector * ship.QdiffZ, localRotation, 0f, WeaponUnlock.LEVEL_2A, true, 1);
+                MPSniperPackets.MaybePlayerFire(player, type, player.c_player_ship.m_muzzle_right.position + c_right * ship.QdiffRightX + c_up * ship.QdiffY + c_forward * ship.QdiffZ, localRotation, 0f, WeaponUnlock.LEVEL_2A, true, 1);
                 MPSniperPackets.MaybePlayerFire(player, type, player.c_player_ship.m_muzzle_left.position, localRotation, 0f, WeaponUnlock.LEVEL_2A, true, 2);
-                MPSniperPackets.MaybePlayerFire(player, type, player.c_player_ship.m_muzzle_left.position + vector2 * ship.QdiffLeftX + vector3 * ship.QdiffY + vector * ship.QdiffZ, localRotation, 0f, WeaponUnlock.LEVEL_2A, false, 3);
+                MPSniperPackets.MaybePlayerFire(player, type, player.c_player_ship.m_muzzle_left.position + c_right * ship.QdiffLeftX + c_up * ship.QdiffY + c_forward * ship.QdiffZ, localRotation, 0f, WeaponUnlock.LEVEL_2A, false, 3);
                 player.c_player_ship.m_refire_time += 0.28f * refire_multiplier;
                 if (MPSniperPackets.AlwaysUseEnergy())
                 {

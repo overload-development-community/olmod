@@ -18,6 +18,7 @@ namespace GameMod
             private static float m_tb_overchargedamage_multiplier = 4f; // 4.0dps self-damage instead of stock 1.0dps)
             //public static float m_muzzle_adjust = 0.2f; // Projectile exit point offsets -- now handled by the definitions in MPShips using local object scaling
 
+            /*
             public static void StopThunderboltSelfDamageLoop()
             {
                 if (m_charge_loop_index != -1)
@@ -26,17 +27,20 @@ namespace GameMod
                     m_charge_loop_index = -1;
                 }
             }
+            */
 
+            /*
             private static float GetThunderboltSelfDamageMultiplier()
             {
                 return GameplayManager.IsMultiplayer ? m_tb_overchargedamage_multiplier : 1f;
             }
+            */
 
+            /*
             // Self damage and charge time
             [HarmonyPatch(typeof(PlayerShip), "ThunderCharge")]
             class MPWeaponBehavior_Thunderbolt_PlayerShip_ThunderCharge
             {
-
                 static void Prefix(PlayerShip __instance)
                 {
                     if (__instance.m_refire_time <= 0f && __instance.m_thunder_power == 0f)
@@ -77,6 +81,7 @@ namespace GameMod
                         yield return code;
                     }
                 }
+                
 
                 [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
                 class MPWeaponBehavior_Thunderbolt_PlayerShip_MaybeFireWeapon
@@ -128,6 +133,7 @@ namespace GameMod
                     }
                 }
             }
+            */
         }
     }
 }

@@ -5,20 +5,21 @@ using UnityEngine;
 
 namespace GameMod
 {
-    public class Lancer : Weapon
+    public class Lancer : PrimaryWeapon
     {
-        public Lancer(Ship s)
+        public Lancer()
         {
-            ship = s;
-
             displayName = "LANCER";
+            Tag2A = "C";
+            Tag2B = "SF";
             UsesEnergy = true;
         }
 
-        public override void Fire(Player player, float refire_multiplier)
+        public override void Fire(float refire_multiplier)
         {
-            Vector3 c_right = (Vector3)c_right_Field.GetValue(player.c_player_ship);
-            Vector3 c_up = (Vector3)c_up_Field.GetValue(player.c_player_ship);
+            Vector3 c_right = ship.c_right;
+            Vector3 c_up = ship.c_up;
+            //Vector3 c_forward = ship.c_forward;
 
             player.c_player_ship.FiringVolumeModifier = 0.75f;
             ProjPrefab type = ProjPrefab.proj_beam;
