@@ -131,6 +131,7 @@ namespace GameMod {
             Say,
             Test,
             SwitchTeam,
+            ListPlayers,
         }
 
         // properties:
@@ -251,6 +252,8 @@ namespace GameMod {
                 cmd = Command.Test;
             } else if (cmdName == "ST" || cmdName == "SWITCHTEAM") {
                 cmd = Command.SwitchTeam;
+            } else if (cmdName == "LP" || cmdName == "LISTPLAYERS") {
+                cmd = Command.ListPlayers;
             }
         }
 
@@ -342,6 +345,9 @@ namespace GameMod {
                     break;
                 case Command.SwitchTeam:
                     result = DoSwitchTeam();
+                    break;
+                case Command.ListPlayers:
+                    result = DoListPlayers();
                     break;
                 default:
                     Debug.LogFormat("CHATCMD {0}: {1} {2} was not handled by server", cmd, cmdName, arg);
@@ -763,6 +769,40 @@ namespace GameMod {
             return false;
         }
 
+        // Execute LISTPLAYERS command
+        public bool DoListPlayers()
+        {
+            int argId = -1;
+            int cnt = 0;
+
+            if (!String.IsNullOrEmpty(arg)) {
+                if (!int.TryParse(arg, NumberStyles.Number, CultureInfo.InvariantCulture, out argId)) {
+                    argId = -1;
+                }
+            }
+
+            if (argId < 0) {
+                for (int i = 0; i < NetworkServer.connections.Count; i++) {
+                    string name = FindPlayerNameForConnection(i, inLobby);
+                    if (!String.IsNullOrEmpty(name)) {
+                        ReturnToSender(String.Format("{0}: {1}",i,name));
+                        cnt++;
+                    }
+                }
+                if (cnt < 1) {
+                    ReturnToSender("LISTPLAYERS: no players found");
+                }
+            } else {
+                string name = FindPlayerNameForConnection(argId, inLobby);
+                if (!String.IsNullOrEmpty(name)) {
+                    ReturnToSender(String.Format("{0}: {1}",argId,name));
+                } else {
+                    ReturnToSender(String.Format("LISTPLAYERS: no player with connection id {0}",argId));
+                }
+            }
+            return false;
+        }
+        
         // trim down the fields in candidate so that it doesn't alias authenticated
         // Return values is the same as MPBanEntry.trim
         private int TrimBanCandidate(ref MPBanEntry candidate, MPBanEntry authenticated) {

@@ -24,6 +24,7 @@ see [the section on privilege management below](#privilege-management) for detai
  * `/SAY`: send a message to all players which are not blocked for chat
  * `/TEST <player>`: Test player name selection. No permission required for this command.
  * `/SWITCHTEAM [<player>]`: Switch the team a player is in. If used without an argument, it affects the player sending this command. Switching teams for players other than yourself requires chat command permissions.
+ * `/LISTPLAYERS [connectionId]`: List all connected players by their connection ID, or list the player for a given `connectionId`
 
 ### Player Name Matching
 
