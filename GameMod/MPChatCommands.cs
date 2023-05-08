@@ -669,8 +669,7 @@ namespace GameMod {
                 matchTimeOutInfo.SetValue(hai, offset);
                 matchStartInfo.SetValue(hai, now);
 
-                ReturnTo(String.Format("manual {0} request by {1}: {2} seconds",op,senderEntry.name,offset.TotalSeconds));
-                //ReturnToSender(String.Format("Server's timeout is now {0}",startTime));
+                ReturnTo(String.Format("manual {0} request by {1}: {2} seconds",op,senderEntry.name,seconds));
             } else {
                 Debug.LogFormat("{0} request via chat command ignored: no HostActiveMatchInfo",op);
                 ReturnToSender(String.Format("{0} rejected: no HostActiveMatchInfo",op));
