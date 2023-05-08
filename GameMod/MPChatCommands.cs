@@ -1037,6 +1037,44 @@ namespace GameMod {
             return 0;
         }
 
+        // helper class for parsing player selection data from a user-specified argument string
+        private class PlayerSelector {
+            public string pattern = null;
+            public string namePattern = null;
+            public int connectionId = -1;
+            public bool valid = false;
+
+            public PlayerSelector(string thePattern) {
+                valid = false;
+                if (!String.IsNullOrEmpty(thePattern)) {
+                    pattern = thePattern.ToUpper().Trim();
+                    int idx = pattern.IndexOf("C:");
+                    if (idx == 0) {
+                        idx += 2;
+                    } else {
+                        idx = pattern.IndexOf("CONN:");
+                        if (idx == 0) {
+                            idx += 5;
+                        }
+                    }
+                    if (idx >= 0) {
+                        if (idx < pattern.Length) {
+                            string num = pattern.Substring(idx);
+                            if (!int.TryParse(num, NumberStyles.Number, CultureInfo.InvariantCulture, out connectionId)) {
+                                connectionId = -1;
+                            }
+                            if (connectionId >= 0) {
+                                valid = true;
+                            }
+                        }
+                    } else {
+                        namePattern = pattern;
+                        valid = !String.IsNullOrEmpty(namePattern);
+                    }
+                }
+            }
+        }
+
         // Find the best match for a player
         // Search the active players in game
         // May return null if no match can be found
@@ -1047,16 +1085,24 @@ namespace GameMod {
 
             int bestScore = -1000000000;
             Player bestPlayer = null;
-            pattern = pattern.ToUpper();
-
-            foreach (var p in Overload.NetworkManager.m_Players) {
-                int score = MatchPlayerName(p.m_mp_name.ToUpper(), pattern);
-                if (score > 0) {
-                    return p;
-                }
-                if (score < 0 && score > bestScore) {
-                    bestScore = score;
-                    bestPlayer = p;
+            PlayerSelector s = new PlayerSelector(pattern);
+            if (s.valid) {
+                foreach (var p in Overload.NetworkManager.m_Players) {
+                    int score = -1000000000;
+                    if (s.connectionId >= 0) {
+                        if (p.connectionToClient.connectionId == s.connectionId) {
+                            score = 1;
+                        }
+                    } else if (!String.IsNullOrEmpty(s.namePattern)) {
+                        score = MatchPlayerName(p.m_mp_name.ToUpper(), s.namePattern);
+                    }
+                    if (score > 0) {
+                        return p;
+                    }
+                    if (score < 0 && score > bestScore) {
+                        bestScore = score;
+                        bestPlayer = p;
+                    }
                 }
             }
             if (bestPlayer == null) {
@@ -1075,16 +1121,24 @@ namespace GameMod {
 
             int bestScore = -1000000000;
             PlayerLobbyData bestPlayer = null;
-            pattern = pattern.ToUpper();
-
-            foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
-                int score = MatchPlayerName(p.Value.m_name.ToUpper(), pattern);
-                if (score > 0) {
-                    return p.Value;
-                }
-                if (score < 0 && score > bestScore) {
-                    bestScore = score;
-                    bestPlayer = p.Value;
+            PlayerSelector s = new PlayerSelector(pattern);
+            if (s.valid) {
+                foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
+                    int score = -1000000000;
+                    if (s.connectionId >= 0) {
+                        if (p.Value.m_id == s.connectionId) {
+                            score = 1;
+                        }
+                    } else if (!String.IsNullOrEmpty(s.namePattern)) {
+                        score = MatchPlayerName(p.Value.m_name.ToUpper(), s.namePattern);
+                    }
+                    if (score > 0) {
+                        return p.Value;
+                    }
+                    if (score < 0 && score > bestScore) {
+                        bestScore = score;
+                        bestPlayer = p.Value;
+                    }
                 }
             }
             if (bestPlayer == null) {

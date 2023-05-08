@@ -26,9 +26,12 @@ see [the section on privilege management below](#privilege-management) for detai
  * `/SWITCHTEAM [<player>]`: Switch the team a player is in. If used without an argument, it affects the player sending this command. Switching teams for players other than yourself requires chat command permissions.
  * `/LISTPLAYERS [connectionId]`: List all connected players by their connection ID, or list the player for a given `connectionId`
 
-### Player Name Matching
+### Player Selection and Name Matching
 
-Player names are matches the `<player>` pattern as follows:
+The argument `<player>` may either be a string pattern to match for a player name, or a connection ID, when the prefix `CONN:` or `C:` is given (like `CONN:2`, use `/LISTPLAYERS` command to get the IDs).
+You can always use the `/TEST` command to find out which player a specific `<player>` argument would select.
+
+Player names are matched to the `<player>` pattern as follows:
  * If the name matches completely, that player is selected
  * If only one player name contains the pattern, that player is selected.
  * If several player names contain the pattern:
