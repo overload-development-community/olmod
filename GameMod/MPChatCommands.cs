@@ -670,6 +670,7 @@ namespace GameMod {
                 matchStartInfo.SetValue(hai, now);
 
                 ReturnTo(String.Format("manual {0} request by {1}: {2} seconds",op,senderEntry.name,seconds));
+                ServerLobbyStatus.SendToTracker(); // update the tracker
             } else {
                 Debug.LogFormat("{0} request via chat command ignored: no HostActiveMatchInfo",op);
                 ReturnToSender(String.Format("{0} rejected: no HostActiveMatchInfo",op));
