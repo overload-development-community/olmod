@@ -772,33 +772,38 @@ namespace GameMod {
         // Execute LISTPLAYERS command
         public bool DoListPlayers()
         {
-            int argId = -1;
+            int argIdLow = -1;
+            int argIdHigh = -1;
             int cnt = 0;
 
             if (!String.IsNullOrEmpty(arg)) {
-                if (!int.TryParse(arg, NumberStyles.Number, CultureInfo.InvariantCulture, out argId)) {
-                    argId = -1;
+                string[] parts = arg.Split(' ');
+                if (parts.Length > 0) {
+                    if (!int.TryParse(parts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out argIdLow)) {
+                        argIdLow = -1;
+                    }
+                }
+                if (parts.Length > 1) {
+                    if (!int.TryParse(parts[1], NumberStyles.Number, CultureInfo.InvariantCulture, out argIdHigh)) {
+                        argIdHigh = -1;
+                    }
+                }
+                if (argIdHigh < 0) {
+                    argIdHigh = argIdLow;
                 }
             }
 
-            if (argId < 0) {
-                for (int i = 0; i < NetworkServer.connections.Count; i++) {
+            for (int i = 0; i < NetworkServer.connections.Count; i++) {
+                if (argIdLow < 0 || (i >= argIdLow && i <= argIdHigh)) {
                     string name = FindPlayerNameForConnection(i, inLobby);
                     if (!String.IsNullOrEmpty(name)) {
                         ReturnToSender(String.Format("{0}: {1}",i,name));
                         cnt++;
                     }
                 }
-                if (cnt < 1) {
-                    ReturnToSender("LISTPLAYERS: no players found");
-                }
-            } else {
-                string name = FindPlayerNameForConnection(argId, inLobby);
-                if (!String.IsNullOrEmpty(name)) {
-                    ReturnToSender(String.Format("{0}: {1}",argId,name));
-                } else {
-                    ReturnToSender(String.Format("LISTPLAYERS: no player with connection id {0}",argId));
-                }
+            }
+            if (cnt < 1) {
+                ReturnToSender("LISTPLAYERS: no players found");
             }
             return false;
         }
