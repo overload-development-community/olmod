@@ -243,7 +243,7 @@ namespace GameMod {
             } else if (cmdName == "EX" || cmdName == "EXTEND") {
                 cmd = Command.Extend;
                 needAuth = true;
-            } else if (cmdName == "STATUS") {
+            } else if (cmdName == "I" || cmdName == "INFO" || cmdName == "STATUS") {
                 cmd = Command.Status;
             } else if (cmdName == "SAY" || cmdName == "CHAT") {
                 cmd = Command.Say;

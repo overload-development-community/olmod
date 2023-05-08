@@ -20,7 +20,7 @@ see [the section on privilege management below](#privilege-management) for detai
  * `/GIVEPERM <player>`: grant a player the chat command permissions.
  * `/REVOKEPERM [<player>]`: revoke chat command permissions from a player or all players.
  * `/AUTH password`: a server operator can also start the server with the commandline argument `-chatCommandPassword serverPassword`. Any Player knowing this password can get to authenticated state with this command. If no `serverPassword` is set, this command always fails. Note that the password check is **not** case-sensitive.
- * `/STATUS`: short info about chat command and ban status. No permission required for this command.
+ * `/STATUS` or `/INFO`: short info about chat command and ban status. No permission required for this command.
  * `/SAY`: send a message to all players which are not blocked for chat
  * `/TEST <player>`: Test player name selection. No permission required for this command.
  * `/SWITCHTEAM [<player>]`: Switch the team a player is in. If used without an argument, it affects the player sending this command. Switching teams for players other than yourself requires chat command permissions.
