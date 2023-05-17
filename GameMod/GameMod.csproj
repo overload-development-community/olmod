@@ -206,6 +206,7 @@
     <Compile Include="MPTeamsEnemyArrow.cs" />
     <Compile Include="MPTweaks.cs" />
     <Compile Include="MPUnlockAll.cs" />
+    <Compile Include="MPValidatePlayerNames.cs" />
     <Compile Include="MPWeaponBehavior.cs" />
     <Compile Include="MPWeaponCycling.cs" />
     <Compile Include="MusicCustom.cs" />
