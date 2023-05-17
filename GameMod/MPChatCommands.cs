@@ -131,6 +131,7 @@ namespace GameMod {
             Say,
             Test,
             SwitchTeam,
+            ListPlayers,
         }
 
         // properties:
@@ -243,7 +244,7 @@ namespace GameMod {
             } else if (cmdName == "EX" || cmdName == "EXTEND") {
                 cmd = Command.Extend;
                 needAuth = true;
-            } else if (cmdName == "STATUS") {
+            } else if (cmdName == "I" || cmdName == "INFO" || cmdName == "STATUS") {
                 cmd = Command.Status;
             } else if (cmdName == "SAY" || cmdName == "CHAT") {
                 cmd = Command.Say;
@@ -251,6 +252,8 @@ namespace GameMod {
                 cmd = Command.Test;
             } else if (cmdName == "ST" || cmdName == "SWITCHTEAM") {
                 cmd = Command.SwitchTeam;
+            } else if (cmdName == "LP" || cmdName == "LISTPLAYERS") {
+                cmd = Command.ListPlayers;
             }
         }
 
@@ -342,6 +345,9 @@ namespace GameMod {
                     break;
                 case Command.SwitchTeam:
                     result = DoSwitchTeam();
+                    break;
+                case Command.ListPlayers:
+                    result = DoListPlayers();
                     break;
                 default:
                     Debug.LogFormat("CHATCMD {0}: {1} {2} was not handled by server", cmd, cmdName, arg);
@@ -663,8 +669,8 @@ namespace GameMod {
                 matchTimeOutInfo.SetValue(hai, offset);
                 matchStartInfo.SetValue(hai, now);
 
-                ReturnTo(String.Format("manual {0} request by {1}: {2} seconds",op,senderEntry.name,offset.TotalSeconds));
-                //ReturnToSender(String.Format("Server's timeout is now {0}",startTime));
+                ReturnTo(String.Format("manual {0} request by {1}: {2} seconds",op,senderEntry.name,seconds));
+                ServerLobbyStatus.SendToTracker(); // update the tracker
             } else {
                 Debug.LogFormat("{0} request via chat command ignored: no HostActiveMatchInfo",op);
                 ReturnToSender(String.Format("{0} rejected: no HostActiveMatchInfo",op));
@@ -763,6 +769,45 @@ namespace GameMod {
             return false;
         }
 
+        // Execute LISTPLAYERS command
+        public bool DoListPlayers()
+        {
+            int argIdLow = -1;
+            int argIdHigh = -1;
+            int cnt = 0;
+
+            if (!String.IsNullOrEmpty(arg)) {
+                string[] parts = arg.Split(' ');
+                if (parts.Length > 0) {
+                    if (!int.TryParse(parts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out argIdLow)) {
+                        argIdLow = -1;
+                    }
+                }
+                if (parts.Length > 1) {
+                    if (!int.TryParse(parts[1], NumberStyles.Number, CultureInfo.InvariantCulture, out argIdHigh)) {
+                        argIdHigh = -1;
+                    }
+                }
+                if (argIdHigh < 0) {
+                    argIdHigh = argIdLow;
+                }
+            }
+
+            for (int i = 0; i < NetworkServer.connections.Count; i++) {
+                if (argIdLow < 0 || (i >= argIdLow && i <= argIdHigh)) {
+                    string name = FindPlayerNameForConnection(i, inLobby);
+                    if (!String.IsNullOrEmpty(name)) {
+                        ReturnToSender(String.Format("{0}: {1}",i,name));
+                        cnt++;
+                    }
+                }
+            }
+            if (cnt < 1) {
+                ReturnToSender("LISTPLAYERS: no players found");
+            }
+            return false;
+        }
+        
         // trim down the fields in candidate so that it doesn't alias authenticated
         // Return values is the same as MPBanEntry.trim
         private int TrimBanCandidate(ref MPBanEntry candidate, MPBanEntry authenticated) {
@@ -997,6 +1042,44 @@ namespace GameMod {
             return 0;
         }
 
+        // helper class for parsing player selection data from a user-specified argument string
+        private class PlayerSelector {
+            public string pattern = null;
+            public string namePattern = null;
+            public int connectionId = -1;
+            public bool valid = false;
+
+            public PlayerSelector(string thePattern) {
+                valid = false;
+                if (!String.IsNullOrEmpty(thePattern)) {
+                    pattern = thePattern.ToUpper().Trim();
+                    int idx = pattern.IndexOf("C:");
+                    if (idx == 0) {
+                        idx += 2;
+                    } else {
+                        idx = pattern.IndexOf("CONN:");
+                        if (idx == 0) {
+                            idx += 5;
+                        }
+                    }
+                    if (idx >= 0) {
+                        if (idx < pattern.Length) {
+                            string num = pattern.Substring(idx);
+                            if (!int.TryParse(num, NumberStyles.Number, CultureInfo.InvariantCulture, out connectionId)) {
+                                connectionId = -1;
+                            }
+                            if (connectionId >= 0) {
+                                valid = true;
+                            }
+                        }
+                    } else {
+                        namePattern = pattern;
+                        valid = !String.IsNullOrEmpty(namePattern);
+                    }
+                }
+            }
+        }
+
         // Find the best match for a player
         // Search the active players in game
         // May return null if no match can be found
@@ -1007,16 +1090,24 @@ namespace GameMod {
 
             int bestScore = -1000000000;
             Player bestPlayer = null;
-            pattern = pattern.ToUpper();
-
-            foreach (var p in Overload.NetworkManager.m_Players) {
-                int score = MatchPlayerName(p.m_mp_name.ToUpper(), pattern);
-                if (score > 0) {
-                    return p;
-                }
-                if (score < 0 && score > bestScore) {
-                    bestScore = score;
-                    bestPlayer = p;
+            PlayerSelector s = new PlayerSelector(pattern);
+            if (s.valid) {
+                foreach (var p in Overload.NetworkManager.m_Players) {
+                    int score = -1000000000;
+                    if (s.connectionId >= 0) {
+                        if (p.connectionToClient.connectionId == s.connectionId) {
+                            score = 1;
+                        }
+                    } else if (!String.IsNullOrEmpty(s.namePattern)) {
+                        score = MatchPlayerName(p.m_mp_name.ToUpper(), s.namePattern);
+                    }
+                    if (score > 0) {
+                        return p;
+                    }
+                    if (score < 0 && score > bestScore) {
+                        bestScore = score;
+                        bestPlayer = p;
+                    }
                 }
             }
             if (bestPlayer == null) {
@@ -1035,16 +1126,24 @@ namespace GameMod {
 
             int bestScore = -1000000000;
             PlayerLobbyData bestPlayer = null;
-            pattern = pattern.ToUpper();
-
-            foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
-                int score = MatchPlayerName(p.Value.m_name.ToUpper(), pattern);
-                if (score > 0) {
-                    return p.Value;
-                }
-                if (score < 0 && score > bestScore) {
-                    bestScore = score;
-                    bestPlayer = p.Value;
+            PlayerSelector s = new PlayerSelector(pattern);
+            if (s.valid) {
+                foreach (KeyValuePair<int, PlayerLobbyData> p in NetworkMatch.m_players) {
+                    int score = -1000000000;
+                    if (s.connectionId >= 0) {
+                        if (p.Value.m_id == s.connectionId) {
+                            score = 1;
+                        }
+                    } else if (!String.IsNullOrEmpty(s.namePattern)) {
+                        score = MatchPlayerName(p.Value.m_name.ToUpper(), s.namePattern);
+                    }
+                    if (score > 0) {
+                        return p.Value;
+                    }
+                    if (score < 0 && score > bestScore) {
+                        bestScore = score;
+                        bestPlayer = p.Value;
+                    }
                 }
             }
             if (bestPlayer == null) {
