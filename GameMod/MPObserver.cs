@@ -588,6 +588,11 @@ namespace GameMod {
                         MPObserver.SetObservedPlayer(player);
                     }
                 }
+                // MPSpawnExtensionVis binding
+                if (cc_type == CCInput.SMASH_ATTACK && MPSpawnExtensionVis.visualizing && Controls.JustPressed(CCInput.SMASH_ATTACK))
+                {
+                    MPSpawnExtensionVis.TriggerSpawnToggle();
+                }
             }
         }
     }
