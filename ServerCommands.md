@@ -20,14 +20,20 @@ see [the section on privilege management below](#privilege-management) for detai
  * `/GIVEPERM <player>`: grant a player the chat command permissions.
  * `/REVOKEPERM [<player>]`: revoke chat command permissions from a player or all players.
  * `/AUTH password`: a server operator can also start the server with the commandline argument `-chatCommandPassword serverPassword`. Any Player knowing this password can get to authenticated state with this command. If no `serverPassword` is set, this command always fails. Note that the password check is **not** case-sensitive.
- * `/STATUS`: short info about chat command and ban status. No permission required for this command.
+ * `/STATUS` or `/INFO`: short info about chat command and ban status. No permission required for this command.
  * `/SAY`: send a message to all players which are not blocked for chat
  * `/TEST <player>`: Test player name selection. No permission required for this command.
  * `/SWITCHTEAM [<player>]`: Switch the team a player is in. If used without an argument, it affects the player sending this command. Switching teams for players other than yourself requires chat command permissions.
+ * `/LISTPLAYERS [connectionId1 [connectionId2]]`: List players by their connection ID. If no arguments are given, all players are listed. If a single argument is given, it is treated as a connection ID and only
+   the player on that ID is queried. If two arguments are given (separated by a single space character), they are treated as a range of connection IDs. Since the chat history shows at most 8 entries, you can split it into multiple queries that way.
 
-### Player Name Matching
+### Player Selection and Name Matching
 
-Player names are matches the `<player>` pattern as follows:
+The argument `<player>` may either be a string pattern to match for a player name, or a connection ID, when the prefix `CONN:` or `C:` is given (like `CONN:2`, use `/LISTPLAYERS` command to get the IDs).
+You can always use the `/TEST` command to find out which player a specific `<player>` argument would select. The selection by connection ID is useful when there are player names with characters which 
+can't be typed in your current language.
+
+Player names are matched to the `<player>` pattern as follows:
  * If the name matches completely, that player is selected
  * If only one player name contains the pattern, that player is selected.
  * If several player names contain the pattern:
