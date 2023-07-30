@@ -270,13 +270,12 @@ namespace GameMod
         [HarmonyPatch(typeof(Controls), "OnControllerConnected")]
         internal class ExtendedConfig_Controls_OnControllerConnected
         {
-            static void Prefix()
+            static void Postfix()
             {
                 //Debug.Log("ExtendedConfig_Controls_OnControllerConnected");
                 if (!Network.isServer)
                 {
-                    ExtendedConfig_PilotManager_Select.LoadPilotExtendedConfig(PilotManager.PilotName);
-                    //PilotManager.Select(PilotManager.ActivePilot);
+                    PilotManager.Select(PilotManager.ActivePilot);
                 }
             }
         }
@@ -672,6 +671,9 @@ namespace GameMod
 
             public static void Load(List<string> section)
             {
+                Debug.Log("\n--------- JOYSTICK CURVES ---------");
+
+                // Remove Whitespaces
                 for (int i = 0; i < section.Count; i++)
                 {
                     if (!string.IsNullOrEmpty(section[i]) && section[i].Length > 3)
@@ -679,7 +681,8 @@ namespace GameMod
                         section[i] = section[i].Substring(3);
                     }
                 }
-
+                
+                // Save the current configuration in case we need to reset back to it when we encounter an error
                 List<Controller> copy_of_controllers = new List<Controller>();
                 foreach (Controller c in controllers)
                 {
@@ -709,7 +712,6 @@ namespace GameMod
                     // read in the amount of controllers that are saved in this curve section
                     int.TryParse(section[++index], out int val);
                     int numControllers = val;
-
 
                     List<Controller> inactive_devices = new List<Controller>();
                     List<Controller> all_devices = new List<Controller>();
@@ -784,7 +786,7 @@ namespace GameMod
                             if (index2 != -1 && index2 < Controls.m_controllers.Count)
                             {
                                 // device has no id and there are no other devices with ids either 
-                                if (all_devices.Find((Controller c) => c.name == Controls.m_controllers[index2].name && c.id == Controls.m_controllers[index2].joystickID) == null)
+                                if (all_devices.Find((Controller c) => c.name == Controls.m_controllers[index2].name && c.id == Controls.m_controllers[index2].joystickID && c.id != -1) == null)
                                 {
                                     int[] matching_device_indexes = FindControllerIndexes(device.name, device.id, false);
                                     if (matching_device_indexes.Length > 0 && matching_device_indexes.Length > controller_types[device.name])
@@ -802,6 +804,7 @@ namespace GameMod
                         }
                     }
 
+                    
                     foreach (Controller c in inactive_devices)
                     {
                         Debug.Log("  readded inactive controller: " + c.name);
