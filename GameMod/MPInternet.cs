@@ -853,7 +853,7 @@ namespace GameMod {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             int state = 0;
-            Label jumpTarget;
+            Label jumpTarget = default;
             LocalBuilder theVar = null;
             List<CodeInstruction> instructionsAfter = new List<CodeInstruction>();
 
