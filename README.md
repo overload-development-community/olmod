@@ -1,4 +1,4 @@
-## olmod 0.5.8 - Overload mod
+## olmod 0.5.9 - Overload mod
 
 **Community mods for Overload**
 
@@ -194,6 +194,16 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - New matcen HP cap calculation for level designers, by Kevin.
 
 - Boss 2B available for use in single player campaigns, by Kevin.
+
+- Audio taunts, by luponix.  See https://github.com/overload-development-community/olmod/wiki/Audio-taunts for details.
+
+- Packet loss monitor, by Fireball.
+
+- Colored creepers in team games, by Fireball.
+
+- Options to use a different mesh collider in multiplayer, by Fireball.
+
+- Frame limiting, by luponix.
 
 ##### Linux
 

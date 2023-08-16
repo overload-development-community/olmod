@@ -286,11 +286,7 @@ namespace GameMod {
                 MPLoadouts.Loadouts[3].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[1].missiles[0]);
 
                 MPAudioTaunts.AClient.active = ModPrefs.GetBool("MP_AUDIOTAUNTS_ACTIVE", true);
-                MPAudioTaunts.AClient.loaded_local_taunts = ModPrefs.GetString("MP_LOCAL_AUDIOTAUNTS", MPAudioTaunts.AClient.loaded_local_taunts);
-                MPAudioTaunts.AClient.LoadLocalAudioTauntsFromPilotPrefs();
                 MPAudioTaunts.AClient.audio_taunt_volume = ModPrefs.GetInt("MP_AUDIOTAUNT_VOLUME", 50);
-                for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++){
-                    MPAudioTaunts.AClient.keybinds[i] = ModPrefs.GetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), -1);}
                 MPAudioTaunts.AClient.display_audio_spectrum = ModPrefs.GetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", true);
 
                 Menus.mms_collision_mesh = ModPrefs.GetInt("MP_COLLIDER_MESH", 0);
@@ -299,6 +295,7 @@ namespace GameMod {
                 Menus.mms_ships_allowed = ModPrefs.GetInt("MP_SHIPS_ALLOWED", 1);
                 MPShips.selected_idx = ModPrefs.GetInt("MP_SHIP_TYPE", 0);
 
+                FramerateLimiter.target_framerate = ModPrefs.GetInt("TARGET_FRAMERATE", 0);
             }
             else // for compatibility with old olmod, no need to add new settings
             {
@@ -385,11 +382,9 @@ namespace GameMod {
             ModPrefs.SetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
             ModPrefs.SetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
             ModPrefs.SetBool("MP_AUDIOTAUNTS_ACTIVE", MPAudioTaunts.AClient.active);
-            ModPrefs.SetString("MP_LOCAL_AUDIOTAUNTS", MPAudioTaunts.AClient.ChainTogetherHashesOfLocalTaunts());
             ModPrefs.SetInt("MP_AUDIOTAUNT_VOLUME", MPAudioTaunts.AClient.audio_taunt_volume);
-            for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++){
-                ModPrefs.SetInt("MP_AUDIOTAUNT_KEYBIND_" + i.ToString(), MPAudioTaunts.AClient.keybinds[i]);}
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
+            ModPrefs.SetInt("TARGET_FRAMERATE", FramerateLimiter.target_framerate);
 
             ModPrefs.SetInt("MP_COLLIDER_MESH", Menus.mms_collision_mesh);
 

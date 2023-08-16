@@ -1443,6 +1443,9 @@ namespace GameMod
         // since Unity actively attempts to outsmart me by reusing previous
         // ParticleSystems and getting leftover TA colors despite my efforts.
 
+        public static float s_intensity = 0.6f;
+        public static float s_EdgePower = 1.44f;
+        public static float s_EdgeStrength = 0.26f;
         public static Color s_glow = new Color(1f, 0.706f, 0.265f, 0.234f);
         public static Color s_trail = new Color(1f, 0.419f, 0.074f, 0.853f);
         public static Color s_ring = new Color(1f, 0.173f, 0.039f, 0.392f);
@@ -1451,23 +1454,34 @@ namespace GameMod
         {
             if (__instance.m_type == ProjPrefab.missile_creeper && !GameplayManager.IsDedicatedServer())
             {
+                Light light = __instance.c_go.GetComponent<Light>();
+                light.intensity = s_intensity;
+
                 if (GameplayManager.IsMultiplayerActive && NetworkMatch.IsTeamMode(NetworkMatch.GetMode()) && Menus.mms_creeper_colors)
                 {
                     var teamcolor = UIManager.ChooseMpColor(__instance.m_mp_team);
-                    //var teamcolor = Color.Lerp(UIManager.ChooseMpColor(__instance.m_mp_team), Color.white, 0.1f); // brightens things slightly
 
-                    __instance.c_go.GetComponent<Light>().color = teamcolor;
+                    light.color = teamcolor;
 
                     foreach (var rend in __instance.c_go.GetComponentsInChildren<Renderer>(includeInactive: true))
                     {
                         if (rend.name == "_glow" || rend.name == "extra_glow")
                         {
+                            //Debug.Log("CCF found rend " + rend.name);
                             foreach (var mat in rend.materials)
                             {
-                                if (mat.name == "_glow_superbright1_yellow" || mat.name == "enemy_creeper1")
+                                //Debug.Log("CCF found mat " + mat.name);
+                                if (mat.name == "_glow_superbright1_yellow (Instance)")
                                 {
                                     mat.color = teamcolor;
                                     mat.SetColor("_EmissionColor", teamcolor);
+                                }
+                                else if (mat.name == "enemy_creeper1 (Instance)")
+                                {
+                                    mat.color = teamcolor;
+                                    mat.SetColor("_EmissionColor", teamcolor);
+                                    mat.SetFloat("_EdgePower", s_EdgePower);
+                                    mat.SetFloat("_EdgeStrength", s_EdgeStrength);
                                 }
                             }
                         }
@@ -1476,10 +1490,31 @@ namespace GameMod
                     {
                         var m = x.main;
                         m.startColor = teamcolor;
+                        if (x.name == "_glow")
+                        {
+                            var col = x.colorOverLifetime;
+                            var c = col.color;
+                            c.color = Color.clear;
+                            c.mode = ParticleSystemGradientMode.Gradient;
+                            col.color = c;
+                        }
                     }
                 }
                 else
                 {
+                    foreach (var rend in __instance.m_robot_only_extra_mesh.GetComponentsInChildren<Renderer>(includeInactive: true).Where(x => x.name == "extra_glow"))
+                    {
+                        foreach (var mat in rend.materials.Where(x => x.name == "enemy_creeper1 (Instance)"))
+                        {
+
+                            if (mat.name == "enemy_creeper1 (Instance)")
+                            {
+                                mat.SetFloat("_EdgePower", s_EdgePower);
+                                mat.SetFloat("_EdgeStrength", s_EdgeStrength);
+                            }
+                        }
+                    }
+
                     foreach (var x in __instance.c_go.GetComponentsInChildren<ParticleSystem>(includeInactive: true))
                     {
                         var m = x.main;
@@ -1487,6 +1522,11 @@ namespace GameMod
                         {
                             case "_glow":
                                 m.startColor = s_glow;
+                                var col = x.colorOverLifetime;
+                                var c = col.color;
+                                c.color = Color.clear;
+                                c.mode = ParticleSystemGradientMode.Gradient;
+                                col.color = c;
                                 break;
                             case "partilce_ring": // No, I didn't misspell that. Revival did.
                                 m.startColor = s_ring;
@@ -1505,36 +1545,51 @@ namespace GameMod
     [HarmonyPatch(typeof(Projectile), "FixedUpdateDynamic")]
     static class MPTeams_Projectile_FixedUpdateDynamic
     {
-        const float offTime = 0.2f;
-        const float cycleTime = 1.2f;
-
-        static bool glowOn = false;
-        static float nextOff = offTime;
-        static float nextTime = 0f;
-        static float tempNext = 0f;
+        const float offTime = 0.75f;
+        const float cycleTime = 1f;
 
         static void Postfix(Projectile __instance)
         {
             if (GameplayManager.IsMultiplayerActive && Menus.mms_creeper_colors && MenuManager.mms_friendly_fire != 1 && __instance.m_type == ProjPrefab.missile_creeper && __instance.m_owner_player.isLocalPlayer)
             {
-                if (!__instance.m_robot_only_extra_mesh.activeSelf && nextTime <= Time.time)
+                var time = Time.time % cycleTime;
+
+                // 0f ... 1f value
+                var pulse = Mathf.Clamp(Math.Abs(time - offTime / 2) / (offTime / 2), 0, 1);
+
+                // Enemy creeper light
+                __instance.m_robot_only_extra_mesh.SetActive(pulse < 1f);
+
+                if (pulse < 1f)
                 {
-                    if (!glowOn)
+                    foreach (var rend in __instance.m_robot_only_extra_mesh.GetComponentsInChildren<Renderer>(includeInactive: true))
                     {
-                        nextOff = Time.time + offTime;
-                        tempNext = Time.time + cycleTime;
-                        glowOn = true;
+                        if (rend.name == "extra_glow")
+                        {
+                            foreach (var mat in rend.materials)
+                            {
+                                
+                                if (mat.name == "enemy_creeper1 (Instance)")
+                                {
+                                    mat.SetFloat("_EdgePower", 5f - 4f * (1f - pulse));
+                                    mat.SetFloat("_EdgeStrength", 3f * (1f - pulse));
+                                }
+                            }
+                        }
                     }
-                    __instance.m_robot_only_extra_mesh.SetActive(true);
                 }
-                if (__instance.m_robot_only_extra_mesh.activeSelf && nextOff <= Time.time)
+
+                // Team color creeper light
+                var light = __instance.c_go.GetComponent<Light>();
+                var color = light.color;
+                color.a = pulse;
+
+                light.intensity = 0.25f + pulse * 0.75f;
+
+                foreach (var ps in __instance.c_go.GetComponentsInChildren<ParticleSystem>().Where(x => x.name == "_glow"))
                 {
-                    if (glowOn)
-                    {
-                        nextTime = tempNext;
-                        glowOn = false;
-                    }
-                    __instance.m_robot_only_extra_mesh.SetActive(false);
+                    var col = ps.colorOverLifetime; // this one is different on purpose - first time sets the mode the "color", then just updates from there
+                    col.color = color;
                 }
             }
         }

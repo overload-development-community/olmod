@@ -170,10 +170,10 @@ namespace GameMod
         // Action for input binding "Toggle Loadout Primary"
         public static void ToggleLoadoutPrimary(Player player)
         {
-            //if (Menus.mms_classic_spawns)
-                //return;
-            
-            var nextWeapon = WeaponType.NUM;
+            if (Menus.mms_classic_spawns)
+                return;
+
+                var nextWeapon = WeaponType.NUM;
             if (NetworkMatch.m_force_loadout == 1)
             {
                 if (NetworkMatch.m_force_w2 == WeaponType.NUM)
@@ -607,7 +607,7 @@ namespace GameMod
             color.a = uie.m_alpha;
             UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
             color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, MPWeapons.secondaries[(int)mt].icon_idx); //CCF NEEDS SWITCHING ONCE MISSILES ARE IMPLEMENTED
+            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, MPWeapons.secondaries[(int)mt].icon_idx);
             uie.DrawStringSmall(Player.GetMissileNameNoDefault(mt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
         }
 

@@ -1,3 +1,22 @@
+v0.5.9 - 2023-04-10
+
+- Audio taunts have been added to multiplayer!  It can be turned off when setting up a game.  See https://github.com/overload-development-community/olmod/wiki/Audio-taunts for details. (Thanks, luponix!)
+- Packet loss is now visible in multiplayer games. (Thanks, Fireball!)
+- Creepers are now color coded in team games.  Your own creepers will also pulse to indicate that they are yours, and will do damage to you when they time out. (Thanks, Fireball!)
+- In weapon autoselect, you can now exclude weapons from previous/next cycling. (Thanks, Fireball!)
+- There is now extremely simple filtering on the map list for multiplayer maps.  On the map selection screen, start typing the name of the map, and the list will be filtered.  (Thanks, derhass!)
+- There is an option when creating a new game to use low poly mesh colliders. (Thanks, Fireball!)
+- Graphics options now include a frame limiter.  Set to 0 for unlimited.  Only works when vsync is off. (Thanks, luponix!)
+- Many fixes have been made in Capture the Flag when Join in Progess is enabled. (Thanks, Fireball!)
+- Reinitializing audio no longer resets volumes to 100%.
+- Options for the reflex cannon and reflex cannon spawns are removed in games where the reflex sidearm is enabled. (Thanks, Fireball!)
+- Boost is now properly updated when energy is gained as normal.
+- Ammo is once again given when you force custom loadouts that are ammo only.
+- The tracker should report the correct weapon on unassisted suicides (suicides that actually count as a suicide).
+- The join timeout has been reduced from 60 seconds to 5 seconds. (Thanks, derhass!)
+- A transpiling fix has been made for Linux builds. (Thanks, derhass!)
+- The left arrow for the axis of controllers now works. (Thanks, Tobias!)
+
 v0.5.8 - 2022-10-30
 
 - Restore functionality of Armor Toughness, Move Speed, and Energy Efficiency mods that were broken as of v0.5.6.
