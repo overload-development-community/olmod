@@ -18,7 +18,9 @@ namespace GameMod
         LancerCharge3s = 486,
         LancerCharge2s5 = 487,
         LancerCharge2s = 488,
-        NUM = 489
+        PlasmaFire1 = 489,
+        PlasmaFire2 = 490,
+        NUM = 491
         //tbbolt = 486,
         //novathrust = 487,
         //devthrust = 488,

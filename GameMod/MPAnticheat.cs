@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace GameMod
 {
+    /*
     [HarmonyPatch(typeof(PlayerShip), "ProcessFiringControls")]
     internal class ProcessFiringControls
     {
@@ -30,17 +31,20 @@ namespace GameMod
                 return;
             }
 
-            if (__instance.c_player.m_weapon_type != WeaponType.CRUSHER && __instance.c_player.m_weapon_type != WeaponType.LANCER) {
+            //if (__instance.c_player.m_weapon_type != WeaponType.CRUSHER && __instance.c_player.m_weapon_type != WeaponType.LANCER) {
+            if (MPWeapons.primaries[(int)__instance.c_player.m_weapon_type].firingMode != FiringMode.SEMI_AUTO)
+            {
                 return;
             }
 
             if (__instance.m_refire_time > 0)
             {
-                __instance.m_refire_time = Mathf.Max(__instance.m_refire_time, 1f / 20f);
+                __instance.m_refire_time = Mathf.Max(__instance.m_refire_time, 0.05f); // 1f / 20f
             }
             return;
         }
     }
+    */
 
     [HarmonyPatch(typeof(Controls), "ReadControlData")]
     internal class ReadControlData

@@ -596,7 +596,7 @@ namespace GameMod
             color.a = uie.m_alpha;
             UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
             color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(26 + wt));
+            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, MPWeapons.primaries[(int)wt].icon_idx);
             uie.DrawStringSmall(Player.GetWeaponNameNoDefault(wt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
         }
 
@@ -607,7 +607,7 @@ namespace GameMod
             color.a = uie.m_alpha;
             UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
             color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(104 + mt));
+            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, MPWeapons.secondaries[(int)mt].icon_idx); //CCF NEEDS SWITCHING ONCE MISSILES ARE IMPLEMENTED
             uie.DrawStringSmall(Player.GetMissileNameNoDefault(mt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
         }
 

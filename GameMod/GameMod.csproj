@@ -104,6 +104,7 @@
     <Compile Include="AddOnLevelSort.cs" />
     <Compile Include="AmbientUnload.cs" />
     <Compile Include="AxisCountFix.cs" />
+    <Compile Include="MPWeaponEnums.cs" />
     <Compile Include="MPWeapons.cs" />
     <Compile Include="MPShips.cs" />
     <Compile Include="MPColliderSwap.cs" />
@@ -211,10 +212,19 @@
     <Compile Include="MusicCustom.cs" />
     <Compile Include="PoorMansProfiler.cs" />
     <Compile Include="PrevWeaponFix.cs" />
+    <Compile Include="Primaries\MSImpulse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PresetData.cs" />
     <Compile Include="RearView.cs" />
     <Compile Include="Debugging.cs" />
+    <Compile Include="Secondaries\Devastator.cs" />
+    <Compile Include="Secondaries\Vortex.cs" />
+    <Compile Include="Secondaries\TimeBomb.cs" />
+    <Compile Include="Secondaries\Nova.cs" />
+    <Compile Include="Secondaries\Creeper.cs" />
+    <Compile Include="Secondaries\Hunter.cs" />
+    <Compile Include="Secondaries\MissilePod.cs" />
+    <Compile Include="Secondaries\Falcon.cs" />
     <Compile Include="ServerCleanup.cs" />
     <Compile Include="ServerPing.cs" />
     <Compile Include="ServerPort.cs" />
@@ -235,14 +245,17 @@
     <Compile Include="VSync.cs" />
     <Compile Include="Boss2B.cs" />
     <Compile Include="MatcenHp.cs" />
-    <Compile Include="Weapons\Thunderbolt.cs" />
-    <Compile Include="Weapons\Reflex.cs" />
-    <Compile Include="Weapons\Lancer.cs" />
-    <Compile Include="Weapons\Impulse.cs" />
-    <Compile Include="Weapons\Flak.cs" />
-    <Compile Include="Weapons\Driller.cs" />
-    <Compile Include="Weapons\Cyclone.cs" />
-    <Compile Include="Weapons\Crusher.cs" />
+    <Compile Include="Primaries\Burstfire.cs" />
+    <Compile Include="Primaries\MDLance.cs" />
+    <Compile Include="Primaries\Plasma.cs" />
+    <Compile Include="Primaries\Thunderbolt.cs" />
+    <Compile Include="Primaries\Reflex.cs" />
+    <Compile Include="Primaries\Lancer.cs" />
+    <Compile Include="Primaries\Impulse.cs" />
+    <Compile Include="Primaries\Flak.cs" />
+    <Compile Include="Primaries\Driller.cs" />
+    <Compile Include="Primaries\Cyclone.cs" />
+    <Compile Include="Primaries\Crusher.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />
@@ -253,8 +266,6 @@
     <EmbeddedResource Include="Resources\meshes" />
     <EmbeddedResource Include="Resources\audio" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Secondaries\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

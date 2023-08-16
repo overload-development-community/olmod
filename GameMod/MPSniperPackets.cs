@@ -95,7 +95,10 @@ namespace GameMod
             // Set this to false so that creepers and time bombs do not explode unless the server tells us.
             CreeperSyncExplode.m_allow_explosions = false;
 
-            if (player.isLocalPlayer && type == ProjPrefab.missile_devastator)
+            Weapon weapon = MPWeapons.WeaponLookup[(int)type];
+
+            //if (player.isLocalPlayer && type == ProjPrefab.missile_devastator)
+            if (player.isLocalPlayer && weapon != null && weapon.firingMode == FiringMode.DETONATOR && (int)type == (int)weapon.projprefab) // we only want this on the main projectile
             {
                 MPSniperPackets.justFiredDev = true;
             }
@@ -105,7 +108,8 @@ namespace GameMod
                 return null;
             }
 
-            if (player.isLocalPlayer && type != ProjPrefab.missile_devastator_mini && type != ProjPrefab.missile_smart_mini)
+            //if (player.isLocalPlayer && type != ProjPrefab.missile_devastator_mini && type != ProjPrefab.missile_smart_mini)
+            if (player.isLocalPlayer && weapon != null && (int)type == (int)weapon.projprefab) // if it indexed to this but it's not projprefab, it's the subprojectile
             {
                 Client.GetClient().Send(MessageTypes.MsgSniperPacket, new SniperPacketMessage
                 {
@@ -123,7 +127,8 @@ namespace GameMod
 
             var result = ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
 
-            if (type == ProjPrefab.missile_devastator || type == ProjPrefab.missile_smart || type == ProjPrefab.missile_timebomb || type == ProjPrefab.missile_creeper)
+            //if (type == ProjPrefab.missile_devastator || type == ProjPrefab.missile_smart || type == ProjPrefab.missile_timebomb || type == ProjPrefab.missile_creeper)
+            if (weapon != null && weapon.GetType() == typeof(SecondaryWeapon) && (((SecondaryWeapon)weapon).subproj != ProjPrefabExt.none || weapon.MineHoming))
             {
                 foreach (var proj in ProjectileManager.proj_list[(int)type])
                 {
@@ -530,6 +535,15 @@ namespace GameMod
                                     MPAutoSelection.swapToMissile((int)missileType);
                                 }
 
+                                if (player.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)player.m_missile_type].WarnSelect && player.m_old_missile_type != player.m_missile_type)
+                                {
+                                    if (MPAutoSelection.zorc)
+                                    {
+                                        SFXCueManager.PlayCue2D(SFXCue.enemy_boss1_alert, 1f, 0f, 0f, false);
+                                        GameplayManager.AlertPopup(string.Format(Loc.LS("{0} SELECTED"), Player.MissileNames[player.m_missile_type]), string.Empty, 5f);
+                                    }
+                                }
+                                /*
                                 if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR && oldMissileType != MissileType.DEVASTATOR)
                                 {
                                     if (MPAutoSelection.zorc)
@@ -538,6 +552,7 @@ namespace GameMod
                                         GameplayManager.AlertPopup(Loc.LS("DEVASTATOR SELECTED"), string.Empty, 5f);
                                     }
                                 }
+                                */
                             }
                         }
                     }
@@ -737,7 +752,7 @@ namespace GameMod
                         refireTime = 0.1f / (player.m_overdrive ? 1.5f : 1f);
                         break;
                     case ProjPrefab.proj_driller:
-                        refireTime = 0.22f / (player.m_overdrive ? 1.5f : 1f);
+                        refireTime = 0.10f / (player.m_overdrive ? 1.5f : 1f); // lowered to allow the burstfire to function
                         break;
                     case ProjPrefab.proj_shotgun:
                         refireTime = (player.m_overdrive ? 0.55f : 0.45f) / (player.m_overdrive ? 1.5f : 1f);
@@ -775,13 +790,18 @@ namespace GameMod
                     case ProjPrefab.missile_devastator:
                         refireTime = 1f;
                         break;
-
+                
                     // Don't fire what we don't know about.
                     default:
-                        Debug.Log($"{DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt} - Fire packet dropped, invalid projectile: {player.m_mp_name} - {msg.m_type}");
-                        return;
+                        if ((int)msg.m_type < (int)ProjPrefab.num) // It's a stock projectile, but not a valid one. Let all extension projectiles through.
+                        {
+                            Debug.Log($"{DateTime.Now:MM/dd/yyyy hh:mm:ss.fff tt} - Fire packet dropped, invalid projectile: {player.m_mp_name} - {msg.m_type}");
+                            return;
+                        }
+                        refireTime = 0.01f; // generic fast time
+                        break;
                 }
-
+                
                 if (_primaries.Contains(msg.m_type))
                 {
                     _primaryFireBuffer[key] += refireTime / projectileCount;
@@ -831,7 +851,6 @@ namespace GameMod
                     }
                 }
             }
-
             ProjectileManager.PlayerFire(player, msg.m_type, msg.m_pos, msg.m_rot, msg.m_strength, msg.m_upgrade_lvl, msg.m_no_sound, msg.m_slot, msg.m_force_id);
         }
 
@@ -1042,6 +1061,7 @@ namespace GameMod
         }
     }
 
+    /*
     /// <summary>
     /// Here, we are attaching to the end of PlayerShip.ProcessFiringControls to synchronize a player's resource when they release the primary fire key and the boost key, two sources of frequent resource use.
     /// 
@@ -1102,6 +1122,7 @@ namespace GameMod
             }
         }
     }
+    */
 
     /// <summary>
     /// Similar to MaybeFireWeapon, we redirect Projectile.PlayerFire to MPSniperPackets.MaybePlayerFire in order for the client to control where the flare gets fired from.

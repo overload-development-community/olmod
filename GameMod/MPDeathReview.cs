@@ -241,6 +241,42 @@ namespace GameMod {
         }
 
         public static int GetTextureIndex(ProjPrefab prefab) {
+
+            /*
+            switch (prefab) // temporary until seconaries are done
+            {
+                case ProjPrefab.missile_creeper:
+                    return 107;
+                case ProjPrefab.missile_devastator:
+                case ProjPrefab.missile_devastator_mini:
+                    return 109;
+                case ProjPrefab.missile_falcon:
+                    return 104;
+                case ProjPrefab.missile_hunter:
+                    return 106;
+                case ProjPrefab.missile_pod:
+                    return 105;
+                case ProjPrefab.missile_smart:
+                case ProjPrefab.missile_smart_mini:
+                    return 108;
+                case ProjPrefab.missile_timebomb:
+                    return 110;
+                case ProjPrefab.missile_vortex:
+                    return 111;
+            }
+            */
+
+            Weapon w = MPWeapons.WeaponLookup[(int)prefab];
+            if (w != null) // safety first, kids
+            {
+                return w.icon_idx;
+            }
+            else
+            {
+                return -1;
+            }
+
+            /*
             switch (prefab) {
                 case ProjPrefab.proj_vortex:
                     return 27;
@@ -248,6 +284,7 @@ namespace GameMod {
                     return 32;
                 case ProjPrefab.proj_shotgun:
                     return 29;
+                case (ProjPrefab)ProjPrefabExt.proj_plasma: // CCF TEMPORARY
                 case ProjPrefab.proj_reflex:
                     return 28;
                 case ProjPrefab.proj_impulse:
@@ -257,6 +294,7 @@ namespace GameMod {
                 case ProjPrefab.proj_driller_mini:
                 case ProjPrefab.proj_driller:
                     return 30;
+                case (ProjPrefab)ProjPrefabExt.proj_mdlance: // CCF TEMPORARY
                 case ProjPrefab.proj_beam:
                     return 33;
                 case ProjPrefab.missile_creeper:
@@ -280,6 +318,7 @@ namespace GameMod {
                 default:
                     return -1;
             }
+            */
         }
     }
 
@@ -313,6 +352,7 @@ namespace GameMod {
 
             float hitpoints = playerShip.c_player.m_hitpoints;
             var weapon = di.weapon;
+            /*
             switch (weapon)
             {
                 case ProjPrefab.missile_devastator_mini:
@@ -322,6 +362,16 @@ namespace GameMod {
                     weapon = ProjPrefab.missile_smart;
                     break;
             }
+            */
+            Weapon w = MPWeapons.WeaponLookup[(int)weapon];
+            if (w == null)
+            {
+                weapon = ProjPrefab.none;
+            }
+            else if ((int)weapon != (int)w.projprefab) // If it matches the index but isn't the main projectile, it's the subprojectile. Change it over.
+            {
+                weapon = (ProjPrefab)w.projprefab;
+            }    
 
             var de = new DamageEvent
             {

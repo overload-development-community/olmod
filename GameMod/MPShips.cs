@@ -18,7 +18,7 @@ namespace GameMod
         public static List<NetworkInstanceId> DeferredShips = new List<NetworkInstanceId>(); // stores any ships that are not found yet when their associated information is received from the server
 
         public static List<Ship> Ships = new List<Ship>();
-        public static Ship sp_ship; // used in cases where there is no assigned ship type
+        public static Ship sp_ship = new Kodachi(); // used in cases where there is no assigned ship type
 
         public static int allowed = 0; // which ships are allowed (0 is stock, 1 is all, the rest are locked ship types)
         public static bool FireWhileBoost = true; // ++++ this needs to have a menu option added
@@ -66,7 +66,8 @@ namespace GameMod
             //Debug.Log("Adding Pyro (Cosmetic) ship definition");
             //Ships.Add(new PyroGXCosmetic());
 
-            sp_ship = Ships[0];
+            //sp_ship = Ships[0];
+            //sp_ship = new Kodachi(); done at field declaration
 
             //DEBUG
             //uConsole.RegisterCommand("accel", "Set ship accel", new uConsole.DebugCommand(SetAccelDebug));
@@ -74,6 +75,11 @@ namespace GameMod
             //uConsole.RegisterCommand("lrefire", "Lancer refire wait", new uConsole.DebugCommand(MPWeapons.SetLancerRefire));
         }
 
+        // anything that needs to get toggled immediately when Multiship is enabled or disabled in the game options should get called here.
+        public static void EnabledInMatch()
+        {
+            MPWeapons.UpdateWeaponList();
+        }
 
         public static void SetScaleDebug()
         {
@@ -137,17 +143,18 @@ namespace GameMod
         public static void AssignShip(int lobbyId, NetworkInstanceId netId)
         {
             int idx;
+
             if (!LobbyShips.TryGetValue(lobbyId, out idx))
             {
                 Debug.Log("CCF did not find lobby_id " + lobbyId + " in AssignShip " + (GameplayManager.IsDedicatedServer() ? "on server" : "on client " + NetworkMatch.m_my_lobby_id));
-                idx = 0;
+                idx = -1;
                 LobbyShips[lobbyId] = idx;
             }
 
             switch (allowed)
             {
                 case 0:
-                    idx = 0;
+                    idx = -1;
                     break;
                 case 1:
                     break;
@@ -155,7 +162,15 @@ namespace GameMod
                     idx = allowed - 2;
                     break;
             }
-            SelectedShips[netId] = Ships[idx].Copy();
+
+            if (idx < 0)
+            {
+                SelectedShips[netId] = sp_ship.Copy();
+            }
+            else
+            {
+                SelectedShips[netId] = Ships[idx].Copy();
+            }
         }
 
 
@@ -166,7 +181,7 @@ namespace GameMod
             if (idx >= Ships.Count)
             {
                 Debug.Log("Client attempted to assign a non-existent ship value, using Kodachi instead.");
-                idx = 0;
+                idx = -1;
             }
             Debug.Log("CCF Adding to list " + lobby_id + " on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
             LobbyShips[lobby_id] = idx;
@@ -181,7 +196,9 @@ namespace GameMod
             NetworkInstanceId id = ps.netId;
             if (!SelectedShips.TryGetValue(id, out s))
             {
+                Debug.Log("CCF No ship found in GetShip");
                 s = sp_ship.Copy();
+                SelectedShips[id] = s;
             }
             return s;
         }
@@ -239,7 +256,8 @@ namespace GameMod
             Client.GetClient().Send(MessageTypes.MsgShipDataToServer, message);
         }
 
-        // temporary solution for the weapon 
+        /*
+        // temporary solution for the weapon -- NOT NEEDED ANYMORE
         public static void TriTBFire(PlayerShip ps)
         {
             //Debug.Log("CCF TRIFIRE");
@@ -249,7 +267,7 @@ namespace GameMod
                 ps.c_player.UseEnergy(2f + ps.m_thunder_power * 3f); // Wasteful trifusion uses twice the energy... tisk tisk.
             }
         }
-
+        */
 
         // ====================================================================
         // Network Messages
@@ -318,9 +336,9 @@ namespace GameMod
         public Player player;
 
         // Substitute fields for the PlayerShip instance this ship is attached to -- don't override these
-        public Weapon[] primaries;
+        public PrimaryWeapon[] primaries;
 
-        public Weapon[] secondaries; // not yet
+        public SecondaryWeapon[] secondaries; // not yet
 
 
         // ====================================================================
@@ -396,26 +414,10 @@ namespace GameMod
             for (int i = 0; i < 8; i++)
             {
                 primaries[i] = (PrimaryWeapon)MPWeapons.primaries[i].Copy();
-                //secondaries[i] = (SecondaryWeapon)MPWeapons.secondaries[i].Copy();
+                secondaries[i] = (SecondaryWeapon)MPWeapons.secondaries[i].Copy();
                 primaries[i].SetShip(this);
-                //secondaries[i].SetShip(this);
+                secondaries[i].SetShip(this);
             }
-
-            /*
-            primaries = new Weapon[8]
-            {
-                new Impulse(this),
-                new Cyclone(this),
-                new Reflex(this),
-                new Crusher(this),
-                new Driller(this),
-                new Flak(this),
-                new Thunderbolt(this),
-                new Lancer(this)
-            };
-
-            secondaries = new Weapon[8];
-            */
         }
 
         // should get called once with the Ship's constructor. If it's not called, the Ship will have Kodachi handling.
@@ -664,6 +666,7 @@ namespace GameMod
         }
     }
 
+    /* no longer needed
 
     // moves the quad shot positions in the PlayerShip firing code.
     // Currently this pulls from the selected ship definition. If multiples are to exist in the -same- round, this will need updating again.
@@ -733,6 +736,8 @@ namespace GameMod
             }
         }
     }
+
+    */
 
     // Moved from Debugging.cs and modified - replaces the SwitchVisibleWeapon method with one that uses Vector3 for positioning instead of Vector2.
     // I am unsure if the exception catching is necessary or not anymore.
@@ -869,7 +874,7 @@ namespace GameMod
                 }
                 __instance.m_muzzle_center.localPosition = localPosition;
             }
-                return false;
+            return false;
         }
     }
 

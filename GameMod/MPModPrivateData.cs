@@ -1610,8 +1610,8 @@ m_push_torque_player;0.15
 m_lifetime_min;5
 m_lifetime_max;-1
 m_lifetime_robot_multiplier;1
-m_init_speed_min;15
-m_init_speed_max;17
+m_init_speed_min;30
+m_init_speed_max;-1
 m_init_speed_robot_multiplier;1
 m_acceleration;0
 m_vel_inherit_player;0
@@ -1637,7 +1637,7 @@ m_trail_particle;trail_enemy1
 m_trail_renderer;none
 m_trail_post_lifetime;1
 m_muzzle_flash_particle;muzzle_flash_enemy1
-m_muzzle_flash_particle_player;none
+m_muzzle_flash_particle_player;muzzle_flash_enemy1
 END_ENTRY
 proj_enemy_vulcan
 m_damage_robot;8
@@ -2392,7 +2392,11 @@ END_ENTRY
         public static int ShipsAllowed
         {
             get { return MPShips.allowed; }
-            set { MPShips.allowed = value; }
+            set
+            {
+                MPShips.allowed = value;
+                MPShips.EnabledInMatch();
+            }
         }
 
         public static bool ThunderboltPassthrough

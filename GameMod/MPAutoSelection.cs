@@ -566,10 +566,17 @@ namespace GameMod
 
                     GameManager.m_local_player.c_player_ship.SetRefireDelayAfterMissileSwitch();
                 }
+
+                if (GameManager.m_local_player.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)GameManager.m_local_player.m_missile_type].WarnSelect)
+                {
+                    SFXCueManager.PlayCue2D(SFXCue.hud_warning_selected_dev, 1f, 0f, 0f, false);
+                }
+                /*
                 if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR)
                 {
                     SFXCueManager.PlayCue2D(SFXCue.hud_warning_selected_dev, 1f, 0f, 0f, false);
                 }
+                */
 
                 GameManager.m_local_player.UpdateCurrentMissileName();
             }
@@ -817,6 +824,16 @@ namespace GameMod
                         delay = 1;
                     }
 
+                    if (__instance.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)__instance.m_missile_type].WarnSelect && __instance.m_old_missile_type != __instance.m_missile_type)
+                    {
+                        if (MPAutoSelection.zorc)
+                        {
+                            SFXCueManager.PlayCue2D(SFXCue.enemy_boss1_alert, 1f, 0f, 0f, false);
+                            GameplayManager.AlertPopup(string.Format(Loc.LS("{0} SELECTED"), Player.MissileNames[__instance.m_missile_type]), string.Empty, 5f);
+                        }
+                    }
+
+                    /* 
                     if (GameManager.m_local_player.m_missile_type == MissileType.DEVASTATOR && old_missile != MissileType.DEVASTATOR)
                     {
                         if (MPAutoSelection.zorc)
@@ -825,6 +842,7 @@ namespace GameMod
                             GameplayManager.AlertPopup(Loc.LS("DEVASTATOR SELECTED"), string.Empty, 5f);
                         }
                     }
+                    */
                 }
             }
         }

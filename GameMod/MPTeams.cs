@@ -1434,6 +1434,7 @@ namespace GameMod
         }
     }
 
+    // CCF this can get moved into the creeper class but it needs MonoBehaviour update stuff and I don't feel like messing with all that right now.
     // Team-colored creepers in team games
     [HarmonyPatch(typeof(Projectile), "Fire")]
     class MPTeams_Projectile_Fire
@@ -1545,7 +1546,7 @@ namespace GameMod
     {
         static void Postfix()
         {
-            for (int i = 1; i < 29; i++) // Whyyyyyyyyy
+            for (int i = 1; i < ProjectileManager.proj_list.Length; i++)
             {
                 //Debug.Log("CCC nuking proj list");
                 /*foreach (ProjElement p in ProjectileManager.proj_list[i])

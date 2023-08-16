@@ -3,6 +3,7 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using Overload;
 
+/*
 namespace GameMod {
     [HarmonyPatch(typeof(Projectile), "Fire")]
     class CrusherTrails_Projectile_Fire {
@@ -34,3 +35,4 @@ namespace GameMod {
         }
     }
 }
+*/

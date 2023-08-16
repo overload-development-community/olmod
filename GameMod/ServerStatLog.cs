@@ -401,6 +401,7 @@ namespace GameMod {
             TrackerPostStats(obj);
         }
 
+        // gets the **stock** projprefab for that weapon slot
         private static ProjPrefab GetProjPrefab(int damageType)
         {
             switch (damageType) {
@@ -443,10 +444,81 @@ namespace GameMod {
             }
         }
 
+        // any custom weapon IDs that have made it through to this point will get converted back to their stock weapon slot's damage
+        private static ProjPrefab SanitizeWeaponID(ProjPrefab weapon)
+        {
+            int damageType = -1;
+
+            for (int i = 0; i < 8; i++)
+            {
+                if ((int)weapon == (int)MPWeapons.primaries[i].projprefab)
+                {
+                    damageType = i;
+                    break;
+                }
+                else if ((int)weapon == (int)MPWeapons.secondaries[i].projprefab || (int)weapon == (int)MPWeapons.secondaries[i].subproj)
+                {
+                    damageType = i + 8;
+                    break;
+                }
+            }
+
+            if (weapon == ProjPrefab.proj_melee)
+            {
+                damageType = 16;
+            }
+            /*
+            switch (weapon)
+            {
+                case ProjPrefab.proj_impulse:
+                    damageType = 0; break;
+                case ProjPrefab.proj_vortex:
+                    damageType = 1; break;
+                case ProjPrefab.proj_reflex:
+                    damageType = 2; break;
+                case ProjPrefab.proj_shotgun:
+                    damageType = 3; break;
+                case ProjPrefab.proj_driller:
+                    damageType = 4; break;
+                case ProjPrefab.proj_flak_cannon:
+                    damageType = 5; break;
+                case ProjPrefab.proj_thunderbolt:
+                    damageType = 6; break;
+                case ProjPrefab.proj_beam:
+                    damageType = 7; break;
+                case ProjPrefab.missile_falcon:
+                    damageType = 8; break;
+                case ProjPrefab.missile_pod:
+                    damageType = 9; break;
+                case ProjPrefab.missile_hunter:
+                    damageType = 10; break;
+                case ProjPrefab.missile_creeper:
+                    damageType = 11; break;
+                case ProjPrefab.missile_smart:
+                case ProjPrefab.missile_smart_mini:
+                    damageType = 12; break;
+                case ProjPrefab.missile_devastator:
+                case ProjPrefab.missile_devastator_mini:
+                    damageType = 13; break;
+                case ProjPrefab.missile_timebomb:
+                    damageType = 14; break;
+                case ProjPrefab.missile_vortex:
+                    damageType = 15; break;
+                case ProjPrefab.proj_melee:
+                    damageType = 16; break;
+                default:
+                    damageType = -1; break;
+            }
+            */
+            return GetProjPrefab(damageType);
+        }
+
         public static void AddKill(DamageInfo di, PlayerDamageRecord pdr, bool flag)
         {
             if (NetworkMatch.m_postgame)
                 return;
+
+            Debug.Log("CCF ServerStatLog kill recorded, damage type is " + GetProjPrefab(pdr.dmg_type) + "and weapon idx is " + SanitizeWeaponID(di.weapon));
 
             Kills.Add(new Kill
             {
@@ -457,7 +529,7 @@ namespace GameMod {
                 AttackerTeam = AttackerTeam,
                 DefenderTeam = DefenderTeam,
                 AssistedTeam = AssistedTeam,
-                Weapon = flag && pdr.client_id > -1 ? GetProjPrefab(pdr.dmg_type) : di.weapon
+                Weapon = flag && pdr.client_id > -1 ? GetProjPrefab(pdr.dmg_type) : SanitizeWeaponID(di.weapon)
             });
 
             var obj = JObject.FromObject(new
@@ -471,7 +543,7 @@ namespace GameMod {
                 defenderTeam = Defender == null ? null : TeamName(DefenderTeam),
                 assisted = Assisted,
                 assistedTeam = Assisted == null ? null : TeamName(AssistedTeam),
-                weapon = flag && pdr.client_id > -1 ? GetProjPrefab(pdr.dmg_type).ToString() : di.weapon.ToString()
+                weapon = flag && pdr.client_id > -1 ? GetProjPrefab(pdr.dmg_type).ToString() : SanitizeWeaponID(di.weapon).ToString()
             }, new JsonSerializer()
             {
                 NullValueHandling = NullValueHandling.Ignore
@@ -492,7 +564,9 @@ namespace GameMod {
             if (NetworkMatch.m_postgame)
                 return;
 
-            var key = new PlayerPlayerWeaponDamage { Attacker = attacker, Defender = defender, Weapon = weapon };
+            Debug.Log("CCF ServerStatLog AddDamage, damage type is " + SanitizeWeaponID(weapon).ToString());
+
+            var key = new PlayerPlayerWeaponDamage { Attacker = attacker, Defender = defender, Weapon = SanitizeWeaponID(weapon) };
             if (DamageTable.TryGetValue(key, out float totalDamage))
                 DamageTable[key] = totalDamage + damage;
             else

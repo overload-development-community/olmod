@@ -24,6 +24,26 @@ namespace GameMod {
         //        public static Dictionary<Player, MPClientExtrapolation_Velocities> players_to_resolve = new Dictionary<Player, MPClientExtrapolation_Velocities>();
         public static Dictionary<string, Queue<Vector3>> player_positions = new Dictionary<string, Queue<Vector3>>();
 
+
+        public static void LerpProjectile (Projectile c_proj)
+        {
+            Weapon weapon = MPWeapons.WeaponLookup[(int)c_proj.m_type];
+
+            if (!GameplayManager.IsMultiplayerActive ||           // it's not a MP game (no network)
+                Network.isServer ||                               // if it's the server (not necessary)
+                MPObserver.Enabled ||
+                c_proj.m_init_speed_min > 80f ||                 // Let's assume this is a reasonable cutoff
+                weapon.MineHoming ||                              // handled by creeper/TB sync
+                ((int)c_proj.m_type != (int)weapon.projprefab ))  // if it matches the lookup position but it's not the main ProjPrefab, it's the sub-projectile
+            {
+                return;
+            }
+
+            // Queue to simulate physics.
+            bodies_to_resolve.Add(c_proj.c_rigidbody);
+        }
+
+        /*
         public static void LerpProjectile(Projectile c_proj) {
             // Bail if:
             if (
@@ -46,6 +66,7 @@ namespace GameMod {
             // Queue to simulate physics.
             bodies_to_resolve.Add(c_proj.c_rigidbody);
         }
+        */
 
         // Factor is 0 for observers, and the average of the desired 1.0 for ship positions and 0.5 for projectile positions for non-observers.
         public static float GetFactor() {

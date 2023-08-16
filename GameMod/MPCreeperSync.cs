@@ -235,7 +235,9 @@ namespace GameMod
         }
     }
 
-    // the server might fire more missles than the client, correct state when the missiles run out on the server
+    // CCF handled in MPWeapons now
+    /*
+    // the server might fire more missiles than the client, correct state when the missiles run out on the server
     [HarmonyPatch(typeof(PlayerShip), "MaybeFireMissile")]
     class CreeperSyncRunOutSync
     {
@@ -262,4 +264,5 @@ namespace GameMod
             ___c_player.CallTargetUpdateCurrentMissileName(___c_player.connectionToClient);
         }
     }
+    */
 }

@@ -1902,24 +1902,24 @@ namespace GameMod {
                 if (idx % 2 == 0)
                 {
                     WeaponType weaponType = GetMpLoadoutWeapon(idx, 0);
-                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 10 + 3 * idx, false, (int)(26 + weaponType), 0.31f);
+                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 10 + 3 * idx, false, MPWeapons.primaries[(int)weaponType].icon_idx, 0.31f);
                     pos.x += num;
                     MissileType missileType = GetMpLoadoutMissile(idx, 0);
-                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 11 + 3 * idx, false, (int)(104 + missileType), 0.31f);
+                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 11 + 3 * idx, false, MPWeapons.secondaries[(int)missileType].icon_idx, 0.31f);
                     pos.x += num;
                     missileType = GetMpLoadoutMissile(idx, 1);
-                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 12 + 3 * idx, false, (int)(104 + missileType), 0.31f);
+                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 12 + 3 * idx, false, MPWeapons.secondaries[(int)missileType].icon_idx, 0.31f);
                 }
                 else
                 {
                     WeaponType weaponType = GetMpLoadoutWeapon(idx, 0);
-                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 13 + 3 * (idx - 1), false, (int)(26 + weaponType), 0.31f);
+                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 13 + 3 * (idx - 1), false, MPWeapons.primaries[(int)weaponType].icon_idx, 0.31f);
                     pos.x += num;
                     weaponType = GetMpLoadoutWeapon(idx, 1);
-                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 14 + 3 * (idx - 1), false, (int)(26 + weaponType), 0.31f);
+                    __instance.SelectAndDrawMicroItem(Player.WeaponNames[(int)weaponType], pos, 14 + 3 * (idx - 1), false, MPWeapons.primaries[(int)weaponType].icon_idx, 0.31f);
                     pos.x += num;
                     MissileType missileType = GetMpLoadoutMissile(idx, 0);
-                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 15 + 3 * (idx - 1), false, (int)(104 + missileType), 0.31f);
+                    __instance.SelectAndDrawMicroItem(Player.MissileNames[(int)missileType], pos, 15 + 3 * (idx - 1), false, MPWeapons.secondaries[(int)missileType].icon_idx, 0.31f);
                 }
             }
 
