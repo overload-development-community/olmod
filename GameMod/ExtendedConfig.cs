@@ -610,6 +610,22 @@ namespace GameMod
                 return index;
             }
 
+
+            public class Type
+            {
+                public string name;
+                public int amount;
+                public int[] positions;
+
+                public Type(string _name, int _amount, int[] _positions)
+                {
+                    name = _name;
+                    amount = _amount;
+                    positions = _positions;
+                }
+            }
+
+
             public static void MatchMControllerOrder()
             {
                 if(controllers != null && Controls.m_controllers != null)
@@ -617,21 +633,80 @@ namespace GameMod
                     
                     if (controllers.Count > Controls.m_controllers.Count)
                     {
-                        Debug.Log("\nThe device count doesnt match!");
-                        List<Controller> to_remove = new List<Controller>();
-                        foreach(Controller device in controllers)
+                        Debug.Log("\nThe device count doesnt match! curves:"+ controllers.Count+ " rewired:"+Controls.m_controllers.Count);
+
+                        List<Type> curve_devices = new List<Type>();
+                        // Populate curve devices
+                        for (int i = 0; i < controllers.Count; i++)
                         {
-                            if(Controls.m_controllers.FindIndex((Overload.Controller c) => c.name == device.name && c.joystickID == device.id) == -1)
+                            int index = curve_devices.FindIndex((Type t) => t.name == controllers[i].name);
+                            if (index != -1)
                             {
-                                to_remove.Add(device);
+                                curve_devices[index].amount++;
+                                curve_devices[index].positions[curve_devices[index].amount - 1] = i;
+                            }
+                            else
+                            {
+                                Type t = new Type(controllers[i].name, 1, new int[16]);
+                                t.positions[0] = i;
+                                curve_devices.Add(t);
                             }
                         }
 
-                        foreach(Controller device in to_remove)
+
+                        List<Type> rewrd_devices = new List<Type>();
+                        // Populate rewired devices
+                        for (int i = 0; i < Controls.m_controllers.Count; i++)
                         {
-                            Debug.Log(" Removed: " + device.name + ":" + device.id);
-                            controllers.Remove(device);
+                            int index = rewrd_devices.FindIndex((Type t) => t.name == Controls.m_controllers[i].name);
+                            if (index != -1)
+                            {
+                                rewrd_devices[index].amount++;
+                                rewrd_devices[index].positions[rewrd_devices[index].amount - 1] = i;
+                            }
+                            else
+                            {
+                                Type t = new Type(Controls.m_controllers[i].name, 1, new int[16]);
+                                t.positions[0] = i;
+                                rewrd_devices.Add(t);
+                            }
                         }
+
+
+                        List<Type> to_remove = new List<Type>();
+                        // Compare the two lists of device types. We want to match curve_devices to rewireds devices 
+                        for (int i = 0; i < curve_devices.Count; i++)
+                        {
+                            // Find the corresponding entry in rewireds devices
+                            int index = rewrd_devices.FindIndex((Type t) => t.name == curve_devices[i].name);
+                            if(index != -1)
+                            {
+                                // mark additional devices for removal
+                                while (curve_devices[i].amount > rewrd_devices[index].amount)
+                                {
+                                    int[] positions = new int[1];
+                                    positions[0] = curve_devices[i].positions[curve_devices[i].amount--];
+                                    to_remove.Add(new Type(curve_devices[i].name, 1, positions));
+                                    Debug.Log(" Joystick Curves: Marked a device for removal: " + curve_devices[i].name);
+                                }
+
+                            }
+                            else
+                            {
+                                int[] positions = new int[1];
+                                positions[0] = curve_devices[i].positions[curve_devices[i].amount--];
+                                to_remove.Add(new Type(curve_devices[i].name, 1, positions));
+                                Debug.Log("ERROR: ExtendedConfig.LoadCurves curve_devices contained a device that didnt exist in rewrd_devices: "+ curve_devices[i].name);
+                            }
+                        }
+
+                        // Remove the excess devices
+                        foreach (Type device in to_remove)
+                        {
+                            Debug.Log(" Removed: " + device.name);
+                            controllers.Remove(controllers[device.positions[0]]);
+                        }
+
                     }
 
 
