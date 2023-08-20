@@ -3,6 +3,7 @@ using Overload;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace GameMod
@@ -24,6 +25,7 @@ namespace GameMod
         public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
 
         // On Game Loading or when selecting a different PILOT read or generating PILOT.extendedconfig
+        [HarmonyPriority(Priority.Last)]
         [HarmonyPatch(typeof(PilotManager), "Select", new Type[] { typeof(string) })]
         internal class ExtendedConfig_PilotManager_Select
         {
@@ -34,7 +36,7 @@ namespace GameMod
 
             public static void Postfix()
             {
-                Section_JoystickCurve.MatchMControllerOrder();
+                Section_JoystickCurve.ParseSectionData();
             }
 
             public static void LoadPilotExtendedConfig(string name)
@@ -570,9 +572,11 @@ namespace GameMod
         internal class Section_JoystickCurve
         {
             public static List<Controller> controllers = new List<Controller>();
+            public static List<string> lines = new List<string>();
 
             public class Controller
             {
+                public bool populated = false;
                 public string name = "";
                 public int id = -1;
                 public List<Axis> axes = new List<Axis>();
@@ -595,21 +599,6 @@ namespace GameMod
                 }
             }
 
-            // returns the index of a controller in Overload.Controls.m_controllers
-            static int FindControllerIndex(string controller_name)
-            {
-                int index = -1;
-                for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
-                {
-                    if (RemoveWhitespace(Overload.Controls.m_controllers[i].name).Equals(controller_name))
-                    {
-                        index = i;
-                        break;
-                    }
-                }
-                return index;
-            }
-
 
             public class Type
             {
@@ -625,140 +614,211 @@ namespace GameMod
                 }
             }
 
-
-            public static void MatchMControllerOrder()
+            public static void Load(List<string> _section)
             {
-                if(controllers != null && Controls.m_controllers != null)
+                // Remove Whitespaces
+                for (int i = 0; i < _section.Count; i++)
                 {
-                    
-                    if (controllers.Count > Controls.m_controllers.Count)
-                    {
-                        Debug.Log("\nThe device count doesnt match! curves:"+ controllers.Count+ " rewired:"+Controls.m_controllers.Count);
+                    if (!string.IsNullOrEmpty(_section[i]) && _section[i].Length > 3)
+                        lines.Add(_section[i].Substring(3));
+                    else
+                        lines.Add(_section[i]);
+                }
 
-                        List<Type> curve_devices = new List<Type>();
-                        // Populate curve devices
-                        for (int i = 0; i < controllers.Count; i++)
+                SetDefault();
+            }
+
+            public static void ParseSectionData()
+            {
+                Debug.Log("\n- Loading Joystick Curves: ");
+                SetDefault();
+
+                // Save the current configuration in case we need to reset back to it when we encounter an incorrectable error
+                List<Controller> copy_of_controllers = CloneCurrentControllerConfiguration();
+
+                //PrintControllerNamesAndAlignment();
+                try
+                {
+                    // read in the data of the devices 
+                    int index = -1;
+                    int.TryParse(lines[++index], out int numControllers); // read in the amount of controllers that are saved in this curve section
+                    List<Controller> parsed_devices = new List<Controller>();
+                    for (int i = 0; i < numControllers; i++){
+                        // create an empty device and populate the name and id
+                        Controller device = new Controller();
+                        string[] device_informations = lines[++index].Split(';');
+                        string controllerName = device_informations[0];
+                        device.name = controllerName;
+                        device.id = -1;
+                        if (device_informations.Length == 2)
                         {
-                            int index = curve_devices.FindIndex((Type t) => t.name == controllers[i].name);
-                            if (index != -1)
+                            int.TryParse(device_informations[1], out device.id);
+                        }
+
+                        // read in the number of axes for this device and create empty axes for the device
+                        int.TryParse(lines[++index], out int val2);
+                        int numAxes = val2;
+                        for (int g = 0; g < numAxes; g++) 
+                            device.axes.Add(new Controller.Axis());
+
+                        // populate device with default or saved curve points
+                        for (int j = 0; j < numAxes; j++){
+                            if (j >= device.axes.Count){
+                                device.axes.Add(new Controller.Axis());
+                            }
+                            float value = 0f;
+                            device.axes[j].curve_points = DefaultCurvePoints();
+                            device.axes[j].curve_points[0].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
+                            device.axes[j].curve_points[1].x = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            device.axes[j].curve_points[1].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            device.axes[j].curve_points[2].x = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            device.axes[j].curve_points[2].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            device.axes[j].curve_points[3].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
+                            // generate the lookup table
+                            device.axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(device.axes[j].curve_points);
+                        }
+                        //Debug.Log(" Added a device: "+device.name+" : "+ ControllerContainsData(device));
+                        parsed_devices.Add(device);
+                    }
+
+                    // Find and assign the best fit to the current default configuration
+                    // best fit base line = equal name, equal axis count
+                    // best fit = matching or non '-1' id > contains data > exists
+                    for ( int i = 0; i < Controls.m_controllers.Count; i++){
+                        Debug.Log(i);
+                        // establish base line and collect candidates
+                        List<Controller> candidates = new List<Controller>();
+                        foreach( Controller c in parsed_devices){
+                            if (c.name.Equals(Controls.m_controllers[i].name) & c.axes.Count == Controls.m_controllers[i].m_axis_count)
                             {
-                                curve_devices[index].amount++;
-                                curve_devices[index].positions[curve_devices[index].amount - 1] = i;
+                                Debug.Log(" Added a candidate");
+                                candidates.Add(c);
                             }
                             else
                             {
-                                Type t = new Type(controllers[i].name, 1, new int[16]);
-                                t.positions[0] = i;
-                                curve_devices.Add(t);
+                                Debug.Log(" "+ c.name+" : "+ Controls.m_controllers[i].name+", "+ c.axes.Count+" : "+ Controls.m_controllers[i].m_axis_count);
+                            }
+                                
+                        }
+                        // if there are no candidates that fit the baseline then leave this controller with default values
+                        if (candidates.Count <= 0){
+                            controllers[i].populated = true;
+                            Debug.Log(" Set "+controllers[i].name + " to DEFAULT");
+                            continue;
+                        }
+                        // if there are candidates then find the best fit among them
+                        int best_score = 0;
+                        int best_candidate = 0;
+                        for(int x = 0; x < candidates.Count; x++){
+                            int score = 0;
+                            if (candidates[x].id == Controls.m_controllers[i].joystickID) score += 8;
+                            if (ControllerContainsData(candidates[x])) score += 4;
+                            if (candidates[x].id != -1) score += 2;
+                            if( score > best_score){
+                                best_score = score;
+                                best_candidate = x;
                             }
                         }
-
-
-                        List<Type> rewrd_devices = new List<Type>();
-                        // Populate rewired devices
-                        for (int i = 0; i < Controls.m_controllers.Count; i++)
-                        {
-                            int index = rewrd_devices.FindIndex((Type t) => t.name == Controls.m_controllers[i].name);
-                            if (index != -1)
-                            {
-                                rewrd_devices[index].amount++;
-                                rewrd_devices[index].positions[rewrd_devices[index].amount - 1] = i;
-                            }
-                            else
-                            {
-                                Type t = new Type(Controls.m_controllers[i].name, 1, new int[16]);
-                                t.positions[0] = i;
-                                rewrd_devices.Add(t);
-                            }
-                        }
-
-
-                        List<Type> to_remove = new List<Type>();
-                        // Compare the two lists of device types. We want to match curve_devices to rewireds devices 
-                        for (int i = 0; i < curve_devices.Count; i++)
-                        {
-                            // Find the corresponding entry in rewireds devices
-                            int index = rewrd_devices.FindIndex((Type t) => t.name == curve_devices[i].name);
-                            if(index != -1)
-                            {
-                                // mark additional devices for removal
-                                while (curve_devices[i].amount > rewrd_devices[index].amount)
-                                {
-                                    int[] positions = new int[1];
-                                    positions[0] = curve_devices[i].positions[curve_devices[i].amount--];
-                                    to_remove.Add(new Type(curve_devices[i].name, 1, positions));
-                                    Debug.Log(" Joystick Curves: Marked a device for removal: " + curve_devices[i].name);
-                                }
-
-                            }
-                            else
-                            {
-                                int[] positions = new int[1];
-                                positions[0] = curve_devices[i].positions[curve_devices[i].amount--];
-                                to_remove.Add(new Type(curve_devices[i].name, 1, positions));
-                                Debug.Log("ERROR: ExtendedConfig.LoadCurves curve_devices contained a device that didnt exist in rewrd_devices: "+ curve_devices[i].name);
-                            }
-                        }
-
-                        // Remove the excess devices
-                        foreach (Type device in to_remove)
-                        {
-                            Debug.Log(" Removed: " + device.name);
-                            controllers.Remove(controllers[device.positions[0]]);
-                        }
+                        // copy over the data
+                        CopyController(candidates[best_candidate], controllers[i]);
+                        controllers[i].id = Controls.m_controllers[i].joystickID;
+                        controllers[i].populated = true;
+                        parsed_devices.Remove(candidates[best_candidate]);
 
                     }
 
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Former Values.");
+                    controllers = copy_of_controllers;
+                }
 
-                    for (int i = 0; i < Controls.m_controllers.Count; i++)
-                    {
-                        if((i < Controls.m_controllers.Count && i < controllers.Count)
-                            &&(!controllers[i].name.Equals(Controls.m_controllers[i].name))
-                            )
-                        {
-                            //Debug.Log("Found a mismatch in the "+i+"th device: "+ controllers[i].name+" : "+ Controls.m_controllers[i].name);
-                            // check if there is an exact match
-                            int index = controllers.FindIndex((Controller c) => c.name == Controls.m_controllers[i].name && Controls.m_controllers[i].joystickID == c.id);
-                            if(index != -1)
-                            {
-                                //Debug.Log(" Found an exact match");
-                                Controller tmp = controllers[i];
-                                controllers[i] = controllers[controllers.Count - 1];
-                                controllers[controllers.Count - 1] = tmp;
-                            }
-                        }
-                    }
+                PrintControllerNamesAndAlignment();
 
+                PrintJoystickCurves();
+            }
 
-                    Debug.Log("\nSection_Joystickcurve.controllers Order");
-                    for (int i = 0; i < controllers.Count; i++)
-                    {
-                        Debug.Log("     "+controllers[i].name+":"+controllers[i].id);
-                    }
+            public static void CopyController(Controller data, Controller blank)
+            {
+                if (data == null | blank == null)
+                    return;
 
-                    Debug.Log("\nControls.m_controllers Order");
-                    for (int i = 0; i < Controls.m_controllers.Count; i++)
-                    {
-                        Debug.Log("     " + Controls.m_controllers[i].name + ":" + Controls.m_controllers[i].joystickID);
-                    }
+                blank.id = data.id;
+                blank.name = data.name;
+                for(int i = 0; i < data.axes.Count; i++)
+                {
+                    blank.axes[i].curve_points = data.axes[i].CloneCurvePoints();
+                    blank.axes[i].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(blank.axes[i].curve_points);
                 }
             }
 
-            public static void Load(List<string> section)
+            public static bool ControllerContainsData( Controller c )
             {
-                Debug.Log("\n--------- JOYSTICK CURVES ---------");
-
-                // Remove Whitespaces
-                for (int i = 0; i < section.Count; i++)
+                if(c == null)
                 {
-                    if (!string.IsNullOrEmpty(section[i]) && section[i].Length > 3)
-                    {
-                        section[i] = section[i].Substring(3);
-                    }
+                    Debug.Log("[ExtendedConfig.Warning] ControllerContainsData received empty controller");
+                    return false;
                 }
-                
-                // Save the current configuration in case we need to reset back to it when we encounter an error
-                List<Controller> copy_of_controllers = new List<Controller>();
+                for( int i = 0; i < c.axes.Count; i++ ){
+                    if (!IsAxisDefault(c.axes[i]))
+                        return true;
+                }
+                return false;
+            }
+
+            public static bool IsAxisDefault( Controller.Axis axis )
+            {
+                return axis.curve_points[0].y == 0f
+                     & axis.curve_points[1].x == 0.25f
+                     & axis.curve_points[1].y == 0.25f
+                     & axis.curve_points[2].x == 0.75f
+                     & axis.curve_points[2].y == 0.75f
+                     & axis.curve_points[3].y == 1f;
+            }
+
+            public static void PrintJoystickCurves()
+            {
+                foreach( Controller c in controllers )
+                {
+                    Debug.Log("\n"+c.name+" : "+c.id);
+                    for(int i = 0; i < Mathf.Min(c.axes.Count, 6); i++)
+                    {
+                        Debug.Log("   axis: " 
+                            + c.axes[i].curve_points[0].y + ", " 
+                            + c.axes[i].curve_points[1].x + ", " 
+                            + c.axes[i].curve_points[1].y + ", " 
+                            + c.axes[i].curve_points[2].x + ", " 
+                            + c.axes[i].curve_points[2].y + ", " 
+                            + c.axes[i].curve_points[3].y);
+                    }
+                    Debug.Log("");
+                }
+            }
+
+            public static void PrintControllerNamesAndAlignment()
+            {
+                int max = new[] { Controls.m_controllers.Count, Controllers.controllers.Count, controllers.Count }.Max();
+
+                Debug.Log(string.Format(" {0, -50} | {1,-50} | {2,-50}", "Rewired", "Sensitivity/Deadzone", "Response-Curves"));
+                string spacer = "";
+                for (int i = 0; i < 156; i++)
+                    spacer += "-";
+                Debug.Log(spacer);
+                for (int i = 0; i < max; i++)
+                {
+                    Debug.Log(string.Format(" {0, -50} | {1,-50} | {2,-50}", 
+                        i < Controls.m_controllers.Count ? Controls.m_controllers[i].name + " : " + Controls.m_controllers[i].joystickID : "",
+                        i < Controllers.controllers.Count ? Controllers.controllers[i].m_device_name + " : " + Controllers.controllers[i].m_joystick_id : "",
+                        i < controllers.Count ? controllers[i].name + " : " + controllers[i].id : ""
+                    ));
+                }
+                Debug.Log("");
+            }
+
+            public static List<Controller> CloneCurrentControllerConfiguration()
+            {
+                List<Controller>  copy_of_controllers = new List<Controller>();
                 foreach (Controller c in controllers)
                 {
                     copy_of_controllers.Add(new Controller
@@ -777,151 +837,7 @@ namespace GameMod
                         });
                     }
                 }
-
-                try
-                {
-                    // Mirror Overload.Controls.m_controllers devices with default configurations
-                    SetDefault();
-                    int index = -1;
-
-                    // read in the amount of controllers that are saved in this curve section
-                    int.TryParse(section[++index], out int val);
-                    int numControllers = val;
-
-                    List<Controller> inactive_devices = new List<Controller>();
-                    List<Controller> all_devices = new List<Controller>();
-                    Dictionary<string, int> controller_types = new Dictionary<string, int>();
-
-                    // read in the data of the devices and insert the populated devices at their right position
-                    // (controllers needs to be parallel to Overload.Controls.m_controllers)
-                    for (int i = 0; i < numControllers; i++)
-                    {
-                        Controller device = new Controller();
-                        string[] device_informations = section[++index].Split(';');
-                        string controllerName = device_informations[0];
-                        device.name = controllerName;
-                        device.id = -1;
-                        if (device_informations.Length == 2)
-                        {
-                            int.TryParse(device_informations[1], out device.id);
-                        }
-
-
-                        // read in the number of axes for this device
-                        int.TryParse(section[++index], out int val2);
-                        int numAxes = val2;
-
-                        for (int g = 0; g < numAxes; g++) device.axes.Add(new Controller.Axis());
-
-                        // populate device with default or saved curve points
-                        for (int j = 0; j < numAxes; j++)
-                        {
-                            if (j >= device.axes.Count)
-                            {
-                                device.axes.Add(new Controller.Axis());
-                            }
-                            float value = 0f;
-                            device.axes[j].curve_points = DefaultCurvePoints();
-                            device.axes[j].curve_points[0].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
-                            device.axes[j].curve_points[1].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
-                            device.axes[j].curve_points[1].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
-                            device.axes[j].curve_points[2].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
-                            device.axes[j].curve_points[2].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
-                            device.axes[j].curve_points[3].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
-
-                            // generate the lookup table
-                            device.axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(device.axes[j].curve_points);
-                        }
-                        all_devices.Add(device);
-                    }
-
-
-                    // match the devices
-                    foreach (var device in all_devices)
-                    {
-                        // populate the dictionary of the different controller types
-                        if (!controller_types.ContainsKey(device.name))
-                            controller_types.Add(device.name, 0);
-
-
-                        if (device.id != -1)
-                        {
-
-                            int index2 = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name == device.name && c.joystickID == device.id);
-                            Debug.Log("[1C] Matching devices: (" + device.name + ":" + device.id + ") to " + (index2 == -1 ? "UNCONNECTED" : index2.ToString()));
-                            if (index2 == -1)
-                                inactive_devices.Add(device);
-                            else
-                                controllers[index2] = device;
-                        }
-                        else
-                        {
-                            int index2 = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name == device.name);
-                            // ensure that there is sth that this device can be matched to
-                            if (index2 != -1 && index2 < Controls.m_controllers.Count)
-                            {
-                                // device has no id and there are no other devices with ids either 
-                                if (all_devices.Find((Controller c) => c.name == Controls.m_controllers[index2].name && c.id == Controls.m_controllers[index2].joystickID && c.id != -1) == null)
-                                {
-                                    int[] matching_device_indexes = FindControllerIndexes(device.name, device.id, false);
-                                    if (matching_device_indexes.Length > 0 && matching_device_indexes.Length > controller_types[device.name])
-                                    {
-                                        device.id = Controls.m_controllers[matching_device_indexes[controller_types[device.name]]].joystickID;
-                                        controllers[matching_device_indexes[controller_types[device.name]]] = device;
-                                        Debug.Log("[2C] Matching devices: (" + device.name + ":" + device.id + ") to " + (index2 == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.name]].ToString()));
-                                    }
-                                    controller_types[device.name]++;
-                                }
-                            }
-                            else
-                                inactive_devices.Add(device);
-
-                        }
-                    }
-
-                    
-                    foreach (Controller c in inactive_devices)
-                    {
-                        Debug.Log("  readded inactive controller: " + c.name);
-                        controllers.Add(c);
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Former Values.");
-                    controllers = copy_of_controllers;
-
-                }
-            }
-
-            static int[] FindControllerIndexes(string controller_name, int device_id, bool requires_matching_device_id = true)
-            {
-                int[] indexes = new int[FindAmountOfControllerIndexes(controller_name, device_id, requires_matching_device_id)];
-                int occurence = 0;
-                for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
-                {
-                    if (Overload.Controls.m_controllers[i].name.Equals(controller_name) && (Overload.Controls.m_controllers[i].joystickID == device_id | !requires_matching_device_id))
-                    {
-                        indexes[occurence] = i;
-                        occurence++;
-                    }
-                }
-                return indexes;
-            }
-
-
-            static int FindAmountOfControllerIndexes(string controller_name, int device_id, bool requires_matching_device_id = true)
-            {
-                int amount = 0;
-                for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
-                {
-                    if (Overload.Controls.m_controllers[i].name.Equals(controller_name) && (Overload.Controls.m_controllers[i].joystickID == device_id | !requires_matching_device_id))
-                    {
-                        amount++;
-                    }
-                }
-                return amount;
+                return copy_of_controllers;
             }
 
             public static void Save(StreamWriter w)
@@ -958,6 +874,7 @@ namespace GameMod
                 {
                     controllers.Add(new Controller
                     {
+                        populated = false,
                         name = Controls.m_controllers[i].name,
                         id = Controls.m_controllers[i].joystickID,
                         axes = new List<Controller.Axis>()

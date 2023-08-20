@@ -299,13 +299,13 @@ namespace GameMod
                 {
                     int.TryParse(device_informations[1], out device.m_joystick_id);
                 }
-
+                /*
                 Debug.Log(string.Format("[{0,-35}] id: {1,2} controller at this position in Overload.Controls.m_controllers: {2, -35} id: {3,9}",
                     device.m_device_name,
                     device.m_joystick_id,
                     i < Controls.m_controllers.Count ? Controls.m_controllers[i].name : "NO DEVICE",
                     i < Controls.m_controllers.Count ? Controls.m_controllers[i].joystickID.ToString() : "NO DEVICE"
-                    ));
+                    ));*/
 
 
                 // read in the amount of axes that this saved device has
@@ -340,7 +340,7 @@ namespace GameMod
 
                     device.axes[j].deadzone = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
                     device.axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
-                    Debug.Log("  created axis: " + j + "   sensitivity: " + device.axes[j].sensitivity + "   deadzone: " + device.axes[j].deadzone);
+                    //Debug.Log("  created axis: " + j + "   sensitivity: " + device.axes[j].sensitivity + "   deadzone: " + device.axes[j].deadzone);
                 }
 
                 all_controllers.Add(device);
@@ -351,7 +351,7 @@ namespace GameMod
      
         static void ReadControlDataFromStream(StreamReader sr)
         {
-            Debug.Log("\n--------- SENSITIVITIES & DEADZONES ---------");
+            //Debug.Log("\n--------- SENSITIVITIES & DEADZONES ---------");
             string text = sr.ReadLine(); // 1
             if (!RUtility.StringStartsWith(text, Controls.CONFIG_KEY))
             {
@@ -384,7 +384,7 @@ namespace GameMod
                 if (device.m_joystick_id != -1)
                 {
                     int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name.Equals(device.m_device_name) && c.joystickID == device.m_joystick_id);
-                    Debug.Log("[1S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : index.ToString()));
+                    //Debug.Log("[1S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : index.ToString()));
                     
                     if (index == -1)
                     {
@@ -411,7 +411,7 @@ namespace GameMod
                             {
                                 device.populated = true;
                                 Controllers.controllers[matching_device_indexes[controller_types[device.m_device_name]]] = device;
-                                Debug.Log("[2S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
+                                //Debug.Log("[2S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
                             }
                             controller_types[device.m_device_name]++;
                         }
@@ -425,7 +425,7 @@ namespace GameMod
                 {
                     if(!Controllers.controllers[i].populated && Controllers.controllers[i].m_device_name.Equals(c.m_device_name))
                     {
-                        Debug.Log("  readded controller: " + c.m_device_name+ " at "+i);
+                        //Debug.Log("  readded controller: " + c.m_device_name+ " at "+i);
                         Controllers.controllers[i] = c;
                         Controllers.controllers[i].populated = true;
                     }
@@ -433,15 +433,15 @@ namespace GameMod
 
             }
 
-            Debug.Log(" ");
+            //Debug.Log(" ");
             for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
-                Debug.Log("Device");
+                //Debug.Log("Device");
                 for(int j = 0; j < Controllers.controllers[i].axes.Count; j++)
                 {
                     if (j < Controllers.controllers[i].axes.Count)
                     {
-                        Debug.Log("   axis:"+j+" sens:"+ Controllers.controllers[i].axes[j].sensitivity+" dead:"+ Controllers.controllers[i].axes[j].deadzone);
+                        //Debug.Log("   axis:"+j+" sens:"+ Controllers.controllers[i].axes[j].sensitivity+" dead:"+ Controllers.controllers[i].axes[j].deadzone);
                         Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
                         Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
                     }
@@ -597,7 +597,7 @@ namespace GameMod
 
         static void WriteControlDataToStream(StreamWriter w)
         {
-            Debug.Log("\n------------- Saving the controller sens/deadzone ------------");
+            //Debug.Log("\n------------- Saving the controller sens/deadzone ------------");
             w.WriteLine(Controls.CONFIG_KEY + Controls.VERSION);
             bool[] array = new bool[Controls.m_controllers.Count];
             array.Populate(true);
@@ -612,7 +612,7 @@ namespace GameMod
                     w.WriteLine(controller.m_axis_count);
                     for (int j = 0; j < controller.m_axis_count; j++)
                     {
-                        Debug.Log("  axis: "+j+"  sens: "+ Controllers.controllers[i].axes[j].sensitivity+"  deadzone: "+ Controllers.controllers[i].axes[j].deadzone);
+                        //Debug.Log("  axis: "+j+"  sens: "+ Controllers.controllers[i].axes[j].sensitivity+"  deadzone: "+ Controllers.controllers[i].axes[j].deadzone);
                         w.WriteLine(Controllers.controllers[i].axes[j].deadzone.ToStringInvariantCulture());
                         w.WriteLine(Controllers.controllers[i].axes[j].sensitivity.ToStringInvariantCulture());
                     }
