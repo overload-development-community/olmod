@@ -17,7 +17,7 @@ namespace GameMod
 
     static class MPServerBrowser
     {
-        static readonly string browserUrl = "https://tracker.otl.gg/api/browser";
+        static readonly string browserUrl = $"{Config.Settings.Value<string>("trackerBaseUrl")}/api/browser";
         static readonly int refreshTime = 10000; // 10s
         public static readonly MenuState msServerBrowser = (MenuState)75;
         public static readonly UIElementType uiServerBrowser = (UIElementType)89;
