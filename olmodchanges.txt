@@ -1,3 +1,20 @@
+v0.5.10 - 2023-08-21
+
+- /START and /EXTEND chat commands now inform the tracker, so the tracker remains in sync. (Thanks, derhass!)
+- You can now mute/unmute individual players audio taunts from the console. (Thanks, luponix!)
+- You can delete keybinds and taunts by hovering over the selection and pressing the delete key. (Thanks, luponix!)
+- You can type a letter while in the audio taunt selection to jump to audio taunts beginning with that letter. (Thanks, luponix!)
+- You can bind audio taunts to the joystick. (Thanks, luponix!)
+- A new reload button has been added to the audio taunts screen that will re-read your audio taunts, so you don't have to restart the game after adding more. (Thanks, luponix!)
+- Audio taunts no longer play if you type a keybind while chatting. (Thanks, luponix!)
+- Audio taunt visual indicator now shows when dead. (Thanks, luponix!)
+- Numerous bug fixes to audio taunts. (Thanks, luponix!)
+- Fixes for multiple controllers/joysticks. (Thanks, luponix!)
+- /STATUS will now also respond to /INFO and /I. (Thanks, derhass!)
+- Invalid names are now replaced with <INVALID NAME>. (Thanks, derhass!)
+- Name collision with more than 2 players is now handled by incrementing the number in parenthesis, not adding another number in parenthesis. (Thanks, derhass!)
+- Creeper glow bugs have been fixed. (Thanks, Fireball!)
+
 v0.5.9 - 2023-04-10
 
 - Audio taunts have been added to multiplayer!  It can be turned off when setting up a game.  See https://github.com/overload-development-community/olmod/wiki/Audio-taunts for details. (Thanks, luponix!)
