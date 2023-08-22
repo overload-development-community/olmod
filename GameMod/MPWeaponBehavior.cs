@@ -174,7 +174,7 @@ namespace GameMod
     internal static class Cyclone
     {
         private static FieldInfo _PlayerShip_flak_fire_count_Field = typeof(PlayerShip).GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static int CycloneSpinupStartingStep = 6;
+        public static int CycloneSpinupStartingStep = 0;
 
         /// <summary>
         /// Simply adjust flak_fire_count input which would normally start at 0 in existing formula:
@@ -185,10 +185,16 @@ namespace GameMod
         static float GetCycloneSpinupAdjustment(PlayerShip player_ship)
         {
             int flak_fire_count = (int)_PlayerShip_flak_fire_count_Field.GetValue(player_ship);
-            if (flak_fire_count == 0)
+
+            if (CycloneSpinupStartingStep != 0)
             {
-                _PlayerShip_flak_fire_count_Field.SetValue(player_ship, CycloneSpinupStartingStep);
+                if (flak_fire_count == 0)
+                {
+                    _PlayerShip_flak_fire_count_Field.SetValue(player_ship, CycloneSpinupStartingStep);
+                    flak_fire_count = CycloneSpinupStartingStep;
+                }
             }
+
             return 1f - Mathf.Min(flak_fire_count * 0.05f, (player_ship.c_player.m_weapon_level[(int)player_ship.c_player.m_weapon_type] != WeaponUnlock.LEVEL_2B) ? 0.4f : 0.25f);
         }
 
