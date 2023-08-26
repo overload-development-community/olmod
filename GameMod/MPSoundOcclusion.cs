@@ -161,7 +161,7 @@ namespace GameMod
             }
         }
 
-        static void Postfix(int __result, Vector3 pos3d)
+        static void Postfix(int __result, Vector3 pos3d, int effect)
         {
             if (__result != -1) // if -1 then we ran out of audio slots, skip the whole thing
             {
@@ -175,7 +175,7 @@ namespace GameMod
                     }
                     else
                     {
-                        if ((!MPObserver.Enabled || MPObserver.ObservedPlayer != null) && !GameplayManager.IsDedicatedServer()) // last check probably not necessary but whatever
+                        if (!MPObserver.Enabled || MPObserver.ObservedPlayer != null)
                         {
                             // if we're mid-cue there's multiple sounds being played from the same location - use the previous Linecast calculations for efficiency
                             if (MPSoundOcclusion.CueState < 2)
@@ -230,6 +230,10 @@ namespace GameMod
                     }
                 }
                 MPSoundExt.m_a_source[__result].Play();  // Nop'd out in the transpiler
+            }
+            else if (!GameplayManager.IsDedicatedServer())
+            {
+                Debug.Log("AUDIO ERROR - all sound slots currently in use, unable to play cue #" + effect);
             }
         }
     }

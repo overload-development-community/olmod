@@ -187,7 +187,7 @@ namespace GameMod
 			}
 			proj.c_transform.localScale = Vector3.one * multiplier; // make the visual bigger for a charged shot...
 			((CapsuleCollider)proj.c_collider).radius = 0.48f / multiplier; // ... but NOT for the player collider. No resize. Stock is resized. Leads to angry mobs and pitchforks. Appease the masses.
-			Debug.Log("CCF TB firing on " + (GameplayManager.IsDedicatedServer() ? "server" : "client" + ", strength " + m_strength + ", scale " + multiplier + ", hit radius " + ((CapsuleCollider)proj.c_collider).radius));
+			//Debug.Log("CCF TB firing on " + (GameplayManager.IsDedicatedServer() ? "server" : "client" + ", strength " + m_strength + ", scale " + multiplier + ", hit radius " + ((CapsuleCollider)proj.c_collider).radius));
 
 
 			m_damage *= 1f + m_strength * ((!GameplayManager.IsMultiplayerActive) ? 2.5f : 1.75f);

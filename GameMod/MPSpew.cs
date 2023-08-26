@@ -13,7 +13,7 @@ namespace GameMod {
         private static MethodInfo _Item_PlayItemPickupFX_Method = typeof(Item).GetMethod("PlayItemPickupFX", BindingFlags.NonPublic | BindingFlags.Instance);
 
         static bool Prefix(Item __instance, Collider other) {
-            Debug.Log("CCF ITEM COLLIDED WITH - " + __instance.m_type.ToString() + " - m_amount = " + __instance.m_amount + " - on " + (NetworkManager.IsServer() ? "server" : "client"));
+            //Debug.Log("CCF ITEM COLLIDED WITH - " + __instance.m_type.ToString() + " - m_amount = " + __instance.m_amount + " - on " + (NetworkManager.IsServer() ? "server" : "client"));
             
             // Needs to be multiplayer, on the server, not on a spawn point, and not a super pickup.  Bail otherwise.
             if (!GameplayManager.IsMultiplayerActive || !NetworkManager.IsServer() || __instance.m_spawn_point != -1 || __instance.m_super) {
@@ -82,7 +82,7 @@ namespace GameMod {
     [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
     class MPSpew_PlayerShip_SpewItemsOnDeath {
         static void Prefix(PlayerShip __instance) {
-            if (!NetworkManager.IsServer() || MPShips.allowed != 0)
+            if (!NetworkManager.IsServer() || MPShips.allowed != 0 && Random.value > 0.333f) // Lancer will only drop 2 out of 3 possible times
             //if (!NetworkManager.IsServer())
             {
                 return;

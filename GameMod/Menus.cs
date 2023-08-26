@@ -47,7 +47,7 @@ namespace GameMod {
             set
             {
                 mms_classic_spawns_internal = value;
-                MPWeapons.ReflexEnabled = value;
+                MPWeapons.SetReflexSlotEnabled();
             }
         }
         public static bool mms_always_cloaked { get; set; }
@@ -143,16 +143,15 @@ namespace GameMod {
             }
         }
 
-        private static int mms_ships_allowed_internal = 0;
         public static int mms_ships_allowed
         {
             get
             {
-                return mms_ships_allowed_internal;
+                return MPShips.allowed;
             }
             set
             {
-                mms_ships_allowed_internal = value;
+                MPShips.allowed = value;
                 MPWeapons.UpdateWeaponList();
             }
         }

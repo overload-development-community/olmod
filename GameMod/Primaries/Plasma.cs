@@ -24,7 +24,8 @@ namespace GameMod
             ParticleElement shot1 = MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_right.position, player.c_player_ship.c_transform.localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], true, 0);
             ParticleElement shot2 = MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_left.position, player.c_player_ship.c_transform.localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], true, 1);
 
-            player.c_player_ship.m_refire_time += ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2A) ? 0.18f : 0.15f) * refire_multiplier;
+            //player.c_player_ship.m_refire_time += ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2A) ? 0.18f : 0.15f) * refire_multiplier;
+            player.c_player_ship.m_refire_time += ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2A) ? 0.16f : 0.14f) * refire_multiplier;
             if (MPSniperPackets.AlwaysUseEnergy())
             {
                 player.UseEnergy(0.75f);
@@ -138,6 +139,7 @@ namespace GameMod
             projectile.m_lifetime_robot_multiplier = 1;
             //projectile.m_init_speed_min = 28;
             projectile.m_init_speed_min = 30;
+            //projectile.m_init_speed_min = 31;
             projectile.m_init_speed_max = -1;
             projectile.m_init_speed_robot_multiplier = 1;
             projectile.m_acceleration = 0;
@@ -174,7 +176,7 @@ namespace GameMod
             Object.Destroy(projectile.c_collider);
             var coll = go.AddComponent<SphereCollider>();
             coll.material = physmat;
-            coll.radius = 0.5f; //0.45?
+            coll.radius = 0.55f; //0.45? 0.5?
             projectile.c_collider = coll;
             go.layer = 12;
 

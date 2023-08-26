@@ -1148,7 +1148,7 @@ namespace GameMod
                         pos = pos,
                         push_dir = ps.c_transform_position - pos,
                         type = DamageType.EXPLOSIVE,
-                        weapon = ProjPrefab.none,
+                        weapon = ProjPrefab.proj_melee,
                         force_death = false,
                         robot_owner = null
                     };

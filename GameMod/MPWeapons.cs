@@ -147,32 +147,17 @@ namespace GameMod
         public static Dictionary<Weapon, NetworkHash128> newItemPrefabs = new Dictionary<Weapon, NetworkHash128>(); // new prefabs generated from weapons
 
         private static Weapon reflexCheck = primaries[2]; // stopgap until I figure out a better way to do this.
-        private static bool ReflexEnabled_internal = false; // start off in "sidearm" mode
-        public static bool ReflexEnabled
-        {
-            get
-            {
-                return true;
-                return ReflexEnabled_internal;
-            }
-            set
-            {
-                ReflexEnabled_internal = Menus.mms_classic_spawns || primaries.Contains(reflexCheck);
-                //MenuManager.mms_powerup_filter[2] = ReflexEnabled_internal;
-                /*if (value && (Menus.mms_classic_spawns || primaries.Contains(reflexCheck)))
-                {
-                    MenuManager.mms_powerup_filter[2] = true;
-                    ReflexEnabled_internal = true;
-                }
-                else
-                {
-                    MenuManager.mms_powerup_filter[2] = false;
-                    ReflexEnabled_internal = false;
-                }*/
-            }
-        }
+        public static bool ReflexEnabled = false; // start off in "sidearm" mode
 
         public static bool Initialized = false;
+
+        public static void SetReflexSlotEnabled()
+        {
+            //Debug.Log("CCF SetReflexSlotEnabled called, primary table contains reflex right now? " + primaries.Contains(reflexCheck));
+            ReflexEnabled = Menus.mms_classic_spawns || !primaries.Contains(reflexCheck);
+
+            MenuManager.mms_powerup_filter[2] = ReflexEnabled;
+        }
 
         public static void MaybeFireWeapon(PlayerShip ps, Player player, Ship ship)
         {
@@ -366,8 +351,6 @@ namespace GameMod
                 secondaries[7] = MasterSecondaries["Vortex"];
                 PrefabManager.item_prefabs[MissileItems[6]] = secondaries[6].itemPrefab;
                 PrefabManager.item_prefabs[MissileItems[6]].GetComponent<Item>().m_type = ItemType.MISSILE_TIMEBOMB;
-
-                ReflexEnabled = true;
             }
             else
             {
@@ -397,9 +380,29 @@ namespace GameMod
                 secondaries[7] = MasterSecondaries["Vortex"];
                 PrefabManager.item_prefabs[MissileItems[6]] = secondaries[6].itemPrefab;
                 PrefabManager.item_prefabs[MissileItems[6]].GetComponent<Item>().m_type = ItemType.MISSILE_TIMEBOMB;
-
-                ReflexEnabled = false;
             }
+
+            SetReflexSlotEnabled();
+
+            MethodInfo PRIMARY_REFRESH = typeof(Player.WeaponNamesType).GetMethod("Refresh", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo SECONDARY_REFRESH = typeof(Player.MissileNamesType).GetMethod("Refresh", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo SECONDARY_PLURAL_REFRESH = typeof(Player.MissileNamesPluralType).GetMethod("Refresh", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            for (int i = 0; i < 8; i++)
+            {
+                Player.WEAPON_2A_TAG[i] = MPWeapons.primaries[i].Tag2A;
+                Player.WEAPON_2B_TAG[i] = MPWeapons.primaries[i].Tag2B;
+                Player.MISSILE_2A_TAG[i] = MPWeapons.secondaries[i].Tag2A;
+                Player.MISSILE_2B_TAG[i] = MPWeapons.secondaries[i].Tag2B;
+
+                Player.MAX_MISSILE_AMMO[i] = MPWeapons.secondaries[i].ammo; // Interestingly, these arrays are readonly. This however does *not* make the elements readonly, only the array structure itself. Huh.
+                Player.MAX_MISSILE_AMMO_UP[i] = MPWeapons.secondaries[i].ammoUp;
+                Player.SUPER_MISSILE_AMMO_MP[i] = MPWeapons.secondaries[i].ammoSuper;
+            }
+
+            PRIMARY_REFRESH.Invoke(Player.WeaponNames, new object[0]);
+            SECONDARY_REFRESH.Invoke(Player.MissileNames, new object[0]);
+            SECONDARY_PLURAL_REFRESH.Invoke(Player.MissileNamesPlural, new object[0]);
 
             //Debug.Log("CCF missile prefab " + ((ItemPrefab)MissileItems[6]).ToString() + " currently is of m_type " + PrefabManager.item_prefabs[MissileItems[6]].GetComponent<Item>().m_type.ToString());
         }
@@ -1418,7 +1421,7 @@ namespace GameMod
         }
     }
 
-
+    /*
     // missile limit and weapon tag changes
     [HarmonyPatch(typeof(Player), MethodType.Constructor)]
     static class MPWeapons_Player_Constructor
@@ -1454,6 +1457,7 @@ namespace GameMod
             SECONDARY_PLURAL_REFRESH.Invoke(Player.MissileNamesPlural, new object[0]);
         }
     }
+    */
 
     // Primary weapon icon references
     [HarmonyPatch(typeof(UIElement), "DrawHUDPrimaryWeapon")]
