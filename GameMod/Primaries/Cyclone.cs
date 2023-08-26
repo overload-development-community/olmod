@@ -7,6 +7,8 @@ namespace GameMod
 {
     public class Cyclone : PrimaryWeapon
     {
+        public static int CycloneSpinupStartingStep = 0;
+
         public Cyclone()
         {
             displayName = "CYCLONE";

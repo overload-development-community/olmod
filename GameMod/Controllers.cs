@@ -22,6 +22,7 @@ namespace GameMod
 
         public class Controller
         {
+            public bool populated = false;
             public string m_device_name = "";
             public int m_joystick_id = -1;
             public List<Axis> axes = new List<Axis>();
@@ -220,8 +221,9 @@ namespace GameMod
     class Controllers_PilotManager_Select
     {
 
-        static void ReadControlData()
+        public static void ReadControlData()
         {
+            Controllers.controllers = new List<Controllers.Controller>();
             string fn = PilotManager.FileName(PilotFileType.CONFIG) + "mod";
             for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
@@ -280,49 +282,41 @@ namespace GameMod
             return index;
         }
 
-        static void ReadControlDataFromStream(StreamReader sr)
+        private static List<Controllers.Controller> ReadInDevicesAndReturnThemInAList(StreamReader sr, int numControllers)
         {
-            string text = sr.ReadLine(); // 1
-            if (!RUtility.StringStartsWith(text, Controls.CONFIG_KEY))
-            {
-                Debug.Log("olmod controls config save file has an incorrect key: " + text);
-                return;
-            }
-
-            int num;
-            bool flag = int.TryParse(text.Substring(Controls.CONFIG_KEY.Length), out num);
-            int numControllers = int.Parse(sr.ReadLine());
-            int[] controllers = new int[numControllers];
-            List<Controllers.Controller> all_controllers = new List<Controllers.Controller>();
-
             Debug.Log("Creating devices from .xconfigmod");
+            List<Controllers.Controller> all_controllers = new List<Controllers.Controller>();
             for (int i = 0; i < numControllers; i++)
             {
+                // create a blank device
                 Controllers.Controller device = new Controllers.Controller();
-                string[] device_informations = sr.ReadLine().Split(';');
                 
+                // read in the device name and id
+                string[] device_informations = sr.ReadLine().Split(';');
                 device.m_device_name = device_informations[0];
                 device.m_joystick_id = -1;
                 if (device_informations.Length == 2)
                 {
                     int.TryParse(device_informations[1], out device.m_joystick_id);
                 }
-
-                Debug.Log(string.Format("   [{0,-35}] id: {1,2} controller at this position in Overload.Controls.m_controllers: {2, -35} id: {3,9}", 
-                    device.m_device_name, 
-                    device.m_joystick_id, 
+                /*
+                Debug.Log(string.Format("[{0,-35}] id: {1,2} controller at this position in Overload.Controls.m_controllers: {2, -35} id: {3,9}",
+                    device.m_device_name,
+                    device.m_joystick_id,
                     i < Controls.m_controllers.Count ? Controls.m_controllers[i].name : "NO DEVICE",
                     i < Controls.m_controllers.Count ? Controls.m_controllers[i].joystickID.ToString() : "NO DEVICE"
-                    ));
+                    ));*/
 
 
-
+                // read in the amount of axes that this saved device has
                 int numAxes = int.Parse(sr.ReadLine());
+                // populate all the axes with default values
                 for (int j = 0; j < numAxes; j++)
                 {
                     // create a default axis if the axes count doesnt match
                     if (j >= device.axes.Count)
                     {
+                        // default values, deadzone used to be 40 but that is a very bad default so this should help newcomers
                         float sens = 17.24138f;
                         float deadzone = 5f;
 
@@ -351,70 +345,103 @@ namespace GameMod
 
                 all_controllers.Add(device);
             }
+            return all_controllers;
+        }
 
-            Dictionary<string, int> controller_types = new Dictionary<string, int>(); // this holds the different types of connected devices. 
-            List<Controllers.Controller> unconnected_controllers = new List<Controllers.Controller>();
+     
+        static void ReadControlDataFromStream(StreamReader sr)
+        {
+            //Debug.Log("\n--------- SENSITIVITIES & DEADZONES ---------");
+            string text = sr.ReadLine(); // 1
+            if (!RUtility.StringStartsWith(text, Controls.CONFIG_KEY))
+            {
+                Debug.Log("olmod controls config save file has an incorrect key: " + text);
+                return;
+            }
+
+            int num; // config key
+            bool flag = int.TryParse(text.Substring(Controls.CONFIG_KEY.Length), out num);
+            int numControllers = int.Parse(sr.ReadLine()); // amount of saved controllers in file
+            int[] controllers = new int[numControllers];
+
+            // this holds all the saved devices till they get ordered and matched to Overload.Controls.m_controllers
+            List<Controllers.Controller> all_controllers = ReadInDevicesAndReturnThemInAList(sr, numControllers);
+
+            // this holds the different types of connected devices to differentiate between for example a Sidewinder 3D pro and a T.16000
+            Dictionary<string, int> controller_types = new Dictionary<string, int>();
+
+
+            List<Controllers.Controller> unassigned_controllers = new List<Controllers.Controller>();
 
             // match the devices
             foreach (var device in all_controllers)
             {
-                // scenario 1: device has an id
-                // scenario 1.1: that id matches one other device -> match them
-                // scenario 1.2: that id doesnt match anything -> add a new device 
-                // scenario 2: device doesnt have an id
-                // scenario 2.1: there are matching devices and there is no device in this config with an id that matches them -> match them
-                // scenario 2.2: same as 2.1 but 2.1 has already happened -> recognise how often this scenario has occured for this device type and either attempt a match or drop it
-                // scenario 2.3: there are matching devices but there is a device in this config with an id that matches them -> drop the current device
-
-                // populate the dictionary of the different controller types
+                // add this device name to controller_types once
                 if (!controller_types.ContainsKey(device.m_device_name))
                     controller_types.Add(device.m_device_name, 0);
 
-               
+
                 if (device.m_joystick_id != -1)
                 {
-                    int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name == device.m_device_name && c.joystickID == device.m_joystick_id);
-                    Debug.Log("[1S] Matching devices: ("+device.m_device_name+":"+device.m_joystick_id+") to "+ (index == -1 ? "UNCONNECTED" : index.ToString()));
+                    int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name.Equals(device.m_device_name) && c.joystickID == device.m_joystick_id);
+                    //Debug.Log("[1S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : index.ToString()));
+                    
                     if (index == -1)
-                        unconnected_controllers.Add(device);
+                    {
+                        unassigned_controllers.Add(device);
+                    } 
                     else
+                    {
                         Controllers.controllers[index] = device;
+                        Controllers.controllers[index].populated = true;
+                    }
+                        
                 }
                 else
                 {
-                    int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name == device.m_device_name);
                     // ensure that there is sth that this device can be matched to
-                    if (index != -1 && index < Controls.m_controllers.Count)
+                    int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name.Equals(device.m_device_name));
+                    if (index != -1)
                     {
                         // device has no id and there are no other devices with ids either 
-                        if (all_controllers.Find((Controllers.Controller c) => c.m_device_name == Controls.m_controllers[index].name && c.m_joystick_id == Controls.m_controllers[index].joystickID) == null)
+                        if (all_controllers.Find((Controllers.Controller c) => c.m_device_name == Controls.m_controllers[index].name && c.m_joystick_id == Controls.m_controllers[index].joystickID && c.m_joystick_id != -1) == null)
                         {
                             int[] matching_device_indexes = FindControllerIndexes(device.m_device_name, device.m_joystick_id, false);
                             if (matching_device_indexes.Length > 0 && matching_device_indexes.Length > controller_types[device.m_device_name])
                             {
+                                device.populated = true;
                                 Controllers.controllers[matching_device_indexes[controller_types[device.m_device_name]]] = device;
-                                Debug.Log("[2S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
+                                //Debug.Log("[2S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
                             }
                             controller_types[device.m_device_name]++;
                         }
                     }
-
                 }
             }
-
-            // add the sensitivities of disconnected controllers at the end
-            foreach(Controllers.Controller c in unconnected_controllers)
+            
+            foreach(Controllers.Controller c in unassigned_controllers)
             {
-                Debug.Log("  readded inactive controller: "+c.m_device_name);
-                Controllers.controllers.Add(c);
+                for(int i = 0; i < Controllers.controllers.Count; i++)
+                {
+                    if(!Controllers.controllers[i].populated && Controllers.controllers[i].m_device_name.Equals(c.m_device_name))
+                    {
+                        //Debug.Log("  readded controller: " + c.m_device_name+ " at "+i);
+                        Controllers.controllers[i] = c;
+                        Controllers.controllers[i].populated = true;
+                    }
+                }
+
             }
 
-            for(int i = 0; i < Controls.m_controllers.Count; i++)
+            //Debug.Log(" ");
+            for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
+                //Debug.Log("Device");
                 for(int j = 0; j < Controllers.controllers[i].axes.Count; j++)
                 {
                     if (j < Controllers.controllers[i].axes.Count)
                     {
+                        //Debug.Log("   axis:"+j+" sens:"+ Controllers.controllers[i].axes[j].sensitivity+" dead:"+ Controllers.controllers[i].axes[j].deadzone);
                         Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
                         Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
                     }
@@ -570,6 +597,7 @@ namespace GameMod
 
         static void WriteControlDataToStream(StreamWriter w)
         {
+            //Debug.Log("\n------------- Saving the controller sens/deadzone ------------");
             w.WriteLine(Controls.CONFIG_KEY + Controls.VERSION);
             bool[] array = new bool[Controls.m_controllers.Count];
             array.Populate(true);
@@ -578,11 +606,13 @@ namespace GameMod
             {
                 Overload.Controller controller = Controls.m_controllers[i];
                 w.WriteLine((!array[i]) ? string.Empty : controller.name + ";" + Controls.m_controllers[i].joystickID);
+                Debug.Log((!array[i]) ? string.Empty : controller.name + ";" + Controls.m_controllers[i].joystickID);
                 if (array[i])
                 {
                     w.WriteLine(controller.m_axis_count);
                     for (int j = 0; j < controller.m_axis_count; j++)
                     {
+                        //Debug.Log("  axis: "+j+"  sens: "+ Controllers.controllers[i].axes[j].sensitivity+"  deadzone: "+ Controllers.controllers[i].axes[j].deadzone);
                         w.WriteLine(Controllers.controllers[i].axes[j].deadzone.ToStringInvariantCulture());
                         w.WriteLine(Controllers.controllers[i].axes[j].sensitivity.ToStringInvariantCulture());
                     }
@@ -605,14 +635,17 @@ namespace GameMod
     [HarmonyPatch(typeof(Controls), "OnControllerConnected")]
     class Controllers_Controls_OnControllerConnected
     {
+
         static void DeadzoneHelper(int controller, int axis)
         {
-            Controllers.SetAxisDeadzone(controller, axis, Controllers.controllers[controller].axes[axis].deadzone);
+
+            //Controllers.SetAxisDeadzone(controller, axis, Controllers.controllers[controller].axes[axis].deadzone);
         }
 
         static void SensitivityHelper(int controller, int axis)
         {
-            Controllers.SetAxisSensitivity(controller, axis, Controllers.controllers[controller].axes[axis].sensitivity);
+
+            //Controllers.SetAxisSensitivity(controller, axis, Controllers.controllers[controller].axes[axis].sensitivity);
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)

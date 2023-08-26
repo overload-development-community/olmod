@@ -272,4 +272,7 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <LangVersion>7.0</LangVersion>
+  </PropertyGroup>
 </Project>

@@ -23,7 +23,6 @@ namespace GameMod
         /* 
          * - write a handler that dynamically schedules downloads/uploads and adjusts the packet size based on the resend rate
          * - replace the AudioTaunt.received_packet list with a dynamically sized bool array 
-         * - make joystick keys bindable
          */
 
         public const int AUDIO_TAUNT_SIZE_LIMIT = 131072;           // 128 kB, maximum allowed audio taunt file size in bytes
@@ -153,7 +152,6 @@ namespace GameMod
                             asc[i] = new AudioSourceContainer();
                         }
 
-
                         ImportAudioTaunts(LocalAudioTauntDirectory, new List<string>(), false);
                         ImportAudioTaunts(ExternalAudioTauntDirectory, new List<string>(), true);
                         for (int i = 0; i < 6; i++)
@@ -170,9 +168,7 @@ namespace GameMod
                         LoadLocalAudioTauntsFromPilotPrefs();
                     }
 
-
                     taunts.Sort((x, y) => x.name.CompareTo(y.name));
-
                     initialized = true;
                 }
 
@@ -299,15 +295,18 @@ namespace GameMod
             {
                 Debug.Log("Attempting to import AudioTaunts from: " + path_to_directory);
 
+                // measure the time it takes to load the taunts
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
 
                 bool load_all_files = files_to_load == null | files_to_load.Count == 0;
-                //Debug.Log(" load all files: " + load_all_files);
                 var fileInfo = new DirectoryInfo(path_to_directory).GetFiles();
                 foreach (FileInfo file in fileInfo)
                 {
-                    if ((files_to_load.Contains(file.Name) | load_all_files) && taunts.Find(t => t.name.Equals(file.Name)) == null && file.Extension.Equals(".ogg") && file.Length <= AUDIO_TAUNT_SIZE_LIMIT)
+                    if ((files_to_load.Contains(file.Name) | load_all_files)    // if this file or all files got requested
+                        && taunts.Find(t => t.name.Equals(file.Name)) == null   // if it hasnt been loaded before
+                        && file.Extension.Equals(".ogg")                        // we only accept .ogg for now
+                        && file.Length <= AUDIO_TAUNT_SIZE_LIMIT)               // limit the taunt size
                     {
 
                         AudioTaunt t = new AudioTaunt
@@ -426,8 +425,7 @@ namespace GameMod
                 {
                     WWW www = new WWW("file:///" + path);
                     while (!www.isDone) { }
-                    if (string.IsNullOrEmpty(www.error))
-                    {
+                    if (string.IsNullOrEmpty(www.error)){
                         return www.GetAudioClip(true, false);
                     }
                     else Debug.Log("Error in 'LoadAsAudioClip': " + www.error + " : " + filename + " : " + directory_path);
@@ -446,11 +444,11 @@ namespace GameMod
             }
 
             // used to calculate a hash for each audio taunt file to avoid filename collisions
-            private static string CalculateMD5ForFile(string filename)
+            public static string CalculateMD5ForFile(string path_to_file)
             {
                 using (var md5 = MD5.Create())
                 {
-                    using (var stream = File.OpenRead(filename))
+                    using (var stream = File.OpenRead(path_to_file))
                     {
                         var hash = md5.ComputeHash(stream);
                         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
@@ -504,8 +502,6 @@ namespace GameMod
             {
                 if (audio_taunt_volume == 0 | audioClip == null | !active | IsPlayerMuted(player_name))
                     return;
-
-                //Debug.Log("Playing Audiotaunt");
 
                 int index = -1;
                 for (int i = 0; i < asc.Length; i++)
@@ -904,6 +900,9 @@ namespace GameMod
                     Debug.Log("[AudioTaunts]  Received AudioTauntIdentifiers from Server");
                     var msg = rawMsg.ReadMessage<ShareAudioTauntIdentifiers>();
                     List<string> file_hashes = msg.hashes.Split('/').ToList();
+                    foreach (string hash in file_hashes)
+                        Debug.Log(hash);
+
 
                     ImportAudioTaunts(ExternalAudioTauntDirectory, file_hashes);
                     
