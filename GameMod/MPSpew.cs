@@ -13,6 +13,8 @@ namespace GameMod {
         private static MethodInfo _Item_PlayItemPickupFX_Method = typeof(Item).GetMethod("PlayItemPickupFX", BindingFlags.NonPublic | BindingFlags.Instance);
 
         static bool Prefix(Item __instance, Collider other) {
+            Debug.Log("CCF ITEM COLLIDED WITH - " + __instance.m_type.ToString() + " - m_amount = " + __instance.m_amount + " - on " + (NetworkManager.IsServer() ? "server" : "client"));
+            
             // Needs to be multiplayer, on the server, not on a spawn point, and not a super pickup.  Bail otherwise.
             if (!GameplayManager.IsMultiplayerActive || !NetworkManager.IsServer() || __instance.m_spawn_point != -1 || __instance.m_super) {
                 return true;

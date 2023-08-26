@@ -18,6 +18,7 @@ namespace GameMod
             icon_idx = (int)AtlasIndex0.WICON_DRILLER;
             UsesAmmo = true;
 			projprefab = ProjPrefabExt.proj_driller;
+			itemID = ItemPrefab.entity_item_driller;
         }
 
         public override void SetShip(Ship s)

@@ -15,6 +15,7 @@ namespace GameMod
             icon_idx = (int)AtlasIndex0.WICON_REFLEX;
             UsesEnergy = true;
             projprefab = ProjPrefabExt.proj_plasma;
+            itemID = ItemPrefab.entity_item_reflex;
         }
 
         public override void Fire(float refire_multiplier)
@@ -34,11 +35,11 @@ namespace GameMod
             {
                 if (player == GameManager.m_local_player)
                 {
-                    GameManager.m_audio.PlayCue2D((int)NewSounds.PlasmaFire2, vol: 0.4f);
+                    GameManager.m_audio.PlayCue2D((int)NewSounds.PlasmaFire3, vol: 0.4f);
                 }
                 else
                 {
-                    GameManager.m_audio.PlayCuePos((int)NewSounds.PlasmaFire2, ps.c_transform.position, vol: 0.4f);
+                    GameManager.m_audio.PlayCuePos((int)NewSounds.PlasmaFire3, ps.c_transform.position, vol: 0.4f);
                 }
             }
         }
@@ -113,11 +114,15 @@ namespace GameMod
             UIManager.DrawSpriteUIRotated(temp_pos, 0.3f, 0.3f, num3 + (float)System.Math.PI / 2f, UIManager.m_col_ui4, m_alpha, 40);
         }
 
+        // THIS IS ESSENTIALLY A PROJ_DATA DEFINITION
+
         public override GameObject GenerateProjPrefab()
         {
             GameObject go = GameObject.Instantiate(ProjectileManager.proj_prefabs[(int)ProjPrefab.proj_enemy_core]);
             Object.DontDestroyOnLoad(go);
             projectile = go.GetComponent<Projectile>();
+
+            projectile.m_type = (ProjPrefab)projprefab;
 
             projectile.m_damage_robot = 14;
             projectile.m_damage_player = 9;
@@ -131,7 +136,8 @@ namespace GameMod
             projectile.m_lifetime_min = 5;
             projectile.m_lifetime_max = -1;
             projectile.m_lifetime_robot_multiplier = 1;
-            projectile.m_init_speed_min = 28;
+            //projectile.m_init_speed_min = 28;
+            projectile.m_init_speed_min = 30;
             projectile.m_init_speed_max = -1;
             projectile.m_init_speed_robot_multiplier = 1;
             projectile.m_acceleration = 0;
@@ -160,7 +166,7 @@ namespace GameMod
             //projectile.m_trail_particle = FXWeaponEffect.trail_reflex;
             projectile.m_trail_particle = FXWeaponEffect.none;
             projectile.m_trail_renderer = FXTrailRenderer.none;
-            projectile.m_trail_post_lifetime = 1f;
+            projectile.m_trail_post_lifetime = 0.4f;
             projectile.m_muzzle_flash_particle = FXWeaponEffect.muzzle_flash_reflex;
             projectile.m_muzzle_flash_particle_player = FXWeaponEffect.muzzle_flash_reflex_player;
 
@@ -168,11 +174,23 @@ namespace GameMod
             Object.Destroy(projectile.c_collider);
             var coll = go.AddComponent<SphereCollider>();
             coll.material = physmat;
-            coll.radius = 0.45f;
+            coll.radius = 0.5f; //0.45?
             projectile.c_collider = coll;
             go.layer = 12;
 
             projectile.c_rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous; // WHY WAS IT DISCRETE
+
+            /*
+            //temporary
+            GameObject vis = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.DontDestroyOnLoad(vis);
+            //vis.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
+            var mr = vis.GetComponent<MeshRenderer>();
+            mr.sharedMaterial = UIManager.gm.m_energy_material;
+            mr.enabled = true;
+            Object.Destroy(vis.GetComponent<SphereCollider>());
+            vis.transform.SetParent(go.transform);
+            */
 
             Light light = go.GetComponent<Light>();
             light.color = new Color(0f, 1f, 0.11f, 1f);
@@ -181,7 +199,7 @@ namespace GameMod
             {
                 var m = ps.main;
                 //Debug.Log("CCF ps name = " + ps.name + " scale " + m.startSizeMultiplier);
-                m.startSizeMultiplier = m.startSizeMultiplier * 1.8f;
+                m.startSizeMultiplier = m.startSizeMultiplier * 2f;
 
                 if (ps.name == "_glow")
                 {

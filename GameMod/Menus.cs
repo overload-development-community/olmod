@@ -36,7 +36,20 @@ namespace GameMod {
             get { return _mms_scale_respawn_time && (MenuManager.mms_mode == ExtMatchMode.TEAM_ANARCHY || MenuManager.mms_mode == ExtMatchMode.CTF || MenuManager.mms_mode == ExtMatchMode.MONSTERBALL); }
             set { _mms_scale_respawn_time = value; }
         }
-        public static bool mms_classic_spawns { get; set; }
+
+        private static bool mms_classic_spawns_internal;
+        public static bool mms_classic_spawns
+        {
+            get
+            {
+                return mms_classic_spawns_internal;
+            }
+            set
+            {
+                mms_classic_spawns_internal = value;
+                MPWeapons.ReflexEnabled = value;
+            }
+        }
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
         public static bool mms_damage_numbers { get; set; }
@@ -129,6 +142,21 @@ namespace GameMod {
                     return "UNKNOWN";
             }
         }
+
+        private static int mms_ships_allowed_internal = 0;
+        public static int mms_ships_allowed
+        {
+            get
+            {
+                return mms_ships_allowed_internal;
+            }
+            set
+            {
+                mms_ships_allowed_internal = value;
+                MPWeapons.UpdateWeaponList();
+            }
+        }
+
 
         public static string GetMMSAlwaysCloaked()
         {
@@ -310,7 +338,7 @@ namespace GameMod {
         public static bool mms_show_framerate = false;
         public static int mms_selected_loadout_idx = 0;
         public static int mms_collision_mesh = 0;
-        public static int mms_ships_allowed = 0;
+        //public static int mms_ships_allowed = 0; // Moved to property, further up
     }
 
 
@@ -567,10 +595,10 @@ namespace GameMod {
                         Menus.mms_classic_spawns = !Menus.mms_classic_spawns;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         // Re-enables Reflex drops in classic spawn mode by default.
-                        if (Menus.mms_classic_spawns)
+                        /*if (Menus.mms_classic_spawns)
                         {
                             MenuManager.mms_powerup_filter[2] = true;
-                        }
+                        }*/
                         break;
                     case 14:
                         Menus.mms_ctf_boost = !Menus.mms_ctf_boost;

@@ -20,6 +20,8 @@ namespace GameMod
             ammoSuper = 40;
             AmmoLevelCap = WeaponUnlock.LEVEL_2A;
             MineHoming = true;
+            MoveSync = true;
+            ExplodeSync = true;
         }
 
         public override void Fire(float refire_multiplier)
@@ -83,6 +85,7 @@ namespace GameMod
             Vector3 vector;
             if (GameplayManager.IsMultiplayerActive)
             {
+                m_vel_inherit = 0f;
                 vector = Vector3.right * 10f;
                 proj.m_acceleration += 0.1f;
                 proj.m_homing_strength *= 1f;
@@ -116,6 +119,14 @@ namespace GameMod
             }
 
             return false;
+        }
+
+        public override void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            if (proj.ShouldPlayDamageEffect(layer))
+            {
+                proj.Explode(damaged_something: true);
+            }
         }
 
         public override RigidbodyInterpolation Interpolation(Projectile proj)

@@ -32,10 +32,12 @@ namespace GameMod {
             if (!GameplayManager.IsMultiplayerActive ||           // it's not a MP game (no network)
                 Network.isServer ||                               // if it's the server (not necessary)
                 MPObserver.Enabled ||
+                c_proj.m_owner_player.isLocalPlayer ||
                 c_proj.m_init_speed_min > 80f ||                 // Let's assume this is a reasonable cutoff
                 weapon.MineHoming ||                              // handled by creeper/TB sync
                 ((int)c_proj.m_type != (int)weapon.projprefab ))  // if it matches the lookup position but it's not the main ProjPrefab, it's the sub-projectile
             {
+                //Debug.Log("CCF skipping lerp for projectile " + ((ProjPrefabExt)c_proj.m_type).ToString());
                 return;
             }
 

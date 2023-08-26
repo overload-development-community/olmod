@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -7,6 +8,7 @@ using HarmonyLib;
 using Overload;
 using Tobii.Gaming;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod
 {
@@ -48,6 +50,7 @@ namespace GameMod
         // new projectiles start here
         proj_plasma,
         proj_mdlance,
+        missile_mortar,
         // new projectiles end here
         num
     }
@@ -61,13 +64,19 @@ namespace GameMod
         DETONATOR
     }
 
+    public class WeaponExtHash : MonoBehaviour
+    {
+        public NetworkHash128 assetId;
+    }
+
     // ====================================================================
     // MPWeapons
     // ====================================================================
     public static class MPWeapons
-    {
-        // populated in MPWeapons_ProjectileManager_ReadProjPresetData, allows looking up a Weapon from a ProjPrefabExt index
-        public static Weapon[] WeaponLookup;
+    {        
+        // holds the main static-but-not-really initialized copy of each weapon for duplication
+        public static Dictionary<string, PrimaryWeapon> MasterPrimaries = new Dictionary<string, PrimaryWeapon>();
+        public static Dictionary<string, SecondaryWeapon> MasterSecondaries = new Dictionary<string, SecondaryWeapon>();
 
         // Any non-stock weapons need to be added here for use during initialization, and new entries created in the enum.
         // This include stock weapons with custom FX added (rather than stock fx modified) due to the way the arrays are modified. A more elegant solution needs to be created. 
@@ -76,10 +85,11 @@ namespace GameMod
             new MSImpulse(),
             new Burstfire(),
             new Plasma(),
-            new MDLance()
+            new MDLance(),
+            new ImpactMortar()
         };
 
-        // The active list of primary weapons at any given time
+        // The active list of primary weapons at any given time. Contains stock weapons at launch.
         public static PrimaryWeapon[] primaries = new PrimaryWeapon[8]
         {
             new Impulse(),
@@ -92,7 +102,7 @@ namespace GameMod
             new Lancer()
         };
 
-        // The active list of secondary weapons at any given time
+        // The active list of secondary weapons at any given time. Contains stock missiles at launch.
         public static SecondaryWeapon[] secondaries = new SecondaryWeapon[8]
         {
             new Falcon(),
@@ -105,7 +115,64 @@ namespace GameMod
             new Vortex()
         };
 
-        public static bool NeedsUpdate = true;
+        // populated in MPWeapons_ProjectileManager_ReadProjPresetData, allows looking up a Weapon from a ProjPrefabExt index
+        public static Weapon[] WeaponLookup;
+
+        // Initialized in MPWeapons_ProjectileManager_ReadProjPresetData, allows substitution of spew.
+        public static GameObject[] item_prefabs; // contains references to the default item prefabs. Don't change this.
+        public static int[] WeaponItems = new int[8] // contains the indexes for the appropriate weapon->prefab translation
+        {
+            (int)ItemPrefab.entity_item_impulse,
+            (int)ItemPrefab.entity_item_cyclone,
+            (int)ItemPrefab.entity_item_reflex,
+            (int)ItemPrefab.entity_item_crusher,
+            (int)ItemPrefab.entity_item_driller,
+            (int)ItemPrefab.entity_item_flak,
+            (int)ItemPrefab.entity_item_thunderbolt,
+            (int)ItemPrefab.entity_item_lancer
+        };
+        public static int[] MissileItems = new int[8] // contains the indexes for the appropriate missile->prefab translation
+        {
+            (int)ItemPrefab.entity_item_falcon4pack,
+            (int)ItemPrefab.entity_item_missile_pod,
+            (int)ItemPrefab.entity_item_hunter4pack,
+            (int)ItemPrefab.entity_item_creeper,
+            (int)ItemPrefab.entity_item_nova,
+            (int)ItemPrefab.entity_item_devastator,
+            (int)ItemPrefab.entity_item_timebomb,
+            (int)ItemPrefab.entity_item_vortex
+        };
+
+        public static Dictionary<NetworkHash128, GameObject> m_registered_prefabs; // a direct reference to the one in Overload.Client
+        public static Dictionary<Weapon, NetworkHash128> newItemPrefabs = new Dictionary<Weapon, NetworkHash128>(); // new prefabs generated from weapons
+
+        private static Weapon reflexCheck = primaries[2]; // stopgap until I figure out a better way to do this.
+        private static bool ReflexEnabled_internal = false; // start off in "sidearm" mode
+        public static bool ReflexEnabled
+        {
+            get
+            {
+                return true;
+                return ReflexEnabled_internal;
+            }
+            set
+            {
+                ReflexEnabled_internal = Menus.mms_classic_spawns || primaries.Contains(reflexCheck);
+                //MenuManager.mms_powerup_filter[2] = ReflexEnabled_internal;
+                /*if (value && (Menus.mms_classic_spawns || primaries.Contains(reflexCheck)))
+                {
+                    MenuManager.mms_powerup_filter[2] = true;
+                    ReflexEnabled_internal = true;
+                }
+                else
+                {
+                    MenuManager.mms_powerup_filter[2] = false;
+                    ReflexEnabled_internal = false;
+                }*/
+            }
+        }
+
+        public static bool Initialized = false;
 
         public static void MaybeFireWeapon(PlayerShip ps, Player player, Ship ship)
         {
@@ -266,23 +333,97 @@ namespace GameMod
 
         public static void UpdateWeaponList()
         {
+            if (!Initialized)
+                return;
+
             if (MPShips.allowed > 0)
             {
                 // for now, swap only the weapons that are needed. This can get less stiff in the future.
 
-                primaries[0] = new MSImpulse();
-                primaries[2] = new Plasma();
-                primaries[4] = new Burstfire();
-                primaries[7] = new MDLance();
+                //primaries[0] = new MSImpulse();
+                //primaries[2] = new Plasma();
+                //primaries[4] = new Burstfire();
+                //primaries[7] = new MDLance();
+
+                //secondaries[6] = new ImpactMortar();
+
+                primaries[0] = MasterPrimaries["MSImpulse"];
+                primaries[1] = MasterPrimaries["Cyclone"];
+                primaries[2] = MasterPrimaries["Plasma"];
+                primaries[3] = MasterPrimaries["Crusher"];
+                primaries[4] = MasterPrimaries["Burstfire"];
+                primaries[5] = MasterPrimaries["Flak"];
+                primaries[6] = MasterPrimaries["Thunderbolt"];
+                primaries[7] = MasterPrimaries["MDLance"];
+
+                secondaries[0] = MasterSecondaries["Falcon"];
+                secondaries[1] = MasterSecondaries["MissilePod"];
+                secondaries[2] = MasterSecondaries["Hunter"];
+                secondaries[3] = MasterSecondaries["Creeper"];
+                secondaries[4] = MasterSecondaries["Nova"];
+                secondaries[5] = MasterSecondaries["Devastator"];
+                secondaries[6] = MasterSecondaries["ImpactMortar"];
+                secondaries[7] = MasterSecondaries["Vortex"];
+                PrefabManager.item_prefabs[MissileItems[6]] = secondaries[6].itemPrefab;
+                PrefabManager.item_prefabs[MissileItems[6]].GetComponent<Item>().m_type = ItemType.MISSILE_TIMEBOMB;
+
+                ReflexEnabled = true;
             }
             else
             {
-                primaries[0] = new Impulse();
-                primaries[2] = new Reflex();
-                primaries[4] = new Driller();
-                primaries[7] = new Lancer();
+                //primaries[0] = new Impulse();
+                //primaries[2] = new Reflex();
+                //primaries[4] = new Driller();
+                //primaries[7] = new Lancer();
+
+                //secondaries[6] = new TimeBomb();
+
+                primaries[0] = MasterPrimaries["Impulse"];
+                primaries[1] = MasterPrimaries["Cyclone"];
+                primaries[2] = MasterPrimaries["Reflex"];
+                primaries[3] = MasterPrimaries["Crusher"];
+                primaries[4] = MasterPrimaries["Driller"];
+                primaries[5] = MasterPrimaries["Flak"];
+                primaries[6] = MasterPrimaries["Thunderbolt"];
+                primaries[7] = MasterPrimaries["Lancer"];
+
+                secondaries[0] = MasterSecondaries["Falcon"];
+                secondaries[1] = MasterSecondaries["MissilePod"];
+                secondaries[2] = MasterSecondaries["Hunter"];
+                secondaries[3] = MasterSecondaries["Creeper"];
+                secondaries[4] = MasterSecondaries["Nova"];
+                secondaries[5] = MasterSecondaries["Devastator"];
+                secondaries[6] = MasterSecondaries["TimeBomb"];
+                secondaries[7] = MasterSecondaries["Vortex"];
+                PrefabManager.item_prefabs[MissileItems[6]] = secondaries[6].itemPrefab;
+                PrefabManager.item_prefabs[MissileItems[6]].GetComponent<Item>().m_type = ItemType.MISSILE_TIMEBOMB;
+
+                ReflexEnabled = false;
+            }
+
+            //Debug.Log("CCF missile prefab " + ((ItemPrefab)MissileItems[6]).ToString() + " currently is of m_type " + PrefabManager.item_prefabs[MissileItems[6]].GetComponent<Item>().m_type.ToString());
+        }
+
+        public static void UpdateProjectileSync()
+        {
+            MPCreeperSync.MoveSync.Clear();
+            MPCreeperSync.ExplodeSync.Clear();
+
+            foreach (Weapon w in primaries.Union<Weapon>(secondaries))
+            {
+                if (w.MoveSync)
+                {
+                    //Debug.Log("CCF Adding " + w.displayName + " to the movement sync list");
+                    MPCreeperSync.MoveSync.Add(w.projprefab);
+                }
+                if (w.ExplodeSync)
+                {
+                    //Debug.Log("CCF Adding " + w.displayName + " to the explosion sync list");
+                    MPCreeperSync.ExplodeSync.Add(w.projprefab);
+                }
             }
         }
+
 
         public static void SetPrimaryNames(ref string[] values)
         {
@@ -319,6 +460,80 @@ namespace GameMod
 
             ps.c_rigidbody.AddForceAtPosition(force, Vector3.LerpUnclamped(ps.c_transform_position, di.pos, 10f), ForceMode.Impulse);
         }
+
+        // Item spawn handler replacements - same as stock, they were just private
+        public static GameObject NetworkSpawnItemExtHandler(Vector3 pos, NetworkHash128 asset_id)
+        {
+            GameObject prefabFromAssetId = Client.GetPrefabFromAssetId(asset_id);
+            if (prefabFromAssetId == null)
+            {
+                Debug.LogErrorFormat("Error looking up item prefab with asset_id {0}", asset_id.ToString());
+                return null;
+            }
+            GameObject gameObject = Object.Instantiate(prefabFromAssetId, pos, Quaternion.identity);
+            if (gameObject == null)
+            {
+                Debug.LogErrorFormat("Error instantiating item prefab {0}", prefabFromAssetId.name);
+                return null;
+            }
+            return gameObject;
+        }
+
+        public static void NetworkUnspawnItemExtHandler(GameObject spawned)
+        {
+            Object.Destroy(spawned);
+        }
+
+        public static void RegisterSpawnItemExtHandler(GameObject prefab, string nameForHash)
+        {
+            if (m_registered_prefabs == null)
+            {
+                m_registered_prefabs = (Dictionary<NetworkHash128, GameObject>)AccessTools.Field(typeof(Client), "m_registered_prefabs").GetValue(null);
+            }
+
+            if (prefab == null)
+            {
+                Debug.LogError("null prefab passed to MPWeapons::RegisterSpawnExtHandler()");
+                return;
+            }
+
+            if (!m_registered_prefabs.ContainsValue(prefab))
+            {
+                //FieldInfo prefabDictionary = AccessTools.Field(typeof(Client), "m_registered_prefabs");
+                //NetworkHash128 assetId = prefab.GetComponent<NetworkIdentity>().assetId;
+                /*char[] name = nameForHash.PadRight(16).ToCharArray();
+                NetworkHash128 assetId = new NetworkHash128();
+                assetId.i0 = (byte)name[0];
+                assetId.i1 = (byte)name[1];
+                assetId.i2 = (byte)name[2];
+                assetId.i3 = (byte)name[3];
+                assetId.i4 = (byte)name[4];
+                assetId.i5 = (byte)name[5];
+                assetId.i6 = (byte)name[6];
+                assetId.i7 = (byte)name[7];
+                assetId.i8 = (byte)name[8];
+                assetId.i9 = (byte)name[9];
+                assetId.i10 = (byte)name[10];
+                assetId.i11 = (byte)name[11];
+                assetId.i12 = (byte)name[12];
+                assetId.i13 = (byte)name[13];
+                assetId.i14 = (byte)name[14];
+                assetId.i15 = (byte)name[15];
+                m_registered_prefabs.Add(assetId, prefab);*/
+                NetworkHash128 assetId = NetworkHash128.Parse(nameForHash);
+
+                NetworkIdentity ni = prefab.GetComponent<NetworkIdentity>();
+                FieldInfo m_AssetId = AccessTools.Field(typeof(NetworkIdentity), "m_AssetId");
+                m_AssetId.SetValue(ni, assetId);
+                m_registered_prefabs.Add(assetId, prefab);
+                //WeaponExtHash hash = prefab.AddComponent<WeaponExtHash>();
+                //hash.assetId = assetId;
+
+                Debug.Log("CCF Adding item prefab for " + nameForHash + " to the m_registered_prefabs dictionary with hash " + assetId.ToString());
+
+                ClientScene.RegisterSpawnHandler(assetId, NetworkSpawnItemExtHandler, NetworkUnspawnItemExtHandler);
+            }
+        }
     }
 
 
@@ -344,14 +559,27 @@ namespace GameMod
 
         public ProjPrefabExt projprefab;
         public Projectile projectile;
+        public FXWeaponEffect bounceFX = FXWeaponEffect.none;
+        public FXWeaponExplosion bounceExp = FXWeaponExplosion.none;
+
+        protected ItemPrefab itemID = ItemPrefab.none; // only used during init, does not need to be set for stock weapons
+        public GameObject itemPrefab;
+        public NetworkHash128 hash; // this will be set when a handler is registered
 
         public bool MineHoming = false; // set true to use omni-directional homing instead of missile-style
         public bool ImpactForce = false; // set true to allow the weapon to shove people around in multiplayer
         public bool WarnSelect = false; // plays a loud warning when this weapon is selected.
+        public bool MoveSync = false; // designates that the projectile should have its position and velocity forcibly synced
+        public bool ExplodeSync = false; // designates that the projectile should have its explosion forcibly synced
 
         public Ship ship;
         public PlayerShip ps;
         public Player player;
+
+        public string projMeshName;
+        public GameObject projMesh; // replacement projectile mesh
+        public string[] extraNames;
+        public GameObject[] extras = new GameObject[0];
 
         //temporary
         public abstract void Fire(float refire_multiplier);
@@ -369,11 +597,20 @@ namespace GameMod
         public virtual GameObject GenerateProjPrefab()
         {
             GameObject go = ProjectileManager.proj_prefabs[(int)projprefab];
-            projectile = go.GetComponent<Projectile>(); 
+            projectile = go.GetComponent<Projectile>();
+            if (itemID != ItemPrefab.none)
+            {
+                itemPrefab = PrefabManager.item_prefabs[(int)itemID];
+            }
+            else
+            {
+                Debug.Log("ERROR GENERATING WEAPON " + displayName + " - GenerateProjPrefab was called on a stock weapon, this should not happen. This weapon's drop item is now an impulse.");
+                itemPrefab = PrefabManager.item_prefabs[(int)ItemPrefab.entity_item_impulse];
+            }
             return go;
         }
 
-        // Called when the weapon's projectile (or sub-projectile) hits something. Extend or replace this for custom behaviour.
+        // Called when the weapon's projectile (or sub-projectile) hits something. Extend and call base.Explode() as the first thing (or replace this entirely) for custom behaviour.
         public virtual void Explode(Projectile proj, bool damaged_something, FXWeaponExplosion m_death_particle_override, float strength, WeaponUnlock m_upgrade)
         {
             FXWeaponExplosion explosion = FXWeaponExplosion.none;
@@ -399,6 +636,14 @@ namespace GameMod
         // Sets any specific characteristics of the projectiles being fired. Returns true if trail particles should be bigger than normal.
         public virtual bool ProjectileFire(Projectile proj, Vector3 pos, Quaternion rot, ref int m_bounces, ref float m_damage, ref FXWeaponExplosion m_death_particle_override, ref float m_init_speed, ref float m_lifetime, ref float m_homing_cur_strength, ref float m_push_force, ref float m_push_torque, ref WeaponUnlock m_upgrade, bool save_pos, ref float m_strength, ref float m_vel_inherit)
         { return false; }
+
+        public virtual void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            if (!m_bounce_allow)
+            {
+                proj.Explode(proj.ShouldPlayDamageEffect(layer));
+            }
+        }
 
         public virtual RigidbodyInterpolation Interpolation(Projectile proj)
         {
@@ -660,7 +905,7 @@ namespace GameMod
                         }
                     }
 
-                    if (pMode == FiringMode.CHARGED)
+                    if (pMode == FiringMode.CHARGED && ((float)player.m_energy > 0f || player.m_overdrive))
                     {
                         primary.WeaponCharge();
                     }
@@ -884,6 +1129,26 @@ namespace GameMod
         }
     }
 
+
+    [HarmonyPatch(typeof(Projectile), "IsMissile")]
+    static class MPWeapons_Projectile_IsMissile
+    {
+        public static bool Prefix(ref bool __result, Projectile __instance)
+        {
+            if (MPWeapons.WeaponLookup[(int)__instance.m_type].GetType().IsSubclassOf(typeof(SecondaryWeapon)))
+            {
+                __result = true;
+            }
+            else
+            {
+                __result = false;
+            }
+
+            return false;
+        }
+    }
+
+
     [HarmonyPatch(typeof(Player), "GetMaxMissileAmmo")]
     static class MPWeapons_Player_GetMaxMissileAmmo
     {
@@ -894,7 +1159,7 @@ namespace GameMod
             if ((level == WeaponUnlock.LEVEL_2A || level == WeaponUnlock.LEVEL_2B) && __instance.m_missile_level[(int)mt] == level)
             {
                 __result = Player.MAX_MISSILE_AMMO_UP[(int)mt];
-            } 
+            }
             else if (__instance.m_missile_level[(int)mt] > level)
             {
                 __result = Player.MAX_MISSILE_AMMO_UP[(int)mt];
@@ -947,71 +1212,71 @@ namespace GameMod
         }
     }
 
-        // THESE 2 METHODS NEED AN OVERHAUL -- NEXTWEAPON NEEDS REIMPLEMENTING WITH AUTOSELECT STUFF REWRITTEN
-        /*
-        // TODO - bring in changes from MPAutoSelection
-        // - bring in changes from MPSniperPackets
-        // - bring in changes from MPWeaponCycling
-        // NEEDS VERIFYING AGAIN
-        [HarmonyPatch(typeof(Player), "SwitchToAmmoWeapon")]
-        static class MPWeapons_Player_SwitchToAmmoWeapon
+    // THESE 2 METHODS NEED AN OVERHAUL -- NEXTWEAPON NEEDS REIMPLEMENTING WITH AUTOSELECT STUFF REWRITTEN
+    /*
+    // TODO - bring in changes from MPAutoSelection
+    // - bring in changes from MPSniperPackets
+    // - bring in changes from MPWeaponCycling
+    // NEEDS VERIFYING AGAIN
+    [HarmonyPatch(typeof(Player), "SwitchToAmmoWeapon")]
+    static class MPWeapons_Player_SwitchToAmmoWeapon
+    {
+        public static bool Prefix(ref bool __result, Player __instance)
         {
-            public static bool Prefix(ref bool __result, Player __instance)
+            __result = false;
+            MPWeaponCycling.PBypass = true;
+
+            for (int i = 0; i < 8; i++)
             {
-                __result = false;
-                MPWeaponCycling.PBypass = true;
-
-                for (int i = 0; i < 8; i++)
+                if (MPWeapons.primaries[i].UsesAmmo)
                 {
-                    if (MPWeapons.primaries[i].UsesAmmo)
-                    {
-                        __instance.Networkm_weapon_type = (WeaponType)i;
-                        __instance.NextWeapon();
-                        __result = true;
-                        break;
-                    }
-                }
-
-                MPWeaponCycling.PBypass = false;
-
-                return false;
-
-                for (int i = 0; i < 8; i++)
-                {
-
-
-                }
-            }
-        }
-
-
-        // TODO - bring in changes from MPAutoSelection
-        // - bring in changes from MPSniperPackets
-        // - bring in changes from MPWeaponCycling
-        // NEEDS VERIFYING AGAIN
-        [HarmonyPatch(typeof(Player), "SwitchToEnergyWeapon")]
-        static class MPWeapons_Player_SwitchToEnergyWeapon
-        {
-            public static bool Prefix(Player __instance)
-            {
-                MPWeaponCycling.PBypass = true;
-
-                for (int i = 7; i >= 0; i--)
-                {
-                    if (MPWeapons.primaries[i].UsesEnergy)
-                    {
-                        __instance.Networkm_weapon_type = (WeaponType)i;
-                    }
+                    __instance.Networkm_weapon_type = (WeaponType)i;
                     __instance.NextWeapon();
+                    __result = true;
                     break;
                 }
+            }
 
-                MPWeaponCycling.PBypass = false;
+            MPWeaponCycling.PBypass = false;
 
-                return false;
+            return false;
+
+            for (int i = 0; i < 8; i++)
+            {
+
+
             }
         }
-        */
+    }
+
+
+    // TODO - bring in changes from MPAutoSelection
+    // - bring in changes from MPSniperPackets
+    // - bring in changes from MPWeaponCycling
+    // NEEDS VERIFYING AGAIN
+    [HarmonyPatch(typeof(Player), "SwitchToEnergyWeapon")]
+    static class MPWeapons_Player_SwitchToEnergyWeapon
+    {
+        public static bool Prefix(Player __instance)
+        {
+            MPWeaponCycling.PBypass = true;
+
+            for (int i = 7; i >= 0; i--)
+            {
+                if (MPWeapons.primaries[i].UsesEnergy)
+                {
+                    __instance.Networkm_weapon_type = (WeaponType)i;
+                }
+                __instance.NextWeapon();
+                break;
+            }
+
+            MPWeaponCycling.PBypass = false;
+
+            return false;
+        }
+    }
+    */
 
 
     // CCF VERIFIED
@@ -1055,7 +1320,7 @@ namespace GameMod
         }
     }
 
-    
+
     // hooks in to allow weapons to physically punch ships in multiplayer
     [HarmonyPatch(typeof(PlayerShip), "ApplyDamage")]
     static class MPWeapons_PlayerShip_ApplyDamage
@@ -1075,7 +1340,7 @@ namespace GameMod
             }
         }
     }
-    
+
 
     // replaces the kill type assessment function -- this needs replacing with something more elegant
     [HarmonyPatch(typeof(Player), "GetKillTypeFromDamageInfo")]
@@ -1095,7 +1360,7 @@ namespace GameMod
                     __result = i + 8;
                     return false;
                 }
-            }            
+            }
 
             if (di.weapon == ProjPrefab.proj_melee)
             {
@@ -1124,7 +1389,7 @@ namespace GameMod
         }
     }
 
-    
+
     // name replacement for secondaries
     [HarmonyPatch(typeof(Player.MissileNamesType), "Refresh")]
     static class MPWeapons_Player_MissileNamesType_Refresh
@@ -1152,7 +1417,7 @@ namespace GameMod
             }
         }
     }
-    
+
 
     // missile limit and weapon tag changes
     [HarmonyPatch(typeof(Player), MethodType.Constructor)]
@@ -1160,6 +1425,7 @@ namespace GameMod
     {
         static MethodInfo PRIMARY_REFRESH = typeof(Player.WeaponNamesType).GetMethod("Refresh", BindingFlags.Instance | BindingFlags.NonPublic);
         static MethodInfo SECONDARY_REFRESH = typeof(Player.MissileNamesType).GetMethod("Refresh", BindingFlags.Instance | BindingFlags.NonPublic);
+        static MethodInfo SECONDARY_PLURAL_REFRESH = typeof(Player.MissileNamesPluralType).GetMethod("Refresh", BindingFlags.Instance | BindingFlags.NonPublic);
 
         public static void Postfix()
         {
@@ -1183,9 +1449,9 @@ namespace GameMod
                 //Debug.Log("CCF setting super missile ammo for pickup index " + i + " to: " + Player.SUPER_MISSILE_AMMO_MP[i]);
             }
 
-
             PRIMARY_REFRESH.Invoke(Player.WeaponNames, new object[0]);
             SECONDARY_REFRESH.Invoke(Player.MissileNames, new object[0]);
+            SECONDARY_PLURAL_REFRESH.Invoke(Player.MissileNamesPlural, new object[0]);
         }
     }
 
@@ -1218,7 +1484,7 @@ namespace GameMod
         }
     }
 
-    
+
     // Secondary weapon icon references
     [HarmonyPatch(typeof(UIElement), "DrawHUDSecondaryWeapon")]
     public static class MPWeapons_UIElement_DrawHUDSecondaryWeapon
@@ -1234,7 +1500,7 @@ namespace GameMod
 
             foreach (var code in codes)
             {
-                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 104) 
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 104)
                 {
                     found = true;
                 }
@@ -1247,7 +1513,7 @@ namespace GameMod
             }
         }
     }
-    
+
 
     // Primary weapon reticle references
     [HarmonyPatch(typeof(UIElement), "DrawHUDWeaponReticle")]
@@ -1282,7 +1548,7 @@ namespace GameMod
         }
     }
 
-    
+
     // Secondary weapon reticle references
     [HarmonyPatch(typeof(UIElement), "DrawHUDMissileReticle")]
     public static class MPWeapons_UIElement_DrawHUDMissileReticle
@@ -1436,7 +1702,7 @@ namespace GameMod
     // FixedUpdateDynamic has code for the homing missiles to update their tracking, needs to be pulled out eventually.
     // UpdateDynamic has some insertions in OLmod. Deal with them  at the same time as FixedUpdateDynamic.
 
-    // SteerTowardsTarget is very specific to TB. I don't think it needs messing with. Instead, revise UseNonFixedHoming() in OLmod. 
+    // ProcessCollision needs separating
     // OnTriggerEnter *may* need updating?
     // OnCollisionEnter has some specific cases with secondaries and Thunderbolt to keep an eye on. Will need generalizing at some point.
     // OnCollisionExit has a specific case for the Reflex bounces if updated to homing. I wouldn't worry about this yet.
@@ -1448,36 +1714,78 @@ namespace GameMod
     // CreeperSync -- some stuff still needs generalizing
 
     // Extends the Projectile lists in ProjectileManager to accomodate new types of Projectile prefabs
+    //[HarmonyPriority(Priority.Last)]
+    //[HarmonyPatch(typeof(ProjectileManager), "ReadProjPresetData")]
+    // apparently this is the only reliable place I can inject for now.
     [HarmonyPriority(Priority.Last)]
-    [HarmonyPatch(typeof(ProjectileManager), "ReadProjPresetData")]
+    [HarmonyPatch(typeof(PilotManager), "Initialize")]
     public static class MPWeapons_ProjectileManager_ReadProjPresetData
     {
         public static void Postfix()
         {
             Debug.Log("Loading additional projectile prefabs and effects...");
 
+            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("GameMod.Resources.meshes")) // probably should have its own embedded file but for now this works
+            {
+                var ab = AssetBundle.LoadFromStream(stream);
+
+                // do weapon mesh loading here as well since it's the same asset file
+                foreach (Weapon w in MPWeapons.ExtWeapons)
+                {
+                    if (w.projMeshName != null) // if it's null, we're planning to use using the Kodachi default mesh
+                    {
+                        w.projMesh = Object.Instantiate(ab.LoadAsset<GameObject>(w.projMeshName));
+                        Object.DontDestroyOnLoad(w.projMesh);
+                        //Debug.Log("Prefab replacement mesh loaded: " + s.mesh.name);
+                    }
+                    for (int i = 0; i < w.extras.Length; i++)
+                    {
+                        w.extras[i] = Object.Instantiate(ab.LoadAsset<GameObject>(w.extraNames[i]));
+                        Object.DontDestroyOnLoad(w.extras[i]);
+                        //Debug.Log("Extra object loaded: " + w.extras[i].name);
+                    }
+                }
+
+                ab.Unload(false);
+            }
+
             MPWeapons.WeaponLookup = new Weapon[(int)ProjPrefabExt.num];
 
-            // extension weapons are done first in case they reuse stock projectiles, the can get overridden this way.
+            // extension weapons are done first in case they reuse stock projectiles, they can get overridden this way. This should get generalized at some point to be able to load arbitrary weapons.
             foreach (Weapon weapon in MPWeapons.ExtWeapons)
             {
                 MPWeapons.WeaponLookup[(int)weapon.projprefab] = weapon;
-                if (weapon.GetType() == typeof(SecondaryWeapon) && ((SecondaryWeapon)weapon).subproj != ProjPrefabExt.none)
+
+                if (weapon.GetType().IsSubclassOf(typeof(SecondaryWeapon)))
                 {
-                    MPWeapons.WeaponLookup[(int)((SecondaryWeapon)weapon).subproj] = weapon;
+                    MPWeapons.MasterSecondaries[weapon.GetType().Name] = (SecondaryWeapon)weapon;
+
+                    if (((SecondaryWeapon)weapon).subproj != ProjPrefabExt.none)
+                    {
+                        MPWeapons.WeaponLookup[(int)((SecondaryWeapon)weapon).subproj] = weapon;
+                    }
                 }
+                else
+                {
+                    MPWeapons.MasterPrimaries[weapon.GetType().Name] = (PrimaryWeapon)weapon;
+                }
+                Debug.Log("CCF added " + weapon.GetType().Name + " to master weapon dictionaries");
             }
             foreach (PrimaryWeapon weapon in MPWeapons.primaries)
             {
                 MPWeapons.WeaponLookup[(int)weapon.projprefab] = weapon;
+                MPWeapons.MasterPrimaries[weapon.GetType().Name] = weapon;
+                Debug.Log("CCF added " + weapon.GetType().Name + " to master weapon dictionaries");
             }
             foreach (SecondaryWeapon weapon in MPWeapons.secondaries)
             {
                 MPWeapons.WeaponLookup[(int)weapon.projprefab] = weapon;
+                MPWeapons.MasterSecondaries[weapon.GetType().Name] = weapon;
                 if (weapon.subproj != ProjPrefabExt.none)
                 {
                     MPWeapons.WeaponLookup[(int)weapon.subproj] = weapon;
                 }
+                Debug.Log("CCF added " + weapon.GetType().Name + " to master weapon dictionaries");
             }
 
             System.Array.Resize(ref ProjectileManager.proj_list, (int)ProjPrefabExt.num);
@@ -1493,56 +1801,114 @@ namespace GameMod
             foreach (Weapon weapon in MPWeapons.ExtWeapons)
             {
                 int idx = (int)weapon.projprefab;
+                GameObject prefab = weapon.GenerateProjPrefab();
                 if (idx >= 29) // don't touch the stock projectile prefabs (projdata doesn't count), make a new one as a copy if you want to mess with it
                 {
                     ProjectileManager.proj_list[idx] = new List<ProjElement>();
-                    ProjectileManager.proj_prefabs[idx] = weapon.GenerateProjPrefab();
+                    //ProjectileManager.proj_prefabs[idx] = weapon.GenerateProjPrefab();
+                    ProjectileManager.proj_prefabs[idx] = prefab;
                     ProjectileManager.proj_info[idx] = ProjectileManager.proj_prefabs[idx].GetComponent<Projectile>();
                     ProjectileManager.proj_info[idx].DieNoExplode(false);
                     ProjectileManager.proj_prefabs[idx].SetActive(false);
 
-                    weapon.AddTrailRenderers(ref TrailRenderers);
-                    weapon.AddWeaponEffects(ref WeaponEffects);
-                    weapon.AddWeaponExplosions(ref WeaponExplosions);
+                    //weapon.AddTrailRenderers(ref TrailRenderers);
+                    //weapon.AddWeaponEffects(ref WeaponEffects);
+                    //weapon.AddWeaponExplosions(ref WeaponExplosions);
                 }
+                weapon.AddTrailRenderers(ref TrailRenderers);
+                weapon.AddWeaponEffects(ref WeaponEffects);
+                weapon.AddWeaponExplosions(ref WeaponExplosions);
             }
 
             ParticleManager.psm[1].particle_prefabs = TrailRenderers.ToArray();
             System.Array.Resize(ref ParticleManager.psm[1].particle_list, TrailRenderers.Count);
             System.Array.Resize(ref ParticleManager.psm[1].particle_frame_count, TrailRenderers.Count);
+            ParticleManager.psm[1].m_num_particles = TrailRenderers.Count;
             for (int i = 1; i < ParticleManager.psm[1].particle_list.Length; i++)
             {
                 if (ParticleManager.psm[1].particle_list[i] == null)
                 {
                     ParticleManager.psm[1].particle_list[i] = new List<ParticleElement>();
+                    ParticleManager.psm[1].InitializeSlots(i, 1);
                 }
+                ParticleManager.psm[1].particle_frame_count[i] = 0;
             }
 
             ParticleManager.psm[2].particle_prefabs = WeaponEffects.ToArray();
             System.Array.Resize(ref ParticleManager.psm[2].particle_list, WeaponEffects.Count);
             System.Array.Resize(ref ParticleManager.psm[2].particle_frame_count, WeaponEffects.Count);
+            ParticleManager.psm[2].m_num_particles = WeaponEffects.Count;
             for (int i = 1; i < ParticleManager.psm[2].particle_list.Length; i++)
             {
                 if (ParticleManager.psm[2].particle_list[i] == null)
                 {
                     ParticleManager.psm[2].particle_list[i] = new List<ParticleElement>();
+                    ParticleManager.psm[2].InitializeSlots(i, 1);
                 }
+                ParticleManager.psm[2].particle_frame_count[i] = 0;
             }
 
             ParticleManager.psm[3].particle_prefabs = WeaponExplosions.ToArray();
             System.Array.Resize(ref ParticleManager.psm[3].particle_list, WeaponExplosions.Count);
             System.Array.Resize(ref ParticleManager.psm[3].particle_frame_count, WeaponExplosions.Count);
+            ParticleManager.psm[3].m_num_particles = WeaponExplosions.Count;
             for (int i = 1; i < ParticleManager.psm[3].particle_list.Length; i++)
             {
                 if (ParticleManager.psm[3].particle_list[i] == null)
                 {
                     ParticleManager.psm[3].particle_list[i] = new List<ParticleElement>();
+                    ParticleManager.psm[3].InitializeSlots(i, 1);
                 }
+                ParticleManager.psm[3].particle_frame_count[i] = 0;
             }
 
+            // populate the stock item prefabs in each weapon. Only needs to be done for the stock weapons, the rest are either set or built in GenerateProjPrefab()
+            for (int i = 0; i < 8; i++)
+            {
+                MPWeapons.primaries[i].itemPrefab = PrefabManager.item_prefabs[MPWeapons.WeaponItems[i]];
+                MPWeapons.secondaries[i].itemPrefab = PrefabManager.item_prefabs[MPWeapons.MissileItems[i]];
+            }
+
+            // Stock projectile fixes
             ProjectileManager.proj_info[(int)ProjPrefab.proj_reflex].c_rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous; // WHY WAS IT DISCRETE
+            ProjectileManager.proj_prefabs[(int)ProjPrefab.proj_thunderbolt].transform.GetChild(2).transform.localPosition = new Vector3(0f, 0f, 0.4f); // level collider was way too far back compared to the player collider
+
+            MPWeapons.Initialized = true;
+            MPWeapons.UpdateWeaponList();
 
             Debug.Log("Additional projectiles prefabs and effects loaded");
+        }
+    }
+
+    [HarmonyPatch(typeof(NetworkSim), "PauseAllProjectiles")]
+    public static class MPWeapons_NetworkSim_PauseAllProjectiles
+    {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 29)
+                {
+                    code.operand = (sbyte)ProjPrefabExt.num;
+                }
+                yield return code;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(ProjectileManager), "DestroyAll")]
+    public static class MPWeapons_ProjectileManager_DestroyAll
+    {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Ldc_I4_S && (sbyte)code.operand == 29)
+                {
+                    code.operand = (sbyte)ProjPrefabExt.num;
+                }
+                yield return code;
+            }
         }
     }
 
@@ -1680,16 +2046,18 @@ namespace GameMod
                 proj.m_homing_strength *= 0.9f;
                 proj.m_team = ProjTeam.ENEMY;
             }
-            else
+            //else
+            //{
+            if (m_vel_inherit > 0f)
             {
-                if (m_vel_inherit > 0f)
-                {
-                    //Rigidbody componentInChildren = proj.m_owner.GetComponentInChildren<Rigidbody>();
-                    Rigidbody playerRB = proj.m_owner_player.c_player_ship.c_rigidbody;
-                    Vector3 velocity = playerRB.velocity;
-                    proj.c_rigidbody.AddForce(proj.c_rigidbody.mass * m_vel_inherit / RUtility.FRAMETIME_FIXED * velocity);
-                }
+                //Rigidbody componentInChildren = proj.m_owner.GetComponentInChildren<Rigidbody>();
+                Rigidbody playerRB = proj.m_owner_player.c_player_ship.c_rigidbody;
+                Vector3 velocity = playerRB.velocity;
+                proj.c_rigidbody.AddForce(proj.c_rigidbody.mass * m_vel_inherit / RUtility.FRAMETIME_FIXED * velocity);
+                //Debug.Log("CCF vel_inherit triggered, original velocity: " + velocity + ", new velocity " + playerRB.velocity);
+
             }
+            //}
 
             return bigParticles;
         }
@@ -1704,8 +2072,6 @@ namespace GameMod
                 {
                     found = true;
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    //yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_owner"));
                     yield return new CodeInstruction(OpCodes.Ldarg_1);
                     yield return new CodeInstruction(OpCodes.Ldarg_2);
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
@@ -1736,7 +2102,7 @@ namespace GameMod
                 }
                 else if (found) // skip the entire switch statement
                 {
-                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(NetworkManager), "IsHeadless")) // there *are* some specific cases after this... but I don't care about them. They're too specific.
+                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Overload.NetworkManager), "IsHeadless")) // there *are* some specific cases after this... but I don't care about them. They're too specific.
                     {
                         found = false;
                         yield return code;
@@ -1750,12 +2116,64 @@ namespace GameMod
         }
     }
 
-    [HarmonyPriority(Priority.Last)]
+    //[HarmonyPriority(Priority.Last)]
     [HarmonyPatch(typeof(Projectile), "Explode")]
     public static class MPWeapons_Projectile_Explode
-    { 
+    {
         public static bool Prefix(bool damaged_something, Projectile __instance, ProjElement ___m_proj_element, ParticleElement ___m_trail_effect_pe, ParticleElement ___m_trail_renderer_pe, float ___m_strength, FXWeaponExplosion ___m_death_particle_override, WeaponUnlock ___m_upgrade)
         {
+            //bool skipping = false;
+            /*
+            if (!GameplayManager.IsMultiplayerActive || !MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)__instance.m_type) || __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f)
+            {
+                Debug.Log("CCF Skipping sync - MPActive " + GameplayManager.IsMultiplayerActive + " ExplodeSync " + MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)___m_type) + " ID " + (__instance.m_projectile_id == -1) + " lifetime " + (__instance.RemainingLifetime() < -4f));
+                //return true;
+            }
+            else
+            {
+                if (!Server.IsActive() && !CreeperSyncExplode.m_allow_explosions) // ignore explosions on client if creeper-sync active
+                {
+                    //return CreeperSyncExplode.m_allow_explosions;
+                    return false;
+                }
+                var msg = new ExplodeMsg();
+                msg.m_id = __instance.m_projectile_id;
+                msg.m_pos = __instance.c_transform.position;
+                msg.m_damaged_something = damaged_something;
+                foreach (var conn in UnityEngine.Networking.NetworkServer.connections)
+                    if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
+                    {
+                        UnityEngine.Networking.NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
+                    }
+
+                Debug.Log("CCF sending explode projectile index " + msg.m_id + ", time is " + Time.time + " -- are we server? " + GameplayManager.IsDedicatedServer());
+                //return true;
+            }
+            */
+
+            //Debug.Log("CCF IS THIS THING FIRING??? " + Time.time);
+            if (GameplayManager.IsMultiplayerActive && MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)__instance.m_type) && __instance.m_projectile_id != -1 && __instance.RemainingLifetime() > -4f)
+            {
+                //Debug.Log("CCF Skipping sync - MPActive " + GameplayManager.IsMultiplayerActive + " ExplodeSync " + MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)__instance.m_type) + " ID " + (__instance.m_projectile_id == -1) + " lifetime " + (__instance.RemainingLifetime() < -4f));
+                if (!Server.IsActive() && !CreeperSyncExplode.m_allow_explosions) // ignore explosions on client if creeper-sync active
+                {
+                    //return CreeperSyncExplode.m_allow_explosions;
+                    return false;
+                }
+                var msg = new ExplodeMsg();
+                msg.m_id = __instance.m_projectile_id;
+                msg.m_pos = __instance.c_transform.position;
+                msg.m_damaged_something = damaged_something;
+                foreach (var conn in UnityEngine.Networking.NetworkServer.connections)
+                    if (conn != null && MPTweaks.ClientHasNetVersion(conn.connectionId, MPCreeperSync.NET_VERSION_CREEPER_SYNC))
+                    {
+                        UnityEngine.Networking.NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
+                    }
+
+                //Debug.Log("CCF sending explode projectile index " + msg.m_id + ", time is " + Time.time);
+            }
+            //Debug.Log("CCF Skipping sync - MPActive " + GameplayManager.IsMultiplayerActive + " ExplodeSync " + MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)__instance.m_type) + " ID " + (__instance.m_projectile_id == -1) + " lifetime " + (__instance.RemainingLifetime() < -4f));
+
             __instance.m_alive = false;
             if (__instance.m_death_sfx != 0)
             {
@@ -1794,7 +2212,7 @@ namespace GameMod
         {
             return MPWeapons.WeaponLookup[(int)proj.m_type].MineHoming;
         }
-        
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             bool found = false;
@@ -1827,4 +2245,144 @@ namespace GameMod
             }
         }
     }
+
+
+    [HarmonyPatch(typeof(Projectile), "ProcessCollision")]
+    public static class MPWeapons_Projectile_ProcessCollision
+    {
+        public static bool ProcessCollisionHandoff(/*ProjPrefab m_type,*/ Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            Weapon weapon = MPWeapons.WeaponLookup[(int)proj.m_type];
+            if (weapon != null)
+            {
+                if (proj.m_bounce_behavior == BounceBehavior.none)  // hey look the field does something now
+                {
+                    m_bounce_allow = false; // defaults to true, updated every frame
+                }
+                else
+                {
+                    m_bounces++; // this needs to be incremented before ProcessCollision() fires for the weapon in case they need to know what bounce they're on.
+                }
+
+                switch (proj.m_type)
+                {
+                    case ProjPrefab.proj_flare:
+                        break;
+                    case ProjPrefab.proj_flare_sticky:
+                        if (!proj.is_attached && layer == 14 && proj.c_rigidbody != null)
+                        {
+                            proj.is_attached = true;
+                            proj.c_rigidbody.isKinematic = true;
+                            proj.c_transform.parent = collider.transform;
+                            ParticleManager.psm[3].StartParticleInstant(1, proj.c_transform.localPosition, proj.c_transform.rotation);
+                            SFXCueManager.PlayRawSoundEffectPos(SoundEffect.wep_driller_fire_low3_r2, proj.c_transform.localPosition, 0.4f, UnityEngine.Random.Range(-0.3f, -0.2f));
+                        }
+                        break;
+                    default:
+                        weapon.ProcessCollision(proj, collider, collision_normal, layer, ref m_bounce_allow, ref m_bounces, ref m_cur_target, ref m_cur_target_player, ref m_cur_target_robot, ref m_damage, ref m_lifetime, ref m_target_timer, m_trail_effect_pe);
+                        break;
+                }
+
+                if (m_bounce_allow && proj.m_alive)
+                {
+                    if (m_bounces > proj.m_bounce_max_count) // how about we actually respect this number :P
+                    {
+                        proj.Explode();
+                    }
+                    else
+                    {
+                        if (weapon.bounceFX != FXWeaponEffect.none)
+                        {
+                            ParticleManager.psm[2].StartParticleInstant((int)weapon.bounceFX, proj.c_transform.localPosition - collision_normal * 0.1f, Quaternion.FromToRotation(Vector3.forward, collision_normal));
+                        }
+                        if (weapon.bounceExp != FXWeaponExplosion.none)
+                        {
+                            ParticleManager.psm[3].StartParticleInstant((int)weapon.bounceExp, proj.c_transform.localPosition, proj.c_transform.rotation);
+                        }
+
+                    }
+                    m_bounce_allow = false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes, ILGenerator gen) // THIS IS BROKEN AND I DON'T KNOW WHY
+        {
+            bool found = false;
+            Label label = gen.DefineLabel();
+
+            foreach (var code in codes)
+            {
+                if (code.opcode == OpCodes.Stloc_S && ((LocalBuilder)code.operand).LocalIndex == 6)
+                {
+                    found = true;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0); // this Projectile
+                    yield return new CodeInstruction(OpCodes.Ldarg_1); // GameObject collider
+                    yield return new CodeInstruction(OpCodes.Ldarg_2); // Vector3 collision_normal
+                    yield return new CodeInstruction(OpCodes.Ldloc_2); // int layer
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_bounce_allow"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_bounces"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_cur_target"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_cur_target_player"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_cur_target_robot"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_damage"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_lifetime"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(Projectile), "m_target_timer"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Projectile), "m_trail_effect_pe"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPWeapons_Projectile_ProcessCollision), "ProcessCollisionHandoff"));
+                    yield return new CodeInstruction(OpCodes.Brfalse, label);
+                    yield return new CodeInstruction(OpCodes.Ret); // skip the rest unless weapon was null above for some reason
+                }
+                else if (found)
+                {
+                    code.labels.Add(label);
+                    yield return code;
+                    found = false;
+                }
+                else if (!found)
+                {
+                    yield return code;
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Item), "Spew")]
+    public static class MPWeapons_Item_Spew
+    {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            bool found = false;
+
+            foreach (var code in codes)
+            {
+                if (!found && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(Overload.NetworkManager), "IsServer"))
+                {
+                    found = true;
+                    //CodeInstruction newcode = new CodeInstruction(OpCodes.Ldarg_0);
+                    CodeInstruction newcode = new CodeInstruction(OpCodes.Ldloc_0);
+                    code.MoveLabelsTo(newcode);
+                    yield return newcode;
+                    //yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(GameObject), "get_gameObject"));
+                    //yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Item), "c_go"));
+                    yield return new CodeInstruction(OpCodes.Ldc_I4_1);
+                    yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(GameObject), "SetActive")); // Most of the time this doesn't matter. With faked prefabs, it does.
+                }
+                yield return code;
+            }
+        }
+    }
 }
+

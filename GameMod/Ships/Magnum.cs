@@ -26,7 +26,9 @@ namespace GameMod
             extras = new GameObject[5];
             extraNames = new string[] { "MagnumDetail", "MagnumThruster", "MagnumTopThruster", "MagnumFrontThruster", "MagnumBottomThruster" };
 
-            detailMat = Resources.Load<GameObject>("entity_enemy_HulkB").transform.GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(0).gameObject.GetComponent<MeshRenderer>().sharedMaterial; // yeesh, there *must* be a better way
+            //detailMat = Resources.Load<GameObject>("entity_enemy_HulkB").transform.GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(0).gameObject.GetComponent<MeshRenderer>().sharedMaterial; // yeesh, there *must* be a better way
+            detailMat = Assets.materials["mat_hulkB_1"]; // THERE IS!
+            Debug.Log("CCF mat name is " + detailMat.name);
 
             customizations = false;
 

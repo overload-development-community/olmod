@@ -246,7 +246,7 @@ namespace GameMod
                 // disables reflex drops if classic spawns is off, regardless of the preset setting
                 if (!this.classicSpawnsEnabled)
                 {
-                    this.powerupFilter[2] = false;
+                    //this.powerupFilter[2] = false;
                 }
 
                 MenuManager.mms_mode = this.matchMode;

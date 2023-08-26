@@ -20,7 +20,13 @@ namespace GameMod
         LancerCharge2s = 488,
         PlasmaFire1 = 489,
         PlasmaFire2 = 490,
-        NUM = 491
+        PlasmaFire3 = 491,
+        MortarExplode = 492,
+        MortarExplode2 = 493,
+        MortarFire1 = 494,
+        MortarFire2 = 495,
+        MortarFire3 = 496,
+        NUM = 497
         //tbbolt = 486,
         //novathrust = 487,
         //devthrust = 488,
@@ -85,6 +91,30 @@ namespace GameMod
                 }
                 yield return code;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(UnityAudio), "StopSound")]
+    public static class MPSoundExt_UnityAudio_StopSound
+    {
+        public static bool Prefix(int idx)
+        {
+            //Debug.Log("AUDIO stopping " + idx);
+            if (idx > -1)
+            {
+                if (idx < MPSoundExt.m_a_source.Length && MPSoundExt.m_a_source[idx] != null)
+                {
+                    if (MPSoundExt.m_a_source[idx].isPlaying)
+                    {
+                        MPSoundExt.m_a_source[idx].Stop();
+                    }
+                }
+                else
+                {
+                    Debug.Log("AUDIO ERROR - Attempted to stop an audio source that didn't exist at index " + idx);
+                }
+            }
+            return false;
         }
     }
 

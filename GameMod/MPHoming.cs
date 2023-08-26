@@ -17,7 +17,8 @@ namespace GameMod
         public static bool UseNonFixedHoming(Projectile proj)
         {
             //return (proj.m_type == ProjPrefab.missile_hunter || proj.m_type == ProjPrefab.missile_pod || proj.m_type == ProjPrefab.missile_smart_mini) && !GameplayManager.IsDedicatedServer() && GameplayManager.IsMultiplayer && MenuManager.m_mp_lan_match;
-            return !MPWeapons.WeaponLookup[(int)proj.m_type].MineHoming && !GameplayManager.IsDedicatedServer() && GameplayManager.IsMultiplayer && MenuManager.m_mp_lan_match;
+            Weapon weapon = MPWeapons.WeaponLookup[(int)proj.m_type];
+            return weapon != null && !weapon.MineHoming && !GameplayManager.IsDedicatedServer() && GameplayManager.IsMultiplayer && MenuManager.m_mp_lan_match;
         }
     }
 

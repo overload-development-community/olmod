@@ -104,6 +104,7 @@
     <Compile Include="AddOnLevelSort.cs" />
     <Compile Include="AmbientUnload.cs" />
     <Compile Include="AxisCountFix.cs" />
+    <Compile Include="Assets.cs" />
     <Compile Include="MPWeaponEnums.cs" />
     <Compile Include="MPWeapons.cs" />
     <Compile Include="FramerateLimiter.cs" />
@@ -220,6 +221,7 @@
     <Compile Include="RearView.cs" />
     <Compile Include="Debugging.cs" />
     <Compile Include="Secondaries\Devastator.cs" />
+    <Compile Include="Secondaries\ImpactMortar.cs" />
     <Compile Include="Secondaries\Vortex.cs" />
     <Compile Include="Secondaries\TimeBomb.cs" />
     <Compile Include="Secondaries\Nova.cs" />

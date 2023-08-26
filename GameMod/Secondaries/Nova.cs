@@ -24,6 +24,7 @@ namespace GameMod
             ammoUp = 10;
             ammoSuper = 3;
             firingMode = FiringMode.SEMI_AUTO;
+            ExplodeSync = true;
         }
 
         public override void Fire(float refire_multiplier)
@@ -78,7 +79,7 @@ namespace GameMod
             }
             else // subproj
             {
-                Debug.Log("CCF ProjectileFire called on subprojectile for Nova");
+                //Debug.Log("CCF ProjectileFire called on subprojectile for Nova");
                 if (proj.m_team == ProjTeam.ENEMY)
                 {
                     proj.m_lockon_sound = false;
@@ -125,7 +126,7 @@ namespace GameMod
                             rot = proj.RotationTowardsNearbyVisibleEnemy(proj.c_transform.localPosition, rot, 25f, 0.75f, -1f, 0.1f);
                             if (Server.IsActive() && (bool)proj.m_owner_player)
                             {
-                                Debug.Log("CCF Calling PlayerFire for Nova subprojectile");
+                                //Debug.Log("CCF Calling PlayerFire for Nova subprojectile");
                                 ProjectileManager.PlayerFire(proj.m_owner_player, (ProjPrefab)subproj, proj.c_transform.localPosition, rot, 0f, m_upgrade);
                             }
                         }
@@ -151,9 +152,24 @@ namespace GameMod
                     }
                 }
             }
-            else
+        }
+
+        public override void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            if ((int)proj.m_type == (int)projprefab)
             {
-                Debug.Log("CCF Explode reached for subprojectile for Nova");
+                base.ProcessCollision(proj, collider, collision_normal, layer, ref m_bounce_allow, ref m_bounces, ref m_cur_target, ref m_cur_target_player, ref m_cur_target_robot, ref m_damage, ref m_lifetime, ref m_target_timer, m_trail_effect_pe);
+            }
+            else // subproj
+            {
+                if (proj.ShouldPlayDamageEffect(layer) || m_lifetime < 3.3f || m_bounces == proj.m_bounce_max_count)
+                {
+                    if (GameManager.m_audio.CanPlaySoundWithCooldown(SoundEffect.wep_missile_nova_orb_imp1, 0.02f))
+                    {
+                        SFXCueManager.PlayCuePos(SFXCue.impact_nova_orb, proj.c_transform.localPosition, UnityEngine.Random.Range(0.9f, 1f), UnityEngine.Random.Range(-0.05f, 0.05f));
+                    }
+                    proj.Explode(m_bounces != proj.m_bounce_max_count);
+                }
             }
         }
     }

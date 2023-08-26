@@ -824,7 +824,11 @@ namespace GameMod
                         delay = 1;
                     }
 
-                    if (__instance.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)__instance.m_missile_type].WarnSelect && __instance.m_old_missile_type != __instance.m_missile_type)
+                    //if (__instance.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)__instance.m_missile_type].WarnSelect && __instance.m_old_missile_type != __instance.m_missile_type)
+                    //if (__instance.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)__instance.m_missile_type].WarnSelect && !MPWeapons.secondaries[(int)old_missile].WarnSelect)
+                    Weapon currmissile = MPWeapons.secondaries[(int)__instance.m_missile_type];
+                    Weapon oldmissile = MPWeapons.secondaries[(int)old_missile];
+                    if (currmissile != null && currmissile.WarnSelect && (oldmissile == null || !oldmissile.WarnSelect))
                     {
                         if (MPAutoSelection.zorc)
                         {

@@ -16,6 +16,7 @@ namespace GameMod
             icon_idx = (int)AtlasIndex0.WICON_IMPULSE;
             UsesEnergy = true;
             projprefab = ProjPrefabExt.proj_impulse;
+            itemID = ItemPrefab.entity_item_impulse;
         }
 
         public override void Fire(float refire_multiplier)

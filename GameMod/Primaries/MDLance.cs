@@ -17,6 +17,7 @@ namespace GameMod
             UsesEnergy = true;
             AllowedCharging = false;
             projprefab = ProjPrefabExt.proj_mdlance;
+            itemID = ItemPrefab.entity_item_lancer;
             firingMode = FiringMode.SEMI_AUTO;
             ImpactForce = true;
         }
@@ -255,6 +256,8 @@ namespace GameMod
             GameObject go = GameObject.Instantiate(ProjectileManager.proj_prefabs[(int)ProjPrefab.proj_beam]);
             Object.DontDestroyOnLoad(go);
             projectile = go.GetComponent<Projectile>();
+
+            projectile.m_type = (ProjPrefab)projprefab;
 
             projectile.m_damage_robot = 40;
             projectile.m_damage_player = 40;

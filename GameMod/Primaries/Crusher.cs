@@ -15,6 +15,7 @@ namespace GameMod
             icon_idx = (int)AtlasIndex0.WICON_CRUSHER;
             UsesAmmo = true;
             projprefab = ProjPrefabExt.proj_shotgun;
+            firingMode = FiringMode.SEMI_AUTO;
         }
 
         public override void Fire(float refire_multiplier)

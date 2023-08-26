@@ -128,10 +128,12 @@ namespace GameMod
             var result = ProjectileManager.PlayerFire(player, type, pos, rot, strength, upgrade_lvl, no_sound, slot, force_id);
 
             //if (type == ProjPrefab.missile_devastator || type == ProjPrefab.missile_smart || type == ProjPrefab.missile_timebomb || type == ProjPrefab.missile_creeper)
-            if (weapon != null && weapon.GetType() == typeof(SecondaryWeapon) && (((SecondaryWeapon)weapon).subproj != ProjPrefabExt.none || weapon.MineHoming))
+            //if (weapon != null && weapon.GetType() == typeof(SecondaryWeapon) && (((SecondaryWeapon)weapon).subproj != ProjPrefabExt.none || weapon.MineHoming))
+            if (weapon != null && MPCreeperSync.ExplodeSync.Contains(weapon.projprefab))
             {
                 foreach (var proj in ProjectileManager.proj_list[(int)type])
                 {
+                    Debug.Log("CCF disabling collider on a " + ((ProjPrefabExt)type).ToString() + " on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
                     proj.c_go.GetComponent<Collider>().enabled = false;
                 }
             }
@@ -535,7 +537,11 @@ namespace GameMod
                                     MPAutoSelection.swapToMissile((int)missileType);
                                 }
 
-                                if (player.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)player.m_missile_type].WarnSelect && player.m_old_missile_type != player.m_missile_type)
+                                //if (player.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)player.m_missile_type].WarnSelect && player.m_old_missile_type != player.m_missile_type)
+                                //if (player.m_missile_type != MissileType.NUM && MPWeapons.secondaries[(int)player.m_missile_type].WarnSelect && !MPWeapons.secondaries[(int)oldMissileType].WarnSelect)
+                                Weapon currmissile = MPWeapons.secondaries[(int)player.m_missile_type];
+                                Weapon oldmissile = MPWeapons.secondaries[(int)oldMissileType];
+                                if (currmissile != null && currmissile.WarnSelect && (oldmissile == null || !oldmissile.WarnSelect))
                                 {
                                     if (MPAutoSelection.zorc)
                                     {
@@ -764,7 +770,8 @@ namespace GameMod
                         break;
                     case ProjPrefab.proj_thunderbolt:
                         refireTime = 0.5f / (player.m_overdrive ? 1.5f : 1f);
-                        projectileCount = 2;
+                        //projectileCount = 2;
+                        projectileCount = (MPShips.GetShip(player.c_player_ship).triTB ? 3 : 2);
                         break;
                     case ProjPrefab.proj_beam:
                         refireTime = (player.m_overdrive ? 0.29f : 0.23f) / (player.m_overdrive ? 1.5f : 1f);
@@ -1001,6 +1008,7 @@ namespace GameMod
         }
     }
 
+    /*
     /// <summary>
     /// In base Overload, energy is only deducted from the player's total on the server, and then it synchronizes that energy amount to the client.  Instead, we are going to keep track of the energy on the client and sync it to the server.  Since everywhere where energy is used in this function check Server.IsActive, we instead redirect to our own function MPSniperPackets.AlwaysUseEnergy, which always returns true, and thus always deducts energy regardless as to whether it's on the server or the client.
     /// 
@@ -1026,6 +1034,7 @@ namespace GameMod
             }
         }
     }
+    */
 
     /// <summary>
     /// We want the client to control what weapon they are using, so if this function is called by the server, we ignore the call.

@@ -19,6 +19,8 @@ namespace GameMod
             ammoUp = 10;
             ammoSuper = 3;
             MineHoming = true;
+            MoveSync = true;
+            ExplodeSync = true;
             firingMode = FiringMode.SEMI_AUTO;
         }
 
@@ -62,6 +64,7 @@ namespace GameMod
         {
             if (GameplayManager.IsMultiplayerActive)
             {
+                m_vel_inherit = 0f;
                 m_death_particle_override = proj.m_death_particle_damage;
                 m_damage *= 2f;
                 proj.m_homing_strength = 10f;
@@ -98,6 +101,31 @@ namespace GameMod
             if (m_upgrade >= WeaponUnlock.LEVEL_1)
             {
                 RobotManager.StunAll(proj.c_transform.position, (m_upgrade != WeaponUnlock.LEVEL_2A) ? 2.5f : 3f, (m_upgrade != WeaponUnlock.LEVEL_2A) ? 1.5f : 2f, 1f);
+            }
+        }
+
+        public override void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            if (proj.ShouldPlayDamageEffect(layer))
+            {
+                proj.Explode(damaged_something: true);
+            }
+            else
+            {
+                Vector3 vector = Vector3.Cross(collision_normal, proj.c_transform.forward);
+                if (proj.c_rigidbody != null)
+                {
+                    proj.c_rigidbody.AddTorque(proj.c_rigidbody.mass * 5f * vector, ForceMode.Impulse);
+                    proj.c_rigidbody.AddForce(proj.c_rigidbody.mass * collision_normal, ForceMode.Impulse);
+                }
+                m_target_timer = 0.3f;
+                m_cur_target = null;
+                m_cur_target_robot = null;
+                m_cur_target_player = null;
+                if (m_trail_effect_pe != null)
+                {
+                    m_trail_effect_pe.DelayedDestroy(proj.m_trail_post_lifetime, detach: true);
+                }
             }
         }
     }

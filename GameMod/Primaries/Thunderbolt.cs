@@ -24,6 +24,7 @@ namespace GameMod
             UsesEnergy = true;
 			projprefab = ProjPrefabExt.proj_thunderbolt;
 			firingMode = FiringMode.CHARGED;
+			// ExplodeSync = true; // let's see what happens, shall we
         }
 
         public override void Fire(float refire_multiplier)
@@ -173,14 +174,22 @@ namespace GameMod
 
         public override bool ProjectileFire(Projectile proj, Vector3 pos, Quaternion rot, ref int m_bounces, ref float m_damage, ref FXWeaponExplosion m_death_particle_override, ref float m_init_speed, ref float m_lifetime, ref float m_homing_cur_strength, ref float m_push_force, ref float m_push_torque, ref WeaponUnlock m_upgrade, bool save_pos, ref float m_strength, ref float m_vel_inherit)
         {
+			float multiplier;
 			if (GameplayManager.IsMultiplayerActive)
 			{
-				proj.c_transform.localScale = Vector3.one * (1.2f + m_strength * 0.3f);
+				//proj.c_transform.localScale = Vector3.one * (1.2f + m_strength * 0.3f);
+				multiplier = 1.2f + m_strength * 0.4f; // larger than the base game by a little
 			}
 			else
 			{
-				proj.c_transform.localScale = Vector3.one * (1.1f + m_strength * 0.6f);
+				//proj.c_transform.localScale = Vector3.one * (1.1f + m_strength * 0.6f);
+				multiplier = 1.1f + m_strength * 0.6f;
 			}
+			proj.c_transform.localScale = Vector3.one * multiplier; // make the visual bigger for a charged shot...
+			((CapsuleCollider)proj.c_collider).radius = 0.48f / multiplier; // ... but NOT for the player collider. No resize. Stock is resized. Leads to angry mobs and pitchforks. Appease the masses.
+			Debug.Log("CCF TB firing on " + (GameplayManager.IsDedicatedServer() ? "server" : "client" + ", strength " + m_strength + ", scale " + multiplier + ", hit radius " + ((CapsuleCollider)proj.c_collider).radius));
+
+
 			m_damage *= 1f + m_strength * ((!GameplayManager.IsMultiplayerActive) ? 2.5f : 1.75f);
 			m_push_force *= 1f + m_strength * 0.5f;
 			m_push_torque *= 1f + m_strength * 0.25f;
@@ -217,35 +226,10 @@ namespace GameMod
 			return false;
 		}
 
-		/*
-        // *******************************************************
-        // TEMPORARY UNTIL PROCESSFIRINGCONTROLS IS FULLY REDONE
-        // *******************************************************
-
-        [HarmonyPatch(typeof(PlayerShip), "ProcessFiringControls")]
-        class Thunderbolt_PlayerShip_ProcessFiringControls
+        public override void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
         {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
-            {
-                foreach (var code in codes)
-                {
-                    if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(PlayerShip), "ThunderCharge"))
-                    {
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPShips), "GetShip"));
-                        yield return new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(Ship), "primaries"));
-                        yield return new CodeInstruction(OpCodes.Ldc_I4_6);
-                        yield return new CodeInstruction(OpCodes.Ldelem_Ref);
-                        yield return new CodeInstruction(OpCodes.Castclass, typeof(Thunderbolt));
-                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Thunderbolt), "ThunderCharge"));
-                    }
-                    else
-                    {
-                        yield return code;
-                    }
-                }
-            }
-        }
-		*/
+			proj.Explode(layer == 11 || layer == 16);
+		}
 
         public override void WeaponCharge()
 		{
@@ -328,6 +312,8 @@ namespace GameMod
         }
     }
 
+
+	// Some necessary hooks. This might actually need to be generalized if any other charged weapons are being considered.
 
     [HarmonyPatch(typeof(PlayerShip), "OnDestroy")]
     class MPWeaponBehavior_Thunderbolt_PlayerShip_OnDestroy

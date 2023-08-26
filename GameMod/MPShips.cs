@@ -79,6 +79,7 @@ namespace GameMod
         public static void EnabledInMatch()
         {
             MPWeapons.UpdateWeaponList();
+            MPWeapons.UpdateProjectileSync();
         }
 
         public static void SetScaleDebug()
@@ -527,11 +528,15 @@ namespace GameMod
 
 
     // Loads the new Prefabs at game launch
-    [HarmonyPatch(typeof(NetworkSpawnPlayer), "Init")]
+    //[HarmonyPatch(typeof(NetworkSpawnPlayer), "Init")]
+    [HarmonyPriority(Priority.First)]
+    [HarmonyPatch(typeof(PilotManager), "Initialize")]
     static class MPShips_NetworkSpawnPlayer_Init
     {
-        public static void Postfix()
+        public static void Prefix()
+        //public static void Postfix()
         {
+            Assets.LoadAssets();
             MPShips.AddShips();
             MPShips.LoadResources();
         }

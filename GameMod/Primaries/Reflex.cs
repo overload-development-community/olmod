@@ -15,6 +15,7 @@ namespace GameMod
             icon_idx = (int)AtlasIndex0.WICON_REFLEX;
             UsesEnergy = true;
             projprefab = ProjPrefabExt.proj_reflex;
+            bounceFX = FXWeaponEffect.reflex_bounce;
         }
 
         public override void Fire(float refire_multiplier)
@@ -79,6 +80,18 @@ namespace GameMod
             }
 
             return false;
+        }
+
+        public override void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            if (proj.ShouldPlayDamageEffect(layer))
+            {
+                proj.Explode(damaged_something: true);
+            }
+            else if (m_bounce_allow)
+            {
+                m_damage *= 0.85f;
+            }
         }
     }
 }

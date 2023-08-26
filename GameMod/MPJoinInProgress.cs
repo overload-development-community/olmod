@@ -229,7 +229,9 @@ namespace GameMod {
     {
         public static bool MaybeInLobby()
         {
-            return MPJoinInProgress.NetworkMatchEnabled || NetworkMatch.InLobby();
+            MatchState state = NetworkMatch.GetMatchState();
+            Debug.Log("CCF Match state is " + state.ToString() + ", client is allowed: " + ((MPJoinInProgress.NetworkMatchEnabled && state == MatchState.PLAYING) || state == MatchState.LOBBY));
+            return (MPJoinInProgress.NetworkMatchEnabled && state == MatchState.PLAYING) || state == MatchState.LOBBY; // only allow connections if the lobby is active or once the round is fully running if JIP is on
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)

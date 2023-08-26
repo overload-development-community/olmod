@@ -336,6 +336,13 @@ namespace GameMod {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires OLMod to play."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
+            if (!MPTweaks.ClientHasTweak(connId, "shipselection") && MPShips.allowed != 0)
+            {
+                //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
+                //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);
+                NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires the latest version of the MULTISHIP mod to play."));
+                GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
+            }
             if ((NetworkMatch.GetMatchState() != MatchState.LOBBY && NetworkMatch.GetMatchState() != MatchState.LOBBY_LOAD_COUNTDOWN) && !ClientModifiersValid(connId)) {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match has disabled modifiers.  Please disable these modifiers and try again: " + MPModifiers.GetDisabledModifiers()));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));

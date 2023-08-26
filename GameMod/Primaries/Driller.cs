@@ -12,7 +12,7 @@ namespace GameMod
             displayName = "DRILLER";
             Tag2A = "DX";
             Tag2B = "M";
-            icon_idx = (int)AtlasIndex0.WICON_CYCLONE;
+            icon_idx = (int)AtlasIndex0.WICON_DRILLER;
             UsesAmmo = true;
 			projprefab = ProjPrefabExt.proj_driller;
         }

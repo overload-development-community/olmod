@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -11,11 +12,14 @@ namespace GameMod
     {
         public const int NET_VERSION_CREEPER_SYNC = 1;
 
-        public static Projectile FindSyncedProjectile(int proj_id, ProjPrefab[] types)
+        public static List<ProjPrefabExt> MoveSync = new List<ProjPrefabExt>();
+        public static List<ProjPrefabExt> ExplodeSync = new List<ProjPrefabExt>();
+
+        public static Projectile FindSyncedProjectile(int proj_id, List<ProjPrefabExt> types)
         {
             foreach (var type in types)
             {
-                var proj = ProjectileManager.FindProjectileById(type, proj_id);
+                var proj = ProjectileManager.FindProjectileById((ProjPrefab)type, proj_id);
                 if (proj != null)
                 {
                     return proj;
@@ -91,7 +95,12 @@ namespace GameMod
 
         static void Postfix()
         {
-            var proj_list = ProjectileManager.proj_list[(int)ProjPrefab.missile_creeper].Union(ProjectileManager.proj_list[(int)ProjPrefab.missile_timebomb]).ToList();
+            //var proj_list = ProjectileManager.proj_list[(int)ProjPrefab.missile_creeper].Union(ProjectileManager.proj_list[(int)ProjPrefab.missile_timebomb]).ToList();
+            var proj_list = new List<ProjElement>();
+            foreach (ProjPrefabExt p in MPCreeperSync.MoveSync)
+            {
+                proj_list.AddRange(ProjectileManager.proj_list[(int)p]);
+            }
             if (proj_list.Count > msg.m_proj_info.Length)
                 msg.m_proj_info = new ProjInfo[proj_list.Count];
             var proj_info = msg.m_proj_info;
@@ -110,6 +119,7 @@ namespace GameMod
                     proj_info[count].m_pos = c_proj.transform.position;
                     proj_info[count].m_vel = c_proj.c_rigidbody.velocity;
                     count++;
+                    Debug.Log("CCF adding projectile index " + id + " velocity " + c_proj.c_rigidbody.velocity + ", time " + Time.time);
                 }
             }
 
@@ -134,7 +144,7 @@ namespace GameMod
             var proj_info = proj_msg.m_proj_info;
             for (int i = 0; i < count; i++)
             {
-                var proj = MPCreeperSync.FindSyncedProjectile(proj_info[i].m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb });
+                var proj = MPCreeperSync.FindSyncedProjectile(proj_info[i].m_id, MPCreeperSync.MoveSync);
                 if (proj == null)
                     continue;
                 var diff = proj_info[i].m_pos - proj.transform.position;
@@ -166,11 +176,12 @@ namespace GameMod
             var explode_msg = msg.ReadMessage<ExplodeMsg>();
             if (Server.IsActive())
                 return;
-            var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_creeper, ProjPrefab.missile_timebomb }); 
-            if (proj == null && MPSniperPackets.enabled) // Extend to devs and novas when sniper packets are enabled.
+            Debug.Log("CCF explode sync searching for projectile index " + explode_msg.m_id);
+            var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, MPCreeperSync.ExplodeSync); 
+            /*if (proj == null && MPSniperPackets.enabled) // Extend to devs and novas when sniper packets are enabled.
             {
                 proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, new ProjPrefab[] { ProjPrefab.missile_devastator, ProjPrefab.missile_smart });
-            }
+            }*/
             if (proj == null)
             {
                 return;
@@ -196,21 +207,29 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Projectile), "Explode")]
-    class CreeperSyncExplode
+
+    //[HarmonyPriority(Priority.First)]
+    //[HarmonyPatch(typeof(Projectile), "Explode")]
+    public static class CreeperSyncExplode
     {
         public static bool m_allow_explosions;
-
-        static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
+    }
+    /*
+        public static bool Prefix(ProjPrefab ___m_type, Projectile __instance, bool damaged_something)
         {
-            if (!GameplayManager.IsMultiplayerActive ||
-                (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || // Extend to devastators and novas when sniper packets are enabled.
-                __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
+            Debug.Log("CCF IS THIS THING FIRING??? " + Time.time);
+            //if (!GameplayManager.IsMultiplayerActive ||
+            //    (___m_type != ProjPrefab.missile_creeper && ___m_type != ProjPrefab.missile_timebomb && (!MPSniperPackets.enabled || (___m_type != ProjPrefab.missile_devastator && ___m_type != ProjPrefab.missile_smart))) || // Extend to devastators and novas when sniper packets are enabled.
+            //    __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f) // unlinked/timeout: probably stuck, explode anyway
+            
+            if (!GameplayManager.IsMultiplayerActive || !MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)___m_type) || __instance.m_projectile_id == -1 || __instance.RemainingLifetime() < -4f)
             {
+                Debug.Log("CCF Skipping sync - MPActive " + GameplayManager.IsMultiplayerActive + " ExplodeSync " + MPCreeperSync.ExplodeSync.Contains((ProjPrefabExt)___m_type) + " ID " + (__instance.m_projectile_id == -1) + " lifetime " + (__instance.RemainingLifetime() < -4f));
                 return true;
             }
             if (!Server.IsActive()) // ignore explosions on client if creeper-sync active
             {
+                Debug.Log("CCF Skipping sync - m_allow_explosions " + m_allow_explosions);
                 return m_allow_explosions;
             }
             var msg = new ExplodeMsg();
@@ -222,9 +241,12 @@ namespace GameMod
                 {
                     NetworkServer.SendToClient(conn.connectionId, MessageTypes.MsgExplode, msg);
                 }
+
+            Debug.Log("CCF sending explode projectile index " + msg.m_id + ", time is " + Time.time + ", time " + Time.time);
             return true;
         }
     }
+    */
 
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
     class CreeperSyncMatchInit

@@ -139,8 +139,10 @@ namespace GameMod
 
             Func<bool> IsValidPrimary = () =>
             {
-                return MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] != WeaponType.REFLEX
-                    && MPLoadouts.Loadouts[loadoutIndex].weapons.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) <= 1;
+                //return (MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] != WeaponType.REFLEX
+                //return (MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex] != WeaponType.REFLEX || !MPWeapons.primaries.Contains(MPWeapons.MasterPrimaries["Reflex"]))
+                //    && MPLoadouts.Loadouts[loadoutIndex].weapons.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) <= 1;
+                return MPLoadouts.Loadouts[loadoutIndex].weapons.Count(x => x == MPLoadouts.Loadouts[loadoutIndex].weapons[weaponIndex]) <= 1;
             };
 
             if (IsValidPrimary())
@@ -299,11 +301,16 @@ namespace GameMod
                 MPLoadouts.NetworkLoadouts[msg.lobby_id] = msg;
             }
 
-            // Add free Reflex sidearm
-            MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts
-                .Where(x => !x.weapons.Contains(WeaponType.REFLEX))
-                .ToList()
-                .ForEach(x => x.weapons.Add(WeaponType.REFLEX));
+            /*
+            if (!MPWeapons.primaries.Contains(MPWeapons.MasterPrimaries["Reflex"]))
+            {
+                // Add free Reflex sidearm
+                MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts
+                    .Where(x => !x.weapons.Contains(WeaponType.REFLEX))
+                    .ToList()
+                    .ForEach(x => x.weapons.Add(WeaponType.REFLEX));
+            }
+            */
         }
 
         private static void OnSetCustomLoadoutMessage(NetworkMessage rawMsg)
@@ -823,9 +830,9 @@ namespace GameMod
     {
         public static void Postfix()
         {
-            if (!Menus.mms_classic_spawns)
+            if (!Menus.mms_classic_spawns || !MPWeapons.ReflexEnabled)
             {
-                MenuManager.mms_powerup_filter[2] = false;
+                //MenuManager.mms_powerup_filter[2] = false; // CCF needs fixing
             }
         }
     }

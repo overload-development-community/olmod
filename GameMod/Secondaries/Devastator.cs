@@ -23,6 +23,7 @@ namespace GameMod
             ammoSuper = 2;
             firingMode = FiringMode.DETONATOR;
             WarnSelect = true;
+            ExplodeSync = true;
         }
 
         public override void Fire(float refire_multiplier)
@@ -132,6 +133,22 @@ namespace GameMod
                 {
                     proj.m_owner_player.c_player_ship.m_refire_missile_time = 0.3f;
                     proj.m_owner_player.MaybeSwitchToNextMissile();
+                }
+            }
+        }
+
+        public override void ProcessCollision(Projectile proj, GameObject collider, Vector3 collision_normal, int layer, ref bool m_bounce_allow, ref int m_bounces, ref Transform m_cur_target, ref Player m_cur_target_player, ref Robot m_cur_target_robot, ref float m_damage, ref float m_lifetime, ref float m_target_timer, ParticleElement m_trail_effect_pe)
+        {
+            if ((int)proj.m_type == (int)projprefab)
+            {
+                Debug.Log("CCF exploding Dev main projectile");
+                base.ProcessCollision(proj, collider, collision_normal, layer, ref m_bounce_allow, ref m_bounces, ref m_cur_target, ref m_cur_target_player, ref m_cur_target_robot, ref m_damage, ref m_lifetime, ref m_target_timer, m_trail_effect_pe);
+            }
+            else // subproj
+            {
+                if (proj.ShouldPlayDamageEffect(layer))
+                {
+                    proj.Explode(damaged_something: true);
                 }
             }
         }

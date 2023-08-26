@@ -568,8 +568,8 @@ m_homing_strength_robot;8
 m_homing_max_dist;15
 m_homing_min_dot;-1
 m_homing_acquire_speed;20
-m_bounce_behavior;none
-m_bounce_max_count;3
+m_bounce_behavior;BOUNCE_ALL
+m_bounce_max_count;10
 m_spawn_proj_count;0
 m_spawn_proj_type;none
 m_spawn_proj_pattern;RANDOM
@@ -1030,7 +1030,7 @@ m_homing_strength_robot;0
 m_homing_max_dist;0
 m_homing_min_dot;-1
 m_homing_acquire_speed;10
-m_bounce_behavior;none
+m_bounce_behavior;BOUNCE_ALL
 m_bounce_max_count;3
 m_spawn_proj_count;0
 m_spawn_proj_type;none
@@ -1706,8 +1706,8 @@ m_homing_strength_robot;8
 m_homing_max_dist;15
 m_homing_min_dot;-1
 m_homing_acquire_speed;20
-m_bounce_behavior;none
-m_bounce_max_count;3
+m_bounce_behavior;BOUNCE_ALL
+m_bounce_max_count;10
 m_spawn_proj_count;0
 m_spawn_proj_type;none
 m_spawn_proj_pattern;RANDOM
@@ -2168,7 +2168,7 @@ m_homing_strength_robot;0
 m_homing_max_dist;0
 m_homing_min_dot;-1
 m_homing_acquire_speed;10
-m_bounce_behavior;none
+m_bounce_behavior;BOUNCE_ALL
 m_bounce_max_count;3
 m_spawn_proj_count;0
 m_spawn_proj_type;none
