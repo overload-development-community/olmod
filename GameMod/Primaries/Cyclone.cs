@@ -23,14 +23,13 @@ namespace GameMod
         {
             Vector3 c_right = ship.c_right;
             Vector3 c_up = ship.c_up;
-            //Vector3 c_forward = ship.c_forward;
-            /*
+            //Vector3 c_forward = ship.c_forward;           
+
             if (ship.flak_fire_count == 0)
             {
-                _PlayerShip_flak_fire_count_Field.SetValue(player_ship, CycloneSpinupStartingStep);
-                flak_fire_count = CycloneSpinupStartingStep;
+                ship.flak_fire_count = CycloneSpinupStartingStep;
             }
-            */
+            
             float num3 = 1f - Mathf.Min((float)ship.flak_fire_count * 0.05f, (player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2B) ? 0.4f : 0.25f);
             player.c_player_ship.FiringPitchModifier = ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2B) ? (0.6f - num3) : (0.75f - num3)) * 0.25f;
             player.c_player_ship.FiringVolumeModifier = 0.75f;

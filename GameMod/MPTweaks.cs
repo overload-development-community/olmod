@@ -286,7 +286,7 @@ namespace GameMod {
             caps.Add("ModVersion", OlmodVersion.FullVersionString);
             caps.Add("Modded", Core.GameMod.Modded ? "1" : "0");
             caps.Add("ModsLoaded", Core.GameMod.ModsLoaded);
-            caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,shipselection,damagenumbers,ctfjoin" + (MPAudioTaunts.AClient.active ? ",audiotaunts":""));
+            caps.Add("SupportsTweaks", "changeteam,deathreview,sniper,jip,nocompress_0_3_6,customloadouts,damagenumbers,ctfjoin," + MPShips.MULTISHIP_VERSION + (MPAudioTaunts.AClient.active ? ",audiotaunts":""));
             caps.Add("ModPrivateData", "1");
             caps.Add("ClassicWeaponSpawns", "1");
             caps.Add("NetVersion", MPTweaks.NET_VERSION.ToString());
@@ -336,7 +336,7 @@ namespace GameMod {
                 NetworkServer.SendToClient(connId, 86, new StringMessage("This match requires OLMod to play."));
                 GameManager.m_gm.StartCoroutine(DisconnectCoroutine(connId));
             }
-            if (!MPTweaks.ClientHasTweak(connId, "shipselection") && MPShips.allowed != 0)
+            if (!MPTweaks.ClientHasTweak(connId, MPShips.MULTISHIP_VERSION) && MPShips.allowed != 0)
             {
                 //LobbyChatMessage chatMsg = new LobbyChatMessage(connId, "SERVER", MpTeam.ANARCHY, "You need OLMOD to join this match", false);
                 //NetworkServer.SendToClient(connId, CustomMsgType.LobbyChatToClient, chatMsg);

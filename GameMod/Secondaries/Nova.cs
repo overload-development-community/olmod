@@ -111,7 +111,7 @@ namespace GameMod
 
             if (proj.m_type == (ProjPrefab)projprefab)
             {
-                SFXCueManager.PlayCuePos(SFXCue.exp_nova_wash, proj.c_transform.localPosition, UnityEngine.Random.Range(0.9f, 1f), UnityEngine.Random.Range(-0.05f, 0.05f), save_pos_only: false, UnityEngine.Random.Range(0.5f, 0.6f));
+                SFXCueManager.PlayCuePos(SFXCue.exp_nova_wash, proj.c_transform.localPosition, UnityEngine.Random.Range(0.9f, 1f), UnityEngine.Random.Range(-0.05f, 0.05f), false, UnityEngine.Random.Range(0.5f, 0.6f));
                 Quaternion rotation = proj.c_transform.rotation;
 
                 if (m_upgrade == WeaponUnlock.LEVEL_2B)

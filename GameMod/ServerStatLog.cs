@@ -518,7 +518,7 @@ namespace GameMod {
             if (NetworkMatch.m_postgame)
                 return;
 
-            Debug.Log("CCF ServerStatLog kill recorded, damage type is " + GetProjPrefab(pdr.dmg_type) + "and weapon idx is " + SanitizeWeaponID(di.weapon));
+            //Debug.Log("CCF ServerStatLog kill recorded, damage type is " + GetProjPrefab(pdr.dmg_type) + "and weapon idx is " + SanitizeWeaponID(di.weapon));
 
             Kills.Add(new Kill
             {
@@ -564,7 +564,7 @@ namespace GameMod {
             if (NetworkMatch.m_postgame)
                 return;
 
-            Debug.Log("CCF ServerStatLog AddDamage, damage type is " + SanitizeWeaponID(weapon).ToString());
+            //Debug.Log("CCF ServerStatLog AddDamage, damage type is " + SanitizeWeaponID(weapon).ToString());
 
             var key = new PlayerPlayerWeaponDamage { Attacker = attacker, Defender = defender, Weapon = SanitizeWeaponID(weapon) };
             if (DamageTable.TryGetValue(key, out float totalDamage))

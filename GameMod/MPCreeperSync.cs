@@ -119,7 +119,7 @@ namespace GameMod
                     proj_info[count].m_pos = c_proj.transform.position;
                     proj_info[count].m_vel = c_proj.c_rigidbody.velocity;
                     count++;
-                    Debug.Log("CCF adding projectile index " + id + " velocity " + c_proj.c_rigidbody.velocity + ", time " + Time.time);
+                    //Debug.Log("CCF adding projectile index " + id + " velocity " + c_proj.c_rigidbody.velocity + ", time " + Time.time);
                 }
             }
 
@@ -176,7 +176,7 @@ namespace GameMod
             var explode_msg = msg.ReadMessage<ExplodeMsg>();
             if (Server.IsActive())
                 return;
-            Debug.Log("CCF explode sync searching for projectile index " + explode_msg.m_id);
+            //Debug.Log("CCF explode sync searching for projectile index " + explode_msg.m_id);
             var proj = MPCreeperSync.FindSyncedProjectile(explode_msg.m_id, MPCreeperSync.ExplodeSync); 
             /*if (proj == null && MPSniperPackets.enabled) // Extend to devs and novas when sniper packets are enabled.
             {

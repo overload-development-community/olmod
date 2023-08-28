@@ -133,7 +133,7 @@ namespace GameMod
             {
                 foreach (var proj in ProjectileManager.proj_list[(int)type])
                 {
-                    Debug.Log("CCF disabling collider on a " + ((ProjPrefabExt)type).ToString() + " on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
+                    //Debug.Log("CCF disabling collider on a " + ((ProjPrefabExt)type).ToString() + " on " + (GameplayManager.IsDedicatedServer() ? "server" : "client"));
                     proj.c_go.GetComponent<Collider>().enabled = false;
                 }
             }

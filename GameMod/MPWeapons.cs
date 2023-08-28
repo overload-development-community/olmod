@@ -323,15 +323,6 @@ namespace GameMod
 
             if (MPShips.allowed > 0)
             {
-                // for now, swap only the weapons that are needed. This can get less stiff in the future.
-
-                //primaries[0] = new MSImpulse();
-                //primaries[2] = new Plasma();
-                //primaries[4] = new Burstfire();
-                //primaries[7] = new MDLance();
-
-                //secondaries[6] = new ImpactMortar();
-
                 primaries[0] = MasterPrimaries["MSImpulse"];
                 primaries[1] = MasterPrimaries["Cyclone"];
                 primaries[2] = MasterPrimaries["Plasma"];
@@ -354,13 +345,6 @@ namespace GameMod
             }
             else
             {
-                //primaries[0] = new Impulse();
-                //primaries[2] = new Reflex();
-                //primaries[4] = new Driller();
-                //primaries[7] = new Lancer();
-
-                //secondaries[6] = new TimeBomb();
-
                 primaries[0] = MasterPrimaries["Impulse"];
                 primaries[1] = MasterPrimaries["Cyclone"];
                 primaries[2] = MasterPrimaries["Reflex"];
@@ -502,35 +486,12 @@ namespace GameMod
 
             if (!m_registered_prefabs.ContainsValue(prefab))
             {
-                //FieldInfo prefabDictionary = AccessTools.Field(typeof(Client), "m_registered_prefabs");
-                //NetworkHash128 assetId = prefab.GetComponent<NetworkIdentity>().assetId;
-                /*char[] name = nameForHash.PadRight(16).ToCharArray();
-                NetworkHash128 assetId = new NetworkHash128();
-                assetId.i0 = (byte)name[0];
-                assetId.i1 = (byte)name[1];
-                assetId.i2 = (byte)name[2];
-                assetId.i3 = (byte)name[3];
-                assetId.i4 = (byte)name[4];
-                assetId.i5 = (byte)name[5];
-                assetId.i6 = (byte)name[6];
-                assetId.i7 = (byte)name[7];
-                assetId.i8 = (byte)name[8];
-                assetId.i9 = (byte)name[9];
-                assetId.i10 = (byte)name[10];
-                assetId.i11 = (byte)name[11];
-                assetId.i12 = (byte)name[12];
-                assetId.i13 = (byte)name[13];
-                assetId.i14 = (byte)name[14];
-                assetId.i15 = (byte)name[15];
-                m_registered_prefabs.Add(assetId, prefab);*/
                 NetworkHash128 assetId = NetworkHash128.Parse(nameForHash);
 
                 NetworkIdentity ni = prefab.GetComponent<NetworkIdentity>();
                 FieldInfo m_AssetId = AccessTools.Field(typeof(NetworkIdentity), "m_AssetId");
                 m_AssetId.SetValue(ni, assetId);
                 m_registered_prefabs.Add(assetId, prefab);
-                //WeaponExtHash hash = prefab.AddComponent<WeaponExtHash>();
-                //hash.assetId = assetId;
 
                 Debug.Log("CCF Adding item prefab for " + nameForHash + " to the m_registered_prefabs dictionary with hash " + assetId.ToString());
 
@@ -1976,7 +1937,7 @@ namespace GameMod
             switch (prefab)
             {
                 case ProjPrefab.none:
-                case ProjPrefab.num:
+                case (ProjPrefab)ProjPrefabExt.num: 
                 case ProjPrefab.proj_melee:
                     break;
                 case ProjPrefab.missile_alien_pod:
@@ -2119,6 +2080,22 @@ namespace GameMod
             }
         }
     }
+    
+
+    // Self-splash was WIMPY. Fixed. 75% of what you do to your enemies now, at 75% the radius (or the originals, if they were higher than that). This is a starting point only.
+    [HarmonyPatch(typeof(ExplosionDelayed), "CopyData")]
+    public static class MPWeapons_ExplosionDelayed_CopyData
+    {
+        public static void Postfix(ExplosionDelayed __instance)
+        {
+            if (MPShips.allowed != 0)
+            {
+                __instance.m_damage_radius_player = Mathf.Max(__instance.m_damage_radius_player, __instance.m_damage_radius_mp * 0.75f);
+                __instance.m_player_damage = Mathf.Max(__instance.m_player_damage, __instance.m_mp_damage * 0.75f);
+            }
+        }
+    }
+
 
     //[HarmonyPriority(Priority.Last)]
     [HarmonyPatch(typeof(Projectile), "Explode")]

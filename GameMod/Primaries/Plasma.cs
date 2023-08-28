@@ -22,27 +22,15 @@ namespace GameMod
         {
             player.c_player_ship.FiringVolumeModifier = 0.75f;
             ParticleElement shot1 = MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_right.position, player.c_player_ship.c_transform.localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], true, 0);
-            ParticleElement shot2 = MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_left.position, player.c_player_ship.c_transform.localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], true, 1);
-
+            ParticleElement shot2 = MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_left.position, player.c_player_ship.c_transform.localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], false, 1);
+            
             //player.c_player_ship.m_refire_time += ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2A) ? 0.18f : 0.15f) * refire_multiplier;
             player.c_player_ship.m_refire_time += ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2A) ? 0.16f : 0.14f) * refire_multiplier;
             if (MPSniperPackets.AlwaysUseEnergy())
             {
-                player.UseEnergy(0.75f);
+                player.UseEnergy(0.85f);
             }
             player.PlayCameraShake(CameraShakeType.FIRE_REFLEX, 1f, 1f);
-
-            if (!GameplayManager.IsDedicatedServer())
-            {
-                if (player == GameManager.m_local_player)
-                {
-                    GameManager.m_audio.PlayCue2D((int)NewSounds.PlasmaFire3, vol: 0.4f);
-                }
-                else
-                {
-                    GameManager.m_audio.PlayCuePos((int)NewSounds.PlasmaFire3, ps.c_transform.position, vol: 0.4f);
-                }
-            }
         }
 
         public override void DrawHUDReticle(Vector2 pos, float m_alpha)
@@ -126,8 +114,8 @@ namespace GameMod
             projectile.m_type = (ProjPrefab)projprefab;
 
             projectile.m_damage_robot = 14;
-            projectile.m_damage_player = 9;
-            projectile.m_damage_mp = 9;
+            projectile.m_damage_player = 8.8f;
+            projectile.m_damage_mp = 8.8f;
             projectile.m_damage_energy = true;
             projectile.m_stun_multiplier = 1;
             projectile.m_push_force_robot = 1.2f;
@@ -176,23 +164,11 @@ namespace GameMod
             Object.Destroy(projectile.c_collider);
             var coll = go.AddComponent<SphereCollider>();
             coll.material = physmat;
-            coll.radius = 0.55f; //0.45? 0.5?
+            coll.radius = 0.52f; //0.45? 0.55?
             projectile.c_collider = coll;
             go.layer = 12;
 
             projectile.c_rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous; // WHY WAS IT DISCRETE
-
-            /*
-            //temporary
-            GameObject vis = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Object.DontDestroyOnLoad(vis);
-            //vis.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
-            var mr = vis.GetComponent<MeshRenderer>();
-            mr.sharedMaterial = UIManager.gm.m_energy_material;
-            mr.enabled = true;
-            Object.Destroy(vis.GetComponent<SphereCollider>());
-            vis.transform.SetParent(go.transform);
-            */
 
             Light light = go.GetComponent<Light>();
             light.color = new Color(0f, 1f, 0.11f, 1f);
@@ -221,6 +197,23 @@ namespace GameMod
             }
 
             return go;
+        }
+
+        public override bool ProjectileFire(Projectile proj, Vector3 pos, Quaternion rot, ref int m_bounces, ref float m_damage, ref FXWeaponExplosion m_death_particle_override, ref float m_init_speed, ref float m_lifetime, ref float m_homing_cur_strength, ref float m_push_force, ref float m_push_torque, ref WeaponUnlock m_upgrade, bool save_pos, ref float m_strength, ref float m_vel_inherit)
+        {
+            if (!GameplayManager.IsDedicatedServer() && proj.m_owner_player != null && !save_pos)
+            {
+                if (proj.m_owner_player.isLocalPlayer)
+                {
+                    GameManager.m_audio.PlayCue2D((int)NewSounds.PlasmaFire3, vol: 0.4f);
+                }
+                else
+                {
+                    GameManager.m_audio.PlayCuePos((int)NewSounds.PlasmaFire3, pos, vol: 0.4f);
+                }
+            }
+
+            return false;
         }
     }
 }

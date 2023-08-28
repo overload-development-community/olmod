@@ -50,18 +50,6 @@ namespace GameMod
             */
             ps.c_rigidbody.AddForce(c_forward * (-300f * ps.c_rigidbody.mass * RUtility.FIXED_FT_INVERTED));
             player.PlayCameraShake(CameraShakeType.FIRE_TIMEBOMB, 1f, 1f);
-
-            if (!GameplayManager.IsDedicatedServer())
-            {
-                if (player == GameManager.m_local_player)
-                {
-                    GameManager.m_audio.PlayCue2D((int)NewSounds.MortarFire3, vol: 1f);
-                }
-                else
-                {
-                    GameManager.m_audio.PlayCuePos((int)NewSounds.MortarFire3, ps.c_transform.position, vol: 1f);
-                }
-            }
         }
 
         public override void DrawHUDReticle(Vector2 pos, float m_alpha)
@@ -103,13 +91,25 @@ namespace GameMod
                 m_death_particle_override = proj.m_death_particle_default;
             }
 
+            if (!GameplayManager.IsDedicatedServer() && proj.m_owner_player != null && !save_pos)
+            {
+                if (proj.m_owner_player.isLocalPlayer)
+                {
+                    GameManager.m_audio.PlayCue2D((int)NewSounds.MortarFire3, vol: 0.8f);
+                }
+                else
+                {
+                    GameManager.m_audio.PlayCuePos((int)NewSounds.MortarFire3, pos, vol: 0.9f);
+                }
+            }
+
             return false;
         }
 
         public override void Explode(Projectile proj, bool damaged_something, FXWeaponExplosion m_death_particle_override, float strength, WeaponUnlock m_upgrade)
         {
             base.Explode(proj, true, m_death_particle_override, strength, m_upgrade);
-            Debug.Log("CCF Exploded at " + Time.time);
+            //Debug.Log("CCF Exploded at " + Time.time);
 
             //float num8 = ((m_upgrade != WeaponUnlock.LEVEL_2A) ? 5f : 7.5f);
             /*
@@ -154,7 +154,7 @@ namespace GameMod
             projectile.m_init_speed_max = -1;
             projectile.m_init_speed_robot_multiplier = 1;
             projectile.m_acceleration = 0;
-            projectile.m_vel_inherit_player = 0.7f;
+            projectile.m_vel_inherit_player = 0.8f;
             projectile.m_vel_inherit_robot = 0.2f;
             projectile.m_homing_strength = 0;
             projectile.m_homing_strength_robot = 0;
@@ -177,7 +177,7 @@ namespace GameMod
             projectile.m_muzzle_flash_particle = FXWeaponEffect.muzzle_flash_devastator;
             projectile.m_muzzle_flash_particle_player = FXWeaponEffect.muzzle_flash_devastator;
 
-            projectile.c_rigidbody.drag = 0.8f;
+            projectile.c_rigidbody.drag = 0.7f;
 
             // visual stuff
 
@@ -196,9 +196,12 @@ namespace GameMod
             Material mat = mr.material;
             mat.SetColor("_EmissionColor", new Color(0.628f, 0.102f, 0f));
             mat.SetTexture("_EmissionMap", extras[0].GetComponent<MeshRenderer>().sharedMaterial.GetTexture("_MainTex"));
-            Debug.Log("CCF texture name is " + mr.material.GetTexture("_EmissionMap").name);
+            //Debug.Log("CCF texture name is " + mr.material.GetTexture("_EmissionMap").name);
             mr.material = mat;
             mat.EnableKeyword("_EMISSION");
+
+            var glowps = go.transform.GetChild(0).GetComponent<ParticleSystem>().main;
+            glowps.startSize = 1.5f;
 
             // May need to screw with lights and adding it to the root object. We'll see.
             //Light origLight = go.GetComponentInChildren<Light>();
@@ -206,7 +209,7 @@ namespace GameMod
 
             GameObject light1 = go.transform.GetChild(3).gameObject;
             light1.transform.localPosition = new Vector3(0.28f, 0f, 0f);
-            light1.GetComponent<Light>().intensity = 0.5f;
+            light1.GetComponent<Light>().intensity = 0.6f;
 
             GameObject.Instantiate(light1, new Vector3(-0.28f, 0f, 0f), Quaternion.identity, go.transform);
             GameObject.Instantiate(light1, new Vector3(0f, 0.28f, 0f), Quaternion.identity, go.transform);
@@ -240,7 +243,7 @@ namespace GameMod
             MeshFilter[] itemMFs = itemPrefab.GetComponentsInChildren<MeshFilter>(includeInactive: true);
             foreach (MeshFilter m in itemMFs)
             {
-                Debug.Log("CCF setting item mesh on " + m.gameObject.name);
+                //Debug.Log("CCF setting item mesh on " + m.gameObject.name);
                 m.mesh = projMesh.GetComponent<MeshFilter>().sharedMesh;
                 m.transform.localScale = Vector3.one * 1.8f;
                 m.transform.localPosition = new Vector3(0f, -0.143f, 0f);
@@ -249,7 +252,7 @@ namespace GameMod
 
             //itemPrefab.SetActive(false);
             item.m_active = false;
-            item.m_amount = 1; // lots of boom for testing
+            item.m_amount = 1;
             item.reg_amount = 1;
             //item.m_type = ItemType.MISSILE_TIMEBOMB; // here temporarily
 
@@ -378,7 +381,7 @@ namespace GameMod
             explosion.m_damage_radius = 20f;
             explosion.m_damage_radius_player = 14f;
             explosion.m_damage_radius_mp = 18f;
-            explosion.m_player_damage  = 180f;
+            explosion.m_player_damage  = 160f;
             explosion.m_robot_damage = 400f;
             explosion.m_mp_damage= 200f;
             explosion.m_camera_shake_type = CameraShakeType.EXPLODE_LARGE;

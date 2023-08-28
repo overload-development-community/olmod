@@ -13,6 +13,8 @@ namespace GameMod
     // Handles asset replacement for different Ship types
     public static class MPShips
     {
+        public const string MULTISHIP_VERSION = "multiship-0-4";
+
         public static Dictionary<NetworkInstanceId, Ship> SelectedShips = new Dictionary<NetworkInstanceId, Ship>(); // stores the PlayerShip's netId and the associated Ship reference
         public static Dictionary<int, int> LobbyShips = new Dictionary<int, int>(); // (lobby_id, idx) stores a lobby_id and the associated Ship index for translation at instantiation
         public static List<NetworkInstanceId> DeferredShips = new List<NetworkInstanceId>(); // stores any ships that are not found yet when their associated information is received from the server
@@ -584,7 +586,7 @@ namespace GameMod
                     {
                         foreach (int idx in NetworkMatch.m_players.Keys)
                         {
-                            if (idx != 0 && MPTweaks.ClientHasTweak(idx, "shipselection"))
+                            if (idx != 0 && MPTweaks.ClientHasTweak(idx, MPShips.MULTISHIP_VERSION))
                             {
                                 var msg = new MPShips.ShipDataToClientMessage
                                 {
@@ -1124,6 +1126,15 @@ namespace GameMod
     [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
     class MPShips_PlayerShip_SpewItemsOnDeath
     {
+        static void Prefix(PlayerShip __instance)
+        {
+            if (MPShips.allowed == 0)
+                return;
+
+            //GameManager.m_audio.PlayCuePos((int)NewSounds.MortarExplode, __instance.c_transform_position, 0.3f, -0.5f);
+            GameManager.m_light_manager.CreateLightFlash(__instance.c_transform_position, Color.white, 10f, 10f, 0.2f, false);
+        }
+
         static void Postfix(PlayerShip __instance)
         {
             if (!GameplayManager.IsDedicatedServer())

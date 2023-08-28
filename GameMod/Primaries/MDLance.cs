@@ -59,14 +59,11 @@ namespace GameMod
             MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_right.position, localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], true, 0);
             MPSniperPackets.MaybePlayerFire(player, (ProjPrefab)projprefab, player.c_player_ship.m_muzzle_left.position, localRotation, 0f, player.m_weapon_level[(int)player.m_weapon_type], false, 1);
 
-            int sound = (int)NewSounds.LancerCharge2s5;
-
             if (GameplayManager.IsMultiplayerActive)
             {
                 if (player.m_overdrive)
                 {
                     player.c_player_ship.m_refire_time += 1.8f;
-                    sound = (int)NewSounds.LancerCharge2s;
                 }
                 else
                 {
@@ -76,7 +73,6 @@ namespace GameMod
             else if (player.m_overdrive)
             {
                 player.c_player_ship.m_refire_time += 2f + ((player.m_weapon_level[(int)player.m_weapon_type] != WeaponUnlock.LEVEL_2A) ? 0.28f : 0.2f);
-                sound = (int)NewSounds.LancerCharge2s;
             }
             else
             {
@@ -94,11 +90,6 @@ namespace GameMod
                 }
             }
             player.PlayCameraShake(CameraShakeType.FIRE_LANCER, 4f, 2f);
-
-            if (!GameplayManager.IsDedicatedServer())
-            {
-                GameManager.m_audio.PlayCueTransform(sound, ps.c_transform, 1f);
-            }
         }
 
         public override void DrawHUDReticle(Vector2 pos, float m_alpha)
@@ -306,8 +297,6 @@ namespace GameMod
             Material mat = go.GetComponentInChildren<MeshRenderer>().material;
             mat.SetColor("_TintColor", new Color(0.863f, 0.157f, 0.314f, 1f));
 
-            //Debug.Log("CCF mat color = " + go.GetComponentInChildren<MeshRenderer>().material.GetColor("_TintColor").ToString());
-
             return go;
         }
 
@@ -394,6 +383,27 @@ namespace GameMod
             if (m_upgrade == WeaponUnlock.LEVEL_2B)
             {
                 proj.m_firing_sfx = SFXCue.weapon_lancer_lvl2b;
+            }
+
+            if (!GameplayManager.IsDedicatedServer() && proj.m_owner_player != null && !save_pos)
+            {
+                int sound;
+                if (proj.m_owner_player.m_overdrive)
+                {
+                    sound = (int)NewSounds.LancerCharge2s;
+                }
+                else
+                {
+                    sound = (int)NewSounds.LancerCharge2s5;
+                }
+                if (proj.m_owner_player.isLocalPlayer)
+                {
+                    GameManager.m_audio.PlayCue2D(sound, 1f);
+                }
+                else
+                {
+                    GameManager.m_audio.PlayCuePos(sound, pos, 1f);
+                }
             }
 
             return false;

@@ -459,7 +459,7 @@ namespace GameMod {
             }
 
             // CCF SEND THE THINGS
-            if (MPTweaks.ClientHasTweak(connectionId, "shipselection"))
+            if (MPTweaks.ClientHasTweak(connectionId, MPShips.MULTISHIP_VERSION))
             {
                 foreach (var player in Overload.NetworkManager.m_Players.Where(x => (x.connectionToClient.connectionId > 0 && x.connectionToClient.connectionId != connectionId)))
                 {
