@@ -12,10 +12,12 @@ namespace GameMod
         private const float LINE_SIZE = 18f;
         private const float LEFT_OFFSET = 200f;
 
-        public static int powerup_bitmask = 0;
-        public static bool[] primarypowerups = new bool[8];
-        public static bool[] secondarypowerups = new bool[8];
-        public static bool disabledpowerups = false;
+        private static int powerup_bitmask = 0;
+        private static bool[] primarypowerups = new bool[8];
+        private static bool[] secondarypowerups = new bool[8];
+        private static bool disabledpowerups = false;
+
+        public static bool Displayed = false;
 
         public static void DrawMatchInfo(UIElement uie, Vector2 position)
         {
@@ -156,6 +158,8 @@ namespace GameMod
                 position.y += 15f;
                 UIManager.DrawQuadUI(position - Vector2.right * 100f, 110f, 1f, UIManager.m_col_ub1, uie.m_alpha, 21);
             }
+
+            Displayed = show;
         }
 
         public static string GetColliderName(int collider)
