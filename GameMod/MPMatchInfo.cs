@@ -43,6 +43,27 @@ namespace GameMod
             float startY = position.y;
             position.y += 45f;
 
+            if (NetworkMatch.m_match_time_limit_seconds != 900 && NetworkMatch.m_match_time_limit_seconds != 1200) // 15 and 20 minutes are expected, everything else is of note
+            {
+                show = true;
+                if (NetworkMatch.m_match_time_limit_seconds < int.MaxValue)
+                {
+                    uie.DrawStringSmall("TIME LIMIT:", position - Vector2.right * LEFT_OFFSET, TEXT_SIZE, StringOffset.LEFT, UIManager.m_col_ui1, 1f, 120f);
+                    uie.DrawStringSmall((NetworkMatch.m_match_time_limit_seconds / 60) + " min", position, TEXT_SIZE, StringOffset.RIGHT, UIManager.m_col_ui2, uie.m_alpha);
+                }
+                else
+                {
+                    uie.DrawStringSmall("NO TIME LIMIT", position - Vector2.right * LEFT_OFFSET, TEXT_SIZE, StringOffset.LEFT, UIManager.m_col_ui1, 1f, 120f);
+                }
+                position.y += LINE_SIZE;
+            }
+            if (NetworkMatch.m_match_score_limit != 0)
+            {
+                show = true;
+                uie.DrawStringSmall("SCORE LIMIT:", position - Vector2.right * LEFT_OFFSET, TEXT_SIZE, StringOffset.LEFT, UIManager.m_col_ui1, 1f, 120f);
+                uie.DrawStringSmall(NetworkMatch.m_match_score_limit.ToString(), position, TEXT_SIZE, StringOffset.RIGHT, UIManager.m_col_ui2, uie.m_alpha);
+                position.y += LINE_SIZE;
+            }
             if (MPModPrivateData.ShipMeshCollider != 0)
             {
                 show = true;
