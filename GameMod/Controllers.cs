@@ -22,7 +22,9 @@ namespace GameMod
 
         public class Controller
         {
-            public string m_device_name = ""; 
+            public bool populated = false;
+            public string m_device_name = "";
+            public int m_joystick_id = -1;
             public List<Axis> axes = new List<Axis>();
 
             public class Axis
@@ -219,13 +221,16 @@ namespace GameMod
     class Controllers_PilotManager_Select
     {
 
-        static void ReadControlData()
+        public static void ReadControlData()
         {
+            Controllers.controllers = new List<Controllers.Controller>();
             string fn = PilotManager.FileName(PilotFileType.CONFIG) + "mod";
             for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
                 Controllers.controllers.Add(new Controllers.Controller
                 {
+                    m_device_name = Controls.m_controllers[i].name,
+                    m_joystick_id = Controls.m_controllers[i].joystickID,
                     axes = new List<Controllers.Controller.Axis>()
                 });
                 for (int j = 0; j < Controls.m_controllers[i].m_axis_count; j++)
@@ -259,54 +264,64 @@ namespace GameMod
         }
 
         // returns the index of a controller in Overload.Controls.m_controllers
-        static int FindControllerIndex(string controller_name)
+        static int FindControllerIndex(string controller_name, int device_id, int skip_first_n_occurences = 0)
         {
             int index = -1;
             for(int i = 0; i < Overload.Controls.m_controllers.Count; i++){
-                if(Overload.Controls.m_controllers[i].name.Equals(controller_name)){
-                    index = i;
-                    break;
+                if(Overload.Controls.m_controllers[i].name.Equals(controller_name) && Overload.Controls.m_controllers[i].joystickID == device_id)
+                {
+                    if (skip_first_n_occurences <= 0)
+                    {
+                        index = i;
+                        break;
+                    }
+                    else
+                        skip_first_n_occurences--;
                 }
             }
             return index;
         }
 
-        static void ReadControlDataFromStream(StreamReader sr)
+        private static List<Controllers.Controller> ReadInDevicesAndReturnThemInAList(StreamReader sr, int numControllers)
         {
-            string text = sr.ReadLine(); // 1
-            if (!RUtility.StringStartsWith(text, Controls.CONFIG_KEY))
-            {
-                Debug.Log("olmod controls config save file has an incorrect key: " + text);
-                return;
-            }
-            int num;
-            bool flag = int.TryParse(text.Substring(Controls.CONFIG_KEY.Length), out num);
-            int numControllers = int.Parse(sr.ReadLine());
-            int[] controllers = new int[numControllers];
-
-            List<Controllers.Controller> unconnected_controllers = new List<Controllers.Controller>();
-            
+            Debug.Log("Creating devices from .xconfigmod");
+            List<Controllers.Controller> all_controllers = new List<Controllers.Controller>();
             for (int i = 0; i < numControllers; i++)
             {
+                // create a blank device
                 Controllers.Controller device = new Controllers.Controller();
+                
+                // read in the device name and id
+                string[] device_informations = sr.ReadLine().Split(';');
+                device.m_device_name = device_informations[0];
+                device.m_joystick_id = -1;
+                if (device_informations.Length == 2)
+                {
+                    int.TryParse(device_informations[1], out device.m_joystick_id);
+                }
+                /*
+                Debug.Log(string.Format("[{0,-35}] id: {1,2} controller at this position in Overload.Controls.m_controllers: {2, -35} id: {3,9}",
+                    device.m_device_name,
+                    device.m_joystick_id,
+                    i < Controls.m_controllers.Count ? Controls.m_controllers[i].name : "NO DEVICE",
+                    i < Controls.m_controllers.Count ? Controls.m_controllers[i].joystickID.ToString() : "NO DEVICE"
+                    ));*/
 
-                string controllerName = sr.ReadLine();
+
+                // read in the amount of axes that this saved device has
                 int numAxes = int.Parse(sr.ReadLine());
-
-                device.m_device_name = controllerName;
-
-                Debug.Log("["+controllerName+"]: "+numAxes);
-                Debug.Log("controller at this position in Overload.Controls.m_controllers: "+ Controls.m_controllers[i].name);
+                // populate all the axes with default values
                 for (int j = 0; j < numAxes; j++)
                 {
-                    // create a default axis
+                    // create a default axis if the axes count doesnt match
                     if (j >= device.axes.Count)
                     {
+                        // default values, deadzone used to be 40 but that is a very bad default so this should help newcomers
                         float sens = 17.24138f;
-                        float deadzone = 0f; // this should be 40 but the world becomes a better place if we default to 0
+                        float deadzone = 5f;
 
                         // if there is a corresponding controller and axis then convert and use its sens/deadzone
-                        int device_pos = FindControllerIndex(controllerName);
+                        int device_pos = FindControllerIndex(device.m_device_name, device.m_joystick_id);
                         if (device_pos != -1 && j < Controls.m_controllers[device_pos].m_axis_count)
                         {
                             int dz_index = Controls.m_controllers[device_pos].GetAxisDeadzone(j);
@@ -325,46 +340,121 @@ namespace GameMod
 
                     device.axes[j].deadzone = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
                     device.axes[j].sensitivity = float.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
-                    Debug.Log("  created axis: " + j + "   sensitivity: " + device.axes[j].sensitivity + "   deadzone: " + device.axes[j].deadzone);
+                    //Debug.Log("  created axis: " + j + "   sensitivity: " + device.axes[j].sensitivity + "   deadzone: " + device.axes[j].deadzone);
                 }
 
-                int index = FindControllerIndex(controllerName);
-                if(index != -1){
-                    Controllers.controllers[index] = device;
-                }
-                else{
-                    unconnected_controllers.Add(device);
-                }
+                all_controllers.Add(device);
+            }
+            return all_controllers;
+        }
 
-                
+     
+        static void ReadControlDataFromStream(StreamReader sr)
+        {
+            //Debug.Log("\n--------- SENSITIVITIES & DEADZONES ---------");
+            string text = sr.ReadLine(); // 1
+            if (!RUtility.StringStartsWith(text, Controls.CONFIG_KEY))
+            {
+                Debug.Log("olmod controls config save file has an incorrect key: " + text);
+                return;
             }
 
-            // add the sensitivities of disconnected controllers at the end
-            foreach(Controllers.Controller c in unconnected_controllers)
+            int num; // config key
+            bool flag = int.TryParse(text.Substring(Controls.CONFIG_KEY.Length), out num);
+            int numControllers = int.Parse(sr.ReadLine()); // amount of saved controllers in file
+            int[] controllers = new int[numControllers];
+
+            // this holds all the saved devices till they get ordered and matched to Overload.Controls.m_controllers
+            List<Controllers.Controller> all_controllers = ReadInDevicesAndReturnThemInAList(sr, numControllers);
+
+            // this holds the different types of connected devices to differentiate between for example a Sidewinder 3D pro and a T.16000
+            Dictionary<string, int> controller_types = new Dictionary<string, int>();
+
+
+            List<Controllers.Controller> unassigned_controllers = new List<Controllers.Controller>();
+
+            // match the devices
+            foreach (var device in all_controllers)
             {
-                Debug.Log("  readded inactive controller: "+c.m_device_name);
-                Controllers.controllers.Add(c);
+                // add this device name to controller_types once
+                if (!controller_types.ContainsKey(device.m_device_name))
+                    controller_types.Add(device.m_device_name, 0);
+
+
+                if (device.m_joystick_id != -1)
+                {
+                    int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name.Equals(device.m_device_name) && c.joystickID == device.m_joystick_id);
+                    //Debug.Log("[1S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : index.ToString()));
+                    
+                    if (index == -1)
+                    {
+                        unassigned_controllers.Add(device);
+                    } 
+                    else
+                    {
+                        Controllers.controllers[index] = device;
+                        Controllers.controllers[index].populated = true;
+                    }
+                        
+                }
+                else
+                {
+                    // ensure that there is sth that this device can be matched to
+                    int index = Controls.m_controllers.FindIndex((Overload.Controller c) => c.name.Equals(device.m_device_name));
+                    if (index != -1)
+                    {
+                        // device has no id and there are no other devices with ids either 
+                        if (all_controllers.Find((Controllers.Controller c) => c.m_device_name == Controls.m_controllers[index].name && c.m_joystick_id == Controls.m_controllers[index].joystickID && c.m_joystick_id != -1) == null)
+                        {
+                            int[] matching_device_indexes = FindControllerIndexes(device.m_device_name, device.m_joystick_id, false);
+                            if (matching_device_indexes.Length > 0 && matching_device_indexes.Length > controller_types[device.m_device_name])
+                            {
+                                device.populated = true;
+                                Controllers.controllers[matching_device_indexes[controller_types[device.m_device_name]]] = device;
+                                //Debug.Log("[2S] Matching devices: (" + device.m_device_name + ":" + device.m_joystick_id + ") to " + (index == -1 ? "UNCONNECTED" : matching_device_indexes[controller_types[device.m_device_name]].ToString()));
+                            }
+                            controller_types[device.m_device_name]++;
+                        }
+                    }
+                }
+            }
+            
+            foreach(Controllers.Controller c in unassigned_controllers)
+            {
+                for(int i = 0; i < Controllers.controllers.Count; i++)
+                {
+                    if(!Controllers.controllers[i].populated && Controllers.controllers[i].m_device_name.Equals(c.m_device_name))
+                    {
+                        //Debug.Log("  readded controller: " + c.m_device_name+ " at "+i);
+                        Controllers.controllers[i] = c;
+                        Controllers.controllers[i].populated = true;
+                    }
+                }
+
             }
 
-            for(int i = 0; i < Controls.m_controllers.Count;i++)
+            //Debug.Log(" ");
+            for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
+                //Debug.Log("Device");
                 for(int j = 0; j < Controllers.controllers[i].axes.Count; j++)
                 {
-                    Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
-                    Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
+                    if (j < Controllers.controllers[i].axes.Count)
+                    {
+                        //Debug.Log("   axis:"+j+" sens:"+ Controllers.controllers[i].axes[j].sensitivity+" dead:"+ Controllers.controllers[i].axes[j].deadzone);
+                        Controllers.SetAxisDeadzone(i, j, Controllers.controllers[i].axes[j].deadzone);
+                        Controllers.SetAxisSensitivity(i, j, Controllers.controllers[i].axes[j].sensitivity);
+                    }
+
                 }
             }
 
-            /*
-            Debug.Log("\n device order   Overload | Olmod");
-            for (int i = 0; i < Controllers.controllers.Count; i++) {
-                Debug.Log(Controls.m_controllers[i].name + " : "+Controllers.controllers[i].m_device_name);
-            }*/
 
-
+            int enums_read = 0;
             // Read any new bindings that are past the original CCInput bounds in our pilot .xconfigmod 
             while (!sr.EndOfStream)
             {
+                enums_read++;
                 text = sr.ReadLine();
                 if (sr.EndOfStream)
                 {
@@ -397,6 +487,25 @@ namespace GameMod
                     }
                 }
             }
+
+            // This indicates that this config file doesnt contain information about the bound taunt keys so we need to initialise them
+            if(enums_read < 7)
+            {
+                for(int i = (int)CCInputExt.TAUNT_1; i <= (int)CCInputExt.TAUNT_6; i++)
+                {
+                    Controls.m_input_joy[0, i].m_controller_num = -1;
+                    Controls.m_input_joy[0, i].m_type = 0;
+                    Controls.m_input_joy[0, i].m_control_num = -1;
+                    Controls.m_input_joy[0, i].m_axis_pos = false;
+                    Controls.m_input_joy[1, i].m_controller_num = -1;
+                    Controls.m_input_joy[1, i].m_type = 0;
+                    Controls.m_input_joy[1, i].m_control_num = -1;
+                    Controls.m_input_joy[1, i].m_axis_pos = false;
+                    Controls.m_input_kc[0, i] = 0;
+                    Controls.m_input_kc[1, i] = 0;
+                }
+            }
+
             for (int m = (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY; m < ControlsExt.MAX_ARRAY_SIZE; m++)
             {
                 for (int n = 0; n < 2; n++)
@@ -405,6 +514,35 @@ namespace GameMod
                         Controls.m_input_joy[n, m].m_controller_num = controllers[Controls.m_input_joy[n, m].m_controller_num];
                 }
             }
+        }
+
+        static int[] FindControllerIndexes(string controller_name, int device_id, bool requires_matching_device_id = true)
+        {
+            int[] indexes = new int[FindAmountOfControllerIndexes(controller_name, device_id, requires_matching_device_id)];
+            int occurence = 0;
+            for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
+            {
+                if (Overload.Controls.m_controllers[i].name.Equals(controller_name) && (Overload.Controls.m_controllers[i].joystickID == device_id | !requires_matching_device_id))
+                {
+                    indexes[occurence] = i;
+                    occurence++;
+                }
+            }
+            return indexes;
+        }
+
+
+        static int FindAmountOfControllerIndexes(string controller_name, int device_id, bool requires_matching_device_id = true)
+        {
+            int amount = 0;
+            for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
+            {
+                if (Overload.Controls.m_controllers[i].name.Equals(controller_name) && (Overload.Controls.m_controllers[i].joystickID == device_id  | !requires_matching_device_id))
+                {
+                    amount++;
+                }
+            }
+            return amount;
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
@@ -459,6 +597,7 @@ namespace GameMod
 
         static void WriteControlDataToStream(StreamWriter w)
         {
+            //Debug.Log("\n------------- Saving the controller sens/deadzone ------------");
             w.WriteLine(Controls.CONFIG_KEY + Controls.VERSION);
             bool[] array = new bool[Controls.m_controllers.Count];
             array.Populate(true);
@@ -466,12 +605,14 @@ namespace GameMod
             for (int i = 0; i < Controls.m_controllers.Count; i++)
             {
                 Overload.Controller controller = Controls.m_controllers[i];
-                w.WriteLine((!array[i]) ? string.Empty : controller.name);
+                w.WriteLine((!array[i]) ? string.Empty : controller.name + ";" + Controls.m_controllers[i].joystickID);
+                Debug.Log((!array[i]) ? string.Empty : controller.name + ";" + Controls.m_controllers[i].joystickID);
                 if (array[i])
                 {
                     w.WriteLine(controller.m_axis_count);
                     for (int j = 0; j < controller.m_axis_count; j++)
                     {
+                        //Debug.Log("  axis: "+j+"  sens: "+ Controllers.controllers[i].axes[j].sensitivity+"  deadzone: "+ Controllers.controllers[i].axes[j].deadzone);
                         w.WriteLine(Controllers.controllers[i].axes[j].deadzone.ToStringInvariantCulture());
                         w.WriteLine(Controllers.controllers[i].axes[j].sensitivity.ToStringInvariantCulture());
                     }
@@ -494,14 +635,17 @@ namespace GameMod
     [HarmonyPatch(typeof(Controls), "OnControllerConnected")]
     class Controllers_Controls_OnControllerConnected
     {
+
         static void DeadzoneHelper(int controller, int axis)
         {
-            Controllers.SetAxisDeadzone(controller, axis, Controllers.controllers[controller].axes[axis].deadzone);
+
+            //Controllers.SetAxisDeadzone(controller, axis, Controllers.controllers[controller].axes[axis].deadzone);
         }
 
         static void SensitivityHelper(int controller, int axis)
         {
-            Controllers.SetAxisSensitivity(controller, axis, Controllers.controllers[controller].axes[axis].sensitivity);
+
+            //Controllers.SetAxisSensitivity(controller, axis, Controllers.controllers[controller].axes[axis].sensitivity);
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)

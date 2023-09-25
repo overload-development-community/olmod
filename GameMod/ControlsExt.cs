@@ -117,7 +117,14 @@ namespace GameMod
         NUM,
         NUM_CONFIGURABLE = 45,
         // Start of new entries
-        TOGGLE_LOADOUT_PRIMARY = 60
+        TOGGLE_LOADOUT_PRIMARY = 60,
+        TAUNT_1 = 61,
+        TAUNT_2 = 62,
+        TAUNT_3 = 63,
+        TAUNT_4 = 64,
+        TAUNT_5 = 65,
+        TAUNT_6 = 66,
+
     };
 
     [HarmonyPatch(typeof(PlayerShip), "UpdateReadImmediateControls")]

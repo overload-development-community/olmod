@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Overload;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 
@@ -162,6 +163,57 @@ namespace GameMod
                             StopThunderboltSelfDamageLoop();
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cyclone Tweaks
+    /// </summary>
+    internal static class Cyclone
+    {
+        private static FieldInfo _PlayerShip_flak_fire_count_Field = typeof(PlayerShip).GetField("flak_fire_count", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static int CycloneSpinupStartingStep = 0;
+
+        /// <summary>
+        /// Simply adjust flak_fire_count input which would normally start at 0 in existing formula:
+        /// 1f - Mathf.Min((float)flak_fire_count * 0.05f, (c_player.m_weapon_level[(int)c_player.m_weapon_type] != WeaponUnlock.LEVEL_2B) ? 0.4f : 0.25f)
+        /// </summary>
+        /// <param name="player_ship"></param>
+        /// <returns></returns>
+        static float GetCycloneSpinupAdjustment(PlayerShip player_ship)
+        {
+            int flak_fire_count = (int)_PlayerShip_flak_fire_count_Field.GetValue(player_ship);
+
+            if (CycloneSpinupStartingStep != 0)
+            {
+                if (flak_fire_count == 0)
+                {
+                    _PlayerShip_flak_fire_count_Field.SetValue(player_ship, CycloneSpinupStartingStep);
+                    flak_fire_count = CycloneSpinupStartingStep;
+                }
+            }
+
+            return 1f - Mathf.Min(flak_fire_count * 0.05f, (player_ship.c_player.m_weapon_level[(int)player_ship.c_player.m_weapon_type] != WeaponUnlock.LEVEL_2B) ? 0.4f : 0.25f);
+        }
+
+        [HarmonyPatch(typeof(PlayerShip), "MaybeFireWeapon")]
+        internal class MPWeaponBehavior_Cyclone_PlayerShip_MaybeFireWeapon
+        {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+            {
+                foreach (var code in codes)
+                {
+                    if (code.opcode == OpCodes.Stloc_S && ((LocalBuilder)code.operand).LocalIndex == 19)
+                    {
+                        yield return code;
+                        yield return new CodeInstruction(OpCodes.Ldarg_0);
+                        yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Cyclone), "GetCycloneSpinupAdjustment"));
+                        yield return new CodeInstruction(OpCodes.Stloc_S, 19);
+                        continue;
+                    }
+                    yield return code;
                 }
             }
         }
