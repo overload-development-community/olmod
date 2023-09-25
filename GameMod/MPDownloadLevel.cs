@@ -230,9 +230,9 @@ namespace GameMod
     {
         static IEnumerator WaitLevel(string name)
         {
-            while (MPDownloadLevel.DownloadBusy)
+            while (MPDownloadLevel.DownloadBusy || MPSpawnExtension.DownloadBusy)
                 yield return null;
-            if (GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) >= 0) // test here to prevent loop
+            if (!name.Contains(":") || Config.NoDownload || GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) >= 0) // test here to prevent loop
             {
                 Debug.Log("Level downloaded, loading scene");
                 Overload.NetworkManager.LoadScene(name);
@@ -247,13 +247,17 @@ namespace GameMod
 
         static bool Prefix(string name)
         {
-            if (!name.Contains(":") || Config.NoDownload)
-                return true;
-            if (!MPDownloadLevel.DownloadBusy && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) < 0)
-                MPDownloadLevel.StartGetLevel(name);
-            if (MPDownloadLevel.DownloadBusy)
+            MPSpawnExtension.CheckExtraSpawnpoints(name); // we want to trigger even for stock levels
+
+            if (name.Contains(":") && !Config.NoDownload)
             {
-                Debug.Log("Level still downloading when loading match scene, delay scene load " + name);
+                if (!MPDownloadLevel.DownloadBusy && GameManager.MultiplayerMission.FindAddOnLevelNumByIdStringHash(name) < 0)
+                    MPDownloadLevel.StartGetLevel(name);
+            }
+
+            if (MPDownloadLevel.DownloadBusy || MPSpawnExtension.DownloadBusy)
+            {
+                //Debug.Log("Level still downloading when loading match scene, delay scene load " + name);
                 GameManager.m_gm.StartCoroutine(WaitLevel(name));
                 return false;
             }

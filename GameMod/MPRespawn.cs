@@ -30,6 +30,7 @@ namespace GameMod {
         private static void Prefix() {
             MPRespawn.spawnPointsFromItems.Clear();
             MPRespawn.spawnPointDistances.Clear();
+            MPSpawnExtension.ResetForNewLevel();
         }
     }
 

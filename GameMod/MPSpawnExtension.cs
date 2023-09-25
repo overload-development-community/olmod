@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,58 +8,96 @@ using HarmonyLib;
 using Newtonsoft.Json;
 using Overload;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GameMod
 {
     public static class MPSpawnExtension
     {
+        const string BASE_URL = "https://raw.githubusercontent.com/CCraigen/ol-map-revisions/main/spawnpoints/";
+
+        public static List<LevelData.SpawnPoint> spawnpoints = new List<LevelData.SpawnPoint>();
+        public static bool DownloadBusy = false;
+        public static bool DownloadChecked = false;
+
+
         // *****************************
         // INPUT
         // *****************************
 
-        public static List<LevelData.SpawnPoint> LoadExtraSpawnpoints()
+
+        public static void ResetForNewLevel()
         {
-            if (!GameplayManager.IsMultiplayer || !GameplayManager.Level.IsAddOn)
-            {
-                return null;
-            }
-
-            List<LevelData.SpawnPoint> ExtraSpawns;
-            string payload = "";
-            var filepath = Path.Combine(Path.GetDirectoryName(GameplayManager.Level.FilePath), $"{GameplayManager.Level.FileName}-spawnpoints.json");
-
-            string text3 = null;
-            byte[] array = Mission.LoadAddonData(GameplayManager.Level.ZipPath, filepath, ref text3, new string[] { ".json" });
-            if (array != null)
-            {
-                payload = System.Text.Encoding.UTF8.GetString(array);
-            }
-            else
-            {
-                return null;
-            }
-
-            try
-            {
-                ExtraSpawns = JsonConvert.DeserializeObject<List<LevelData.SpawnPoint>>(payload);
-                Debug.Log($"{ExtraSpawns.Count} additional spawnpoints parsed from the current level's embedded json file");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("ERROR: Unable to parse additional player spawns, continuing with originals (error message: " + e.Message + ")");
-                return null;
-            }
-
-            return ExtraSpawns;
+            //Debug.Log("CCF resetting in MPSpawnExtension");
+            spawnpoints.Clear();
+            DownloadChecked = false;
         }
 
-        public static void AddPlayerSpawns(LevelData ld)
+        public static void CheckExtraSpawnpoints(string name)
         {
-            List<LevelData.SpawnPoint> ExtraSpawns = LoadExtraSpawnpoints();
-
-            if (ExtraSpawns != null)
+            if (!GameplayManager.IsMultiplayer || DownloadChecked)
             {
-                LevelData.SpawnPoint[] NewSpawnPoints = ld.m_player_spawn_points.Concat(ExtraSpawns).ToArray();
+                return;
+            }
+
+            DownloadChecked = true;
+
+            string[] split = name.Split(':');
+            if (split == null)
+            {
+                Debug.Log("Invalid level name in CheckExtraSpawnpoints, skipping.");
+                return;
+            }
+
+            string levelname = split[0].ToUpperInvariant();
+
+            if (levelname.EndsWith(".MP"))
+            {
+                levelname = levelname.Remove(levelname.Length - 3);
+            }
+
+            GameManager.m_gm.StartCoroutine(LoadSpawnpointFile(levelname));
+        }
+
+        public static IEnumerator LoadSpawnpointFile(string name)
+        {
+            DownloadBusy = true; // piggybacking off of the download code delay
+
+            //Debug.Log("CCF requesting url " + BASE_URL + $"{name}-spawnpoints.json");
+
+            UnityWebRequest www = UnityWebRequest.Get(BASE_URL + $"{name}-spawnpoints.json");
+            www.timeout = 3;
+            yield return www.SendWebRequest();
+
+            if (www.isNetworkError)
+            {
+                Debug.Log(www.error);
+                DownloadBusy = false;
+                yield break;
+            }
+            if (www.responseCode == 200) // we found a file
+            {
+                try
+                {
+                    spawnpoints = JsonConvert.DeserializeObject<List<LevelData.SpawnPoint>>(www.downloadHandler.text);
+                    Debug.Log($"{spawnpoints.Count} additional spawnpoints parsed from the current level's online json file");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError("ERROR: Unable to parse additional player spawns, continuing with originals (error message: " + e.Message + ")");
+                    spawnpoints.Clear();
+                }
+            }
+
+            DownloadBusy = false;
+        }
+
+        public static void LoadExtraSpawnpoints(LevelData ld)
+        {
+            //Debug.Log("CCF additional spawn count: " + spawnpoints.Count);
+            if (spawnpoints.Count != 0)
+            {
+                LevelData.SpawnPoint[] NewSpawnPoints = ld.m_player_spawn_points.Concat(spawnpoints).ToArray();
                 ld.m_player_spawn_points = NewSpawnPoints;
             }
         }
@@ -81,18 +120,19 @@ namespace GameMod
                 if (count == 2)
                 {
                     yield return new CodeInstruction(OpCodes.Ldarg_0);
-                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPSpawnExtension), "AddPlayerSpawns"));
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MPSpawnExtension), "LoadExtraSpawnpoints"));
 
                     count++;
                 }
             }
         }
     }
-
+    
 
     // *****************************
     // Output
     // *****************************
+
 
     public static class MPSpawnExtensionVis
     {
@@ -119,7 +159,7 @@ namespace GameMod
             // if we're within 3U of an original spawn, don't add a new one
             foreach (LevelData.SpawnPoint sp in GameManager.m_level_data.m_player_spawn_points)
             {
-                if (Vector3.Distance(GameManager.m_player_ship.c_transform_position, sp.position) <= 3f)
+                if (!MPSpawnExtension.spawnpoints.Contains(sp) && Vector3.Distance(GameManager.m_player_ship.c_transform_position, sp.position) <= 3f)
                 {
                     adding = false;
                 }
@@ -127,12 +167,15 @@ namespace GameMod
 
             if (adding)
             {
+                Vector3 rot = GameManager.m_player_ship.c_transform.eulerAngles;
+                Quaternion quantized = Quaternion.Euler(((int)rot.x + 15) / 30 * 30, ((int)rot.y + 15) / 30 * 30, ((int)rot.z + 15) / 30 * 30); // quantize things a bit for rotation
+
                 SpawnpointVis vis = new SpawnpointVis
                 {
                     position = GameManager.m_player_ship.c_transform_position,
-                    rotation = GameManager.m_player_ship.c_transform_rotation,
+                    rotation = quantized,
                     spawnpoint = new LevelData.SpawnPoint(),
-                    visualizer = GameObject.Instantiate(MPShips.selected.collider[0], GameManager.m_player_ship.c_transform_position, GameManager.m_player_ship.c_transform_rotation)
+                    visualizer = GameObject.Instantiate(MPShips.selected.collider[0], GameManager.m_player_ship.c_transform_position, quantized)
                 };
 
                 vis.spawnpoint.position = vis.position;
@@ -154,7 +197,7 @@ namespace GameMod
         {
             if (ExtraSpawns.Count != 0)
             {
-                string filepath = Path.Combine(Config.OLModDir, $"{GameplayManager.Level.FileName}-spawnpoints.json");
+                string filepath = Path.Combine(Config.OLModDir, $"{GameplayManager.Level.FileName.ToUpperInvariant()}-spawnpoints.json");
                 string extension = Path.GetExtension(filepath);
 
                 int i = 0;
@@ -208,6 +251,18 @@ namespace GameMod
 
                     MeshRenderer mr = go.AddComponent<MeshRenderer>();
                     mr.sharedMaterial = UIManager.gm.m_energy_material;
+
+                    if (MPSpawnExtension.spawnpoints.Contains(sp))
+                    {
+                        Material m = mr.material;
+                        m.color = Color.green;
+                        m.SetColor("_GlowColor", Color.green);
+                        m.SetColor("_EdgeColor", Color.green);
+
+                        MPSpawnExtensionVis.ExtraSpawns.Add(new SpawnpointVis() { position = sp.position, rotation = sp.orientation, spawnpoint = sp, visualizer = go });
+                    }
+
+                    mr.enabled = true;
                 }
             }
         }
