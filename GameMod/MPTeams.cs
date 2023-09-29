@@ -197,15 +197,30 @@ namespace GameMod
 
         public static void DrawLobby(UIElement uie, Vector2 pos)
         {
-            float name_offset = -250f;
-            float highlight_width = 285f;
-            float org_x = pos.x;
             int max_row_count = NetworkMatch.GetMaxPlayersForMatch() + MPTeams.NetworkMatchTeamCount;
             int cur_row_count = NetworkMatch.m_players.Count() + MPTeams.NetworkMatchTeamCount;
             bool split = max_row_count > 10;
+
+            float highlight_width;
+            float name_offset;
+            
+            if (MPMatchInfo.Displayed && split)
+            {
+                highlight_width = 245f;
+                name_offset = -210f;
+                pos.x -= 100f;
+            }
+            else
+            {
+                highlight_width = 285f;
+                name_offset = -250f;
+            }
+
+            float org_x = pos.x;
+            
             if (split)
             {
-                pos.x -= 300f;
+                pos.x -= highlight_width + 15f;
                 pos.y += 50f + 24f;
             }
             float org_y = pos.y;
@@ -217,12 +232,12 @@ namespace GameMod
                 if (row_num >= rows_per_col)
                 {
                     first_y = pos.y;
-                    pos.x += 300f * 2;
+                    pos.x += (highlight_width + 15f) * 2;
                     pos.y = org_y;
                     rows_per_col = cur_row_count; // no more split
                     row_num = 0;
                 }
-                DrawTeamHeader(uie, pos, team, 255f);
+                DrawTeamHeader(uie, pos, team, highlight_width - 30f);
                 pos.y += 24f;
                 row_num++;
                 int num = 0;

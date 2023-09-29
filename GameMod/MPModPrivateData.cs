@@ -82,6 +82,7 @@ m_muzzle_flash_particle;muzzle_flash_impulse
 m_muzzle_flash_particle_player;muzzle_flash_impulse_player
 END_ENTRY
 proj_vortex
+m_spinup_starting_time;4
 m_damage_robot;7
 m_damage_player;4
 m_damage_mp;2.8875

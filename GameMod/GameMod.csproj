@@ -106,6 +106,7 @@
     <Compile Include="AxisCountFix.cs" />
     <Compile Include="Assets.cs" />
     <Compile Include="MPWeapons.cs" />
+    <Compile Include="MPMatchInfo.cs" />
     <Compile Include="FramerateLimiter.cs" />
     <Compile Include="MPShips.cs" />
     <Compile Include="MPColliderSwap.cs" />
