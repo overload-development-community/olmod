@@ -1,4 +1,4 @@
-olmod 0.5.10 - Overload mod
+olmod 0.5.11 - Overload mod
 Community mods for Overload
 https://github.com/overload-development-community/olmod
 
@@ -204,6 +204,8 @@ What does it do
 - Options to use a different mesh collider in multiplayer, by Fireball.
 
 - Frame limiting, by luponix.
+
+- Multiplayer options shown in the lobby, by Fireball.
 
 How does it work
 ----------------

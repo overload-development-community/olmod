@@ -1,7 +1,10 @@
-v0.5.11
+v0.5.11 - 2023-09-27
 
+- Cyclone spin up now starts at step 4 out of 8 by default, getting to full speed faster.  This is modifyable using the m_spinup_starting_time variable in projdata under the proj_vortex section, acceptable values are integers between 0 and 8. (Thanks, Tobias!)
+- Multiplayer options are now shown in the lobby. (Thanks, by Fireball!)
 - Servers now post stats to the server listed in the olmodsettings.json "trackerBaseUrl" key. (Thanks, Tobias!)
 - Bug fixes to the controller curves, and cases where controllers are connected and disconnected while the game is running. (Thanks, luponix!)
+- C# project now forces C# language version 7.0 for best Mono compatibility.
 
 v0.5.10 - 2023-08-21
 
