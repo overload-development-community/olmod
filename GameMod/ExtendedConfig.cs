@@ -401,7 +401,12 @@ namespace GameMod
             }
             catch (Exception ex)
             {
-                Debug.Log("Error in ExtendedConfig.SaveActivePilot(): " + ex);
+                if (ex is UnauthorizedAccessException)
+                {
+                    Debug.Log("Error in ExtendedConfig.SaveActivePilot: Could not save pilot file due to insufficient permissions");
+                    return;
+                }
+                Debug.Log("Error in ExtendedConfig.SaveActivePilot: " + ex);
             }
         }
 

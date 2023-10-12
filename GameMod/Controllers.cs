@@ -590,6 +590,11 @@ namespace GameMod
             }
             catch (Exception ex)
             {
+                if (ex is UnauthorizedAccessException)
+                {
+                    Debug.Log("Error in ControlsMod.SaveControlData: Could not save pilot file due to insufficient permissions");
+                    return;
+                }
                 Debug.LogException(ex);
                 GameManager.DebugOut("Error in ControlsMod.SaveControlData: " + ex.Message, 15f);
             }
