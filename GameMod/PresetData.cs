@@ -98,7 +98,7 @@ namespace GameMod
             if (index != -1)
             {
                 var spinup = projData.Substring(index + 23, 1);
-                var hasCrLf = projData.Substring(index + 24, 2) == Environment.NewLine;
+                var hasCrLf = projData.Substring(index + 24, 1) == "\r" || projData.Substring(index + 24, 1) == "\n";
 
                 if (!hasCrLf || !(new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8" }.Contains(spinup)))
                 {
