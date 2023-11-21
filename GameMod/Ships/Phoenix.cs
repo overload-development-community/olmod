@@ -45,8 +45,13 @@ namespace GameMod
             MoveMulti = 1.05f;
             TurnMulti = 0.8f;
 
-            boostMulti = 1.75f;
-            boostMod = 1.95f;
+            //boostMulti = 1.75f;
+            //boostMod = 1.95f;
+
+            boostMulti = 1.85f;
+            boostMod = 2.15f;
+
+            boostBurst = 0.3f;
 
             SetHandling();
         }

@@ -2401,6 +2401,18 @@ END_ENTRY
             }
         }
 
+        public static float ShipScale
+        {
+            get
+            {
+                return MPShips.allowed == 0 ? 0 : MPShips.masterscale;
+            }
+            set
+            {
+                MPShips.masterscale = value;
+            }
+        }
+
         public static bool ThunderboltPassthrough
         {
             get { return MPThunderboltPassthrough.isAllowed; }
@@ -2443,6 +2455,7 @@ END_ENTRY
             jobject["joystickrotationfixsupported"] = JoystickRotationFixSupported;
             jobject["shipmeshcollider"] = ShipMeshCollider;
             jobject["shipsallowed"] = ShipsAllowed;
+            jobject["shipscale"] = ShipScale;
             jobject["thunderboltpassthrough"] = ThunderboltPassthrough;
             jobject["damagenumbers"] = DamageNumbers;
             jobject["audiotauntsupport"] = AudioTauntsSupported;
@@ -2476,6 +2489,7 @@ END_ENTRY
             JoystickRotationFixSupported = root["joystickrotationfixsupported"].GetBool(false);
             ShipMeshCollider = root["shipmeshcollider"].GetInt(0);
             ShipsAllowed = root["shipsallowed"].GetInt(0);
+            ShipScale = root["shipscale"].GetFloat(1f);
             ThunderboltPassthrough = root["thunderboltpassthrough"].GetBool(false);
             DamageNumbers = root["damagenumbers"].GetBool(false);
             AudioTauntsSupported = root["audiotauntsupport"].GetBool(false);
@@ -2772,6 +2786,7 @@ END_ENTRY
             MPModPrivateData.AssistScoring = Menus.mms_assist_scoring;
             MPModPrivateData.ShipMeshCollider = Menus.mms_collision_mesh;
             MPModPrivateData.ShipsAllowed = Menus.mms_ships_allowed;
+            MPModPrivateData.ShipScale = MPShips.masterscale;
             MPModPrivateData.ThunderboltPassthrough = MPThunderboltPassthrough.isAllowed;
             if (Menus.mms_mp_projdata_fn == "STOCK") {
                 MPModPrivateData.CustomProjdata = string.Empty;

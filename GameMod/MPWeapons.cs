@@ -48,6 +48,7 @@ namespace GameMod
         proj_thunderbolt,
         proj_vortex,
         // new projectiles start here
+        proj_flakshell,
         proj_plasma,
         proj_mdlance,
         missile_mortar,
@@ -84,6 +85,7 @@ namespace GameMod
         {
             new MSImpulse(),
             new Burstfire(),
+            new Flakshell(),
             new Plasma(),
             new MDLance(),
             new ImpactMortar()
@@ -328,7 +330,8 @@ namespace GameMod
                 primaries[2] = MasterPrimaries["Plasma"];
                 primaries[3] = MasterPrimaries["Crusher"];
                 primaries[4] = MasterPrimaries["Burstfire"];
-                primaries[5] = MasterPrimaries["Flak"];
+                //primaries[5] = MasterPrimaries["Flak"];
+                primaries[5] = MasterPrimaries["Flakshell"];
                 primaries[6] = MasterPrimaries["Thunderbolt"];
                 primaries[7] = MasterPrimaries["MDLance"];
 

@@ -28,7 +28,7 @@ namespace GameMod
 
             //detailMat = Resources.Load<GameObject>("entity_enemy_HulkB").transform.GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(0).gameObject.GetComponent<MeshRenderer>().sharedMaterial; // yeesh, there *must* be a better way
             detailMat = Assets.materials["mat_hulkB_1"]; // THERE IS!
-            Debug.Log("CCF mat name is " + detailMat.name);
+            //Debug.Log("CCF mat name is " + detailMat.name);
 
             customizations = false;
 
@@ -56,10 +56,13 @@ namespace GameMod
             MoveMulti = 0.82f;
             TurnMulti = 0.68f;
 
-            boostMulti = 1.8f;
-            boostMod = 2f;
+            //boostMulti = 1.8f;
+            //boostMod = 2f;
+            boostMulti = 2f;
+            boostMod = 2.2f;
 
-            boostBurst = 0.8f;
+            //boostBurst = 0.8f;
+            boostBurst = 0.9f;
 
             SetHandling();
         }

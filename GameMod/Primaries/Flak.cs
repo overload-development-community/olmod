@@ -50,6 +50,7 @@ namespace GameMod
                 player.PlayCameraShake(CameraShakeType.FIRE_FLAK, 0.9f, 1.1f);
                 ship.flak_fire_count++;
                 player.UseAmmo(1);
+                //player.UseAmmo(2);
                 return;
             }
             float angle2 = ((!GameplayManager.IsMultiplayerActive) ? 8f : 6f);
@@ -70,6 +71,7 @@ namespace GameMod
             }
             player.PlayCameraShake(CameraShakeType.FIRE_FLAK, 0.6f, 1f);
             player.UseAmmo(1);
+            //player.UseAmmo(2);
         }
 
         public override void DrawHUDReticle(Vector2 pos, float m_alpha)

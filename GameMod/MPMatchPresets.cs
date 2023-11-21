@@ -67,6 +67,7 @@ namespace GameMod
                 teamCount = MPTeams.MenuManagerTeamCount,
                 shipMeshCollider = Menus.mms_collision_mesh,
                 shipsAllowed = Menus.mms_ships_allowed,
+                shipScale = Menus.mms_ship_scale,
                 thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
             });
 
@@ -109,6 +110,7 @@ namespace GameMod
                 teamCount = 2,
                 shipMeshCollider = 0,
                 shipsAllowed = 1, // CCF this is temporary
+                shipScale = 0,
                 thunderboltPassthrough = false
             }) ;
 
@@ -151,6 +153,7 @@ namespace GameMod
                 damageNumbers = true,
                 shipMeshCollider = 0,
                 shipsAllowed = 1, // CCF this is temporary
+                shipScale = 0,
                 thunderboltPassthrough = false
             });
 
@@ -193,7 +196,8 @@ namespace GameMod
                 teamCount = 2,
                 shipMeshCollider = 2,
                 shipsAllowed = 1,
-                thunderboltPassthrough = false
+                shipScale = 0,
+                thunderboltPassthrough = true
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -238,6 +242,7 @@ namespace GameMod
             public int teamCount = 2;
             public int shipMeshCollider;
             public int shipsAllowed;
+            public int shipScale;
             public bool thunderboltPassthrough;
 
             public void Apply()
@@ -285,6 +290,7 @@ namespace GameMod
                 MPTeams.MenuManagerTeamCount = this.teamCount;
                 Menus.mms_collision_mesh = this.shipMeshCollider;
                 Menus.mms_ships_allowed = this.shipsAllowed;
+                Menus.mms_ship_scale = this.shipScale;
                 MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }

@@ -13,7 +13,7 @@ namespace GameMod
     // Handles asset replacement for different Ship types
     public static class MPShips
     {
-        public const string MULTISHIP_VERSION = "multiship-0-4";
+        public const string MULTISHIP_VERSION = "MULTISHIP-0.5a3";
 
         public static Dictionary<NetworkInstanceId, Ship> SelectedShips = new Dictionary<NetworkInstanceId, Ship>(); // stores the PlayerShip's netId and the associated Ship reference
         public static Dictionary<int, int> LobbyShips = new Dictionary<int, int>(); // (lobby_id, idx) stores a lobby_id and the associated Ship index for translation at instantiation
@@ -47,7 +47,7 @@ namespace GameMod
 
         public static bool loading = false; // set to true during the loading process
 
-        public static float masterscale = 1f; // for debugging
+        public static float masterscale = 1f; // applied in addition to any ship-defined scaling
 
 
         public static void AddShips()
@@ -456,9 +456,9 @@ namespace GameMod
         // Scales the visible and shootable portion of the ship down or up by some amount.
         protected void SetScale()//PlayerShip ps)
         {
-            if (MPShips.allowed != 0 && shipScale != 1f) // don't bother if multiship is off or if we're not scaling this particular ship
+            /*if (MPShips.allowed != 0 && shipScale != 1f) // don't bother if multiship is off or if we're not scaling this particular ship
             {
-                ps.c_main_ship_go.transform.localScale = new Vector3(shipScale, shipScale, shipScale); // only scales visible components, not the level collider. We don't want to squeeze places we shouldn't.
+                ps.c_main_ship_go.transform.localScale = new Vector3(shipScale * MPShips.masterscale, shipScale, shipScale); // only scales visible components, not the level collider. We don't want to squeeze places we shouldn't.
 
                 //ps.c_main_ship_go.transform.localScale = new Vector3(MPShips.masterscale, MPShips.masterscale, MPShips.masterscale);
 
@@ -474,12 +474,28 @@ namespace GameMod
                     m_slide_force_mp[i] = m_slide_force_mp_nonscaled[i];
                 }
             }
+            */
+
+            float sizeScale = shipScale * MPShips.masterscale;
+
+            ps.c_main_ship_go.transform.localScale = new Vector3(sizeScale, sizeScale, sizeScale); // only scales visible components, not the level collider. We don't want to squeeze places we shouldn't.
+            if (GameplayManager.IsMultiplayer)
+            {
+                ps.c_mesh_collider_trans.localScale = new Vector3(sizeScale, sizeScale, sizeScale); // however the mesh collider *should* be scaled, and it's not parented to the main ship in multiplayer
+            }
+            ps.c_flak_range_go.transform.localScale = new Vector3(3.333f / sizeScale, 3.333f / sizeScale, 3.333f / sizeScale); // flak rangefinder gets scaled too but shouldn't, its range isn't affected
+
+
+            for (int i = 0; i < 4; i++) // bring down the movement speeds by half of the difference
+            {
+                m_slide_force_mp[i] = ((shipScale * m_slide_force_mp_nonscaled[i]) + (sizeScale * m_slide_force_mp_nonscaled[i])) / 2f;
+            }
         }
 
         // translates the firepoint coordinates to world-scale adjustments like the game expects
         protected void SetQuadFirepoints()//PlayerShip ps)
         {
-            float scale = ps.m_muzzle_right.parent.lossyScale.x; // 0.4f, unless some interesting stuff is happening -- this is different from the shipScale field
+            float scale = ps.m_muzzle_right.parent.lossyScale.x; // changes if the ship has been scaled
 
             QdiffRightX = (FIRING_POINTS[8].x - FIRING_POINTS[0].x) * scale;
             QdiffLeftX = -1 * QdiffRightX;
@@ -1030,6 +1046,38 @@ namespace GameMod
                     yield return code;
                 }
             }
+        }
+    }
+    
+
+    // scale back up the flak rangefinder collider if the ship has been scaled
+    [HarmonyPatch(typeof(PlayerShip), "UpdateFlakRangeFinder")]
+    static class MPShips_PlayerShip_UpdateFlakRangeFinder
+    {
+        static bool Prefix(PlayerShip __instance, CapsuleCollider ___c_flak_range_collider)
+        {
+            float scale = __instance.c_main_ship_go.transform.localScale.x;
+            Vector3 zero = Vector3.zero;
+            if (GameplayManager.IsMultiplayerActive)
+            {
+                zero.z = 7f / scale;
+                ___c_flak_range_collider.center = zero;
+                ___c_flak_range_collider.height = 13f / scale;
+            }
+            else if (__instance.c_player.m_weapon_level[5] == WeaponUnlock.LEVEL_2B)
+            {
+                zero.z = 8f / scale;
+                ___c_flak_range_collider.center = zero;
+                ___c_flak_range_collider.height = 15f / scale;
+            }
+            else
+            {
+                zero.z = 6f / scale;
+                ___c_flak_range_collider.center = zero;
+                ___c_flak_range_collider.height = 11f / scale;
+            }
+
+            return false;
         }
     }
 

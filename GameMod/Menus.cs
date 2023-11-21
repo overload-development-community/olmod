@@ -156,6 +156,51 @@ namespace GameMod {
             }
         }
 
+        private static int mms_ship_scale_internal = 0;
+        public static int mms_ship_scale
+        {
+            get
+            {
+                return mms_ship_scale_internal;
+            }
+            set
+            {
+                mms_ship_scale_internal = value;
+                switch (value)
+                {
+                    case 0:
+                        MPShips.masterscale = 1f;
+                        break;
+                    case 1:
+                        MPShips.masterscale = 0.9f;
+                        break;
+                    case 2:
+                        MPShips.masterscale = 0.8f;
+                        break;
+                    case 3:
+                        MPShips.masterscale = 0.7f;
+                        break;
+                }
+            }
+        }
+
+        public static string GetMMSShipScale()
+        {
+            switch (mms_ship_scale)
+            {
+                case 0:
+                    return "100%";
+                case 1:
+                    return "90%";
+                case 2:
+                    return "80%";
+                case 3:
+                    return "70%";
+                default:
+                    return "UNKNOWN";
+            }
+        }
+
 
         public static string GetMMSAlwaysCloaked()
         {
@@ -359,15 +404,21 @@ namespace GameMod {
 
         private static void DrawRightColumn(UIElement uie, ref Vector2 position)
         {
+            float yOffset = 52f;
             col_bot = position.y;
             position.x += 600f;
             position.y = col_top - 250f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW REAR VIEW CAMERA"), position, 11, Menus.GetMMSRearViewPIP(), Loc.LS("CLIENTS CAN CHOOSE TO HAVE REAR VIEW"), 1f, false);
-            position.y += 55f;
+
+            // CCF this is getting temporarily hidden to make some menu space. Tobias is cooking up a new menu that should fix this.
+
+            position.y += yOffset;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALWAYS CLOAKED"), position, 15, Menus.GetMMSAlwaysCloaked(), Loc.LS("SHIPS ARE ALWAYS CLOAKED"), 1f, false);
-            position.y += 55f;
+            // END HIDE
+
+            position.y += yOffset;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
-            position.y += 55f;
+            position.y += yOffset;
 
             if (MenuManager.mms_mode == ExtMatchMode.CTF)
             {
@@ -378,22 +429,26 @@ namespace GameMod {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ASSISTS"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("AWARD POINTS FOR ASSISTING WITH KILLS"), 1f, false);
             }
 
-            position.y += 55f;
+            position.y += yOffset;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
-            position.y += 55f;
+            position.y += yOffset;
 
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
-            position.y += 55f;
+            position.y += yOffset;
 
             uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
-            position.y += 55f;
+            position.y += yOffset;
             uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
 
-            position.y += 55f;
+            position.y += yOffset;
             uie.SelectAndDrawStringOptionItem(Loc.LS("COLLISION MESH"), position, 22, Menus.GetMMSCollisionMesh(), Loc.LS("COLLIDER TO USE FOR PROJECTILE->SHIP COLLISIONS"), 1f, false);
 
-            position.y += 55f;
+            position.y += yOffset;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CUSTOM SHIPS"), position, 23, Menus.GetMMSShipsAllowed(), Loc.LS("ALLOW PLAYERS TO CHOOSE THEIR SHIP TYPE"), 1f, false);
+
+            // THIS IS NOT READY YET.
+            //position.y += yOffset;
+            //uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP SCALE"), position, 24, Menus.GetMMSShipScale(), Loc.LS("SCALES DOWN ALL SHIPS TO A CERTAIN FACTOR"), 1f, false);
         }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
@@ -658,6 +713,10 @@ namespace GameMod {
                         break;
                     case 23:
                         Menus.mms_ships_allowed = (MPShips.Ships.Count + 2 + Menus.mms_ships_allowed + UIManager.m_select_dir) % (MPShips.Ships.Count + 2);
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+                    case 24:
+                        Menus.mms_ship_scale = (4 + Menus.mms_ship_scale - UIManager.m_select_dir) % 4; // Scroll this list backwards. Why not.
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
                 }

@@ -99,8 +99,12 @@ namespace GameMod
 
             ShieldMultiplier = 1f;
 
-            boostMulti = 1.7f;
-            boostMod = 1.9f;
+            //boostMulti = 1.7f;
+            //boostMod = 1.9f;
+            boostMulti = 1.8f;
+            boostMod = 2f;
+
+            boostBurst = 0.5f;
         }
 
         // nothing needs to actually get created here, obviously, we handle creating the quad firepoints in base.ApplyParameters()
