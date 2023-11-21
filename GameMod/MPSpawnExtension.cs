@@ -14,7 +14,7 @@ namespace GameMod
 {
     public static class MPSpawnExtension
     {
-        const string BASE_URL = "https://raw.githubusercontent.com/CCraigen/ol-map-revisions/main/spawnpoints/";
+        const string BASE_URL = "https://raw.githubusercontent.com/overload-development-community/ol-map-revisions/main/spawnpoints/";
 
         public static List<LevelData.SpawnPoint> spawnpoints = new List<LevelData.SpawnPoint>();
         public static bool DownloadBusy = false;
@@ -84,7 +84,7 @@ namespace GameMod
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("ERROR: Unable to parse additional player spawns, continuing with originals (error message: " + e.Message + ")");
+                    Debug.LogError("WARNING: Unable to parse additional player spawns, continuing with originals (error message: " + e.Message + ")");
                     spawnpoints.Clear();
                 }
             }
