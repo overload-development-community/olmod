@@ -108,7 +108,7 @@ namespace GameMod
                 damageNumbers = true,
                 assistScoring = true,
                 teamCount = 2,
-                shipMeshCollider = 0,
+                shipMeshCollider = 2, // CCF this is temporary
                 shipsAllowed = 1, // CCF this is temporary
                 shipScale = 0,
                 thunderboltPassthrough = false
@@ -151,7 +151,7 @@ namespace GameMod
                 assistScoring = true,
                 teamCount = 2,
                 damageNumbers = true,
-                shipMeshCollider = 0,
+                shipMeshCollider = 2, // CCF this is temporary
                 shipsAllowed = 1, // CCF this is temporary
                 shipScale = 0,
                 thunderboltPassthrough = false

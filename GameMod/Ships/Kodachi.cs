@@ -13,7 +13,7 @@ namespace GameMod
             name = "entity_special_player_ship";
             description = new string[3]
             {
-                "A short-range enforcement ship. Surprisingly well-armed and shielded.",
+                "A short-range enforcement gunship. Surprisingly well-armed and shielded.",
                 "Its low mass and small size trade overall speed for maneuvering performance.",
                 "Because of this, the Kodachi is able to out-turn any of its competitors."
             };

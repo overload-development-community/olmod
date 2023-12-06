@@ -61,8 +61,8 @@ namespace GameMod
             boostMulti = 2f;
             boostMod = 2.2f;
 
-            //boostBurst = 0.8f;
-            boostBurst = 0.9f;
+            boostBurst = 0.8f;
+            //boostBurst = 0.9f;
 
             SetHandling();
         }

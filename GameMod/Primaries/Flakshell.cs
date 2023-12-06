@@ -25,22 +25,24 @@ namespace GameMod
             Vector3 c_up = ship.c_up;
             //Vector3 c_forward = ship.c_forward;
 
-            ps.FiringVolumeModifier = 0.9f;
+            ps.FiringVolumeModifier = 0.7f;
 
+            /*
             if (ship.flak_fire_count < 4)
             {
-                //ship.flak_fire_count++;
+                ship.flak_fire_count++;
             }
+            */
 
             if (ps.isLocalPlayer)
             {
-                GameManager.m_audio.PlayCue2D(337, 0.7f, 0.5f, 0f, true);
-                GameManager.m_audio.PlayCue2D(338, 0.7f, 0.5f, 0f, true);
+                GameManager.m_audio.PlayCue2D(337, 0.6f, 0.5f, 0f, true);
+                GameManager.m_audio.PlayCue2D(338, 0.6f, 0.5f, 0f, true);
             }
             else
             {
-                GameManager.m_audio.PlayCuePos(337, ps.c_transform.position, 0.7f, 0.5f, 0f);
-                GameManager.m_audio.PlayCuePos(338, ps.c_transform.position, 0.7f, 0.5f, 0f);
+                GameManager.m_audio.PlayCuePos(337, ps.c_transform.position, 0.6f, 0.5f, 0f);
+                GameManager.m_audio.PlayCuePos(338, ps.c_transform.position, 0.6f, 0.5f, 0f);
             }
 
             // originally ProjectileManager.PlayerFire()
@@ -119,7 +121,9 @@ namespace GameMod
         /*
         public override void Explode(Projectile proj, bool damaged_something, FXWeaponExplosion m_death_particle_override, float strength, WeaponUnlock m_upgrade)
         {
-            base.Explode(proj, true, m_death_particle_override, strength, m_upgrade);
+            Debug.Log("CCF flak damaged something = " + damaged_something);
+            base.Explode(proj, damaged_something, m_death_particle_override, strength, m_upgrade);
+            //base.Explode(proj, true, m_death_particle_override, strength, m_upgrade);
 
             //GameManager.m_light_manager.CreateLightFlash(proj.c_transform.position, Color.white, 10f, 25f, 0.2f, false);
             //SFXCueManager.PlayCuePos(SFXCue.exp_creeper, proj.c_transform.position, 0.5f);
@@ -138,17 +142,17 @@ namespace GameMod
             projectile.m_type = (ProjPrefab)projprefab;
 
             projectile.m_damage_robot = 15f;
-            projectile.m_damage_player = 3f;
-            projectile.m_damage_mp = 3f;
+            projectile.m_damage_player = 6f;
+            projectile.m_damage_mp = 6f;
             projectile.m_damage_energy = false;
             projectile.m_stun_multiplier = 1f;
             projectile.m_push_force_robot = 1f;
             projectile.m_push_force_player = 1f;
             projectile.m_push_torque_robot = 1f;
-            projectile.m_lifetime_min = 0.26f;
+            projectile.m_lifetime_min = 0.23f;
             projectile.m_lifetime_max = -1;
             projectile.m_lifetime_robot_multiplier = 1;
-            projectile.m_init_speed_min = 50f;
+            projectile.m_init_speed_min = 60f;
             projectile.m_init_speed_max = -1;
             projectile.m_init_speed_robot_multiplier = 1;
             projectile.m_acceleration = 0;
@@ -216,6 +220,13 @@ namespace GameMod
             ps1speed.constantMin = 9;
             ps1speed.constantMax = 10;
             ps1main.startSpeed = ps1speed;
+            ps1main.simulationSpeed = 2f;
+
+            Renderer rend1 = sparks1.GetComponent<Renderer>();
+            Material mat1 = rend1.material;
+            mat1.SetFloat("_CoreStrength", 105f);
+            mat1.SetFloat("_Exponent", 9f);
+            rend1.material = mat1;
 
             GameObject sparks2 = go.transform.GetChild(2).gameObject;
             var ps2main = sparks2.GetComponent<ParticleSystem>().main;
@@ -223,6 +234,13 @@ namespace GameMod
             ps2speed.constantMin = 8;
             ps2speed.constantMax = 10;
             ps2main.startSpeed = ps2speed;
+            ps2main.simulationSpeed = 2f;
+
+            Renderer rend2 = sparks2.GetComponent<Renderer>();
+            Material mat2 = rend2.material;
+            mat2.SetFloat("_CoreStrength", 105f);
+            mat2.SetFloat("_Exponent", 9f);
+            rend2.material = mat1;
 
             GameObject ring1 = go.transform.GetChild(1).gameObject;
             var ps3main = ring1.GetComponent<ParticleSystem>().main;
@@ -230,6 +248,7 @@ namespace GameMod
             ps3speed.constantMin = 6;
             ps3speed.constantMax = 7;
             ps3main.startSpeed = ps3speed;
+            ps3main.simulationSpeed = 2f;
 
             GameObject ring2 = go.transform.GetChild(3).gameObject;
             var ps4main = ring2.GetComponent<ParticleSystem>().main;
@@ -237,6 +256,15 @@ namespace GameMod
             ps4speed.constantMin = 8;
             ps4speed.constantMax = 9;
             ps4main.startSpeed = ps4speed;
+            ps4main.simulationSpeed = 2f;
+
+            var ps5main = go.GetComponent<ParticleSystem>().main; // smoke is on the main GameObject
+            var ps5size = ps4main.startSize;
+            ps5size.constantMin = 6.5f;
+            ps5size.constantMax = 8;
+            ps5main.startSize = ps5size;
+            ps5main.simulationSpeed = 2f;
+
 
             projectile.m_death_particle_default = (FXWeaponExplosion)ex.Count;
             projectile.m_death_particle_robot = (FXWeaponExplosion)ex.Count;
@@ -247,12 +275,12 @@ namespace GameMod
 
             explosion.m_exp_force = 1f;
             explosion.m_exp_radius = 4f;
-            explosion.m_damage_radius = 5f;
+            explosion.m_damage_radius = 5.5f;
             explosion.m_damage_radius_player = 5f;
-            explosion.m_damage_radius_mp = 5f;
-            explosion.m_player_damage = 15f;
+            explosion.m_damage_radius_mp = 5.5f;
+            explosion.m_player_damage = 18f;
             explosion.m_robot_damage = 20f;
-            explosion.m_mp_damage = 15f;
+            explosion.m_mp_damage = 18f;
             explosion.m_camera_shake_type = CameraShakeType.EXPLODE_SMALL;
             explosion.m_camera_shake_intensity = 0.3f;
 
@@ -271,13 +299,13 @@ namespace GameMod
             explosion.m_damage_radius = 3.5f;
             explosion.m_damage_radius_player = 3.5f;
             explosion.m_damage_radius_mp = 3.5f;
-            explosion.m_player_damage = 10f;
-            explosion.m_robot_damage = 20f;
-            explosion.m_mp_damage = 10f;
+            explosion.m_player_damage = 8f;
+            explosion.m_robot_damage = 12f;
+            explosion.m_mp_damage = 8f;
             explosion.m_camera_shake_type = CameraShakeType.EXPLODE_SMALL;
             explosion.m_camera_shake_intensity = 0.5f;
 
-            ex.Add(go);
+            ex.Add(goDirect);
         }
     }
 }

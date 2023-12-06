@@ -13,7 +13,7 @@ namespace GameMod
     // Handles asset replacement for different Ship types
     public static class MPShips
     {
-        public const string MULTISHIP_VERSION = "MULTISHIP-0.5a3";
+        public const string MULTISHIP_VERSION = "MULTISHIP-0.5";
 
         public static Dictionary<NetworkInstanceId, Ship> SelectedShips = new Dictionary<NetworkInstanceId, Ship>(); // stores the PlayerShip's netId and the associated Ship reference
         public static Dictionary<int, int> LobbyShips = new Dictionary<int, int>(); // (lobby_id, idx) stores a lobby_id and the associated Ship index for translation at instantiation
