@@ -50,6 +50,7 @@ namespace GameMod
         public const short MsgPlayAudioTaunt = 152;
         public const short MsgAudioTauntPacket = 153;
 
+        public const short MsgEnhancedFirePacket = 154;
         // Do not use 400, it is in use by Mod-Projdata.dll.
     }
 }
