@@ -813,16 +813,17 @@ namespace GameMod {
 
                             // Draws the joystick binding buttons
                             position.x += 165f;
-                            highlighted = UIManager.m_menu_selection == 2010 + i;
-                            if (highlighted)
+                            if (UIManager.m_menu_selection == 2010 + i)
                                 MenuManager.option_dir = false;
                             __instance.TestMouseInRect(position, 80f, 22f, 2010 + i, true);
+  
                             string bound_input_name = "";
-                            if (Controls.m_input_joy != null && Controls.m_input_joy.GetLength(0) >= 2 && Controls.m_input_joy.GetLength(1) >= (61 + i))
+                            if (Controls.GetNextControllerWithAxes(-1) != -1 && Controls.m_input_joy != null && Controls.m_input_joy.GetLength(0) >= 2 && Controls.m_input_joy.GetLength(1) >= (61 + i))
                                 bound_input_name = Controls.m_input_joy[0, 61 + i].GetName();
                             if (string.IsNullOrEmpty(bound_input_name))
                                 bound_input_name = "BIND KEY";
-                            __instance.DrawControlItem(bound_input_name, position, highlighted, 130f, false);
+
+                            __instance.DrawControlItem(bound_input_name, position, UIManager.m_menu_selection == 2010 + i, 130f, false);
 
                             position.x -= 290f;
                             position.x -= 165f;
