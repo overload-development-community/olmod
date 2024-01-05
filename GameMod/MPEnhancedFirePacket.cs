@@ -17,16 +17,14 @@ namespace GameMod
             {
                 if ((bool)player2 && !player2.isLocalPlayer && !player2.m_spectator)
                 {
-                    if (strength != 0f && MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "efirepacket"))
+                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "efirepacket"))
                     {
-                        EnhancedFireProjectileToClientMessage msg1 = new EnhancedFireProjectileToClientMessage(player.netId, type, pos, rot, upgrade_level, no_sound, id, strength);
-                        player2.connectionToClient.SendByChannel(MessageTypes.MsgEnhancedFirePacket, msg1, 2);
+                        player2.connectionToClient.SendByChannel(MessageTypes.MsgEnhancedFirePacket, new EnhancedFireProjectileToClientMessage(player.netId, type, pos, rot, upgrade_level, no_sound, id, strength), 2);
 						//Debug.Log("CCF sent E-fire packet, strength " + strength);
 					}
                     else // older client, don't send the upgraded packet
                     {
-                        FireProjectileToClientMessage msg2 = new FireProjectileToClientMessage(player.netId, type, pos, rot, upgrade_level, no_sound, id);
-                        player2.connectionToClient.SendByChannel(70, msg2, 2);
+                        player2.connectionToClient.SendByChannel(70, new FireProjectileToClientMessage(player.netId, type, pos, rot, upgrade_level, no_sound, id), 2);
                     }
                 }
             }
@@ -98,10 +96,14 @@ namespace GameMod
 			{
 				writer.Write(m_net_id);
 				writer.Write((byte)m_proj_prefab);
-				writer.Write(HalfHelper.Compress(m_pos.x));
-				writer.Write(HalfHelper.Compress(m_pos.y));
-				writer.Write(HalfHelper.Compress(m_pos.z));
+				//writer.Write(HalfHelper.Compress(m_pos.x));
+				//writer.Write(HalfHelper.Compress(m_pos.y));
+				//writer.Write(HalfHelper.Compress(m_pos.z));
+				writer.Write(m_pos.x);
+				writer.Write(m_pos.y);
+				writer.Write(m_pos.z);
 				writer.Write(NetworkCompress.CompressQuaternion(m_rot));
+				//writer.Write(m_rot);
 				writer.Write(m_id);
 				byte b = (byte)m_upgrade_level;
 				if (m_no_sound)
@@ -116,10 +118,14 @@ namespace GameMod
 			{
 				m_net_id = reader.ReadNetworkId();
 				m_proj_prefab = (ProjPrefab)reader.ReadByte();
-				m_pos.x = HalfHelper.Decompress(reader.ReadUInt16());
-				m_pos.y = HalfHelper.Decompress(reader.ReadUInt16());
-				m_pos.z = HalfHelper.Decompress(reader.ReadUInt16());
+				//m_pos.x = HalfHelper.Decompress(reader.ReadUInt16());
+				//m_pos.y = HalfHelper.Decompress(reader.ReadUInt16());
+				//m_pos.z = HalfHelper.Decompress(reader.ReadUInt16());
+				m_pos.x = reader.ReadSingle();
+				m_pos.y = reader.ReadSingle();
+				m_pos.z = reader.ReadSingle();
 				m_rot = NetworkCompress.DecompressQuaternion(reader.ReadUInt32());
+				//m_rot = reader.ReadQuaternion();
 				m_id = reader.ReadInt32();
 				byte b = reader.ReadByte();
 				m_upgrade_level = (WeaponUnlock)(b & 0x7F);
