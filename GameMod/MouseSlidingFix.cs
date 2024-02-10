@@ -18,7 +18,7 @@ namespace GameMod
             ...
 			num4 += zero.x; -- becomes --> num4 = Mathf.Clamp(num4 + zero.x, -1f, 1f);
 			num3 += zero.y; -- becomes --> num4 = Mathf.Clamp(num3 + zero.y, -1f, 1f);
-			num5 += zero.z; -- becomes --> num4 = Mathf.Clamp(num5 + zero.x, -1f, 1f);
+			num5 += zero.z; -- becomes --> num4 = Mathf.Clamp(num5 + zero.z, -1f, 1f);
          *
          */
 
