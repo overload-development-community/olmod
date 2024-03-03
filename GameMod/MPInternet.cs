@@ -830,4 +830,79 @@ namespace GameMod {
             }
         }
     }
+
+    // prevent exception with invalid JSON data
+    [HarmonyPatch]
+    class MPInternetHandleInvalidMatchmakingData
+    {
+        static MethodBase TargetMethod()
+        {
+            foreach (var x in typeof(NetworkMatch).GetNestedTypes(BindingFlags.NonPublic)) {
+                if (x.Name.Contains("TryLocalMatchmaking"))
+                {
+                    var m = AccessTools.Method(x, "<>m__0");
+                    if (m != null) {
+                        return m;
+                    }
+                }
+            }
+            Debug.Log("MPInternetHandleInvalidMatchmakingData TargetMethod not found");
+            return null;
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            int state = 0;
+            Label jumpTarget = new Label();
+            LocalBuilder theVar = null;
+            List<CodeInstruction> instructionsAfter = new List<CodeInstruction>();
+
+            foreach (var code in instructions) {
+                if (state == 0) {
+                    // find Ldstr "PlayerId"
+                    if (code.opcode == OpCodes.Ldstr && (string)code.operand == "PlayerId") {
+                        state++;
+                    }
+                } else if (state == 1) {
+                    // find the Stloc.s after the PlayerId was retrieved
+                    if (code.opcode == OpCodes.Stloc_S) {
+                        theVar = (LocalBuilder)code.operand;
+                        state++;
+                    }
+                } else if (state == 2) {
+                    // this is the first instruction we will put into instructionsAfter
+                    state++;
+                } else if (state == 3) {
+                    // find Ldstr "private_initiator
+                    if (code.opcode == OpCodes.Ldstr && (string)code.operand == "private_initiator") {
+                        state++;
+                    }
+                } else if (state == 4) {
+                    // the next Brtrue will contain the target label for the end of loop
+                    // where the loop counter is incremented...
+                    if (code.opcode == OpCodes.Brtrue) {
+                        jumpTarget = (Label)code.operand;
+                        state++;
+                    }
+                }
+                if (state >= 3) {
+                    instructionsAfter.Add(code);
+                } else {
+                    yield return code;
+                }
+            }
+            if (state == 5) {
+                // we stopped after the Stloc.s for the PlayerID;
+                // check if it is null and jump to end of loop if so
+                yield return new CodeInstruction(OpCodes.Ldloc_S, theVar);
+                yield return new CodeInstruction(OpCodes.Brfalse, jumpTarget);
+            } else {
+                Debug.LogFormat("MPInternetHandleInvalidMatchmakingData: transpiler failed at state {0}", state);
+            }
+            // emit the remaining instructions
+            foreach (var code in instructionsAfter) {
+                yield return code;
+            }
+        }
+    }
 }

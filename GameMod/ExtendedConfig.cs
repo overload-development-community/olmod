@@ -3,6 +3,7 @@ using Overload;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace GameMod
@@ -16,7 +17,7 @@ namespace GameMod
     /// </summary>
     class ExtendedConfig
     {
-        
+
         private const string file_extension = ".extendedconfig";
         private static List<string> unknown_sections;
 
@@ -24,6 +25,7 @@ namespace GameMod
         public static string textFile = Path.Combine(Application.persistentDataPath, "AutoSelect-Config.txt");
 
         // On Game Loading or when selecting a different PILOT read or generating PILOT.extendedconfig
+        [HarmonyPriority(Priority.Last)]
         [HarmonyPatch(typeof(PilotManager), "Select", new Type[] { typeof(string) })]
         internal class ExtendedConfig_PilotManager_Select
         {
@@ -32,7 +34,12 @@ namespace GameMod
                 LoadPilotExtendedConfig(name);
             }
 
-            public static void LoadPilotExtendedConfig( string name )
+            public static void Postfix()
+            {
+                Section_JoystickCurve.ParseSectionData();
+            }
+
+            public static void LoadPilotExtendedConfig(string name)
             {
                 if (Network.isServer)
                 {
@@ -116,7 +123,7 @@ namespace GameMod
         private static void ReadConfigData(string filepath)
         {
             List<string> completed = new List<string>();
-            
+
             uConsole.Log("ReadConfigData");
             using (StreamReader sr = new StreamReader(filepath))
             {
@@ -167,14 +174,13 @@ namespace GameMod
                     }
                 }
             }
-            
+
             foreach (string s in known_sections)
             {
                 // a section is missing from the config file, create it
                 if (!completed.Contains(s))
                 {
                     List<string> l = new List<string>();
-                    l.Add("---");
                     PassSectionToFunction(l, s);
                     Debug.Log("Creating missing section \"" + s + "\" in pilot's .extendedconfig");
                 }
@@ -223,7 +229,7 @@ namespace GameMod
                     Debug.Log("ExtendedConfig_PilotManager_Create called on the server");
                     return;
                 }
-                if ( string.IsNullOrEmpty(PilotManager.ActivePilot) )
+                if (string.IsNullOrEmpty(PilotManager.ActivePilot))
                 {
                     SetDefaultConfig();
                 }
@@ -266,13 +272,12 @@ namespace GameMod
         [HarmonyPatch(typeof(Controls), "OnControllerConnected")]
         internal class ExtendedConfig_Controls_OnControllerConnected
         {
-            static void Prefix()
+            static void Postfix()
             {
                 //Debug.Log("ExtendedConfig_Controls_OnControllerConnected");
                 if (!Network.isServer)
                 {
-                    ExtendedConfig_PilotManager_Select.LoadPilotExtendedConfig(PilotManager.PilotName);
-                    //PilotManager.Select(PilotManager.ActivePilot);
+                    PilotManager.Select(PilotManager.ActivePilot);
                 }
             }
         }
@@ -300,6 +305,8 @@ namespace GameMod
             "[SECTION: JOYSTICKCURVE]",
             "[SECTION: WEAPONCYCLING]",
             "[SECTION: AUDIOTAUNT_KEYBINDS]",
+            "[SECTION: AUDIOTAUNT_MUTED_PLAYERS]",
+            "[SECTION: AUDIOTAUNT_SELECTED_TAUNTS]",
             //...
         };
 
@@ -309,20 +316,38 @@ namespace GameMod
             if (section_name.Equals(known_sections[0]))
             {
                 Section_AutoSelect.Load(section);
+                return;
             }
             if (section_name.Equals(known_sections[1]))
             {
                 Section_JoystickCurve.Load(section);
+                return;
             }
             if (section_name.Equals(known_sections[2]))
             {
                 Section_WeaponCycling.Load(section);
+                return;
             }
             if (section_name.Equals(known_sections[3]))
             {
-                Section_Audiotaunt_Keybinds.Load(section);
+                Section_AudiotauntKeybinds.Load(section);
+                return;
             }
-
+            if (section_name.Equals(known_sections[3]))
+            {
+                Section_AudiotauntKeybinds.Load(section);
+                return;
+            }
+            if (section_name.Equals(known_sections[4]))
+            {
+                Section_AudiotauntMutedPlayers.Load(section);
+                return;
+            }
+            if (section_name.Equals(known_sections[5]))
+            {
+                Section_AudiotauntSelectedTaunts.Load(section);
+                return;
+            }
             //...
 
         }
@@ -352,9 +377,17 @@ namespace GameMod
                     w.WriteLine("[/END]");
 
                     w.WriteLine("[SECTION: AUDIOTAUNT_KEYBINDS]");
-                    Section_Audiotaunt_Keybinds.Save(w);
+                    Section_AudiotauntKeybinds.Save(w);
                     w.WriteLine("[/END]");
-                    
+
+                    w.WriteLine("[SECTION: AUDIOTAUNT_MUTED_PLAYERS]");
+                    Section_AudiotauntMutedPlayers.Save(w);
+                    w.WriteLine("[/END]");
+
+                    w.WriteLine("[SECTION: AUDIOTAUNT_SELECTED_TAUNTS]");
+                    Section_AudiotauntSelectedTaunts.Save(w);
+                    w.WriteLine("[/END]");
+
                     //...
 
                     if (unknown_sections != null)
@@ -368,7 +401,12 @@ namespace GameMod
             }
             catch (Exception ex)
             {
-                Debug.Log("Error in ExtendedConfig.SaveActivePilot(): " + ex);
+                if (ex is UnauthorizedAccessException)
+                {
+                    Debug.Log("Error in ExtendedConfig.SaveActivePilot: Could not save pilot file due to insufficient permissions");
+                    return;
+                }
+                Debug.Log("Error in ExtendedConfig.SaveActivePilot: " + ex);
             }
         }
 
@@ -377,7 +415,7 @@ namespace GameMod
             Section_AutoSelect.Set();
             Section_JoystickCurve.SetDefault();
             Section_WeaponCycling.Set();
-            Section_Audiotaunt_Keybinds.SetDefaultKeybinds();
+            Section_AudiotauntKeybinds.SetDefaultKeybinds();
         }
 
         public static void ApplyConfigData()
@@ -539,10 +577,13 @@ namespace GameMod
         internal class Section_JoystickCurve
         {
             public static List<Controller> controllers = new List<Controller>();
+            public static List<string> lines = new List<string>();
 
             public class Controller
             {
+                public bool populated = false;
                 public string name = "";
+                public int id = -1;
                 public List<Axis> axes = new List<Axis>();
 
                 public class Axis
@@ -552,10 +593,10 @@ namespace GameMod
 
                     public Vector2[] CloneCurvePoints()
                     {
-                        return new Vector2[] { 
-                            new Vector2(curve_points[0].x,curve_points[0].y), 
-                            new Vector2(curve_points[1].x,curve_points[1].y), 
-                            new Vector2(curve_points[2].x,curve_points[2].y), 
+                        return new Vector2[] {
+                            new Vector2(curve_points[0].x,curve_points[0].y),
+                            new Vector2(curve_points[1].x,curve_points[1].y),
+                            new Vector2(curve_points[2].x,curve_points[2].y),
                             new Vector2(curve_points[3].x,curve_points[3].y)
                         };
 
@@ -563,140 +604,245 @@ namespace GameMod
                 }
             }
 
-            // returns the index of a controller in Overload.Controls.m_controllers
-            static int FindControllerIndex(string controller_name)
+
+            public class Type
             {
-                int index = -1;
-                for (int i = 0; i < Overload.Controls.m_controllers.Count; i++)
+                public string name;
+                public int amount;
+                public int[] positions;
+
+                public Type(string _name, int _amount, int[] _positions)
                 {
-                    if (RemoveWhitespace(Overload.Controls.m_controllers[i].name).Equals(controller_name))
-                    {
-                        index = i;
-                        break;
-                    }
+                    name = _name;
+                    amount = _amount;
+                    positions = _positions;
                 }
-                return index;
             }
 
-            public static void Load(List<string> section)
+            public static void Load(List<string> _section)
             {
-                for (int i = 0; i < section.Count; i++)
+                // Remove Whitespaces
+                for (int i = 0; i < _section.Count; i++)
                 {
-                    if (!string.IsNullOrEmpty(section[i]))
-                    {
-                        section[i] = RemoveWhitespace(section[i]);
-                    }
+                    if (!string.IsNullOrEmpty(_section[i]) && _section[i].Length > 3)
+                        lines.Add(_section[i].Substring(3));
+                    else
+                        lines.Add(_section[i]);
                 }
 
-                List<Controller> copy_of_controllers = new List<Controller>();
-                foreach(Controller c in controllers)
-                {
+                SetDefault();
+            }
 
+            public static void ParseSectionData()
+            {
+                Debug.Log("\n- Loading Joystick Curves: ");
+                SetDefault();
+
+                // Save the current configuration in case we need to reset back to it when we encounter an incorrectable error
+                List<Controller> copy_of_controllers = CloneCurrentControllerConfiguration();
+
+                //PrintControllerNamesAndAlignment();
+                try
+                {
+                    // read in the data of the devices 
+                    int index = -1;
+                    int.TryParse(lines[++index], out int numControllers); // read in the amount of controllers that are saved in this curve section
+                    List<Controller> parsed_devices = new List<Controller>();
+                    for (int i = 0; i < numControllers; i++){
+                        // create an empty device and populate the name and id
+                        Controller device = new Controller();
+                        string[] device_informations = lines[++index].Split(';');
+                        string controllerName = device_informations[0];
+                        device.name = controllerName;
+                        device.id = -1;
+                        if (device_informations.Length == 2)
+                        {
+                            int.TryParse(device_informations[1], out device.id);
+                        }
+
+                        // read in the number of axes for this device and create empty axes for the device
+                        int.TryParse(lines[++index], out int val2);
+                        int numAxes = val2;
+                        for (int g = 0; g < numAxes; g++) 
+                            device.axes.Add(new Controller.Axis());
+
+                        // populate device with default or saved curve points
+                        for (int j = 0; j < numAxes; j++){
+                            if (j >= device.axes.Count){
+                                device.axes.Add(new Controller.Axis());
+                            }
+                            float value = 0f;
+                            device.axes[j].curve_points = DefaultCurvePoints();
+                            device.axes[j].curve_points[0].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
+                            device.axes[j].curve_points[1].x = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            device.axes[j].curve_points[1].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
+                            device.axes[j].curve_points[2].x = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            device.axes[j].curve_points[2].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
+                            device.axes[j].curve_points[3].y = float.TryParse(lines[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
+                            // generate the lookup table
+                            device.axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(device.axes[j].curve_points);
+                        }
+                        //Debug.Log(" Added a device: "+device.name+" : "+ ControllerContainsData(device));
+                        parsed_devices.Add(device);
+                    }
+
+                    // Find and assign the best fit to the current default configuration
+                    // best fit base line = equal name, equal axis count
+                    // best fit = matching or non '-1' id > contains data > exists
+                    for ( int i = 0; i < Controls.m_controllers.Count; i++){
+                        Debug.Log(i);
+                        // establish base line and collect candidates
+                        List<Controller> candidates = new List<Controller>();
+                        foreach( Controller c in parsed_devices){
+                            if (c.name.Equals(Controls.m_controllers[i].name) & c.axes.Count == Controls.m_controllers[i].m_axis_count)
+                            {
+                                Debug.Log(" Added a candidate");
+                                candidates.Add(c);
+                            }
+                            else
+                            {
+                                Debug.Log(" "+ c.name+" : "+ Controls.m_controllers[i].name+", "+ c.axes.Count+" : "+ Controls.m_controllers[i].m_axis_count);
+                            }
+                                
+                        }
+                        // if there are no candidates that fit the baseline then leave this controller with default values
+                        if (candidates.Count <= 0){
+                            controllers[i].populated = true;
+                            Debug.Log(" Set "+controllers[i].name + " to DEFAULT");
+                            continue;
+                        }
+                        // if there are candidates then find the best fit among them
+                        int best_score = 0;
+                        int best_candidate = 0;
+                        for(int x = 0; x < candidates.Count; x++){
+                            int score = 0;
+                            if (candidates[x].id == Controls.m_controllers[i].joystickID) score += 8;
+                            if (ControllerContainsData(candidates[x])) score += 4;
+                            if (candidates[x].id != -1) score += 2;
+                            if( score > best_score){
+                                best_score = score;
+                                best_candidate = x;
+                            }
+                        }
+                        // copy over the data
+                        CopyController(candidates[best_candidate], controllers[i]);
+                        controllers[i].id = Controls.m_controllers[i].joystickID;
+                        controllers[i].populated = true;
+                        parsed_devices.Remove(candidates[best_candidate]);
+
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Former Values.");
+                    controllers = copy_of_controllers;
+                }
+
+                PrintControllerNamesAndAlignment();
+
+                PrintJoystickCurves();
+            }
+
+            public static void CopyController(Controller data, Controller blank)
+            {
+                if (data == null | blank == null)
+                    return;
+
+                blank.id = data.id;
+                blank.name = data.name;
+                for(int i = 0; i < data.axes.Count; i++)
+                {
+                    blank.axes[i].curve_points = data.axes[i].CloneCurvePoints();
+                    blank.axes[i].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(blank.axes[i].curve_points);
+                }
+            }
+
+            public static bool ControllerContainsData( Controller c )
+            {
+                if(c == null)
+                {
+                    Debug.Log("[ExtendedConfig.Warning] ControllerContainsData received empty controller");
+                    return false;
+                }
+                for( int i = 0; i < c.axes.Count; i++ ){
+                    if (!IsAxisDefault(c.axes[i]))
+                        return true;
+                }
+                return false;
+            }
+
+            public static bool IsAxisDefault( Controller.Axis axis )
+            {
+                return axis.curve_points[0].y == 0f
+                     & axis.curve_points[1].x == 0.25f
+                     & axis.curve_points[1].y == 0.25f
+                     & axis.curve_points[2].x == 0.75f
+                     & axis.curve_points[2].y == 0.75f
+                     & axis.curve_points[3].y == 1f;
+            }
+
+            public static void PrintJoystickCurves()
+            {
+                foreach( Controller c in controllers )
+                {
+                    Debug.Log("\n"+c.name+" : "+c.id);
+                    for(int i = 0; i < Mathf.Min(c.axes.Count, 6); i++)
+                    {
+                        Debug.Log("   axis: " 
+                            + c.axes[i].curve_points[0].y + ", " 
+                            + c.axes[i].curve_points[1].x + ", " 
+                            + c.axes[i].curve_points[1].y + ", " 
+                            + c.axes[i].curve_points[2].x + ", " 
+                            + c.axes[i].curve_points[2].y + ", " 
+                            + c.axes[i].curve_points[3].y);
+                    }
+                    Debug.Log("");
+                }
+            }
+
+            public static void PrintControllerNamesAndAlignment()
+            {
+                int max = new[] { Controls.m_controllers.Count, Controllers.controllers.Count, controllers.Count }.Max();
+
+                Debug.Log(string.Format(" {0, -50} | {1,-50} | {2,-50}", "Rewired", "Sensitivity/Deadzone", "Response-Curves"));
+                string spacer = "";
+                for (int i = 0; i < 156; i++)
+                    spacer += "-";
+                Debug.Log(spacer);
+                for (int i = 0; i < max; i++)
+                {
+                    Debug.Log(string.Format(" {0, -50} | {1,-50} | {2,-50}", 
+                        i < Controls.m_controllers.Count ? Controls.m_controllers[i].name + " : " + Controls.m_controllers[i].joystickID : "",
+                        i < Controllers.controllers.Count ? Controllers.controllers[i].m_device_name + " : " + Controllers.controllers[i].m_joystick_id : "",
+                        i < controllers.Count ? controllers[i].name + " : " + controllers[i].id : ""
+                    ));
+                }
+                Debug.Log("");
+            }
+
+            public static List<Controller> CloneCurrentControllerConfiguration()
+            {
+                List<Controller>  copy_of_controllers = new List<Controller>();
+                foreach (Controller c in controllers)
+                {
                     copy_of_controllers.Add(new Controller
                     {
                         name = c.name,
+                        id = c.id,
                         axes = new List<Controller.Axis>()
                     });
 
                     foreach (Controller.Axis axis in c.axes)
                     {
-                        copy_of_controllers[copy_of_controllers.Count-1].axes.Add(new Controller.Axis()
+                        copy_of_controllers[copy_of_controllers.Count - 1].axes.Add(new Controller.Axis()
                         {
                             curve_points = axis.curve_points,
                             curve_lookup = axis.curve_lookup
                         });
                     }
                 }
-
-
-
-                try
-                {
-                    // Mirror Overload.Controls.m_controllers devices with default configurations
-                    SetDefault();
-                    int index = -1;
-
-                    // read in the amount of controllers that are saved in this curve section
-                    int.TryParse(section[++index], out int val);
-                    int numControllers = val;
-
-                    List<Controller> inactive_devices = new List<Controller>();
-
-                    // read in the data of the devices and insert the populated devices at their right position
-                    // (controllers needs to be parallel to Overload.Controls.m_controllers)
-                    for (int i = 0; i < numControllers; i++)
-                    {
-                        Controller device = new Controller();
-                        string controllerName = section[++index];//.Substring(3);
-
-                        device.name = controllerName;
-
-                        // read in the number of axes for this device
-                        int.TryParse(section[++index], out int val2);
-                        int numAxes = val2;
-
-                        for (int g = 0; g < numAxes; g++) device.axes.Add(new Controller.Axis());
-
-
-
-                        // populate device with default or saved curve points
-                        for (int j = 0; j < numAxes; j++)
-                        {
-                            if(j >= device.axes.Count) {
-                                device.axes.Add(new Controller.Axis());
-                            }
-                            float value = 0f;
-                            device.axes[j].curve_points = DefaultCurvePoints();
-                            device.axes[j].curve_points[0].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0f;
-                            device.axes[j].curve_points[1].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
-                            device.axes[j].curve_points[1].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.25f;
-                            device.axes[j].curve_points[2].x = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
-                            device.axes[j].curve_points[2].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 0.75f;
-                            device.axes[j].curve_points[3].y = float.TryParse(section[++index], out value) && value >= 0f && value <= 1f ? value : 1f;
-                            
-                            /*
-                            Debug.Log(" Added an axis: "+j);
-                            Debug.Log("     " + device.axes[j].curve_points[0].y);
-                            Debug.Log("     " + device.axes[j].curve_points[1].x);
-                            Debug.Log("     " + device.axes[j].curve_points[1].y);
-                            Debug.Log("     " + device.axes[j].curve_points[2].x);
-                            Debug.Log("     " + device.axes[j].curve_points[2].y);
-                            Debug.Log("     " + device.axes[j].curve_points[3].y);*/
-
-                            // generate the lookup table
-                            device.axes[j].curve_lookup = ExtendedConfig.Section_JoystickCurve.GenerateCurveLookupTable(device.axes[j].curve_points);
-                        }
-
-                        // insert the device at the correct spot
-                        int controller_pos = FindControllerIndex(controllerName);
-                        if(controller_pos != -1)
-                        {
-                            if (controller_pos >= controllers.Count){ 
-                                Debug.Log(" Extended.Config: OnLoad: JoystickCurveSection: controllers and m_controllers element count does not match "); 
-                            }
-                            //Debug.Log(" inserted at "+controller_pos+" device: "+device.name);
-                            controllers[controller_pos] = device;
-                        }
-                        else
-                        {
-                            inactive_devices.Add(device);
-                        }
-
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.Log("Error in ExtendedConfig.Section_JoystickCurve.Load:  " + ex + ", Setting Former Values.");
-                    controllers = copy_of_controllers;
-
-                }
-
-                /*
-                Debug.Log("\n device curve order   Overload | Olmod");
-                for (int i = 0; i < controllers.Count; i++)
-                {
-                    Debug.Log(Controls.m_controllers[i].name + " : " + controllers[i].name);
-                }*/
+                return copy_of_controllers;
             }
 
             public static void Save(StreamWriter w)
@@ -706,7 +852,7 @@ namespace GameMod
                     w.WriteLine(controllers.Count);
                     for (int i = 0; i < controllers.Count; i++)
                     {
-                        w.WriteLine("   " + controllers[i].name);
+                        w.WriteLine("   " + controllers[i].name + ";" + controllers[i].id);
                         w.WriteLine("   " + controllers[i].axes.Count);
                         for (int j = 0; j < controllers[i].axes.Count; j++)
                         {
@@ -733,7 +879,9 @@ namespace GameMod
                 {
                     controllers.Add(new Controller
                     {
+                        populated = false,
                         name = Controls.m_controllers[i].name,
+                        id = Controls.m_controllers[i].joystickID,
                         axes = new List<Controller.Axis>()
                     });
                     for (int j = 0; j < Controls.m_controllers[i].m_axis_count; j++)
@@ -837,8 +985,8 @@ namespace GameMod
             //  mirror = true    sets the current MPWeaponCycling values
             public static void Set(bool mirror = false)
             {
-                
-                
+
+
                 settings = new Dictionary<string, string>();
                 settings.Add("p_cycle_0", mirror ? MPWeaponCycling.CPrimaries[0].ToString() : "true");
                 settings.Add("p_cycle_1", mirror ? MPWeaponCycling.CPrimaries[1].ToString() : "true");
@@ -889,12 +1037,12 @@ namespace GameMod
 
         }
 
-        internal class Section_Audiotaunt_Keybinds
+        internal class Section_AudiotauntKeybinds
         {
             public static void Load(List<string> section)
             {
                 string l;
-                for(int i = 0; i < section.Count; i++)
+                for (int i = 0; i < section.Count; i++)
                 {
                     if (i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT)
                     {
@@ -912,7 +1060,7 @@ namespace GameMod
 
             public static void Save(StreamWriter w)
             {
-                for(int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
+                for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
                 {
                     w.WriteLine("   " + MPAudioTaunts.AClient.keybinds[i]);
                 }
@@ -924,11 +1072,50 @@ namespace GameMod
                 for (int i = 0; i < MPAudioTaunts.AClient.keybinds.Length; i++)
                 {
                     MPAudioTaunts.AClient.keybinds[i] = -1;
-                } 
+                }
             }
         }
 
+        internal class Section_AudiotauntSelectedTaunts
+        {
+            public static void Load(List<string> section){  
+                string hashes = "", l = "";
+                for (int i = 0; i < section.Count; i++){
+                    if (i != 0)
+                        hashes += "/";
+                    if (i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT){
+                        l = RemoveWhitespace(section[i]);
+                        hashes += l;
+                    }
+                }
+                MPAudioTaunts.AClient.loaded_local_taunts = hashes;
+                MPAudioTaunts.AClient.LoadLocalAudioTauntsFromPilotPrefs();
+            }
 
+            public static void Save(StreamWriter w){
+                for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
+                    if (MPAudioTaunts.AClient.local_taunts.Length > i && MPAudioTaunts.AClient.local_taunts[i] != null)
+                        w.WriteLine("   " + MPAudioTaunts.AClient.local_taunts[i].hash);
+            }
+        }
+
+        internal class Section_AudiotauntMutedPlayers
+        {
+            public static HashSet<string> ids = new HashSet<string>();
+
+            public static void Load(List<string> section)
+            {
+                for (int i = 0; i < section.Count; i++)
+                   ids.Add(RemoveWhitespace(section[i]));
+            }
+
+            public static void Save(StreamWriter w)
+            {
+                foreach(string id in ids)
+                    w.WriteLine("   " + id);
+            }
+
+        }
 
     }
 }

@@ -104,6 +104,7 @@
     <Compile Include="AddOnLevelSort.cs" />
     <Compile Include="AmbientUnload.cs" />
     <Compile Include="AxisCountFix.cs" />
+    <Compile Include="MPMatchInfo.cs" />
     <Compile Include="CMTracker\Models\StatPlayer.cs" />
     <Compile Include="CMTracker\Models\StatRobot.cs" />
     <Compile Include="CMTracker\Models\LeaderboardEntry.cs" />
@@ -212,6 +213,7 @@
     <Compile Include="MPTeamsEnemyArrow.cs" />
     <Compile Include="MPTweaks.cs" />
     <Compile Include="MPUnlockAll.cs" />
+    <Compile Include="MPValidatePlayerNames.cs" />
     <Compile Include="MPWeaponBehavior.cs" />
     <Compile Include="MPWeaponCycling.cs" />
     <Compile Include="MusicCustom.cs" />
@@ -247,4 +249,7 @@
     <EmbeddedResource Include="Resources\meshes" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <LangVersion>7.0</LangVersion>
+  </PropertyGroup>
 </Project>

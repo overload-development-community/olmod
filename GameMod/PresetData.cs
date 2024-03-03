@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
@@ -57,13 +58,14 @@ namespace GameMod
         }
         public static string GetProjData(TextAsset ta)
         {
+            string projData;
             if (PresetData.ProjDataExists)
             {
-                return MPModPrivateData.CustomProjdata;
+                projData = MPModPrivateData.CustomProjdata;
             }
             else if (GameplayManager.IsMultiplayer)
             {
-                return MPModPrivateData.DEFAULT_PROJ_DATA;
+                projData = MPModPrivateData.DEFAULT_PROJ_DATA;
             }
             else
             {
@@ -89,10 +91,36 @@ namespace GameMod
                         }
                     }                    
                 }
-                return GetData(ta, "projdata.txt");
+                projData = GetData(ta, "projdata.txt");
             }
 
+            var index = projData.IndexOf("m_spinup_starting_time;");
+            if (index != -1)
+            {
+                var spinup = projData.Substring(index + 23, 1);
+                var hasCrLf = projData.Substring(index + 24, 1) == "\r" || projData.Substring(index + 24, 1) == "\n";
+
+                if (!hasCrLf || !(new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8" }.Contains(spinup)))
+                {
+                    Cyclone.CycloneSpinupStartingStep = 0;
+
+                    Debug.LogError("Invalid m_spinup_starting_time, must be 0 to 8.");
+                }
+                else
+                {
+                    Cyclone.CycloneSpinupStartingStep = int.Parse(spinup);
+
+                    projData = string.Format("{0}{1}", projData.Substring(0, index), projData.Substring(index + 26));
+                }
+            }
+            else
+            {
+                Cyclone.CycloneSpinupStartingStep = 0;
+            }
+
+            return projData;
         }
+
         public static string GetRobotData(TextAsset ta)
         {
             // Look for "robotdata.txt" in SP/CM zip files and use if possible
