@@ -107,6 +107,7 @@
     <Compile Include="MouseSlidingFix.cs" />
     <Compile Include="MPMatchInfo.cs" />
     <Compile Include="FramerateLimiter.cs" />
+	<Compile Include="MPEnhancedFirePacket.cs" />
     <Compile Include="MPShips.cs" />
     <Compile Include="MPColliderSwap.cs" />
     <Compile Include="MPPacketStatus.cs" />
