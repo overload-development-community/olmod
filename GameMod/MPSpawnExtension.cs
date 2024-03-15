@@ -15,6 +15,7 @@ namespace GameMod
     public static class MPSpawnExtension
     {
         const string BASE_URL = "https://raw.githubusercontent.com/overload-development-community/ol-map-revisions/main/spawnpoints/";
+        //const string BASE_URL = "https://raw.githubusercontent.com/CCraigen/ol-map-revisions/main/spawnpoints/"; // testing repo
 
         public static List<LevelData.SpawnPoint> spawnpoints = new List<LevelData.SpawnPoint>();
         public static bool DownloadBusy = false;
@@ -35,7 +36,7 @@ namespace GameMod
 
         public static void CheckExtraSpawnpoints(string name)
         {
-            if (!GameplayManager.IsMultiplayer || DownloadChecked)
+            if (DownloadChecked || !(GameplayManager.IsDedicatedServer() || GameplayManager.IsMultiplayer))
             {
                 return;
             }

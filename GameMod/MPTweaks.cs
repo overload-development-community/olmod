@@ -160,7 +160,7 @@ namespace GameMod {
     {
         private static void Postfix()
         {
-            if (!GameplayManager.IsDedicatedServer())
+            if (MPDownloadLevel.DownloadBusy || MPSpawnExtension.DownloadBusy || !GameplayManager.IsDedicatedServer())
                 return;
             Debug.Log("MPTweaksLoadScene");
             RobotManager.ReadMultiplayerModeFile();
