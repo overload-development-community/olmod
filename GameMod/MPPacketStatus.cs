@@ -12,7 +12,7 @@ namespace GameMod
     {
         // do yourself a favour and make sure that holdTime is a multiple of sampleTime
         public const int sampleTime = 1; // sample window size in seconds
-        public const int holdTime = 10; // length of time to hold a visible loss value on-screen
+        public const int holdTime = 5; // length of time to hold a visible loss value on-screen
 
         public const int holdSize = holdTime / sampleTime; // array size for the stats arrays
 
@@ -60,10 +60,11 @@ namespace GameMod
                 running = true;
                 if (Time.unscaledTime >= shortUpdate)
                 {
-                    int loss = NetworkTransport.GetOutgoingPacketNetworkLossPercent(connection.hostId, connection.connectionId, out _);
-                    int drop = NetworkTransport.GetOutgoingPacketOverflowLossPercent(connection.hostId, connection.connectionId, out _);
+                    //int loss = NetworkTransport.GetOutgoingPacketNetworkLossPercent(connection.hostId, connection.connectionId, out _);
+                    //int drop = NetworkTransport.GetOutgoingPacketOverflowLossPercent(connection.hostId, connection.connectionId, out _);
                     //outErr = Math.Max(loss + drop, outErr);  // this one keeps the max 1/4-second recorded value
-                    outErr += loss + drop;  // this one is for the average over the sampleTime
+                    //outErr += loss + drop;  // this one is for the average over the sampleTime
+                    outErr += NetworkTransport.GetOutgoingPacketNetworkLossPercent(connection.hostId, connection.connectionId, out _);
 
                     shortUpdate = Time.unscaledTime + 0.25f;
                 }
@@ -91,8 +92,8 @@ namespace GameMod
                         OutStatus = Math.Max(OutStatus, outStats[i]);
                     }
 
-                    InColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, InStatus / 10f); // 10f since anything over 0% is bad, if you're at 10% it's terrible
-                    OutColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, OutStatus / 10f);
+                    InColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, InStatus / 20f); // 20f since anything over 0% is bad, if you're at 20% it's terrible
+                    OutColor = Color.Lerp(UIManager.m_col_good_ping, UIManager.m_col_em5, OutStatus / 20f);
 
                     if (InStatus > InMin)
                     {
@@ -131,7 +132,7 @@ namespace GameMod
         }
     }
 
-    [HarmonyPatch(typeof(Client), "Update")]
+    [HarmonyPatch(typeof(Client), "FixedUpdate")]
     class MPPacketStatus_Client_Update
     {
         static void Postfix()
