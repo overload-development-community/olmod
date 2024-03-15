@@ -17,7 +17,7 @@ namespace GameMod
             {
                 if ((bool)player2 && !player2.isLocalPlayer && !player2.m_spectator)
                 {
-                    if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "efirepacket"))
+                    if (MPTweaks.ClientHasTweak(player2.connectionToClient.connectionId, "efirepacket"))
                     {
                         player2.connectionToClient.SendByChannel(MessageTypes.MsgEnhancedFirePacket, new EnhancedFireProjectileToClientMessage(player.netId, type, pos, rot, upgrade_level, no_sound, id, strength), 2);
 						//Debug.Log("CCF sent E-fire packet, strength " + strength);
