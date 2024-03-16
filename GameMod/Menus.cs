@@ -783,17 +783,17 @@ namespace GameMod {
 
                         position.x -= 175f;
                         position.y += 50f;
-                        for (int i = 0; i < 6; i++)
+                        for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
                         {
                             // Draws the Item slider for selecting an audio taunt
                             __instance.SelectAndDrawStringOptionItem("", position, 16 + i, MPAudioTaunts.AClient.local_taunts[i].name, string.Empty, 0.49f, false);
-                            
+
 
                             // Draws the buttons that play the selected audio taunt of the respective slot
                             position.x -= 171f;
                             __instance.TestMouseInRect(position, 25f, 25f, 1610 + i, true);
                             bool highlighted = UIManager.m_menu_selection == 1610 + i;
-                            if (highlighted) 
+                            if (highlighted)
                                 MenuManager.option_dir = false;
                             Color color = Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.15f * UIElement.FLICKER) + ((!__instance.m_fade_die) ? 0f : 0.5f));
                             UIManager.DrawQuadBarHorizontal(position, 14f, 24f, 14f, 0.2f * UIManager.m_col_ub0, 12);
@@ -805,7 +805,7 @@ namespace GameMod {
                             // Draws the keybind buttons
                             position.x += 290f;
                             highlighted = UIManager.m_menu_selection == 1810 + i;
-                            if (highlighted) 
+                            if (highlighted)
                                 MenuManager.option_dir = false;
                             __instance.TestMouseInRect(position, 80f, 22f, 1810 + i, true);
                             __instance.DrawControlItem(MPAudioTaunts.AClient.keybinds[i] != -1 ? ((KeyCode)MPAudioTaunts.AClient.keybinds[i]).ToString() : "BIND KEY", position, highlighted, 130f, false);
@@ -813,14 +813,17 @@ namespace GameMod {
 
                             // Draws the joystick binding buttons
                             position.x += 165f;
-                            highlighted = UIManager.m_menu_selection == 2010 + i;
-                            if (highlighted)
+                            if (UIManager.m_menu_selection == 2010 + i)
                                 MenuManager.option_dir = false;
                             __instance.TestMouseInRect(position, 80f, 22f, 2010 + i, true);
-                            string bound_input_name = Controls.m_input_joy[0, 61 + i].GetName();
+  
+                            string bound_input_name = "";
+                            if (Controls.GetNextControllerWithAxes(-1) != -1 && Controls.m_input_joy != null && Controls.m_input_joy.GetLength(0) >= 2 && Controls.m_input_joy.GetLength(1) >= (61 + i))
+                                bound_input_name = Controls.m_input_joy[0, 61 + i].GetName();
                             if (string.IsNullOrEmpty(bound_input_name))
                                 bound_input_name = "BIND KEY";
-                            __instance.DrawControlItem(bound_input_name, position, highlighted, 130f, false);
+
+                            __instance.DrawControlItem(bound_input_name, position, UIManager.m_menu_selection == 2010 + i, 130f, false);
 
                             position.x -= 290f;
                             position.x -= 165f;
