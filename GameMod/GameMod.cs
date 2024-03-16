@@ -82,6 +82,12 @@ namespace GameMod.Core {
             if (FindArg("-poor-mans-profiler")) {
                 PoorMansProfiler.Initialize(harmony);
             }
+
+            MPSpawnExtensionVis.visualizing = FindArg("-spawnpoint-editor");
+            if (MPSpawnExtensionVis.visualizing)
+            {
+                uConsole.RegisterCommand("export-spawns", "Exports spawnpoints from the editor to a .json file in the OLmod directory", new uConsole.DebugCommand(MPSpawnExtensionVis.Export));
+            }
         }
 
         public static bool FindArg(string arg)

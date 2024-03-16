@@ -106,6 +106,7 @@
     <Compile Include="AxisCountFix.cs" />
     <Compile Include="MouseSlidingFix.cs" />
     <Compile Include="MPMatchInfo.cs" />
+    <Compile Include="MPSpawnExtension.cs" />
     <Compile Include="FramerateLimiter.cs" />
 	<Compile Include="MPEnhancedFirePacket.cs" />
     <Compile Include="MPShips.cs" />
