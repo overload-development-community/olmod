@@ -26,4 +26,17 @@ namespace GameMod
             }
         }
     }
+
+    // Cancels spawn invuln if a player starts charging Thunderbolt
+    [HarmonyPatch(typeof(PlayerShip), "ThunderCharge")]
+    internal class MPSpawnInvuln_PlayerShip_ThunderCharge
+    {
+        static void Postfix(Player ___c_player)
+        {
+            if (GameplayManager.IsMultiplayerActive && ___c_player.m_spawn_invul_active)
+            {
+                ___c_player.m_timer_invuln = (float)___c_player.m_timer_invuln - (float)NetworkMatch.m_respawn_shield_seconds;
+            }
+        }
+    }
 }
