@@ -98,9 +98,9 @@ namespace GameMod
             if (index != -1)
             {
                 var spinup = projData.Substring(index + 23, 1);
-                var hasCrLf = projData.Substring(index + 24, 1) == "\r" || projData.Substring(index + 24, 1) == "\n";
+                var newlineIndex = projData.IndexOf('\n', index + 24, 2);
 
-                if (!hasCrLf || !(new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8" }.Contains(spinup)))
+                if (newlineIndex < index+24 || newlineIndex > index+26 || !(new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8" }.Contains(spinup)))
                 {
                     Cyclone.CycloneSpinupStartingStep = 0;
 
@@ -110,7 +110,7 @@ namespace GameMod
                 {
                     Cyclone.CycloneSpinupStartingStep = int.Parse(spinup);
 
-                    projData = string.Format("{0}{1}", projData.Substring(0, index), projData.Substring(index + 26));
+                    projData = projData.Substring(0, index) + projData.Substring(newlineIndex+1);
                 }
             }
             else
