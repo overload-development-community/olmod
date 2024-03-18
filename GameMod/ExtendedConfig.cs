@@ -194,7 +194,7 @@ namespace GameMod
             public static void Postfix()
             {
                 //uConsole.Log("ExtendedConfig_Controls_SaveControlData");
-                if (Network.isServer)
+                if (GameplayManager.IsDedicatedServer())
                 {
                     Debug.Log("ExtendedConfig_Controls_SaveControlData called on the server");
                     return;
