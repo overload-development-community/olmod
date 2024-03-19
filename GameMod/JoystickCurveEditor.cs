@@ -588,7 +588,7 @@ namespace GameMod
 
                         if (i == 0)
                         {
-                            result = axis_value / 0.005f * a.curve_lookup[0];
+                            result = axis_value / 0.005f * a.curve_lookup[1];
                         }
                         else if (i == 200)
                         {
