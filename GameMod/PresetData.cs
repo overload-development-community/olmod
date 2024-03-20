@@ -94,29 +94,9 @@ namespace GameMod
                 projData = GetData(ta, "projdata.txt");
             }
 
-            var index = projData.IndexOf("m_spinup_starting_time;");
-            if (index != -1)
-            {
-                var spinup = projData.Substring(index + 23, 1);
-                var hasCrLf = projData.Substring(index + 24, 1) == "\r" || projData.Substring(index + 24, 1) == "\n";
+            // Initialize any default round-start values for custom projdata entries here
 
-                if (!hasCrLf || !(new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8" }.Contains(spinup)))
-                {
-                    Cyclone.CycloneSpinupStartingStep = 0;
-
-                    Debug.LogError("Invalid m_spinup_starting_time, must be 0 to 8.");
-                }
-                else
-                {
-                    Cyclone.CycloneSpinupStartingStep = int.Parse(spinup);
-
-                    projData = string.Format("{0}{1}", projData.Substring(0, index), projData.Substring(index + 26));
-                }
-            }
-            else
-            {
-                Cyclone.CycloneSpinupStartingStep = 0;
-            }
+            Cyclone.CycloneSpinupStartingStep = 0;
 
             return projData;
         }
@@ -147,6 +127,34 @@ namespace GameMod
             }
             return GetData(ta, "robotdata.txt");
         }
+
+        public static void ReadFieldFilter(object obj, string name, string value, ProjPrefab id)
+        {
+            // define entries here for any custom data that should be read
+            if (id == ProjPrefab.proj_vortex && name == "m_spinup_starting_time")
+            {
+                try
+                {
+                    int spinup = int.Parse(value);
+                    if (spinup < 0 || spinup > 8)
+                    {
+                        Debug.LogError("Invalid m_spinup_starting_time, must be 0 to 8.");
+                    }
+                    else
+                    {
+                        Cyclone.CycloneSpinupStartingStep = spinup;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError("Invalid m_spinup_starting_time, error reading value: " + e);
+                }
+            }
+            else // all other fields fall through like normal
+            {
+                RUtility.ReadField(obj, name, value);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(ProjectileManager), "ReadProjPresetData")]
@@ -155,11 +163,24 @@ namespace GameMod
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var dataReader_GetProjData_Method = typeof(DataReader).GetMethod("GetProjData");
+            var dataReader_ReadFieldFilter_Method = typeof(DataReader).GetMethod("ReadFieldFilter");
+
             foreach (var code in instructions)
+            {
                 if (code.opcode == OpCodes.Callvirt && ((MethodInfo)code.operand).Name == "get_text")
+                {
                     yield return new CodeInstruction(OpCodes.Call, dataReader_GetProjData_Method);
+                }
+                else if (code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(RUtility), "ReadField"))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)6); // current ProjPrefab
+                    yield return new CodeInstruction(OpCodes.Call, dataReader_ReadFieldFilter_Method);
+                }
                 else
+                {
                     yield return code;
+                }
+            }
         }
     }
 
