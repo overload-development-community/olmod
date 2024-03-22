@@ -570,22 +570,22 @@ namespace GameMod
                     pos2.y += 100f;
                     DrawDumbTextEntry(uie, pos2, FloatToString(curve_points[0].x), "POINT 1:");
                     pos2.x += 92f;
-                    DrawTextEntry(uie, pos2, 237, currently_edited_index == 0 ? currently_edited_value : FloatToString(curve_points[0].y));
+                    DrawTextEntry(uie, pos2, 237, currently_edited_index == 0 ? currently_edited_value : (FloatToString(curve_points[0].y).Length > 6 ? FloatToString(curve_points[0].y).Substring(0, 6) : FloatToString(curve_points[0].y)));
                     pos2.x -= 92f;
                     pos2.y += 33f;
-                    DrawTextEntry(uie, pos2, 238, currently_edited_index == 1 ? currently_edited_value : FloatToString(curve_points[1].x), "POINT 2:");
+                    DrawTextEntry(uie, pos2, 238, currently_edited_index == 1 ? currently_edited_value : (FloatToString(curve_points[1].x).Length > 6 ? FloatToString(curve_points[1].x).Substring(0, 6) : FloatToString(curve_points[1].x)), "POINT 2:");
                     pos2.x += 92f;
-                    DrawTextEntry(uie, pos2, 239, currently_edited_index == 2 ? currently_edited_value : FloatToString(curve_points[1].y));
+                    DrawTextEntry(uie, pos2, 239, currently_edited_index == 2 ? currently_edited_value : (FloatToString(curve_points[1].y).Length > 6 ? FloatToString(curve_points[1].y).Substring(0, 6) : FloatToString(curve_points[1].y)));
                     pos2.x -= 92f;
                     pos2.y += 33f;
-                    DrawTextEntry(uie, pos2, 240, currently_edited_index == 3 ? currently_edited_value : FloatToString(curve_points[2].x), "POINT 3:");
+                    DrawTextEntry(uie, pos2, 240, currently_edited_index == 3 ? currently_edited_value : (FloatToString(curve_points[2].x).Length > 6 ? FloatToString(curve_points[2].x).Substring(0, 6) : FloatToString(curve_points[2].x)), "POINT 3:");
                     pos2.x += 92f;
-                    DrawTextEntry(uie, pos2, 241, currently_edited_index == 4 ? currently_edited_value : FloatToString(curve_points[2].y));
+                    DrawTextEntry(uie, pos2, 241, currently_edited_index == 4 ? currently_edited_value : (FloatToString(curve_points[2].y).Length > 6 ? FloatToString(curve_points[2].y).Substring(0, 6) : FloatToString(curve_points[2].y)));
                     pos2.x -= 92f;
                     pos2.y += 33f;
                     DrawDumbTextEntry(uie, pos2, FloatToString(curve_points[3].x), "POINT 4:");
                     pos2.x += 92f;
-                    DrawTextEntry(uie, pos2, 242, currently_edited_index == 5 ? currently_edited_value : FloatToString(curve_points[3].y));
+                    DrawTextEntry(uie, pos2, 242, currently_edited_index == 5 ? currently_edited_value : (FloatToString(curve_points[3].y).Length > 6 ? FloatToString(curve_points[3].y).Substring(0, 6) : FloatToString(curve_points[3].y)));
 
 
                     pos.y += 334f;
