@@ -1,3 +1,13 @@
+v0.5.12 - 2024-03-17
+
+- Fixed a bug with Cylone spinup on Linux servers. The config file changes were causing exceptions at round start due to the the way line endings were being interpreted. (roncli)
+- Reduce error logging when failing to save pilot files due to missing write permissions. (luponix)
+- Fixed an audio taunt menu exception when no controllers had been registered with Overload. (luponix)
+- Projectiles use a new server->client fire packet which now includes the weapon charge level (which affects both size and speed, previously omitted) and more accurate position information. (Fireball)
+- Fixed a bug with mouse sliding which allowed players to completely ignore movement speed and acceleration limits. (Fireball)
+- Charging a Thunderbolt will now cancel spawn invulnerability in the same way firing other weapons will. (Fireball)
+- Spawnpoints can now be injected into existing levels without rebuilding them. See https://github.com/overload-development-community/olmod/wiki/Spawnpoint-Injection for details. (Fireball)
+
 v0.5.11 - 2023-09-27
 
 - Cyclone spin up now starts at step 4 out of 8 by default, getting to full speed faster.  This is modifyable using the m_spinup_starting_time variable in projdata under the proj_vortex section, acceptable values are integers between 0 and 8. (Thanks, Tobias!)
