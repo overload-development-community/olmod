@@ -641,6 +641,8 @@ namespace GameMod
                 __instance.DrawStringSmall("[0,0]", zero, 0.4f, StringOffset.LEFT, UIManager.m_col_ui0, 1f, -1f);
             }
 
+            public static bool init = false;
+
             private static void DrawResponseCurve(UIElement __instance, Vector2 initial_pos, int xrange, int yrange)
             {
                 int cv = 6222419;
@@ -670,9 +672,31 @@ namespace GameMod
                     if (!(Controls.m_controllers.Count <= controller_num) & Controls.m_controllers[controller_num].isConnected)
                     {
                         float axis_raw_value = Controls.m_controllers[controller_num].m_joystick.GetAxis(control_num);
-                        float axis_altered_value = Controls.m_controllers[controller_num].GetAxis(MenuManager.m_calibration_current_axis, controller_num);
+                        //float axis_altered_value = Controls.m_controllers[controller_num].GetAxis(MenuManager.m_calibration_current_axis, controller_num);
+                        
+                        float axis_value = axis_raw_value;
+                        if (axis_value < 0f)
+                        {
+                            axis_value *= -1f;
+                        }
+                        float axis_altered_value = axis_value;
+                        ExtendedConfig.Section_JoystickCurve.Controller.Axis a = ExtendedConfig.Section_JoystickCurve.controllers[controller_num].axes[control_num];
+                        int x = (int)(axis_value / 0.005f);
+                        if (x == 0)
+                        {
+                            axis_altered_value = axis_value / 0.005f * a.curve_lookup[1];
+                        }
+                        else if (x == 200)
+                        {
+                            axis_altered_value = Mathf.Clamp(a.curve_lookup[199] + ((axis_value - 0.995f) / 0.005f * (a.curve_lookup[199] - a.curve_lookup[198])), 0f, 1f);
+                        }
+                        else
+                        {
+                            axis_altered_value = a.curve_lookup[x - 1] + ((axis_value - (x - 1) * 0.005f) / 0.005f * (a.curve_lookup[x] - a.curve_lookup[x - 1]));
+                        }
+
                         if (axis_raw_value < 0f) axis_raw_value *= -1f;
-                        if (axis_altered_value < 0f) axis_altered_value *= -1f;
+                        //if (axis_altered_value < 0f) axis_altered_value *= -1f;
 
                         Vector2 start_position = new Vector2(initial_pos.x + xrange * axis_raw_value, initial_pos.y);
                         Vector2 end_position = new Vector2(initial_pos.x + xrange * axis_raw_value, initial_pos.y - axis_altered_value * yrange);
@@ -681,8 +705,6 @@ namespace GameMod
                             new Vector2(initial_pos.x + xrange * axis_raw_value, initial_pos.y + 27f), 0.4f, StringOffset.CENTER, Color.yellow, 1f, -1f);
                     }
 
-                    // draw deadzone
-                    //UIManager.DrawQuadCenterLine(initial_pos, new Vector2(initial_pos.x + (Controllers.controllers[MenuManager.m_calibration_current_controller].axes[MenuManager.m_calibration_current_axis].deadzone / 200f) * xrange, initial_pos.y), 1f, 0f, Color.red, 4);
 
                     // draw the lines from p0->p1, p2->p3
                     start = initial_pos;
@@ -842,8 +864,8 @@ namespace GameMod
                 try
                 {
                     ExtendedConfig.Section_JoystickCurve.Controller.Axis a = ExtendedConfig.Section_JoystickCurve.controllers[controller_num].axes[control_num];
-                    if (axis_value > Controllers.controllers[controller_num].axes[control_num].deadzone / 200f)
-                    {
+                    //if (axis_value > Controllers.controllers[controller_num].axes[control_num].deadzone / 200f)
+                    //{
                         int i = (int)(axis_value / 0.005f);
 
                         if (i == 0)
@@ -859,7 +881,7 @@ namespace GameMod
                         {
                             result = a.curve_lookup[i - 1] + ((axis_value - (i - 1) * 0.005f) / 0.005f * (a.curve_lookup[i] - a.curve_lookup[i - 1]));
                         }
-                    }
+                    //}
                 }
                 catch (Exception ex)
                 {
@@ -905,8 +927,8 @@ namespace GameMod
                             last_adjusted_input = result
                         };
                     }
-                }*/
-
+                }
+                */
                 return false;
 
             }
