@@ -1,4 +1,4 @@
-## olmod 0.5.11 - Overload mod
+## olmod 0.5.12 - Overload mod
 
 **Community mods for Overload**
 
@@ -206,6 +206,10 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 - Frame limiting, by luponix.
 
 - Multiplayer options shown in the lobby, by Fireball.
+
+- Configurable cyclone spinup time, by roncli.
+
+- Spawnpoint injection, by Fireball. See https://github.com/overload-development-community/olmod/wiki/Spawnpoint-Injection for details.
 
 ##### Linux
 

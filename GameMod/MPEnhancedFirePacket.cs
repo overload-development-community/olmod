@@ -15,7 +15,7 @@ namespace GameMod
         {
             foreach (Player player2 in Overload.NetworkManager.m_Players)
             {
-                if ((bool)player2 && !player2.isLocalPlayer && !player2.m_spectator)
+                if ((bool)player2 && !player2.isLocalPlayer)
                 {
                     if (MPTweaks.ClientHasTweak(player2.connectionToClient.connectionId, "efirepacket"))
                     {
