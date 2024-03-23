@@ -108,7 +108,7 @@
     <Compile Include="MPMatchInfo.cs" />
     <Compile Include="MPSpawnExtension.cs" />
     <Compile Include="FramerateLimiter.cs" />
-	<Compile Include="MPEnhancedFirePacket.cs" />
+    <Compile Include="MPEnhancedFirePacket.cs" />
     <Compile Include="MPShips.cs" />
     <Compile Include="MPColliderSwap.cs" />
     <Compile Include="MPPacketStatus.cs" />
@@ -227,6 +227,7 @@
     <Compile Include="ServerTrackerPost.cs" />
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
+    <Compile Include="SPThunderboltShakeFix.cs" />
     <Compile Include="WarperOrientation.cs" />
     <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
