@@ -41,13 +41,13 @@ namespace GameMod
 
             public static void LoadPilotExtendedConfig(string name)
             {
-                if (Network.isServer)
+                SetDefaultConfig();
+
+                if (GameplayManager.IsDedicatedServer())
                 {
                     Debug.Log("ExtendedConfig_PilotManager_Select called on the server");
                     return;
                 }
-
-                SetDefaultConfig();
 
                 var loaded = false;
 
@@ -194,7 +194,7 @@ namespace GameMod
             public static void Postfix()
             {
                 //uConsole.Log("ExtendedConfig_Controls_SaveControlData");
-                if (Network.isServer)
+                if (GameplayManager.IsDedicatedServer())
                 {
                     Debug.Log("ExtendedConfig_Controls_SaveControlData called on the server");
                     return;
@@ -209,7 +209,7 @@ namespace GameMod
             public static void Postfix()
             {
                 //uConsole.Log("ExtendedConfig_PilotManager_SavePreferences");
-                if (Network.isServer)
+                if (GameplayManager.IsDedicatedServer())
                 {
                     Debug.Log("ExtendedConfig_Controls_SavePreferences called on the server");
                     return;
@@ -224,7 +224,7 @@ namespace GameMod
             public static void Prefix()
             {
                 uConsole.Log("ExtendedConfig_PilotManager_Create");
-                if (Network.isServer)
+                if (GameplayManager.IsDedicatedServer())
                 {
                     Debug.Log("ExtendedConfig_PilotManager_Create called on the server");
                     return;
@@ -238,9 +238,9 @@ namespace GameMod
 
             public static void Postfix(string name, bool copy_prefs, bool copy_config)
             {
-                if (Network.isServer)
+                if (GameplayManager.IsDedicatedServer())
                 {
-                    Debug.Log(" called on the server");
+                    Debug.Log("ExtendedConfig_PilotManager_Create.Postfix called on the server");
                     return;
                 }
                 if (!copy_prefs && !copy_config)
@@ -257,7 +257,7 @@ namespace GameMod
         {
             static void Postfix(string filename)
             {
-                if (Network.isServer)
+                if (GameplayManager.IsDedicatedServer())
                 {
                     Debug.Log("ExtendedConfig_Platform_DeleteUserData called on the server");
                     return;
@@ -275,7 +275,7 @@ namespace GameMod
             static void Postfix()
             {
                 //Debug.Log("ExtendedConfig_Controls_OnControllerConnected");
-                if (!Network.isServer)
+                if (!GameplayManager.IsDedicatedServer())
                 {
                     PilotManager.Select(PilotManager.ActivePilot);
                 }
