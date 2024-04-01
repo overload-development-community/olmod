@@ -1252,6 +1252,13 @@ END_ENTRY
             set { MPColliderSwap.selectedCollider = value; }
         }
 
+        /*public static float ColliderScale
+        {
+            get { return MPColliderSwap.colliderScale; }
+            set { MPColliderSwap.colliderScale = value; }
+        }*/
+        public static float ColliderScale { get; set; } = 1f;
+
         public static bool ThunderboltPassthrough
         {
             get { return MPThunderboltPassthrough.isAllowed; }
@@ -1293,6 +1300,7 @@ END_ENTRY
             jobject["assistscoring"] = AssistScoring;
             jobject["joystickrotationfixsupported"] = JoystickRotationFixSupported;
             jobject["shipmeshcollider"] = ShipMeshCollider;
+            jobject["colliderscale"] = ColliderScale;
             jobject["thunderboltpassthrough"] = ThunderboltPassthrough;
             jobject["damagenumbers"] = DamageNumbers;
             jobject["audiotauntsupport"] = AudioTauntsSupported;
@@ -1325,6 +1333,7 @@ END_ENTRY
             AssistScoring = root["assistscoring"].GetBool(true);
             JoystickRotationFixSupported = root["joystickrotationfixsupported"].GetBool(false);
             ShipMeshCollider = root["shipmeshcollider"].GetInt(0);
+            ColliderScale = root["colliderscale"].GetFloat(1f);
             ThunderboltPassthrough = root["thunderboltpassthrough"].GetBool(false);
             DamageNumbers = root["damagenumbers"].GetBool(false);
             AudioTauntsSupported = root["audiotauntsupport"].GetBool(false);
@@ -1620,6 +1629,7 @@ END_ENTRY
             MPModPrivateData.MatchTimeLimit = Menus.mms_match_time_limit == 0 ? int.MaxValue : Menus.mms_match_time_limit;
             MPModPrivateData.AssistScoring = Menus.mms_assist_scoring;
             MPModPrivateData.ShipMeshCollider = Menus.mms_collision_mesh;
+            MPModPrivateData.ColliderScale = MPColliderSwap.colliderScale;
             MPModPrivateData.ThunderboltPassthrough = MPThunderboltPassthrough.isAllowed;
             if (Menus.mms_mp_projdata_fn == "STOCK") {
                 MPModPrivateData.CustomProjdata = string.Empty;

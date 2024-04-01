@@ -8,6 +8,7 @@ namespace GameMod
     public static class MPColliderSwap
     {
         public static int selectedCollider = 0;
+        public static float colliderScale = 1f;
 
         public static bool visualizeMe = false; // For debugging. Turn this on to render the collider mesh.
     }
@@ -42,6 +43,12 @@ namespace GameMod
                 __instance.c_mesh_collider = coll;
                 __instance.c_mesh_collider_trans = __instance.c_mesh_collider.transform;
                 __instance.c_flak_range_go.GetComponent<TriggerFlakRange>().player_collider = coll;
+            }
+
+            if (MPModPrivateData.ColliderScale != 1f)
+            {
+                __instance.c_mesh_collider_trans.localScale = new Vector3(MPModPrivateData.ColliderScale, MPModPrivateData.ColliderScale, MPModPrivateData.ColliderScale);
+                Debug.Log("Ship colliders scaled to " + (int)(MPModPrivateData.ColliderScale * 100) + "%");
             }
         }
     }

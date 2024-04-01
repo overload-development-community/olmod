@@ -192,6 +192,7 @@ namespace GameMod
             public bool assistScoring = true;
             public int teamCount = 2;
             public int shipMeshCollider = 0;
+            public float colliderScale = 1f;
             public bool thunderboltPassthrough;
 
             public void Apply()
@@ -238,6 +239,7 @@ namespace GameMod
                 Menus.mms_assist_scoring = this.assistScoring;
                 MPTeams.MenuManagerTeamCount = this.teamCount;
                 Menus.mms_collision_mesh = this.shipMeshCollider;
+                MPColliderSwap.colliderScale = this.colliderScale;
                 MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
             }
         }

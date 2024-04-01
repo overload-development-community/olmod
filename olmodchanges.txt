@@ -1,3 +1,11 @@
+v0.5.13 - 2024-03-31
+
+- Rewrote the projdata reader that was handling Cyclone spinup. Linux line endings were still breaking it. (derhass/Fireball)
+- Joystick curve editor has received enhancements. (luponix)
+- Thunderbolt shake in single player no correctly respects the framerate of the game. (luponix)
+- General fixes to the interaction between server processes and pilot files. (luponix)
+- 0.5.12's new fire packet is now getting sent to observers correctly. (Fireball)
+
 v0.5.12 - 2024-03-17
 
 - Fixed a bug with Cylone spinup on Linux servers. The config file changes were causing exceptions at round start due to the the way line endings were being interpreted. (roncli)
