@@ -26,7 +26,6 @@ namespace GameMod
     private static TelemetryMod.Telemetry telemetryComponent;
     private static bool initialized = false;
     private static GameObject udpSenderObject;
-    private static Vector3 previousVelocity = Vector3.zero;
 
     [HarmonyPatch(typeof (PlayerShip), "FixedUpdateProcessControlsInternal")]
     private class TelemetryMod_PlayerShip_FixedUpdateProcessControlsInternal
@@ -85,18 +84,22 @@ namespace GameMod
             Rigidbody cRigidbody = GameManager.m_local_player.c_player_ship.c_rigidbody;
             Quaternion rotation = cRigidbody.rotation;
             Vector3 eulerAngles = ((Quaternion) rotation).eulerAngles;
-            Vector3 angularVelocity = cRigidbody.angularVelocity;
-            Vector3 vector3 = (cRigidbody.velocity - TelemetryMod.previousVelocity) / Time.fixedDeltaTime / 9.81f;
-            TelemetryMod.previousVelocity = cRigidbody.velocity;
+
+            // angular velocity relative to object
+            Vector3 localAngularVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.angularVelocity);
+
+            // velocity relative to object
+            Vector3 localVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.velocity);
+
             TelemetryMod.Telemetry.Telemetry_SendTelemetry((double)eulerAngles.z > 180.0 ? eulerAngles.z - 360f : eulerAngles.z,
                                                            (double)eulerAngles.x > 180.0 ? eulerAngles.x - 360f : eulerAngles.x,
                                                            (double)eulerAngles.y > 180.0 ? eulerAngles.y - 360f : eulerAngles.y,
-                                                           angularVelocity.z,
-                                                           angularVelocity.x,
-                                                           angularVelocity.y,
-                                                           vector3.x,
-                                                           vector3.y,
-                                                           vector3.z,
+                                                           localAngularVelocity.z,
+                                                           localAngularVelocity.x,
+                                                           localAngularVelocity.y,
+                                                           localVelocity.x,
+                                                           localVelocity.y,
+                                                           localVelocity.z,
                                                            TelemetryMod.event_boosting,
                                                            TelemetryMod.event_primary_fire,
                                                            TelemetryMod.event_secondary_fire,
