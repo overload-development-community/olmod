@@ -91,7 +91,7 @@ namespace GameMod
                         Vector3 eulerAngles = rotation.eulerAngles;
 
                         Vector3 angularVelocity = cRigidbody.angularVelocity;
-                        Vector3 vector3 = (cRigidbody.velocity - previousVelocity) / Time.fixedDeltaTime / 9.81f;
+                        Vector3 gforce = (cRigidbody.velocity - previousVelocity) / Time.fixedDeltaTime / 9.81f;
                         previousVelocity = cRigidbody.velocity;
 
 
@@ -107,9 +107,9 @@ namespace GameMod
                                                                        angularVelocity.x,
                                                                        angularVelocity.y,
                                                                        angularVelocity.z,
-                                                                       vector3.x,
-                                                                       vector3.y,
-                                                                       vector3.z,
+                                                                       gforce.x,
+                                                                       gforce.y,
+                                                                       gforce.z,
                                                                        event_boosting,
                                                                        event_primary_fire,
                                                                        event_secondary_fire,
