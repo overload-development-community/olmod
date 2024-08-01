@@ -5,220 +5,281 @@
 // Assembly location: H:\SteamLibrary\steamapps\common\Overload\GameMod.dll
 
 using HarmonyLib;
+
 using Overload;
+
 using System.Collections;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace GameMod
 {
-  internal class TelemetryMod
-  {
-    private static bool telemetry_enabled = true;
-    private static float event_boosting = 0.0f;
-    private static float event_primary_fire = 0.0f;
-    private static float event_secondary_fire = 0.0f;
-    private static float event_picked_up_item = 0.0f;
-    private static float event_damage_taken = 0.0f;
-    private static TelemetryMod.Telemetry telemetryComponent;
-    private static bool initialized = false;
-    private static GameObject udpSenderObject;
-
-    [HarmonyPatch(typeof (PlayerShip), "FixedUpdateProcessControlsInternal")]
-    private class TelemetryMod_PlayerShip_FixedUpdateProcessControlsInternal
+    internal class TelemetryMod
     {
-      private static void Prefix()
-      {
-        if (!TelemetryMod.telemetry_enabled)
-          return;
-        TelemetryMod.event_primary_fire = GameManager.m_local_player.IsPressed((CCInput) 14) ? 1f : 0.0f;
-        TelemetryMod.event_secondary_fire = GameManager.m_local_player.IsPressed((CCInput) 15) ? 1f : 0.0f;
-      }
-    }
+        private static bool telemetry_enabled = true;
+        private static float event_boosting = 0.0f;
+        private static float event_primary_fire = 0.0f;
+        private static float event_secondary_fire = 0.0f;
+        private static float event_picked_up_item = 0.0f;
+        private static float event_damage_taken = 0.0f;
+        private static Telemetry telemetryComponent;
+        private static bool initialized = false;
+        private static GameObject udpSenderObject;
+        private static Vector3 previousVelocity = Vector3.zero;
 
-    [HarmonyPatch(typeof (Item), "PlayItemPickupFX")]
-    private class TelemetryMod_Item_PlayItemPickupFX
-    {
-      private static void Postfix(Player player)
-      {
-        if (!TelemetryMod.telemetry_enabled || (Object) player == null || !((NetworkBehaviour) player).isLocalPlayer)
-          return;
-        TelemetryMod.event_secondary_fire = 1f;
-      }
-    }
 
-    [HarmonyPatch(typeof (PlayerShip), "ApplyDamage")]
-    private class TelemetryMod_PlayerShip_ApplyDamage
-    {
-      private static void Postfix(DamageInfo di, PlayerShip __instance)
-      {
-        if (!TelemetryMod.telemetry_enabled || __instance ==  null || !((NetworkBehaviour) __instance).isLocalPlayer)
-          return;
-        TelemetryMod.event_damage_taken += di.damage;
-      }
-    }
-
-    [HarmonyPatch(typeof (GameManager), "FixedUpdate")]
-    private class TelemetryMod_GameManager_FixedUpdate
-    {
-      private static void Postfix()
-      {
-        if (!TelemetryMod.initialized & (Object) GameManager.m_local_player != null)
+        [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
+        private class TelemetryMod_PlayerShip_FixedUpdateProcessControlsInternal
         {
-          TelemetryMod.initialized = true;
-          TelemetryMod.udpSenderObject = new GameObject("UdpTelemetrySender");
-          TelemetryMod.telemetryComponent = TelemetryMod.udpSenderObject.AddComponent<TelemetryMod.Telemetry>();
-          TelemetryMod.telemetryComponent.IP = "127.0.0.1";
-          TelemetryMod.telemetryComponent.port = 4123;
+            private static void Prefix()
+            {
+                if (!telemetry_enabled)
+                    return;
+                event_primary_fire = GameManager.m_local_player.IsPressed((CCInput)14) ? 1f : 0.0f;
+                event_secondary_fire = GameManager.m_local_player.IsPressed((CCInput)15) ? 1f : 0.0f;
+            }
         }
-        else
+
+        [HarmonyPatch(typeof(Item), "PlayItemPickupFX")]
+        private class TelemetryMod_Item_PlayItemPickupFX
         {
-          if (!TelemetryMod.initialized)
-            return;
-          TelemetryMod.event_boosting = GameManager.m_local_player.c_player_ship.m_boosting ? 1f : 0.0f;
-          if (GameplayManager.m_gameplay_state == 0)
-          {
-            Rigidbody cRigidbody = GameManager.m_local_player.c_player_ship.c_rigidbody;
-            Quaternion rotation = cRigidbody.rotation;
-            Vector3 eulerAngles = ((Quaternion) rotation).eulerAngles;
-
-            // angular velocity relative to object
-            Vector3 localAngularVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.angularVelocity);
-
-            // velocity relative to object
-            Vector3 localVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.velocity);
-
-            TelemetryMod.Telemetry.Telemetry_SendTelemetry((double)eulerAngles.z > 180.0 ? eulerAngles.z - 360f : eulerAngles.z,
-                                                           (double)eulerAngles.x > 180.0 ? eulerAngles.x - 360f : eulerAngles.x,
-                                                           (double)eulerAngles.y > 180.0 ? eulerAngles.y - 360f : eulerAngles.y,
-                                                           localAngularVelocity.z,
-                                                           localAngularVelocity.x,
-                                                           localAngularVelocity.y,
-                                                           localVelocity.x,
-                                                           localVelocity.y,
-                                                           localVelocity.z,
-                                                           TelemetryMod.event_boosting,
-                                                           TelemetryMod.event_primary_fire,
-                                                           TelemetryMod.event_secondary_fire,
-                                                           TelemetryMod.event_picked_up_item,
-                                                           TelemetryMod.event_damage_taken);
-          }
-          else
-            TelemetryMod.Telemetry.Telemetry_SendTelemetry(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-          TelemetryMod.event_boosting = 0.0f;
-          TelemetryMod.event_primary_fire = 0.0f;
-          TelemetryMod.event_secondary_fire = 0.0f;
-          TelemetryMod.event_picked_up_item = 0.0f;
-          TelemetryMod.event_damage_taken = 0.0f;
+            private static void Postfix(Player player)
+            {
+                if (!telemetry_enabled || player == null || !player.isLocalPlayer)
+                    return;
+                event_secondary_fire = 1f;
+            }
         }
-      }
-    }
 
-    private class PlayerData
-    {
-      public float Roll;
-      public float Pitch;
-      public float Yaw;
-      public float Heave;
-      public float Sway;
-      public float Surge;
-      public float Extra1;
-      public float Extra2;
-      public float Extra3;
-      public float EventBoosting;
-      public float EventPrimaryFire;
-      public float EventSecondaryFire;
-      public float EventItemPickup;
-      public float EventDamageTaken;
-
-      public PlayerData()
-      {
-      }
-
-      public PlayerData(
-        float Roll,
-        float Pitch,
-        float Yaw,
-        float Heave,
-        float Sway,
-        float Surge,
-        float Extra1,
-        float Extra2,
-        float Extra3,
-        float Boosting,
-        float PrimaryFire,
-        float SecondaryFire,
-        float ItemPickup,
-        float DamageTaken)
-      {
-        this.Roll = Roll;
-        this.Pitch = Pitch;
-        this.Yaw = Yaw;
-        this.Heave = Heave;
-        this.Sway = Sway;
-        this.Surge = Surge;
-        this.Extra1 = Extra1;
-        this.Extra2 = Extra2;
-        this.Extra3 = Extra3;
-        this.EventBoosting = Boosting;
-        this.EventPrimaryFire = PrimaryFire;
-        this.EventSecondaryFire = SecondaryFire;
-        this.EventItemPickup = ItemPickup;
-        this.EventDamageTaken = DamageTaken;
-      }
-    }
-
-    public class Telemetry : MonoBehaviour
-    {
-      public string IP = "127.0.0.1";
-      public int port = 4123;
-      private IPEndPoint remoteEndPoint;
-      private static UdpClient client;
-      private static TelemetryMod.PlayerData local_player_data;
-
-      private void Start()
-      {
-        Object.DontDestroyOnLoad((Object) ((Component) this).gameObject);
-        this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(this.IP), this.port);
-        TelemetryMod.Telemetry.client = new UdpClient();
-        TelemetryMod.Telemetry.local_player_data = new TelemetryMod.PlayerData();
-        this.StartCoroutine("Telemetry_Start");
-      }
-
-      public static void Telemetry_SendTelemetry(
-        float Roll,
-        float Pitch,
-        float Yaw,
-        float Heave,
-        float Sway,
-        float Surge,
-        float Extra1,
-        float Extra2,
-        float Extra3,
-        float Boosting,
-        float PrimaryFire,
-        float SecondaryFire,
-        float ItemPickup,
-        float DamageTaken)
-      {
-        TelemetryMod.Telemetry.local_player_data = new TelemetryMod.PlayerData(Roll, Pitch, Yaw, Heave, Sway, Surge, Extra1, Extra2, Extra3, Boosting, PrimaryFire, SecondaryFire, ItemPickup, DamageTaken);
-      }
-
-      private IEnumerator Telemetry_Start()
-      {
-        while (true)
+        [HarmonyPatch(typeof(PlayerShip), "ApplyDamage")]
+        private class TelemetryMod_PlayerShip_ApplyDamage
         {
-          string info = string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12};{13}", (object) TelemetryMod.Telemetry.local_player_data.Roll, (object) TelemetryMod.Telemetry.local_player_data.Pitch, (object) TelemetryMod.Telemetry.local_player_data.Yaw, (object) TelemetryMod.Telemetry.local_player_data.Heave, (object) TelemetryMod.Telemetry.local_player_data.Sway, (object) TelemetryMod.Telemetry.local_player_data.Surge, (object) TelemetryMod.Telemetry.local_player_data.Extra1, (object) TelemetryMod.Telemetry.local_player_data.Extra2, (object) TelemetryMod.Telemetry.local_player_data.Extra3, (object) TelemetryMod.Telemetry.local_player_data.EventBoosting, (object) TelemetryMod.Telemetry.local_player_data.EventPrimaryFire, (object) TelemetryMod.Telemetry.local_player_data.EventSecondaryFire, (object) TelemetryMod.Telemetry.local_player_data.EventItemPickup, (object) TelemetryMod.Telemetry.local_player_data.EventDamageTaken);
-          byte[] data = Encoding.Default.GetBytes(info);
-          TelemetryMod.Telemetry.client.Send(data, data.Length, this.remoteEndPoint);
-          yield return (object) null;
-          info = (string) null;
-          data = (byte[]) null;
+            private static void Postfix(DamageInfo di, PlayerShip __instance)
+            {
+                if (!telemetry_enabled || __instance == null || !__instance.isLocalPlayer)
+                    return;
+                event_damage_taken += di.damage;
+            }
         }
-      }
+
+        [HarmonyPatch(typeof(GameManager), "FixedUpdate")]
+        private class TelemetryMod_GameManager_FixedUpdate
+        {
+            private static void Postfix()
+            {
+                if (!initialized & GameManager.m_local_player != null)
+                {
+                    initialized = true;
+                    udpSenderObject = new GameObject("UdpTelemetrySender");
+                    telemetryComponent = udpSenderObject.AddComponent<Telemetry>();
+                    telemetryComponent.IP = "127.0.0.1";
+                    telemetryComponent.port = 4123;
+                }
+                else
+                {
+                    if (!initialized)
+                        return;
+                    event_boosting = GameManager.m_local_player.c_player_ship.m_boosting ? 1f : 0.0f;
+                    if (GameplayManager.m_gameplay_state == 0)
+                    {
+                        Rigidbody cRigidbody = GameManager.m_local_player.c_player_ship.c_rigidbody;
+                        Quaternion rotation = cRigidbody.rotation;
+                        Vector3 eulerAngles = rotation.eulerAngles;
+
+                        Vector3 angularVelocity = cRigidbody.angularVelocity;
+                        Vector3 vector3 = (cRigidbody.velocity - previousVelocity) / Time.fixedDeltaTime / 9.81f;
+                        previousVelocity = cRigidbody.velocity;
+
+
+                        // angular velocity relative to object
+                        Vector3 localAv = cRigidbody.transform.InverseTransformDirection(cRigidbody.angularVelocity);
+
+                        // velocity relative to object
+                        Vector3 lv = cRigidbody.transform.InverseTransformDirection(cRigidbody.velocity);
+
+                        Telemetry.Telemetry_SendTelemetry(eulerAngles.z > 180.0 ? eulerAngles.z - 360f : eulerAngles.z,
+                                                                       eulerAngles.x > 180.0 ? eulerAngles.x - 360f : eulerAngles.x,
+                                                                       eulerAngles.y > 180.0 ? eulerAngles.y - 360f : eulerAngles.y,
+                                                                       angularVelocity.x,
+                                                                       angularVelocity.y,
+                                                                       angularVelocity.z,
+                                                                       vector3.x,
+                                                                       vector3.y,
+                                                                       vector3.z,
+                                                                       event_boosting,
+                                                                       event_primary_fire,
+                                                                       event_secondary_fire,
+                                                                       event_picked_up_item,
+                                                                       event_damage_taken,
+                                                                       localAv.x,
+                                                                       localAv.y,
+                                                                       localAv.z,
+                                                                       lv.x,
+                                                                       lv.y,
+                                                                       lv.z);
+                    }
+                    else
+                        Telemetry.Telemetry_SendTelemetry(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f);
+
+                    event_boosting = 0.0f;
+                    event_primary_fire = 0.0f;
+                    event_secondary_fire = 0.0f;
+                    event_picked_up_item = 0.0f;
+                    event_damage_taken = 0.0f;
+                }
+            }
+        }
+
+        private class PlayerData
+        {
+            public float Roll;
+            public float Pitch;
+            public float Yaw;
+            
+            public float AngularVelocityX;
+            public float AngularVelocityY;
+            public float AngularVelocityZ;
+
+            public float GForceX;
+            public float GForceY;
+            public float GForceZ;
+            public float EventBoosting;
+            public float EventPrimaryFire;
+            public float EventSecondaryFire;
+            public float EventItemPickup;
+            public float EventDamageTaken;
+
+            public float LocalAngularVelocityX;
+            public float LocalAngularVelocityY;
+            public float LocalAngularVelocityZ;
+
+            public float Sway;
+            public float Heave;
+            public float Surge;
+
+            public PlayerData()
+            {
+            }
+
+            public PlayerData(
+              float roll,
+              float pitch,
+              float yaw,
+              float angularVelocityX,
+              float angularVelocityY,
+              float angularVelocityZ,
+              float gforcex,
+              float geforcey,
+              float geforcez,
+              float boosting,
+              float primaryFire,
+              float secondaryFire,
+              float itemPickup,
+              float damageTaken,
+              float localAngularVelocityX,
+              float localAngularVelocityY,
+              float localAngularVelocityZ,
+              float sway,
+              float heave,
+              float surge
+              )
+            {
+                Roll = roll;
+                Pitch = pitch;
+                Yaw = yaw;
+                
+                
+                AngularVelocityX = angularVelocityX;
+                AngularVelocityY = angularVelocityY;
+                AngularVelocityZ = angularVelocityZ;
+
+                GForceX = gforcex;
+                GForceY = geforcey;
+                GForceZ = geforcez;
+                
+                EventBoosting = boosting;
+                EventPrimaryFire = primaryFire;
+                EventSecondaryFire = secondaryFire;
+                EventItemPickup = itemPickup;
+                EventDamageTaken = damageTaken;
+
+                
+                LocalAngularVelocityX = localAngularVelocityX;
+                LocalAngularVelocityY = localAngularVelocityY;
+                LocalAngularVelocityZ = localAngularVelocityZ;
+
+
+                Sway = sway;
+                Heave = heave;
+                Surge = surge;
+
+            }
+        }
+
+        public class Telemetry : MonoBehaviour
+        {
+            public string IP = "127.0.0.1";
+            public int port = 4123;
+            private IPEndPoint remoteEndPoint;
+            private static UdpClient client;
+            private static PlayerData local_player_data;
+
+            private void Start()
+            {
+                DontDestroyOnLoad(gameObject);
+                this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(this.IP), this.port);
+                client = new UdpClient();
+                local_player_data = new PlayerData();
+                this.StartCoroutine("Telemetry_Start");
+            }
+
+            public static void Telemetry_SendTelemetry(
+              float roll, float pitch, float yaw,
+              float angularVelocityX, float angularVelocityY, float angularVelocityZ,
+              float gforcex, float gforcey, float gforcez,
+              float boosting,
+              float primaryFire, float secondaryFire,
+              float itemPickup,
+              float damageTaken,
+              float localAngularVelocityX, float localAngularVelocityY, float localAngularVelocityZ,
+              float sway, float heave, float surge)
+            {
+                local_player_data = new PlayerData(roll, pitch, yaw,
+                                                   angularVelocityX, angularVelocityY, angularVelocityZ,
+                                                   gforcex, gforcey, gforcez,
+                                                   boosting,
+                                                   primaryFire, secondaryFire,
+                                                   itemPickup,
+                                                   damageTaken,
+                                                   localAngularVelocityX, localAngularVelocityY, localAngularVelocityZ,
+                                                   sway, heave, surge);
+            }
+
+            private IEnumerator Telemetry_Start()
+            {
+                while (true)
+                {
+                    string info = string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12};{13};{14};{15};{16};{17};{18};{19}", 
+                        local_player_data.Roll, local_player_data.Pitch, local_player_data.Yaw, 
+                        local_player_data.AngularVelocityZ, local_player_data.AngularVelocityX, local_player_data.AngularVelocityY, 
+                        local_player_data.GForceX, local_player_data.GForceY, local_player_data.GForceZ, 
+                        local_player_data.EventBoosting, 
+                        local_player_data.EventPrimaryFire, local_player_data.EventSecondaryFire, 
+                        local_player_data.EventItemPickup, local_player_data.EventDamageTaken,
+                        local_player_data.LocalAngularVelocityX, local_player_data.LocalAngularVelocityY, local_player_data.LocalAngularVelocityZ,
+                        local_player_data.Sway, local_player_data.Heave, local_player_data.Surge);
+                    
+                    byte[] data = Encoding.Default.GetBytes(info);
+                    client.Send(data, data.Length, this.remoteEndPoint);
+                    yield return null;
+                    info = null;
+                    data = null;
+                }
+            }
+        }
     }
-  }
 }
