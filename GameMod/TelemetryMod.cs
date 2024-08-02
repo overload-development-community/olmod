@@ -1,10 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: GameMod.TelemetryMod
-// Assembly: GameMod, Version=0.5.13.0, Culture=neutral, PublicKeyToken=null
-// MVID: 07E71B55-E588-4E1E-892E-01FD6C135707
-// Assembly location: H:\SteamLibrary\steamapps\common\Overload\GameMod.dll
-
-using HarmonyLib;
+﻿using HarmonyLib;
 
 using Overload;
 
@@ -18,6 +12,9 @@ using UnityEngine.Networking;
 
 namespace GameMod
 {
+    /// <summary>
+    /// v 1.1.1
+    /// </summary>
     internal class TelemetryMod
     {
         private static bool telemetry_enabled = true;
@@ -29,7 +26,8 @@ namespace GameMod
         private static Telemetry telemetryComponent;
         private static bool initialized = false;
         private static GameObject udpSenderObject;
-        private static Vector3 previousVelocity = Vector3.zero;
+        private static Vector3 previousVelocity = Vector3.zero; 
+        private static Vector3 previousLocalVelocity = Vector3.zero;
 
 
         [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
@@ -89,41 +87,38 @@ namespace GameMod
                         Rigidbody cRigidbody = GameManager.m_local_player.c_player_ship.c_rigidbody;
                         Quaternion rotation = cRigidbody.rotation;
                         Vector3 eulerAngles = rotation.eulerAngles;
-
                         Vector3 angularVelocity = cRigidbody.angularVelocity;
+
+                        // angular velocity relative to object
+                        Vector3 localAngularVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.angularVelocity);
+
+                        // velocity relative to object
+                        Vector3 localVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.velocity);
+
                         Vector3 gforce = (cRigidbody.velocity - previousVelocity) / Time.fixedDeltaTime / 9.81f;
                         previousVelocity = cRigidbody.velocity;
 
+                        Vector3 lgforce = (localVelocity - previousLocalVelocity) / Time.fixedDeltaTime / 9.81f;
+                        previousLocalVelocity = localVelocity;
 
-                        // angular velocity relative to object
-                        Vector3 localAv = cRigidbody.transform.InverseTransformDirection(cRigidbody.angularVelocity);
 
-                        // velocity relative to object
-                        Vector3 lv = cRigidbody.transform.InverseTransformDirection(cRigidbody.velocity);
-
-                        Telemetry.Telemetry_SendTelemetry(eulerAngles.z > 180.0 ? eulerAngles.z - 360f : eulerAngles.z,
-                                                                       eulerAngles.x > 180.0 ? eulerAngles.x - 360f : eulerAngles.x,
-                                                                       eulerAngles.y > 180.0 ? eulerAngles.y - 360f : eulerAngles.y,
-                                                                       angularVelocity.x,
-                                                                       angularVelocity.y,
-                                                                       angularVelocity.z,
-                                                                       gforce.x,
-                                                                       gforce.y,
-                                                                       gforce.z,
-                                                                       event_boosting,
-                                                                       event_primary_fire,
-                                                                       event_secondary_fire,
-                                                                       event_picked_up_item,
-                                                                       event_damage_taken,
-                                                                       localAv.x,
-                                                                       localAv.y,
-                                                                       localAv.z,
-                                                                       lv.x,
-                                                                       lv.y,
-                                                                       lv.z);
+                        Telemetry.Telemetry_SendTelemetry(  new Vector3(
+                            eulerAngles.x > 180.0 ? eulerAngles.x - 360f : eulerAngles.x, 
+                            eulerAngles.y > 180.0 ? eulerAngles.y - 360f : eulerAngles.y, 
+                            eulerAngles.z > 180.0 ? eulerAngles.z - 360f : eulerAngles.z),
+                            angularVelocity,
+                            gforce,
+                            event_boosting,
+                            event_primary_fire,
+                            event_secondary_fire,
+                            event_picked_up_item,
+                            event_damage_taken,
+                            lgforce,
+                            localAngularVelocity,
+                            localVelocity);
                     }
                     else
-                        Telemetry.Telemetry_SendTelemetry(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f);
+                        Telemetry.Telemetry_SendTelemetry(Vector3.zero, Vector3.zero, Vector3.zero, 0f, 0f, 0f, 0f, 0f, Vector3.zero, Vector3.zero, Vector3.zero);
 
                     event_boosting = 0.0f;
                     event_primary_fire = 0.0f;
@@ -136,70 +131,79 @@ namespace GameMod
 
         private class PlayerData
         {
-            public float Roll;
-            public float Pitch;
-            public float Yaw;
-            
-            public float AngularVelocityX;
-            public float AngularVelocityY;
-            public float AngularVelocityZ;
+            /// <summary>
+            /// pitch (x), yaw (y), roll (z)
+            /// </summary>
+            public Vector3 Rotation;
 
-            public float GForceX;
-            public float GForceY;
-            public float GForceZ;
+            /// <summary>
+            /// pitch (x), yaw (y), roll (z)
+            /// </summary>
+            public Vector3 AngularVelocity;
+
+            /// <summary>
+            /// sway (x), heave (y), surge (z)
+            /// </summary>
+            public Vector3 GForce;
+
+            /// <summary>
+            /// pitch (x), yaw (y), roll (z)
+            /// </summary>
+            public Vector3 LocalAngularVelocity;
+
+            /// <summary>
+            /// sway (x), heave (y), surge (z)
+            /// </summary>
+            public Vector3 LocalVelocity;
+
+            /// <summary>
+            /// sway (x), heave (y), surge (z)
+            /// </summary>
+            public Vector3 LocalGForce;
+
             public float EventBoosting;
             public float EventPrimaryFire;
             public float EventSecondaryFire;
             public float EventItemPickup;
             public float EventDamageTaken;
 
-            public float LocalAngularVelocityX;
-            public float LocalAngularVelocityY;
-            public float LocalAngularVelocityZ;
-
-            public float Sway;
-            public float Heave;
-            public float Surge;
+            
 
             public PlayerData()
             {
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="rotation">pitch(x), yaw(y), roll(z)</param>
+            /// <param name="angularVelocity">pitch (x), yaw (y), roll (z)</param>
+            /// <param name="gforce">sway (x), heave (y), surge (z)</param>
+            /// <param name="boosting"></param>
+            /// <param name="primaryFire"></param>
+            /// <param name="secondaryFire"></param>
+            /// <param name="itemPickup"></param>
+            /// <param name="damageTaken"></param>
+            /// <param name="localgForce">sway (x), heave (y), surge (z)</param>
+            /// <param name="localAngularVelocity">pitch (x), yaw (y), roll (z)</param>
+            /// <param name="localVelocity">sway (x), heave (y), surge (z)</param>
             public PlayerData(
-              float roll,
-              float pitch,
-              float yaw,
-              float angularVelocityX,
-              float angularVelocityY,
-              float angularVelocityZ,
-              float gforcex,
-              float geforcey,
-              float geforcez,
+              Vector3 rotation,
+              Vector3 angularVelocity,
+              Vector3 gforce,
               float boosting,
               float primaryFire,
               float secondaryFire,
               float itemPickup,
               float damageTaken,
-              float localAngularVelocityX,
-              float localAngularVelocityY,
-              float localAngularVelocityZ,
-              float sway,
-              float heave,
-              float surge
+              Vector3 localgForce,
+              Vector3 localAngularVelocity,
+              Vector3 localVelocity
               )
             {
-                Roll = roll;
-                Pitch = pitch;
-                Yaw = yaw;
-                
-                
-                AngularVelocityX = angularVelocityX;
-                AngularVelocityY = angularVelocityY;
-                AngularVelocityZ = angularVelocityZ;
-
-                GForceX = gforcex;
-                GForceY = geforcey;
-                GForceZ = geforcez;
+                Rotation = rotation;
+                AngularVelocity = angularVelocity;
+                GForce = gforce;
                 
                 EventBoosting = boosting;
                 EventPrimaryFire = primaryFire;
@@ -207,15 +211,9 @@ namespace GameMod
                 EventItemPickup = itemPickup;
                 EventDamageTaken = damageTaken;
 
-                
-                LocalAngularVelocityX = localAngularVelocityX;
-                LocalAngularVelocityY = localAngularVelocityY;
-                LocalAngularVelocityZ = localAngularVelocityZ;
-
-
-                Sway = sway;
-                Heave = heave;
-                Surge = surge;
+                LocalGForce = localgForce;
+                LocalAngularVelocity = localAngularVelocity;
+                LocalVelocity = localVelocity;
 
             }
         }
@@ -238,40 +236,43 @@ namespace GameMod
             }
 
             public static void Telemetry_SendTelemetry(
-              float roll, float pitch, float yaw,
-              float angularVelocityX, float angularVelocityY, float angularVelocityZ,
-              float gforcex, float gforcey, float gforcez,
+              Vector3 rotation,
+              Vector3 angularVelocity,
+              Vector3 gforce,
               float boosting,
               float primaryFire, float secondaryFire,
               float itemPickup,
               float damageTaken,
-              float localAngularVelocityX, float localAngularVelocityY, float localAngularVelocityZ,
-              float sway, float heave, float surge)
+              Vector3 localgForce,
+              Vector3 localAngularVelocity,
+              Vector3 localVelocity)
             {
-                local_player_data = new PlayerData(roll, pitch, yaw,
-                                                   angularVelocityX, angularVelocityY, angularVelocityZ,
-                                                   gforcex, gforcey, gforcez,
+                local_player_data = new PlayerData(rotation,
+                                                   angularVelocity,
+                                                   gforce,
                                                    boosting,
                                                    primaryFire, secondaryFire,
                                                    itemPickup,
                                                    damageTaken,
-                                                   localAngularVelocityX, localAngularVelocityY, localAngularVelocityZ,
-                                                   sway, heave, surge);
+                                                   localgForce,
+                                                   localAngularVelocity,
+                                                   localVelocity);
             }
 
             private IEnumerator Telemetry_Start()
             {
                 while (true)
                 {
-                    string info = string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12};{13};{14};{15};{16};{17};{18};{19}", 
-                        local_player_data.Roll, local_player_data.Pitch, local_player_data.Yaw, 
-                        local_player_data.AngularVelocityZ, local_player_data.AngularVelocityX, local_player_data.AngularVelocityY, 
-                        local_player_data.GForceX, local_player_data.GForceY, local_player_data.GForceZ, 
+                    string info = string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12};{13};{14};{15};{16};{17};{18};{19};{20};{21};{22}", 
+                        local_player_data.Rotation.z, local_player_data.Rotation.x, local_player_data.Rotation.y,                       // out of order for backwards compatibility with simtools
+                        local_player_data.AngularVelocity.z, local_player_data.AngularVelocity.x, local_player_data.AngularVelocity.y,  // out of order for backwards compatibility with simtools
+                        local_player_data.GForce.x, local_player_data.GForce.y, local_player_data.GForce.z, 
                         local_player_data.EventBoosting, 
                         local_player_data.EventPrimaryFire, local_player_data.EventSecondaryFire, 
                         local_player_data.EventItemPickup, local_player_data.EventDamageTaken,
-                        local_player_data.LocalAngularVelocityX, local_player_data.LocalAngularVelocityY, local_player_data.LocalAngularVelocityZ,
-                        local_player_data.Sway, local_player_data.Heave, local_player_data.Surge);
+                        local_player_data.LocalGForce.x, local_player_data.LocalGForce.y, local_player_data.LocalGForce.z,
+                        local_player_data.LocalAngularVelocity.x, local_player_data.LocalAngularVelocity.y, local_player_data.LocalAngularVelocity.z,
+                        local_player_data.LocalVelocity.x, local_player_data.LocalVelocity.y, local_player_data.LocalVelocity.z);
                     
                     byte[] data = Encoding.Default.GetBytes(info);
                     client.Send(data, data.Length, this.remoteEndPoint);
