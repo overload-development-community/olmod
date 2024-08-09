@@ -90,10 +90,10 @@ namespace GameMod.Core {
                 uConsole.RegisterCommand("export-spawns", "Exports spawnpoints from the editor to a .json file in the OLmod directory", new uConsole.DebugCommand(MPSpawnExtensionVis.Export));
             }
 
-            if (FindArg("telemetry")) 
+            if (FindArg("-telemetry")) 
                 TelemetryMod.telemetry_enabled = true;
 
-            if (FindArgVal("telemetry-ip", out string ip_string)){
+            if (FindArgVal("-telemetry-ip", out string ip_string)){
                 if (!String.IsNullOrEmpty(ip_string))
                 {
                     string[] ip_string_parts = ip_string.Split('.');
@@ -114,7 +114,7 @@ namespace GameMod.Core {
                 }
             }
 
-            if (FindArgVal("telemetry-port", out string port_string))
+            if (FindArgVal("-telemetry-port", out string port_string))
             {
                 if (int.TryParse(port_string, out int port))
                     if (port >= 0 && port < 65535)
