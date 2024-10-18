@@ -38,6 +38,15 @@ namespace GameMod
             return (1<<(m + (int)MissileType.NUM));
         }
 
+        private static void SetFilterBit(int bit, bool allowed = true)
+        {
+            if (allowed) {
+                LoadoutFilterBitmask |= bit;
+            } else {
+                LoadoutFilterBitmask &= ~bit;
+            }
+        }
+
         public static bool IsAllowedByFilter(WeaponType weapon, int filter)
         {
             if (weapon >= WeaponType.NUM) {
@@ -52,6 +61,26 @@ namespace GameMod
                 return true; // the "no such missile" is also always allowed
             }
             return ( (filter & GetFilterBit(missile)) != 0);
+        }
+
+        public static bool IsAllowed(WeaponType weapon)
+        {
+            return IsAllowedByFilter(weapon, LoadoutFilterBitmask);
+        }
+
+        public static bool IsAllowed(MissileType missile)
+        {
+            return IsAllowedByFilter(missile, LoadoutFilterBitmask);
+        }
+
+        public static void SetAllowed(WeaponType weapon, bool allowed = true)
+        {
+            SetFilterBit(GetFilterBit(weapon), allowed);
+        }
+
+        public static void SetAllowed(MissileType missile, bool allowed = true)
+        {
+            SetFilterBit(GetFilterBit(missile), allowed);
         }
 
         private static WeaponType FindFirstUnsedAllowed(List<WeaponType> weapons, int filter)
