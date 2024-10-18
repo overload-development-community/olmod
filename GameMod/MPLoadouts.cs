@@ -505,26 +505,6 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "SendLoadoutDataToClients")]
     internal class MPLoadouts_Server_SendLoadoutDataToClients
     {
-        /*
-        static void Prefix()
-        {
-            foreach (var kvp in MPLoadouts.NetworkLoadouts)
-            {
-                foreach (var loadout in kvp.Value.loadouts)
-                {
-                    loadout.weapons.RemoveAll(weapon => weapon == WeaponType.IMPULSE);
-                    loadout.weapons.Clear();
-                    loadout.missiles.Clear();
-                    loadout.weapons.Add(WeaponType.THUNDERBOLT);
-                    loadout.weapons.Add(WeaponType.NUM);
-                    loadout.missiles.Add(MissileType.NUM);
-                    loadout.missiles.Add(MissileType.NUM);
-
-                }
-            }
-        }
-        */
-
         static void Postfix()
         {
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
