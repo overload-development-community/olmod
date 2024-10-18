@@ -139,14 +139,14 @@ namespace GameMod
                     if (i > 0) {
                         desc = desc + ", ";
                     }
-                    desc = Player.GetWeaponNameNoDefault(weapons[i]);
+                    desc = desc + Player.GetWeaponNameNoDefault(weapons[i]);
                 }
                 desc = desc + "} missiles: {";
                 for(int i=0; i<missiles.Count; i++) {
                     if (i > 0) {
                         desc = desc + ", ";
                     }
-                    desc = Player.GetMissileNameNoDefault(missiles[i]);
+                    desc = desc + Player.GetMissileNameNoDefault(missiles[i]);
                 }
                 desc = desc + "}";
                 return desc;
