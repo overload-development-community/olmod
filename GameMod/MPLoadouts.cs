@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Networking.NetworkSystem;
 
 namespace GameMod
 {
@@ -216,6 +217,68 @@ namespace GameMod
             public void ApplyFilter()
             {
                 ApplyFilter(LoadoutFilterBitmask);
+            }
+
+            public void ImportLegacyLoadout(Overload.LoadoutDataMessage ldm, int index)
+            {
+                weapons.Clear();
+                weapons.Add(ldm.GetMpLoadoutWeapon1(index));
+                WeaponType w = ldm.GetMpLoadoutWeapon2(index);
+                if (w != WeaponType.NUM) {
+                    weapons.Add(w);
+                    loadoutType = LoadoutType.GUNNER;
+                } else {
+                    loadoutType = LoadoutType.BOMBER;
+                }
+
+                missiles.Clear();
+                missiles.Add(ldm.GetMpLoadoutMissile1(index));
+                if (loadoutType == LoadoutType.BOMBER) {
+                    missiles.Add(ldm.GetMpLoadoutMissile2(index));
+                }
+            }
+
+            public void ExportToLegacyLoadout(Overload.LoadoutDataMessage ldm, int index)
+            {
+                if (loadoutType == LoadoutType.BOMBER) {
+                    for (int i=0; i<6; i++) {
+                        if (ldm.GetMpLoadoutWeapon1(i)  == weapons[0] && ldm.GetMpLoadoutMissile1(i) == missiles[0] && ldm.GetMpLoadoutMissile2(i) == missiles[1]) {
+                            if (index > 0) {
+                                ldm.m_mp_loadout2 = i;
+                            } else {
+                                ldm.m_mp_loadout1 = i;
+                            }
+                            return;
+                        }
+                    }
+                    if (index > 0) {
+                        ldm.m_mp_loadout2 = 6;
+                    } else {
+                        ldm.m_mp_loadout1 = 6;
+                    }
+                    ldm.m_mp_custom1_w1 = weapons[0];
+                    ldm.m_mp_custom1_m1 = missiles[0];
+                    ldm.m_mp_custom1_m2 = missiles[1];
+                } else {
+                    for (int i=0; i<6; i++) {
+                        if (ldm.GetMpLoadoutWeapon1(i)  == weapons[0] && ldm.GetMpLoadoutWeapon2(i) == weapons[1] && ldm.GetMpLoadoutMissile1(i) == missiles[0]) {
+                            if (index > 0) {
+                                ldm.m_mp_loadout2 = i;
+                            } else {
+                                ldm.m_mp_loadout1 = i;
+                            }
+                            return;
+                        }
+                    }
+                    if (index > 0) {
+                        ldm.m_mp_loadout2 = 7;
+                    } else {
+                        ldm.m_mp_loadout1 = 7;
+                    }
+                    ldm.m_mp_custom2_w1 = weapons[0];
+                    ldm.m_mp_custom2_w2 = weapons[1];
+                    ldm.m_mp_custom2_m1 = missiles[0];
+                }
             }
         }
 
@@ -472,6 +535,10 @@ namespace GameMod
                     {
                         NetworkServer.SendToClient(player.connectionToClient.connectionId, MessageTypes.MsgCustomLoadouts, kvp.Value);
                     }
+                }
+                if ((MPLoadouts.LoadoutFilterBitmask & MPLoadouts.MASK_ALL_WEAPONS) == 0 && !MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "noprimaries")) {
+                    // this client can't join this game
+                    NetworkServer.SendToClient(player.connectionToClient.connectionId, CustomMsgType.UnsupportedMatch, new StringMessage("This match enforces NO PRIMARIES in the loadout, which is not supported for legacy clients"));
                 }
             }
         }
@@ -1039,6 +1106,33 @@ namespace GameMod
             }
         }
     }
+
+    // Take care about the old-style loadout messages, especially apply the filters there, too
+    [HarmonyPatch(typeof(NetworkMatch), "UpdatePlayerLoadout")]
+    class MPLoadouts_NetworkMatch_UpdatePlayerLoadout {
+        static void Prefix(int lobby_id, ref Overload.LoadoutDataMessage ldm) {
+            MPLoadouts.CustomLoadout l1 = new MPLoadouts.CustomLoadout();
+            MPLoadouts.CustomLoadout l2 = new MPLoadouts.CustomLoadout();
+
+            l1.ImportLegacyLoadout(ldm, ldm.m_mp_loadout1);
+            l2.ImportLegacyLoadout(ldm, ldm.m_mp_loadout2);
+
+            ldm.m_mp_custom1_w1 = WeaponType.NUM;
+            ldm.m_mp_custom2_w1 = WeaponType.NUM;
+            ldm.m_mp_custom2_w2 = WeaponType.NUM;
+
+            ldm.m_mp_custom1_m1 = MissileType.NUM;
+            ldm.m_mp_custom1_m2 = MissileType.NUM;
+            ldm.m_mp_custom2_m1 = MissileType.NUM;
+
+            l1.ApplyFilter();
+            l2.ApplyFilter();
+
+            l1.ExportToLegacyLoadout(ldm, 0);
+            l2.ExportToLegacyLoadout(ldm, 1);
+        }
+    }
+
 
     // Prevent SwitchVisibleWeapon if no primary is allowed at all
     [HarmonyPatch(typeof(PlayerShip), "SwitchVisibleWeapon")]
