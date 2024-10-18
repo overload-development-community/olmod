@@ -233,6 +233,14 @@ namespace GameMod {
             }
         }
 
+        static void CmdLoadoutMask()
+        {
+            if (uConsole.GetNumParameters() > 0) {
+                MPLoadouts.LoadoutFilterBitmask = uConsole.GetInt();
+            }
+            Debug.LogFormat("loadout mask: {0} = {0:X8}", MPLoadouts.LoadoutFilterBitmask);
+        }
+
         public static void RegisterCommands()
         {
             uConsole.RegisterCommand("mute", "Mute a specific player", new uConsole.DebugCommand(MutePlayer));
@@ -244,6 +252,7 @@ namespace GameMod {
             uConsole.RegisterCommand("ui_color", "Set UI color #aabbcc", new uConsole.DebugCommand(CmdUIColor));
             uConsole.RegisterCommand("vr_scale", "Set VR scale (0.1 to 10)", new uConsole.DebugCommand(CmdVRScale));
             uConsole.RegisterCommand("xp", "Set XP", new uConsole.DebugCommand(CmdXP));
+            uConsole.RegisterCommand("loadout_mask", "Manually set the loadout mask", CmdLoadoutMask);
         }
     }
 
