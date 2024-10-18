@@ -17,6 +17,10 @@ namespace GameMod
         private static bool[] secondarypowerups = new bool[8];
         private static bool disabledpowerups = false;
 
+        private static int loadout_bitmask = MPLoadouts.MASK_DEFAULT;
+        private static List<string> loadouts = new List<string>();
+        private static string loadouts_mode = "undefined";
+
         public static bool Displayed = false;
 
         public static void DrawMatchInfo(UIElement uie, Vector2 position)
@@ -35,6 +39,12 @@ namespace GameMod
                         disabledpowerups = true;
                     }
                 }
+            }
+
+            if (loadout_bitmask != MPModPrivateData.LoadoutFilterBitmask) {
+                loadout_bitmask = MPModPrivateData.LoadoutFilterBitmask;
+                loadouts = MPLoadouts.GetItems(loadout_bitmask, ref loadouts_mode);
+                //loadouts_additional = MPLoadouts.GetAdditionalAllowedItems(loadout_bitmask);
             }
 
             bool show = false;
@@ -167,6 +177,14 @@ namespace GameMod
                         uie.DrawStringSmall(Player.MissileNames[s], position, TEXT_SIZE, StringOffset.RIGHT, UIManager.m_col_ui2, uie.m_alpha);
                         position.y += LINE_SIZE;
                     }
+                }
+            }
+            if (NetworkMatch.m_force_loadout == 0 && loadouts.Count > 0) {
+                show = true;
+                uie.DrawStringSmall(loadouts_mode, position - Vector2.right * LEFT_OFFSET, TEXT_SIZE, StringOffset.LEFT, UIManager.m_col_ui1, 1f, 100f);
+                foreach(var s in loadouts) {
+                        uie.DrawStringSmall(s, position, TEXT_SIZE, StringOffset.RIGHT, UIManager.m_col_ui2, uie.m_alpha);
+                        position.y += LINE_SIZE;
                 }
             }
 

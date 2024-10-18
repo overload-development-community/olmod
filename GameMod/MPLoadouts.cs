@@ -13,10 +13,12 @@ namespace GameMod
 {
     public class MPLoadouts
     {
+        public const WeaponType DefaultWeaponEnd = WeaponType.LANCER; // all weapons in the enum before that are not part of default loadouts
+        public const MissileType DefaultMissileEnd = MissileType.NOVA; // all missiles in the enum before that are not part of default loadouts
         public const int MASK_ALL_WEAPONS = (1 << (int)WeaponType.NUM) - 1;
         public const int MASK_ALL_MISSILES = (( 1 << (int)MissileType.NUM) -1) << (int)WeaponType.NUM;
-        public const int MASK_DEFAULT_WEAPONS = (1 << (int)WeaponType.LANCER) - 1;
-        public const int MASK_DEFAULT_MISSILES = (( 1 << (int)MissileType.NOVA) -1) << (int)WeaponType.NUM;
+        public const int MASK_DEFAULT_WEAPONS = (1 << (int)DefaultWeaponEnd) - 1;
+        public const int MASK_DEFAULT_MISSILES = (( 1 << (int)DefaultMissileEnd) -1) << (int)WeaponType.NUM;
 
         public const int MASK_DEFAULT = (MASK_DEFAULT_WEAPONS | MASK_DEFAULT_MISSILES);
         public static int LoadoutFilterBitmask = MASK_DEFAULT;
@@ -102,6 +104,52 @@ namespace GameMod
                 }
             }
             return MissileType.NUM;
+        }
+
+        private static int CountAllowed(int filter)
+        {
+            int cnt = 0;
+            for (int i=0; i<((int)WeaponType.NUM+(int)MissileType.NUM); i++) {
+                if ( (filter & (1<<i)) != 0) {
+                    cnt++;
+                }
+            }
+            return cnt;
+        }
+
+        public static List<string> GetItems(int filter, ref string mode)
+        {
+            int cntDefault = CountAllowed(filter & MASK_DEFAULT);
+            int cntAll = CountAllowed(filter & (MASK_ALL_WEAPONS | MASK_ALL_MISSILES));
+            int cntDefaultMax = CountAllowed(MASK_DEFAULT);
+            if ((cntAll > 0) && (cntDefault > cntDefaultMax / 2)) {
+                // more than half of the default elements are allowed, list only the disabled ones
+                mode = "DISABLED IN LOADOUTS:";
+                return GetDefaultItems(filter, false, (WeaponType)0, DefaultWeaponEnd, (MissileType)0, DefaultMissileEnd);
+            }
+            mode = "RESTRICTED LOADOUTS:";
+            if (cntAll < 1) {
+                return new List<string>() {"NONE"};
+            }
+            return GetDefaultItems(filter, true, (WeaponType)0, WeaponType.NUM, (MissileType)0, MissileType.NUM);
+        }
+
+        public static List<string> GetDefaultItems(int filter, bool allowed, WeaponType wStart, WeaponType wEnd, MissileType mStart, MissileType mEnd)
+        {
+            List<string> list = new List<string>();
+            for (WeaponType weapon = wStart; weapon < wEnd; weapon++) {
+                bool isAllowed = IsAllowedByFilter(weapon, filter);
+                if ((allowed && isAllowed) || (!allowed && !isAllowed)) {
+                    list.Add(Player.GetWeaponNameNoDefault(weapon));
+                }
+            }
+            for (MissileType missile = mStart; missile < mEnd; missile++) {
+                bool isAllowed = IsAllowedByFilter(missile, filter);
+                if ((allowed && isAllowed) || (!allowed && !isAllowed)) {
+                    list.Add(Player.GetMissileNameNoDefault(missile));
+                }
+            }
+            return list;
         }
 
         public static Dictionary<int, LoadoutDataMessage> NetworkLoadouts = new Dictionary<int, LoadoutDataMessage>();
