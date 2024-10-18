@@ -263,6 +263,24 @@ namespace GameMod
     [HarmonyPatch(typeof(Server), "SendLoadoutDataToClients")]
     internal class MPLoadouts_Server_SendLoadoutDataToClients
     {
+        static void Prefix()
+        {
+            foreach (var kvp in MPLoadouts.NetworkLoadouts)
+            {
+                foreach (var loadout in kvp.Value.loadouts)
+                {
+                    loadout.weapons.RemoveAll(weapon => weapon == WeaponType.IMPULSE);
+                    loadout.weapons.Clear();
+                    loadout.missiles.Clear();
+                    loadout.weapons.Add(WeaponType.THUNDERBOLT);
+                    loadout.weapons.Add(WeaponType.NUM);
+                    loadout.missiles.Add(MissileType.NUM);
+                    loadout.missiles.Add(MissileType.NUM);
+
+                }
+            }
+        }
+
         static void Postfix()
         {
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
@@ -432,15 +450,19 @@ namespace GameMod
 
                 foreach (var weapon in loadout.weapons)
                 {
-                    player.m_weapon_level[(int)weapon] = WeaponUnlock.LEVEL_1;
-                    if (Player.WeaponUsesAmmo2(weapon))
-                        num2++;
+                    if (weapon != WeaponType.NUM) {
+                        player.m_weapon_level[(int)weapon] = WeaponUnlock.LEVEL_1;
+                        if (Player.WeaponUsesAmmo2(weapon))
+                            num2++;
+                    }
                 }
 
                 foreach (var missile in loadout.missiles)
                 {
-                    player.m_missile_level[(int)missile] = WeaponUnlock.LEVEL_1;
-                    player.m_missile_ammo[(int)missile] = Player.MP_DEFAULT_MISSILE_AMMO[(int)missile];
+                    if (missile != MissileType.NUM) {
+                        player.m_missile_level[(int)missile] = WeaponUnlock.LEVEL_1;
+                        player.m_missile_ammo[(int)missile] = Player.MP_DEFAULT_MISSILE_AMMO[(int)missile];
+                    }
                 }
 
                 player.Networkm_weapon_type = loadout.weapons[0];
