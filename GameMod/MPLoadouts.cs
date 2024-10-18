@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -1040,20 +1041,25 @@ namespace GameMod
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             int state = 0;
+            if ((int)WeaponType.NUM  != 8) {// just to make sure...
+                throw new System.Exception("MPLoadouts_PlayerShip_SpewItemsOnDeath expects WeaponType.NUM == 8");
+            }
             foreach (var code in codes)
             {
                 if (state == 0) {
+                    if (code.opcode == OpCodes.Ldfld && ((FieldInfo)code.operand).Name == "m_weapon_type") {
+                        state = 1;
+                    }
+                } else if (state == 1) {
                     if (code.opcode == OpCodes.Ldelem_U1)
                     {
                         yield return new CodeInstruction(OpCodes.Ldc_I4_7);
                         yield return new CodeInstruction(OpCodes.And);
-                        state = 1;
+                        state = 2;
                     }
                 }
                 yield return code;
             }
         }
     }
-
-
 }
