@@ -234,8 +234,8 @@ namespace GameMod
                 int weaponCnt = weapons.Count;
                 int missileCnt = missiles.Count;
 
-                Debug.LogFormat("Loadout filter: XX: {0}", filter);
-                Debug.LogFormat("Loadout filter: before: {0}", Describe());
+                //Debug.LogFormat("Loadout filter: XX: {0}", filter);
+                //Debug.LogFormat("Loadout filter: before: {0}", Describe());
 
                 // filter out not allowed entries, replace by allowed ones
                 for (i=0; i<weapons.Count; i++) {
@@ -260,15 +260,15 @@ namespace GameMod
                 CleanupList<WeaponType>(weapons, WeaponType.NUM);
                 CleanupList<MissileType>(missiles, MissileType.NUM);
 
-                // Overload crashes when used without any weapon
                 /*
+                // Overload crashes when used without any weapon
                 if (weapons.Count > 0 && weapons[0] == WeaponType.NUM) {
                     weapons[0] = (WeaponType)0;
                 }
                 */
 
 
-                Debug.LogFormat("Loadout filter: after: {0}", Describe());
+                //Debug.LogFormat("Loadout filter: after: {0}", Describe());
                 return replaced;
             }
 
