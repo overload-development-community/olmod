@@ -86,7 +86,7 @@ namespace GameMod
         [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
         class MPModifiers_UIElement_DrawMpMatchSetup
         {
-
+            /*
             static void ModifierSettings(UIElement uie, ref Vector2 position)
             {
                 position.y += 62f;
@@ -115,7 +115,7 @@ namespace GameMod
 
                     yield return code;
                 }
-            }
+            }*/
 
             private static void Postfix(UIElement __instance)
             {

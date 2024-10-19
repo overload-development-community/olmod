@@ -328,6 +328,18 @@ namespace GameMod {
             position.y += 62f;
         }
 
+        private static void DrawLoadoutRestrictionOptions(UIElement uie, ref Vector2 position)
+        {
+            position.y += 12f;
+            uie.SelectAndDrawItem(Loc.LS("ALLOWED LOADOUT WEAPONS"), position, 23, false, 1f, 0.75f);
+            position.y += 62f;           
+            uie.SelectAndDrawItem("ALLOWED MODIFIERS", position, 8, false, 1f, 0.75f);
+            position.y += 31f;
+            uie.DrawMenuSeparator(position);
+            position.y += 31f;
+        }
+
+
         private static void ResetCenter(UIElement uie, ref Vector2 position)
         {
             position.x += 300f;
@@ -336,8 +348,10 @@ namespace GameMod {
         [HarmonyPriority(Priority.Normal - 9)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            int state = 0;
+            MethodInfo targetMethod = AccessTools.Method(typeof(UIElement), "DrawMenuSeparator", new[] { typeof(Vector2) });
 
+            int state = 0;
+            int loadout_specific_state = 0;
             foreach (var code in codes)
             {
                 // Adjust x position
@@ -378,6 +392,36 @@ namespace GameMod {
                     yield return code;
                     continue;
                 }
+
+                // Skip the state till we are at the second occurence of "LOADOUT SETTINGS"
+                if (loadout_specific_state <= 1 && code.opcode == OpCodes.Ldstr && (string)code.operand == "LOADOUT SETTINGS")
+                {
+                    loadout_specific_state++;
+                    yield return code;
+                    continue;
+                }
+
+                // Changes the spacing of the menu to make room for the loadout/modifier menu buttons
+                if (loadout_specific_state == 2 && code.opcode == OpCodes.Ldc_R4)
+                {
+                    if( (float)code.operand == 186f )
+                        code.operand = 270f;
+                    if( (float)code.operand == 40f)
+                        code.operand = 19f;
+                }
+
+                // Adds the restricted loadout/modifier menu buttons
+                if (loadout_specific_state == 2 && code.opcode == OpCodes.Call &&  code.operand is MethodInfo method && method == targetMethod)
+                {
+                    loadout_specific_state = 3;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "DrawLoadoutRestrictionOptions"));
+                    continue;
+                }
+
+
                 if (state == 3 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "SelectAndDrawItem"))
                 {
                     state = 4;

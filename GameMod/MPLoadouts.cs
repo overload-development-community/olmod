@@ -1185,4 +1185,103 @@ namespace GameMod
             }
         }
     }
+
+
+    // Draw Selection Menu 
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class MPLoadouts_UIElement_DrawMpMatchSetup {
+        private static void Postfix(UIElement __instance)
+        {
+            
+            switch (MenuManager.m_menu_micro_state)
+            {
+                case 15:
+                    Vector2 position = Vector2.up * (UIManager.UI_TOP + 70f);
+            	    __instance.DrawLabelSmall(Vector2.up * (UIManager.UI_TOP + 70f), Loc.LS("ALLOWED LOADOUT WEAPONS"), 250f, 24f, 1f);
+				    position.y = -100f;
+				    __instance.DrawMenuSeparator(position - Vector2.up * 40f);
+				    position.y += 40f;
+				    __instance.DrawSmallHeader1(position - Vector2.up * 51f, Loc.LS("PRIMARY WEAPONS"), 300f);
+				    for (int i = 0; i < 4; i++)
+				    {
+					    string weaponNameNoDefault = Player.GetWeaponNameNoDefault((WeaponType)i);
+					    int num = i;
+					    __instance.SelectAndDrawCheckboxItem(weaponNameNoDefault, position + Vector2.right * (((float)i - 1.5f) * 320f), num, MenuManager.mms_powerup_filter[num], false, 0.5f, -1);
+				    }
+				    position.y += 62f;
+				    for (int j = 0; j < 4; j++)
+			    	{
+			    		string weaponNameNoDefault2 = Player.GetWeaponNameNoDefault(j + WeaponType.DRILLER);
+			      		int num2 = j + 4;
+			    		__instance.SelectAndDrawCheckboxItem(weaponNameNoDefault2, position + Vector2.right * (((float)j - 1.5f) * 320f), num2, MenuManager.mms_powerup_filter[num2], false, 0.5f, -1);
+			    	}
+			    	position.y += 62f;
+			    	position.y += 80f;
+				    __instance.DrawSmallHeader1(position - Vector2.up * 51f, Loc.LS("SECONDARY WEAPONS"), 300f);
+			    	for (int k = 0; k < 4; k++)
+				    {
+			    		string missileNameNoDefault = Player.GetMissileNameNoDefault((MissileType)k);
+			    		int num3 = k + 8;
+				    	__instance.SelectAndDrawCheckboxItem(missileNameNoDefault, position + Vector2.right * (((float)k - 1.5f) * 320f), num3, MenuManager.mms_powerup_filter[num3], false, 0.5f, -1);
+			    	}
+			    	position.y += 62f;
+			    	for (int l = 0; l < 4; l++)
+			    	{
+			    		string missileNameNoDefault2 = Player.GetMissileNameNoDefault(l + MissileType.NOVA);
+			    		int num4 = l + 12;
+				    	__instance.SelectAndDrawCheckboxItem(missileNameNoDefault2, position + Vector2.right * (((float)l - 1.5f) * 320f), num4, MenuManager.mms_powerup_filter[num4], false, 0.5f, -1);
+				    }
+				    __instance.DrawMenuSeparator(position + Vector2.up * 40f);
+				    position.y += 80.6f;
+				    __instance.SelectAndDrawHalfItem2(Loc.LS("CLEAR"), position - Vector2.right * 160f, 20, false);
+				    __instance.SelectAndDrawHalfItem2(Loc.LS("RESET"), position + Vector2.right * 160f, 21, false);
+				    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // Handle Logic for Selection Menu
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+        class MPLoadouts_MenuManager_MpMatchSetup_II
+        {
+            static void Postfix()
+            {
+                if (!UIManager.PushedSelect(100) && (!MenuManager.option_dir || !UIManager.PushedDir()))
+                    return;
+
+                switch (MenuManager.m_menu_micro_state)
+                {
+                    case 6:
+                        switch (UIManager.m_menu_selection)
+                        {
+                            case 23:
+                                MenuManager.m_menu_micro_state = 15;
+                                MenuManager.UIPulse(2f);
+                                MenuManager.PlaySelectSound(1f);
+                                return;
+                            case 100:
+                                MenuManager.m_menu_micro_state = 6;
+                                MenuManager.UIPulse(2f);
+                                MenuManager.PlaySelectSound(1f);
+                                return;
+                            default:
+                                return;
+                        }
+                    case 15:
+                        switch (UIManager.m_menu_selection)
+                        {
+                            
+                            case 100:
+                                MenuManager.m_menu_micro_state = 6;
+                                MenuManager.UIPulse(2f);
+                                MenuManager.PlaySelectSound(1f);
+                                return;
+                            default:
+                                return;
+                        }
+                }
+            }
+        }
 }
