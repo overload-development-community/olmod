@@ -1214,6 +1214,20 @@ namespace GameMod
         }
     }
 
+    // if loadout forbids all primaries, make sure to switch to the first weapon which is picked up
+    [HarmonyPatch(typeof(Player), "UnlockWeaponClient")]
+    class MPLoadouts_Player_UnlockWeaponClient
+    {
+        public static void Postfix(WeaponType wt, bool silent, Player __instance)
+        {
+            if (__instance.m_weapon_type >= WeaponType.NUM) {
+                __instance.Networkm_weapon_type = wt;
+                __instance.CallCmdSetCurrentWeapon(__instance.m_weapon_type);
+                __instance.c_player_ship.WeaponSelectFX();
+                __instance.UpdateCurrentWeaponName();
+            }
+        }
+    }
 
     // Draw Selection Menu 
     [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
