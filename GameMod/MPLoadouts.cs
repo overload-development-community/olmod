@@ -1400,5 +1400,62 @@ namespace GameMod
                     }
             }
         }
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            int state = 0;
+            int fail = 0;
+            Label jumpTarget = new Label();
+            List<CodeInstruction> instructionsSaved = new List<CodeInstruction>();
+
+            foreach (var code in instructions) {
+                if (state == 0) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "mms_powerup_filter") {
+                        state++;
+                    }
+                } else if (state == 1) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "m_menu_selection") {
+                        state++;
+                    } else {
+                        fail = state;
+                    }
+                } else if (state == 2) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "mms_powerup_filter") {
+                        state++;
+                    } else {
+                        fail = state;
+                    }
+                } else if (state == 3) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "m_menu_selection") {
+                        state++;
+                    } else {
+                        fail = state;
+                    }
+                } else if (state == 4) {
+                    if (code.opcode == OpCodes.Br) {
+                        jumpTarget = (Label)code.operand;
+                        // add additional branch
+                        yield return new CodeInstruction(OpCodes.Ldlen);
+                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(UIManager), "m_menu_selection"));
+                        yield return new CodeInstruction(OpCodes.Ble, jumpTarget);
+                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MenuManager), "mms_powerup_filter"));
+
+                        // emit the saved instructions now
+                        foreach (var c in instructionsSaved) {
+                            yield return c;
+                        }
+                        state++;
+                    }
+                }
+                if (state > 1 && state < 5) {
+                    instructionsSaved.Add(code);
+                } else {
+                    yield return code;
+                }
+            }
+            if (state != 5 || fail > 0) {
+            } else {
+                Debug.LogFormat("MPLoadouts_MenuManager_MpMatchSetup: transpiler failed at state {0} {1}", state, fail);
+            }
+        }
     }
 }
