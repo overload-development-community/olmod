@@ -1247,7 +1247,7 @@ namespace GameMod
                     Vector2 position = Vector2.up * (UIManager.UI_TOP + 70f);
                     position.y += 62f;
                     __instance.DrawLabelSmall(Vector2.up * (UIManager.UI_TOP + 70f), Loc.LS("ALLOWED LOADOUT WEAPONS"), 250f, 24f, 1f);
-                    position.y = -130f;
+                    position.y = -133f;
                     __instance.DrawMenuSeparator(position - Vector2.up * 40f);
                     position.y += 40f;
                     __instance.DrawSmallHeader1(position - Vector2.up * 51f, Loc.LS("PRIMARY WEAPONS"), 300f);
@@ -1265,7 +1265,7 @@ namespace GameMod
                         __instance.SelectAndDrawCheckboxItem(weaponNameNoDefault2, position + Vector2.right * (((float)j - 1.5f) * 320f), num2, MPLoadouts.IsAllowed((WeaponType)num2), false, 0.5f, -1);
                     }
                     position.y += 62f;
-                    position.y += 30f;
+                    position.y += 40f;
                     __instance.DrawSmallHeader1(position - Vector2.up * 51f, Loc.LS("SECONDARY WEAPONS"), 300f);
                     for (int k = 0; k < 4; k++)
                     {
