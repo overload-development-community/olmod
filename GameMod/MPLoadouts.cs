@@ -1302,7 +1302,8 @@ namespace GameMod
             //uConsole.Log("Fire: " + MenuManager.m_menu_micro_state + " : " + UIManager.m_menu_selection);
 
             // Disables reflex powerups since it's provided as a standard sidearm now.
-            if (!Menus.mms_classic_spawns && !MPLoadouts.IsAllowedByFilter(WeaponType.REFLEX, MPLoadouts.LoadoutFilterBitmask))
+            // But if Reflex is forbidden in the loadout settings, you may add it as powerup
+            if (!Menus.mms_classic_spawns && MPLoadouts.IsAllowedByFilter(WeaponType.REFLEX, MPLoadouts.LoadoutFilterBitmask))
             {
                 MenuManager.mms_powerup_filter[2] = false;
             }
