@@ -342,8 +342,7 @@ namespace GameMod {
 
         private static void DrawBacklinkButtonInPowerupMenu(UIElement uie)
         {
-            Vector2 position = Vector2.up * (UIManager.UI_TOP + 700f);
-            uie.SelectAndDrawHalfItem2("ALLOWED LOADOUTS", position - Vector2.right * 360f, 30, false);
+            uie.SelectAndDrawHalfItem2("ALLOWED LOADOUTS", new Vector2(-473f, 214), 30, false);
         }
 
         private static void ResetCenter(UIElement uie, ref Vector2 position)
