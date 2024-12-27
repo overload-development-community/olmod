@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Xml.Schema;
 using GameMod.VersionHandling;
 using HarmonyLib;
 using Overload;
@@ -87,6 +88,41 @@ namespace GameMod.Core {
             if (MPSpawnExtensionVis.visualizing)
             {
                 uConsole.RegisterCommand("export-spawns", "Exports spawnpoints from the editor to a .json file in the OLmod directory", new uConsole.DebugCommand(MPSpawnExtensionVis.Export));
+            }
+
+            if (FindArg("-telemetry")) 
+                TelemetryMod.telemetry_enabled = true;
+
+            if (FindArgVal("-telemetry-ip", out string ip_string)){
+                if (!String.IsNullOrEmpty(ip_string))
+                {
+                    string[] ip_string_parts = ip_string.Split('.');
+                    if (ip_string_parts.Length == 4)
+                    {
+                        bool valid = true;
+                        for (int i = 0; i < 3; i++)
+                            if (int.TryParse(ip_string_parts[i], out int value))
+                                if (value < 0 | value > 255)
+                                    valid = false;
+
+                        if (valid)
+                            TelemetryMod.telemetry_ip = ip_string;
+                        else
+                            Debug.Log("Invalid Input. Telemetry IP contains subvalues outside of the [0,255] range: " + ip_string);
+                    }
+
+                }
+            }
+
+            if (FindArgVal("-telemetry-port", out string port_string))
+            {
+                if (int.TryParse(port_string, out int port))
+                    if (port >= 0 && port < 65535)
+                        TelemetryMod.telemetry_port = port;
+                    else
+                        Debug.Log("Invalid Input. Telemetry Port is outside of the allowed [0, 65534] range: " + port_string);
+                else
+                    Debug.Log("Invalid Input. Telemetry Port is not a whole number: " + port_string);
             }
         }
 
