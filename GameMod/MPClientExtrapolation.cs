@@ -442,14 +442,12 @@ namespace GameMod {
             }
         }
 
-        static private MethodInfo _Client_GetPlayerFromNetId_Method = AccessTools.Method(typeof(Client), "GetPlayerFromNetId");
-
         public static NewPlayerSnapshot GetPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, Player p)
         {
             for (int i = 0; i < msg.m_num_snapshots; i++)
             {
                 NewPlayerSnapshot playerSnapshot = msg.m_snapshots[i];
-                Player candidate = (Player)_Client_GetPlayerFromNetId_Method.Invoke(null, new object[] {playerSnapshot.m_net_id});
+                Player candidate = OL_Client.GetPlayerFromNetId(playerSnapshot.m_net_id);
 
                 if (candidate == p)
                 {
@@ -487,11 +485,26 @@ namespace GameMod {
             player.c_player_ship.c_mesh_collider_trans.localRotation = player.c_player_ship.c_transform.localRotation;
         }
 
-        public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t){
+        public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t)
+        {
             if (HandlePlayerRespawn(player,snapshot)) {
                 return;
             }
-            Vector3 newPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos+snapshot.m_vel, t);
+
+            //Vector3 newPos;
+            Vector3 newPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos + snapshot.m_vel, t);
+            //Quaternion newRot = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot * Quaternion.Euler(snapshot.m_vrot), t);
+            //Quaternion newRot = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot * Quaternion.Euler(snapshot.m_vrot * Mathf.Rad2Deg), t); // turns out snapshot.m_vrot is in radians, and Quaternion.Euler expects degrees -- this makes for jerky rotation, though
+            //Quaternion newRot = snapshot.m_rot * Quaternion.Euler(snapshot.m_vrot * Mathf.Rad2Deg * t); // trying something new -- scale the angular velocity first.
+            Quaternion newRot = snapshot.m_rot * Quaternion.Euler(Vector3.SlerpUnclamped(Vector3.zero, snapshot.m_vrot * Mathf.Rad2Deg, t)); // trying something new -- slerp the angular velocity first, in degrees, *then* apply it as a quaternion rotation
+
+            // An attempt to better predict player positions on higher pings -- this portion applies the rotation to the movement vector and then averages between the linear and rotated positions
+            if (Menus.mms_lag_compensation_prediction_mode == 1 || Menus.mms_lag_compensation_prediction_mode == 3) // Rotation or Damped Rotation mode
+            {
+                Vector3 rotPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos + ((snapshot.m_rot * Quaternion.Inverse(newRot)) * snapshot.m_vel), t);
+                newPos = Vector3.Lerp(newPos, rotPos, 0.5f); // some semblance of faking inertia -- only go ~1/2 of the way to the rotated position vector
+            }
+
             // limit ship dive-in if enabled:
             if (Menus.mms_lag_compensation_collision_limit > 0) {
                 const float radius = 0.98f; /// the ship's collider is radius 1, we use a bit smaller one
@@ -525,7 +538,7 @@ namespace GameMod {
                 }
             }
             player.c_player_ship.c_transform.localPosition = newPos;
-            player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot*Quaternion.Euler(snapshot.m_vrot), t);
+            player.c_player_ship.c_transform.rotation = newRot;
             player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
             player.c_player_ship.c_mesh_collider_trans.localRotation = player.c_player_ship.c_transform.localRotation;
         }
@@ -598,6 +611,7 @@ namespace GameMod {
                 } else {
                     // extrapolation case
                     // use the most recently received snapshot
+                    msgA = m_last_messages_ring[(m_last_messages_ring_pos_last - 2) & 3]; // we've added another snapshot here, see below during the "foreach"
                     msgB = m_last_messages_ring[m_last_messages_ring_pos_last];
                 }
             } // lock
@@ -641,18 +655,30 @@ namespace GameMod {
             // actually apply the operation to each player
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
-                if (player != null && !player.isLocalPlayer && !player.m_spectator)
+                if (player != null && !player.isLocalPlayer && !player.m_spectator && m_last_messages_ring_count > 3) // wait until the ring is full before actually doing anything since we need multiple snapshots
                 {
                     // do the actual interpolation or extrapolation, as calculated above
-                    if (do_interpolation) {
+                    if (do_interpolation)
+                    {
                         NewPlayerSnapshot A = GetPlayerSnapshot(msgA, player);
                         NewPlayerSnapshot B = GetPlayerSnapshot(msgB, player);
-                        if(A != null && B != null){
+                        if (A != null && B != null)
+                        {
                             interpolatePlayer(player, A, B, interpolate_factor);
                         }
-                    } else {
+                    }
+                    else
+                    {
+                        NewPlayerSnapshot oldsnapshot = GetPlayerSnapshot(msgA, player);
                         NewPlayerSnapshot snapshot = GetPlayerSnapshot(msgB, player);
-                        if(snapshot != null){
+
+                        if (snapshot != null && oldsnapshot != null)
+                        {
+                            // An attempt to put some damping on the wild swinging certain highly-mobile players appear to have on high ping. If enabled, looks back 2 snapshots and scales the amount of extrapolation by how strongly the velocity vectors are correlated.
+                            if (Menus.mms_lag_compensation_prediction_mode > 1)
+                            {
+                                delta_t *= Mathf.Min(Mathf.Sqrt(snapshot.m_vel.sqrMagnitude / oldsnapshot.m_vel.sqrMagnitude), 1f); // only takes magnitudes into account
+                            }
                             extrapolatePlayer(player, snapshot, delta_t);
                         }
                     }
@@ -698,6 +724,7 @@ namespace GameMod {
         }
     }
 
+    /* This has been moved to MPServerOptimization and combined with the patch there
     /// <summary>
     /// Force a high input deficit on the server so it always catches up on inputs, even if this number gets out of sync with the number of inputs received.
     /// </summary>
@@ -711,6 +738,7 @@ namespace GameMod {
             }
         }
     }
+    */
 
     /*[HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
     class MPClientExtrapolation_UpdateInterpolationBuffer {

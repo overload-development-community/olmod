@@ -66,7 +66,8 @@ namespace GameMod
                 assistScoring = Menus.mms_assist_scoring,
                 teamCount = MPTeams.MenuManagerTeamCount,
                 shipMeshCollider = Menus.mms_collision_mesh,
-                thunderboltPassthrough = MPThunderboltPassthrough.isAllowed
+                thunderboltPassthrough = MPThunderboltPassthrough.isAllowed,
+                serverOptimizations = MPServerOptimization.prefEnabled
             });
 
             presets.Add(new MPMatchPreset
@@ -107,7 +108,8 @@ namespace GameMod
                 assistScoring = true,
                 teamCount = 2,
                 shipMeshCollider = 0,
-                thunderboltPassthrough = false
+                thunderboltPassthrough = false,
+                serverOptimizations = true
             });
 
             presets.Add(new MPMatchPreset
@@ -148,7 +150,8 @@ namespace GameMod
                 teamCount = 2,
                 shipMeshCollider = 0,
                 damageNumbers = true,
-                thunderboltPassthrough = false
+                thunderboltPassthrough = false,
+                serverOptimizations = true
             });
 
             GameManager.m_gm.StartCoroutine(GetMatchPresets());
@@ -194,6 +197,7 @@ namespace GameMod
             public int shipMeshCollider = 0;
             public float colliderScale = 1f;
             public bool thunderboltPassthrough;
+            public bool serverOptimizations = true; // CCF-FixMaybe - should this be on by default? Set this properly if so.
 
             public void Apply()
             {
@@ -241,6 +245,7 @@ namespace GameMod
                 Menus.mms_collision_mesh = this.shipMeshCollider;
                 MPColliderSwap.colliderScale = this.colliderScale;
                 MPThunderboltPassthrough.isAllowed = this.thunderboltPassthrough;
+                MPServerOptimization.prefEnabled = this.serverOptimizations;
             }
         }
 

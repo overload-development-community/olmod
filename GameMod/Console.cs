@@ -259,6 +259,8 @@ namespace GameMod {
         }
     }
 
+    // Consolidated into Menus_UIElement_DrawControlsMenu in Menus.cs
+    /*
     [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
     class ConsoleOptionPatch
     {
@@ -293,7 +295,10 @@ namespace GameMod {
             }
         }
     }
+    */
 
+    // Consolidated into Menus_MenuManager_ControlsOptionsUpdate in Menus.cs
+    /*
     // Changed from Postfix to Transpile to fix left arrow, insert processing directly after MaybeReverseOption
     [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
     class ConsoleOptionTogglePatch
@@ -328,6 +333,7 @@ namespace GameMod {
             }
         }
     }
+    */
 
     [HarmonyPatch(typeof(uConsoleInput), "ProcessActivationInput")]
     class ConsoleEnablePatch
