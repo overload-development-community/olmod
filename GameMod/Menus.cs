@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -213,6 +213,34 @@ namespace GameMod {
             }
         }
 
+        public static string GetMMSLagCompensationPredictionMode()
+        {
+            switch (mms_lag_compensation_prediction_mode)
+            {
+                case 0:
+                default:
+                    return "VELOCITY";
+                case 1:
+                    return "VELOCITY + ROTATION";
+                case 2:
+                    return "MOTION ARC";
+            }
+        }
+
+        public static string GetMMSLagCompensationDampingMode()
+        {
+            switch (mms_lag_compensation_damping_mode)
+            {
+                case 0:
+                default:
+                    return "DISABLED";
+                case 1:
+                    return "SPEED ONLY";
+                case 2:
+                    return "SPEED + DIRECTION";
+            }
+        }
+
         public static string GetMMSTeamColorDefault()
         {
             return mms_team_color_default ? Loc.LS("DEFAULT") : Loc.LS("CUSTOM");
@@ -239,6 +267,8 @@ namespace GameMod {
             mms_lag_compensation_strength = 2;
             mms_lag_compensation_use_interpolation = 0;
             mms_lag_compensation_collision_limit = 0;
+            mms_lag_compensation_prediction_mode = 0;
+            mms_lag_compensation_damping_mode = 0;
         }
 
         public static int mms_weapon_lag_compensation_max = 100;
@@ -251,6 +281,8 @@ namespace GameMod {
         public static int mms_lag_compensation_strength = 2;
         public static int mms_lag_compensation_use_interpolation = 0;
         public static int mms_lag_compensation_collision_limit = 0;
+        public static int mms_lag_compensation_prediction_mode = 0;
+        public static int mms_lag_compensation_damping_mode = 0;
         public static string mms_mp_projdata_fn = "STOCK";
         public static bool mms_sticky_death_summary = false;
         public static int mms_damageeffect_alpha_mult = 30;
@@ -310,7 +342,8 @@ namespace GameMod {
             uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
-
+            position.y += 55f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("CLIENT-SIDE PHYSICS"), position, 23, MPServerOptimization.prefEnabled ? "ENABLED" : "DISABLED", Loc.LS("ALLOWS CLIENTS TO PASS PRE-PROCESSED PHYSICS RATHER THAN RESIMULATING INPUTS ON THE SERVER"), 1f, false);
             position.y += 55f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("COLLISION MESH"), position, 22, Menus.GetMMSCollisionMesh(), Loc.LS("COLLIDER TO USE FOR PROJECTILE->SHIP COLLISIONS"), 1f, false);
         }
@@ -328,6 +361,23 @@ namespace GameMod {
             position.y += 62f;
         }
 
+        private static void DrawLoadoutRestrictionOptions(UIElement uie, ref Vector2 position)
+        {
+            position.y += 12f;
+            uie.SelectAndDrawItem("ALLOWED LOADOUT WEAPONS", position, 23, false, 1f, 0.75f);
+            position.y += 62f;           
+            uie.SelectAndDrawItem("ALLOWED MODIFIERS", position, 8, false, 1f, 0.75f);
+            position.y += 31f;
+            uie.DrawMenuSeparator(position);
+            position.y += 31f;
+        }
+
+
+        private static void DrawBacklinkButtonInPowerupMenu(UIElement uie)
+        {
+            uie.SelectAndDrawHalfItem2("ALLOWED LOADOUTS", new Vector2(-473f, 214), 30, false);
+        }
+
         private static void ResetCenter(UIElement uie, ref Vector2 position)
         {
             position.x += 300f;
@@ -336,8 +386,11 @@ namespace GameMod {
         [HarmonyPriority(Priority.Normal - 9)] // set global order of transpilers for this function
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            int state = 0;
+            MethodInfo targetMethod = AccessTools.Method(typeof(UIElement), "DrawMenuSeparator", new[] { typeof(Vector2) });
 
+            int state = 0;
+            int loadout_specific_state = 0; // this is used to find the place where to add the loadout menu
+            int loadout_powerup_menulink_button_state = 0; // this is used to find the entrypoint to the original powerup menu to insert a button that links back to the new loadout menu
             foreach (var code in codes)
             {
                 // Adjust x position
@@ -378,6 +431,50 @@ namespace GameMod {
                     yield return code;
                     continue;
                 }
+
+                // FOR MpLoadouts:
+                // Skip the state till we are at the second occurence of "LOADOUT SETTINGS"
+                if (loadout_specific_state <= 1 && code.opcode == OpCodes.Ldstr && (string)code.operand == "LOADOUT SETTINGS")
+                {
+                    loadout_specific_state++;
+                    yield return code;
+                    continue;
+                }
+
+                // FOR MpLoadouts:
+                // Changes the spacing of the menu to make room for the loadout/modifier menu buttons
+                if (loadout_specific_state == 2 && code.opcode == OpCodes.Ldc_R4)
+                {
+                    if( (float)code.operand == 186f )
+                        code.operand = 270f;
+                    if( (float)code.operand == 40f)
+                        code.operand = 19f;
+                }
+
+                // FOR MpLoadouts:
+                // Adds the restricted loadout/modifier menu buttons
+                if (loadout_specific_state == 2 && code.opcode == OpCodes.Call &&  code.operand is MethodInfo method && method == targetMethod)
+                {
+                    loadout_specific_state = 3;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloca, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "DrawLoadoutRestrictionOptions"));
+                    continue;
+                }
+
+                // look for the second appearance of "ALLOWED POWERUPS" to add the loadout menu button in the powerup menu. this would not work if this patch was not always the first to execute
+                if( code.opcode == OpCodes.Ldstr && (string)code.operand == "ALLOWED POWERUPS")
+                    loadout_powerup_menulink_button_state++;   
+                if(loadout_powerup_menulink_button_state == 2 && code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 80.6f)
+                {
+                    loadout_powerup_menulink_button_state++;
+                    yield return code;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawMpMatchSetup), "DrawBacklinkButtonInPowerupMenu"));
+                    continue;
+                }
+
                 if (state == 3 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "SelectAndDrawItem"))
                 {
                     state = 4;
@@ -575,7 +672,10 @@ namespace GameMod {
                         Menus.mms_collision_mesh = (4 + Menus.mms_collision_mesh + UIManager.m_select_dir) % 4;
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
-
+                    case 23:
+                        MPServerOptimization.prefEnabled = !MPServerOptimization.prefEnabled;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
                 }
             }
             else if (MenuManager.m_menu_micro_state == 10)
@@ -758,16 +858,22 @@ namespace GameMod {
                     else
                     {
                         SelectAndDrawSliderItem(__instance, Loc.LS("MAX PING TO COMPENSATE FOR WEAPONS"), position, 6, Menus.mms_weapon_lag_compensation_max, 250, "LIMIT WEAPON LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR FROM THE FIRING SHIP WEAPONS WILL BE DRAWN, AT THE COST OF HAVING TO LEAD YOUR DODGES MORE", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1);
-                        position.y += 62f;
+                        position.y += 58f;
                         SelectAndDrawSliderItem(__instance, Loc.LS("MAX PING TO COMPENSATE FOR SHIPS"), position, 7, Menus.mms_ship_lag_compensation_max, 250, "LIMIT SHIP LAG COMPENSATION IF YOUR PING EXCEEDS THIS AMOUNT. HAS NO EFFECT WHEN YOUR PING IS LOWER THAN THIS AMOUNT." + Environment.NewLine + "AT HIGHER PING, A LOWER SETTING LIMITS HOW FAR INTO THE FUTURE SHIP POSITIONS WILL BE GUESSED, AT THE COST OF HAVING TO LEAD YOUR SHOTS MORE", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2);
-                        position.y += 62f;
+                        position.y += 58f;
                         SelectAndDrawSliderItem(__instance, Loc.LS("WEAPON LAG COMPENSATION SCALE"), position, 8, Menus.mms_weapon_lag_compensation_scale, 100, "THE SCALE AT WHICH WEAPON LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR DODGING CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR WEAPONS", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 1);
-                        position.y += 62f;
+                        position.y += 58f;
                         SelectAndDrawSliderItem(__instance, Loc.LS("SHIP LAG COMPENSATION SCALE"), position, 9, Menus.mms_ship_lag_compensation_scale, 100, "THE SCALE AT WHICH SHIP LAG IS COMPENSATED MEASURED AS A PERCENTAGE OF THE AMOUNT OF PING YOU ARE COMPENSATING FOR." + Environment.NewLine + "A SCALE OF 100% WILL MAKE YOUR SHOTS THAT HIT SHIPS CLOSELY MATCH THE SERVER WHEN YOUR PING IS LESS THAN YOUR MAX PING TO COMPENSATE FOR SHIPS", Menus.mms_lag_compensation == 0 || Menus.mms_lag_compensation == 2);
-                        position.y += 62f;
+                        position.y += 58f;
                         SelectAndDrawSliderItem(__instance, Loc.LS("SHIP LAG ADDED"), position, 10, Menus.mms_lag_compensation_ship_added_lag, 50, "ADDS A SET AMOUNT OF LAG TO THE END OF THE SHIP LAG COMPENSATION CALCULATIONS. USEFUL WHEN SHIP LAG COMPENSATION IS TURNED OFF." + Environment.NewLine + "A HIGHER SETTING WILL BETTER SHOW SHIP POSITIONS WITHOUT GUESSING, BUT REQUIRE YOU TO LEAD SHIPS MORE");
-                        position.y += 62f;
+                        position.y += 58f;
                         SelectAndDrawSliderItem(__instance, Loc.LS("LIMIT SHIPS DIVING INTO WALLS"), position, 11, Menus.mms_lag_compensation_collision_limit, 100, "LIMIT HOW FAR SHIPS MIGHT DIVE INTO WALLS (BUT SHIPS MIGHT APPEAR STUCK AT THE WALLS FOR SHORT MOMENTS INSTEAD)." + Environment.NewLine + "0 FOR UNLIMITED (NO CALCULATION OVERHEAD), OTHERWISE PERCENTAGE OF SHIP DIAMETER WHICH MUST REMAIN VISIBLE (100 = NO DIVE-IN AT ALL).");
+                        position.y += 58f;
+                        position.x = -260f;
+                        __instance.SelectAndDrawStringOptionItem(Loc.LS("VECTOR PREDICTION"), position, 12, Menus.GetMMSLagCompensationPredictionMode(), Loc.LS("\"VELOCITY\" PROJECTS ONLY THE STRAIGHT-LINE VELOCITY - \"VELOCITY + ROTATION\" PROJECTS THE STRAIGHT-LINE VELOCITY AND CONTINUES ROTATION - \"MOTION ARC\" PARTIALLY ROTATES THE PREDICTED VELOCITY VECTOR AS THE SHIP ROTATES"), 0.9f);
+                        position.x = 260f;
+                        __instance.SelectAndDrawStringOptionItem(Loc.LS("MOTION DAMPING"), position, 13, Menus.GetMMSLagCompensationDampingMode(), Loc.LS("IF ENABLED, DAMPS TWITCHY MOVEMENTS BY COMPARING SHIP VELOCITY AGAINST THE PREVIOUS FEW FRAMES. AS SPEED (AND OPTIONALLY DIRECTION) BECOME LESS CORRELATED WITH PAST FRAMES, PREDICTION STRENGTH DROPS TO COMPENSATE."), 0.9f);
+                        position.x = 0f;
                     }
                     break;
                 case 3:
@@ -1172,6 +1278,14 @@ namespace GameMod {
                                         break;
                                     case 11:
                                         Menus.mms_lag_compensation_collision_limit = (int)(UIElement.SliderPos * 100f + 0.5f);
+                                        break;
+                                    case 12:
+                                        Menus.mms_lag_compensation_prediction_mode = (Menus.mms_lag_compensation_prediction_mode + 3 + UIManager.m_select_dir) % 3;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 13:
+                                        Menus.mms_lag_compensation_damping_mode = (Menus.mms_lag_compensation_damping_mode + 3 + UIManager.m_select_dir) % 3;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                         break;
                                 }
                                 break;
@@ -2345,11 +2459,66 @@ namespace GameMod {
     }
 
     /// <summary>
-    /// Draw additional CCInputExt bindings under Controls -> Additional Controls page under Re-center VR
+    /// Expands the Advanced Options window to 2-column to allow more toggles. Also draws additional CCInputExt bindings under Controls -> Additional Controls page under Re-center VR
     /// </summary>
     [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
     internal class Menus_UIElement_DrawControlsMenu
     {
+        const float colwidth = 1.1f;
+
+        static void DrawAdvancedOptions(UIElement uie, Vector2 position)
+        {
+            uie.DrawHeaderMedium(Vector2.up * (UIManager.UI_TOP + 20f), Loc.LS("CONTROL OPTIONS - ADVANCED"));
+            position.y -= 248f;
+            uie.DrawMenuSeparator(position - Vector2.up * 40f);
+            uie.SelectAndDrawItem(Loc.LS("CONFIGURE AUTOSELECT"), position, 121, false, 1f, 0.75f);
+            position.y += 62f;
+
+            // Left column
+            position.x = -320f;
+            float top = position.y;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("JOYSTICK/KB TURN SPEED"), position, 1, MenuManager.GetJoySpeed(), Loc.LS("MAXIMUM SPEED OF TURNING WITH THE JOYSTICK AND KEYBOARD"), colwidth);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("JOYSTICK/KB ROLL SPEED"), position, 4, MenuManager.GetJoySpeedRoll(), Loc.LS("MAXIMUM SPEED OF ROLLING WITH THE JOYSTICK AND KEYBOARD"), colwidth);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MAX TURN RAMPING"), position, 5, MenuManager.GetJoyRamp(), Loc.LS("ADDITIONAL TURN SPEED WHEN TURNING QUICKLY OR FOR AN EXTENDED TIME (KB/JOYSTICK ONLY)"), colwidth);
+            position.y += 62f;
+            if (!JoystickRotationFix.server_support && !GameplayManager.IsMultiplayerActive && NetworkMatch.GetMatchState() != MatchState.LOBBY) // TODO @ Lupo - this shouldn't be here in the menu code. I've moved it as-is for now.
+            {
+                JoystickRotationFix.server_support = true;
+                Debug.Log("JoystickRamping.server_support didnt reset properly");
+            }
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MAX TURN RAMP MODE"), position, 0, JoystickRotationFix.alt_turn_ramp_mode ? "LINEAR" : "DEFAULT", "LINEAR ADDS THE MAX TURN RAMPING SPEED LINEARLY ALONG THE INPUT [KB/JOYSTICK ONLY]", colwidth, !JoystickRotationFix.server_support);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("TURN SPEED LIMITING"), position, 6, MenuManager.GetTurnSpeedLimit(), Loc.LS("ABSOLUTE LIMIT OF PITCH AND YAW ROTATION SPEED (ALL CONTROL TYPES)"), colwidth);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MOVEMENT SPEED CONFIG"), position, 2, MenuManager.GetMovementConfig(), Loc.LS("SLIGHTLY FASTER OMNI-DIRECTIONAL SPEED (ALL-WAY) OR MUCH FASTER TRI-CHORD SPEED"), colwidth);
+            float lbottom = position.y;
+
+            // Right column
+            position.x = 320f;
+            position.y = top;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("OVERDRIVE-ENHANCED TURNING"), position, 10, MPServerOptimization.ODTurning ? Loc.LS("ON") : Loc.LS("OFF"), Loc.LS("OVERDRIVE POWERUPS WILL ALSO GRANT ADDITIONAL TURN SPEED WHEN ENABLED"), colwidth); // CCF needs to be server option safe, check it
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("MOUSE AIMING ROLL BEHAVIOR"), position, 11, MPServerOptimization.RollFix ? Loc.LS("INDEPENDENT") : Loc.LS("LIMITED"), Loc.LS("\"INDEPENDENT\" ALLOWS THE FULL SELECTED JOY/KB ROLL SPEED WHILE AIMING WITH MOUSE, \"LIMITED\" RESTRICTS ROLL SPEED WHILE AIMING (STOCK, TECHNICALLY A BUG)"), colwidth); // CCF needs to be server option safe, check it
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SMASH COMBO BUTTONS"), position, 3, MenuManager.GetSmashCombo(), Loc.LS("BUTTON COMBO TO TRIGGER A SMASH ATTACK (IN ADDITION TO DEDICATED BUTTON)"), colwidth);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("KEYBOARD RAMPING"), position, 7, MenuManager.GetKBRamping(), Loc.LS("SMOOTHS OUT KEYBOARD TURNING ACCELERATION (WHEN FIRST PRESSING A KEY)"), colwidth);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("INVERT SLIDE MODIFIER Y"), position, 8, MenuManager.opt_invert_slide_modifier ? Loc.LS("ON") : Loc.LS("OFF"), Loc.LS("IF SET, SLIDE MODIFIER WILL SLIDE IN OPPOSITE DIRECTION FOR KB AND CONTROLLER"), colwidth);
+            position.y += 62f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("ENABLE CONSOLE KEY"), position, 9, MenuManager.GetToggleSetting(Console.KeyEnabled ? 1 : 0), Loc.LS("ACTIVATE CONSOLE WITH ` KEY"), colwidth, false);
+
+            // Menu controls
+            position.x = 0f;
+            if (lbottom > position.y) { position.y = lbottom; }
+            uie.DrawMenuSeparator(position + Vector2.up * 40f);
+            uie.DrawMenuToolTip(position + Vector2.up * 40f);
+            position.y = UIManager.UI_BOTTOM - 30f;
+            uie.SelectAndDrawItem(Loc.LS("BACK"), position, 100, fade: false);
+        }
+
         static void DrawAdditionalBindings(UIElement uie, Vector2 position, bool joystick)
         {
             uie.SelectAndDrawControlOption("TOGGLE LOADOUT PRIMARY", position, (int)CCInputExt.TOGGLE_LOADOUT_PRIMARY, joystick);
@@ -2358,6 +2527,7 @@ namespace GameMod {
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
+            int adv = 0;
             int control_remap_page2_count = 0;
             int state = 0;
             foreach (var code in codes)
@@ -2384,18 +2554,62 @@ namespace GameMod {
                     }
                 }
 
-                yield return code;
+                if (adv != 2)
+                {
+                    yield return code;
+                }
+
+                if (adv == 0 && code.opcode == OpCodes.Ldstr && (string)code.operand == "CONTROL OPTIONS - ADVANCED")
+                {
+                    adv++;
+                }
+
+                if (adv == 1 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "DrawHeaderMedium")) // start of menu calls for the Advanced Options menu
+                {
+                    adv++;
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);
+                    yield return new CodeInstruction(OpCodes.Ldloc_0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawControlsMenu), "DrawAdvancedOptions"));
+                }
+
+                if (adv == 2 && code.opcode == OpCodes.Call && code.operand == AccessTools.Method(typeof(UIElement), "SelectAndDrawItem")) // end of the Advanced Options section before "break"
+                {
+                    adv++;
+                }
             }
         }
     }
 
     /// <summary>
+    /// Process the added Advanced Options toggles.
     /// Process changes to menu bindings. Most work focuses around sticking point of original code using CCInput + 50 value for the
     /// "alt" representation and having to adjust to account for new higher CCInputExt values
     /// </summary>
     [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]
     internal class Menus_MenuManager_ControlsOptionsUpdate
     {
+        static void ProcessAdvancedOptions()
+        {
+            if (MenuManager.m_menu_micro_state == 2)
+            {
+                switch (UIManager.m_menu_selection)
+                {
+                    case 9:
+                        Console.KeyEnabled = !Console.KeyEnabled;
+                        MenuManager.PlayCycleSound(1f, UIManager.m_select_dir);
+                        break;
+                    case 10:
+                        MPServerOptimization.ODTurning = !MPServerOptimization.ODTurning;
+                        MenuManager.PlayCycleSound(1f, UIManager.m_select_dir);
+                        break;
+                    case 11:
+                        MPServerOptimization.RollFix = !MPServerOptimization.RollFix;
+                        MenuManager.PlayCycleSound(1f, UIManager.m_select_dir);
+                        break;
+                }
+            }
+        }
+
         static void AdjustRemapValues()
         {
             MenuManager.control_remap_alt = UIManager.m_menu_selection >= 1000;
@@ -2492,6 +2706,11 @@ namespace GameMod {
                     code.operand = AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "ResetControlJoy");
 
                 yield return code;
+
+                if (code.opcode == OpCodes.Call && ((MethodInfo)code.operand).Name == "MaybeReverseOption")
+                {
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_MenuManager_ControlsOptionsUpdate), "ProcessAdvancedOptions"));
+                }
             }
         }
     }

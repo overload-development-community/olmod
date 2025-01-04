@@ -153,6 +153,9 @@ namespace GameMod {
         static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM) {
             if (wt == WeaponType.NUM) {
                 wt = __instance.c_player.m_weapon_type;
+                if (wt == WeaponType.NUM) {
+                    return false;
+                }
             }
             if (__instance.IsCockpitVisible || force_visible || !__instance.isLocalPlayer) {
                 for (int i = 0; i < 8; i++) {

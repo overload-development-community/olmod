@@ -4,13 +4,154 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Networking.NetworkSystem;
 
 namespace GameMod
 {
     public class MPLoadouts
     {
+        public const WeaponType DefaultWeaponEnd = WeaponType.LANCER; // all weapons in the enum before that are not part of default loadouts
+        public const MissileType DefaultMissileEnd = MissileType.NOVA; // all missiles in the enum before that are not part of default loadouts
+        public const int MASK_ALL_WEAPONS = (1 << (int)WeaponType.NUM) - 1;
+        public const int MASK_ALL_MISSILES = (( 1 << (int)MissileType.NUM) -1) << (int)WeaponType.NUM;
+        public const int MASK_DEFAULT_WEAPONS = (1 << (int)DefaultWeaponEnd) - 1;
+        public const int MASK_DEFAULT_MISSILES = (( 1 << (int)DefaultMissileEnd) -1) << (int)WeaponType.NUM;
+
+        public const int MASK_DEFAULT = (MASK_DEFAULT_WEAPONS | MASK_DEFAULT_MISSILES);
+        public static int LoadoutFilterBitmask = MASK_DEFAULT;
+
+        private static int GetFilterBit(WeaponType weapon)
+        {
+            int w = (int)weapon;
+            if (w < 0 || w >= (int)WeaponType.NUM) {
+                return 0;
+            }
+            return (1<<w);
+        }
+
+        private static int GetFilterBit(MissileType missile)
+        {
+            int m = (int)missile;
+            if (m < 0 || m >= (int)MissileType.NUM) {
+                return 0;
+            }
+            return (1<<(m + (int)MissileType.NUM));
+        }
+
+        private static void SetFilterBit(int bit, bool allowed = true)
+        {
+            if (allowed) {
+                LoadoutFilterBitmask |= bit;
+            } else {
+                LoadoutFilterBitmask &= ~bit;
+            }
+        }
+
+        public static bool IsAllowedByFilter(WeaponType weapon, int filter)
+        {
+            if (weapon >= WeaponType.NUM) {
+                return true; // the "no such weapon" is also always allowed
+            }
+            return ( (filter & GetFilterBit(weapon)) != 0);
+        }
+
+        public static bool IsAllowedByFilter(MissileType missile, int filter)
+        {
+            if (missile >= MissileType.NUM) {
+                return true; // the "no such missile" is also always allowed
+            }
+            return ( (filter & GetFilterBit(missile)) != 0);
+        }
+
+        public static bool IsAllowed(WeaponType weapon)
+        {
+            return IsAllowedByFilter(weapon, LoadoutFilterBitmask);
+        }
+
+        public static bool IsAllowed(MissileType missile)
+        {
+            return IsAllowedByFilter(missile, LoadoutFilterBitmask);
+        }
+
+        public static void SetAllowed(WeaponType weapon, bool allowed = true)
+        {
+            SetFilterBit(GetFilterBit(weapon), allowed);
+        }
+
+        public static void SetAllowed(MissileType missile, bool allowed = true)
+        {
+            SetFilterBit(GetFilterBit(missile), allowed);
+        }
+
+        private static WeaponType FindFirstUnusedAllowed(List<WeaponType> weapons, int filter)
+        {
+            for (WeaponType weapon = (WeaponType)0; weapon < WeaponType.NUM; weapon++) {
+                if (IsAllowedByFilter(weapon, filter) && !weapons.Contains(weapon)) {
+                    return weapon;
+                }
+            }
+            return WeaponType.NUM;
+        }
+
+        private static MissileType FindFirstUnusedAllowed(List<MissileType> missiles, int filter)
+        {
+            for (MissileType missile = (MissileType)0; missile < MissileType.NUM; missile++) {
+                if (IsAllowedByFilter(missile, filter) && !missiles.Contains(missile)) {
+                    return missile;
+                }
+            }
+            return MissileType.NUM;
+        }
+
+        private static int CountAllowed(int filter)
+        {
+            int cnt = 0;
+            for (int i=0; i<((int)WeaponType.NUM+(int)MissileType.NUM); i++) {
+                if ( (filter & (1<<i)) != 0) {
+                    cnt++;
+                }
+            }
+            return cnt;
+        }
+
+        public static List<string> GetItems(int filter, ref string mode)
+        {
+            int cntDefault = CountAllowed(filter & MASK_DEFAULT);
+            int cntAll = CountAllowed(filter & (MASK_ALL_WEAPONS | MASK_ALL_MISSILES));
+            int cntDefaultMax = CountAllowed(MASK_DEFAULT);
+            if ((cntAll > 0) && (cntDefault > cntDefaultMax / 2)) {
+                // more than half of the default elements are allowed, list only the disabled ones
+                mode = "DISABLED IN LOADOUTS:";
+                return GetDefaultItems(filter, false, (WeaponType)0, DefaultWeaponEnd, (MissileType)0, DefaultMissileEnd);
+            }
+            mode = "RESTRICTED LOADOUTS:";
+            if (cntAll < 1) {
+                return new List<string>() {"NONE"};
+            }
+            return GetDefaultItems(filter, true, (WeaponType)0, WeaponType.NUM, (MissileType)0, MissileType.NUM);
+        }
+
+        public static List<string> GetDefaultItems(int filter, bool allowed, WeaponType wStart, WeaponType wEnd, MissileType mStart, MissileType mEnd)
+        {
+            List<string> list = new List<string>();
+            for (WeaponType weapon = wStart; weapon < wEnd; weapon++) {
+                bool isAllowed = IsAllowedByFilter(weapon, filter);
+                if ((allowed && isAllowed) || (!allowed && !isAllowed)) {
+                    list.Add(Player.GetWeaponNameNoDefault(weapon));
+                }
+            }
+            for (MissileType missile = mStart; missile < mEnd; missile++) {
+                bool isAllowed = IsAllowedByFilter(missile, filter);
+                if ((allowed && isAllowed) || (!allowed && !isAllowed)) {
+                    list.Add(Player.GetMissileNameNoDefault(missile));
+                }
+            }
+            return list;
+        }
+
         public static Dictionary<int, LoadoutDataMessage> NetworkLoadouts = new Dictionary<int, LoadoutDataMessage>();
 
         public static CustomLoadout[] Loadouts = new CustomLoadout[4]
@@ -37,6 +178,150 @@ namespace GameMod
             {
                 weapons = new List<WeaponType>();
                 missiles = new List<MissileType>();
+            }
+
+            public string Describe()
+            {
+                string desc = "weapons: {";
+                for(int i=0; i< weapons.Count; i++) {
+                    if (i > 0) {
+                        desc = desc + ", ";
+                    }
+                    desc = desc + Player.GetWeaponNameNoDefault(weapons[i]);
+                }
+                desc = desc + "} missiles: {";
+                for(int i=0; i<missiles.Count; i++) {
+                    if (i > 0) {
+                        desc = desc + ", ";
+                    }
+                    desc = desc + Player.GetMissileNameNoDefault(missiles[i]);
+                }
+                desc = desc + "}";
+                return desc;
+            }
+
+            private static void CleanupList<T>(List<T> l, T emptyMarker)
+            {
+                if (l.Count < 1) {
+                    return;
+                }
+
+                for (int i=0; i<l.Count; i++) {
+                    if (l[i].Equals(emptyMarker)) {
+                        int found = -1;
+                        // check if any non-empty element is present later in the list
+                        for (int j=i+1; j<l.Count; j++) {
+                            if (!l[j].Equals(emptyMarker)) {
+                                found = j;
+                                break;
+                            }
+                        }
+                        if (found >= 0) {
+                            // swap it
+                            l[i] = l[found];
+                            l[found] = emptyMarker;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            public int ApplyFilter(int filter)
+            {
+                int i;
+                int replaced = 0;
+                int weaponCnt = weapons.Count;
+                int missileCnt = missiles.Count;
+
+                //Debug.LogFormat("Loadout filter: XX: {0}", filter);
+                //Debug.LogFormat("Loadout filter: before: {0}", Describe());
+
+                // filter out not allowed entries, replace by allowed ones
+                for (i=0; i<weapons.Count; i++) {
+                    if (!IsAllowedByFilter(weapons[i], filter)) {
+                        weapons[i] = WeaponType.NUM;
+                        replaced++;
+                    }
+                    if (weapons[i] == WeaponType.NUM) {
+                        weapons[i] = FindFirstUnusedAllowed(weapons, filter);
+                    }
+                }
+                for (i=0; i<missiles.Count; i++) {
+                    if (!IsAllowedByFilter(missiles[i], filter)) {
+                        missiles[i] = MissileType.NUM;
+                        replaced++;
+                    }
+                    if (missiles[i] == MissileType.NUM) {
+                        missiles[i] = FindFirstUnusedAllowed(missiles, filter);
+                    }
+                }
+                // sort the available entries before all "NUM" empty markers
+                CleanupList<WeaponType>(weapons, WeaponType.NUM);
+                CleanupList<MissileType>(missiles, MissileType.NUM);
+
+                /*
+                // Overload crashes when used without any weapon
+                if (weapons.Count > 0 && weapons[0] == WeaponType.NUM) {
+                    weapons[0] = (WeaponType)0;
+                }
+                */
+
+
+                //Debug.LogFormat("Loadout filter: after: {0}", Describe());
+                return replaced;
+            }
+
+            public void ApplyFilter()
+            {
+                ApplyFilter(LoadoutFilterBitmask);
+            }
+
+            public void ImportLegacyLoadout(Overload.LoadoutDataMessage ldm, int index)
+            {
+                weapons.Clear();
+                weapons.Add(ldm.GetMpLoadoutWeapon1(index));
+                WeaponType w = ldm.GetMpLoadoutWeapon2(index);
+                if (w != WeaponType.NUM) {
+                    weapons.Add(w);
+                    loadoutType = LoadoutType.GUNNER;
+                } else {
+                    loadoutType = LoadoutType.BOMBER;
+                }
+
+                missiles.Clear();
+                missiles.Add(ldm.GetMpLoadoutMissile1(index));
+                if (loadoutType == LoadoutType.BOMBER) {
+                    missiles.Add(ldm.GetMpLoadoutMissile2(index));
+                }
+            }
+
+            public int ExportToLegacyLoadout(Overload.LoadoutDataMessage ldm)
+            {
+                if (loadoutType == LoadoutType.BOMBER) {
+                    for (int i=0; i<6; i++) {
+                        MissileType m1 = ldm.GetMpLoadoutMissile1(i);
+                        MissileType m2 = ldm.GetMpLoadoutMissile2(i);
+                        if (ldm.GetMpLoadoutWeapon1(i)  == weapons[0] && ( (m1 == missiles[0] && m2 == missiles[1]) || (m1 == missiles[1] && m2 == missiles[0]) )) {
+                            return i;
+                        }
+                    }
+                    ldm.m_mp_custom1_w1 = weapons[0];
+                    ldm.m_mp_custom1_m1 = missiles[0];
+                    ldm.m_mp_custom1_m2 = missiles[1];
+                    return 6;
+                }
+                for (int i=0; i<6; i++) {
+                    WeaponType w1 = ldm.GetMpLoadoutWeapon1(i);
+                    WeaponType w2 = ldm.GetMpLoadoutWeapon2(i);
+                    if ( ((w1 == weapons[0] && w2 == weapons[1]) || (w1 == weapons[1] && w2 == weapons[0])) && ldm.GetMpLoadoutMissile1(i) == missiles[0]) {
+                        return i;
+                    }
+                }
+                ldm.m_mp_custom2_w1 = weapons[0];
+                ldm.m_mp_custom2_w2 = weapons[1];
+                ldm.m_mp_custom2_m1 = missiles[0];
+                return 7;
             }
         }
 
@@ -239,6 +524,23 @@ namespace GameMod
             clm.selected_idx = idx;
             Client.GetClient().Send(MessageTypes.MsgSetCustomLoadout, clm);
         }
+
+        public static bool MaybeIncomplete()
+        {
+            int allowedWeapons = 0;
+            int allowedMissiles = 0;
+            for (WeaponType w = (WeaponType)0; w < WeaponType.NUM;  w++) {
+                if (IsAllowed(w)) {
+                    allowedWeapons++;
+                }
+            }
+            for (MissileType m = (MissileType)0; m < MissileType.NUM;  m++) {
+                if (IsAllowed(m)) {
+                    allowedMissiles++;
+                }
+            }
+            return ((allowedWeapons < 2) || (allowedMissiles < 2));
+        }
     }
 
     [HarmonyPatch(typeof(NetworkMatch), "InitBeforeEachMatch")]
@@ -265,8 +567,13 @@ namespace GameMod
     {
         static void Postfix()
         {
+            bool incompleteLoadouts = MPLoadouts.MaybeIncomplete();
             foreach (var player in Overload.NetworkManager.m_Players.Where(x => x.connectionToClient.connectionId > 0))
             {
+                // disconnect legacy clients with a message if they do not support the filtered loadouts
+                if (incompleteLoadouts && !MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "incompleteloadouts")) {
+                    NetworkServer.SendToClient(player.connectionToClient.connectionId, CustomMsgType.UnsupportedMatch, new StringMessage("This match enforces INCOMPLETE LOADOUTS, which is not supported for legacy clients"));
+                }
                 if (MPTweaks.ClientHasTweak(player.connectionToClient.connectionId, "customloadouts"))
                 {
                     foreach (var kvp in MPLoadouts.NetworkLoadouts)
@@ -300,10 +607,17 @@ namespace GameMod
             }
 
             // Add free Reflex sidearm
-            MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts
-                .Where(x => !x.weapons.Contains(WeaponType.REFLEX))
-                .ToList()
-                .ForEach(x => x.weapons.Add(WeaponType.REFLEX));
+            if (MPLoadouts.IsAllowedByFilter(WeaponType.REFLEX, MPLoadouts.LoadoutFilterBitmask)) {
+                MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts
+                    .Where(x => !x.weapons.Contains(WeaponType.REFLEX))
+                    .ToList()
+                    .ForEach(x => x.weapons.Add(WeaponType.REFLEX));
+            }
+
+            // Filter the loadout according to the allowed weapons in the match setting
+            foreach(var loadout in  MPLoadouts.NetworkLoadouts[msg.lobby_id].loadouts) {
+                loadout.ApplyFilter();
+            }
         }
 
         private static void OnSetCustomLoadoutMessage(NetworkMessage rawMsg)
@@ -432,15 +746,19 @@ namespace GameMod
 
                 foreach (var weapon in loadout.weapons)
                 {
-                    player.m_weapon_level[(int)weapon] = WeaponUnlock.LEVEL_1;
-                    if (Player.WeaponUsesAmmo2(weapon))
-                        num2++;
+                    if (weapon != WeaponType.NUM) {
+                        player.m_weapon_level[(int)weapon] = WeaponUnlock.LEVEL_1;
+                        if (Player.WeaponUsesAmmo2(weapon))
+                            num2++;
+                    }
                 }
 
                 foreach (var missile in loadout.missiles)
                 {
-                    player.m_missile_level[(int)missile] = WeaponUnlock.LEVEL_1;
-                    player.m_missile_ammo[(int)missile] = Player.MP_DEFAULT_MISSILE_AMMO[(int)missile];
+                    if (missile != MissileType.NUM) {
+                        player.m_missile_level[(int)missile] = WeaponUnlock.LEVEL_1;
+                        player.m_missile_ammo[(int)missile] = Player.MP_DEFAULT_MISSILE_AMMO[(int)missile];
+                    }
                 }
 
                 player.Networkm_weapon_type = loadout.weapons[0];
@@ -596,7 +914,9 @@ namespace GameMod
             color.a = uie.m_alpha;
             UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
             color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(26 + wt));
+            if (wt < WeaponType.NUM) {
+                UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(26 + wt));
+            }
             uie.DrawStringSmall(Player.GetWeaponNameNoDefault(wt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
         }
 
@@ -607,7 +927,9 @@ namespace GameMod
             color.a = uie.m_alpha;
             UIManager.DrawQuadBarHorizontal(pos, 11f, 11f, num, color, 8);
             color = ((!highlight) ? UIManager.m_col_ui1 : UIManager.m_col_ui5);
-            UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(104 + mt));
+            if (mt < MissileType.NUM) {
+                UIManager.DrawSpriteUI(pos - Vector2.right * (num * 0.5f + 2f), 0.16f, 0.16f, color, uie.m_alpha, (int)(104 + mt));
+            }
             uie.DrawStringSmall(Player.GetMissileNameNoDefault(mt), pos - Vector2.right * (num * 0.5f - 10f), 0.4f, StringOffset.LEFT, color, 1f, num * 0.95f);
         }
 
@@ -817,15 +1139,323 @@ namespace GameMod
         }
     }
 
-    // Disables reflex powerups since it's provided as a standard sidearm now.
-    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
-    internal class MPLoadouts_MenuManager_MpMatchSetup
-    {
-        public static void Postfix()
+    // Take care about the old-style loadout messages, especially apply the filters there, too
+    [HarmonyPatch(typeof(NetworkMatch), "UpdatePlayerLoadout")]
+    class MPLoadouts_NetworkMatch_UpdatePlayerLoadout {
+        static void Prefix(int lobby_id, ref Overload.LoadoutDataMessage ldm) {
+            MPLoadouts.CustomLoadout l1 = new MPLoadouts.CustomLoadout();
+            MPLoadouts.CustomLoadout l2 = new MPLoadouts.CustomLoadout();
+
+            l1.ImportLegacyLoadout(ldm, ldm.m_mp_loadout1);
+            l2.ImportLegacyLoadout(ldm, ldm.m_mp_loadout2);
+
+            ldm.m_mp_custom1_w1 = WeaponType.NUM;
+            ldm.m_mp_custom2_w1 = WeaponType.NUM;
+            ldm.m_mp_custom2_w2 = WeaponType.NUM;
+
+            ldm.m_mp_custom1_m1 = MissileType.NUM;
+            ldm.m_mp_custom1_m2 = MissileType.NUM;
+            ldm.m_mp_custom2_m1 = MissileType.NUM;
+
+            l1.ApplyFilter();
+            l2.ApplyFilter();
+
+            ldm.m_mp_loadout1 = l1.ExportToLegacyLoadout(ldm);
+            ldm.m_mp_loadout2 = l2.ExportToLegacyLoadout(ldm);
+        }
+    }
+
+
+    // Prevent SwitchVisibleWeapon if no primary is allowed at all
+    [HarmonyPatch(typeof(PlayerShip), "SwitchVisibleWeapon")]
+    class MPLoadouts_PlayerShip_SwitchVisibleWeapon {
+        [HarmonyPriority(Priority.First)]
+        static bool Prefix(PlayerShip __instance, bool force_visible = false, WeaponType wt = WeaponType.NUM) {
+            if (wt == WeaponType.NUM && __instance.c_player.m_weapon_type == WeaponType.NUM) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    // Prevent DrawHUDPrimaryWeapon if no primary is allowed at all
+    [HarmonyPatch(typeof(UIElement), "DrawHUDPrimaryWeapon")]
+    class MPLoadouts_UIElement_DrawHUDPrimaryWeapon {
+        [HarmonyPriority(Priority.First)]
+        static bool Prefix() {
+            if (GameManager.m_local_player.m_weapon_type == WeaponType.NUM) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    // Fix crash in SpewItemsOnDeath if no primary is available at all
+    [HarmonyPatch(typeof(PlayerShip), "SpewItemsOnDeath")]
+    class MPLoadouts_PlayerShip_SpewItemsOnDeath {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
-            if (!Menus.mms_classic_spawns)
+            int state = 0;
+            if ((int)WeaponType.NUM  != 8) {// just to make sure...
+                throw new System.Exception("MPLoadouts_PlayerShip_SpewItemsOnDeath expects WeaponType.NUM == 8");
+            }
+            foreach (var code in codes)
+            {
+                if (state == 0) {
+                    if (code.opcode == OpCodes.Ldfld && ((FieldInfo)code.operand).Name == "m_weapon_type") {
+                        state = 1;
+                    }
+                } else if (state == 1) {
+                    if (code.opcode == OpCodes.Ldelem_U1)
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldc_I4_7);
+                        yield return new CodeInstruction(OpCodes.And);
+                        state = 2;
+                    }
+                }
+                yield return code;
+            }
+        }
+    }
+
+    // if loadout forbids all primaries, make sure to switch to the first weapon which is picked up
+    [HarmonyPatch(typeof(Player), "UnlockWeaponClient")]
+    class MPLoadouts_Player_UnlockWeaponClient
+    {
+        public static void Postfix(WeaponType wt, bool silent, Player __instance)
+        {
+            if (__instance.m_weapon_type >= WeaponType.NUM) {
+                __instance.Networkm_weapon_type = wt;
+                __instance.CallCmdSetCurrentWeapon(__instance.m_weapon_type);
+                __instance.c_player_ship.WeaponSelectFX();
+                __instance.UpdateCurrentWeaponName();
+            }
+        }
+    }
+
+    // Draw Selection Menu 
+    [HarmonyPatch(typeof(UIElement), "DrawMpMatchSetup")]
+    class MPLoadouts_UIElement_DrawMpMatchSetup {
+
+        [HarmonyPriority(Priority.Normal + 1)]
+        private static void Postfix(UIElement __instance)
+        {
+            
+            switch (MenuManager.m_menu_micro_state)
+            {
+                case 15:
+                    Vector2 position = Vector2.up * (UIManager.UI_TOP + 70f);
+                    position.y += 62f;
+                    __instance.DrawLabelSmall(Vector2.up * (UIManager.UI_TOP + 70f), Loc.LS("ALLOWED LOADOUT WEAPONS"), 250f, 24f, 1f);
+                    position.y = -133f;
+                    __instance.DrawMenuSeparator(position - Vector2.up * 40f);
+                    position.y += 40f;
+                    __instance.DrawSmallHeader1(position - Vector2.up * 51f, Loc.LS("PRIMARY WEAPONS"), 300f);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        string weaponNameNoDefault = Player.GetWeaponNameNoDefault((WeaponType)i);
+                        int num = i;
+                        __instance.SelectAndDrawCheckboxItem(weaponNameNoDefault, position + Vector2.right * (((float)i - 1.5f) * 320f), num, MPLoadouts.IsAllowed((WeaponType)num), false, 0.5f, -1);
+                    }
+                    position.y += 62f;
+                    for (int j = 0; j < 4; j++)
+                    {
+                        string weaponNameNoDefault2 = Player.GetWeaponNameNoDefault(j + WeaponType.DRILLER);
+                        int num2 = j + 4;
+                        __instance.SelectAndDrawCheckboxItem(weaponNameNoDefault2, position + Vector2.right * (((float)j - 1.5f) * 320f), num2, MPLoadouts.IsAllowed((WeaponType)num2), false, 0.5f, -1);
+                    }
+                    position.y += 62f;
+                    position.y += 40f;
+                    __instance.DrawSmallHeader1(position - Vector2.up * 51f, Loc.LS("SECONDARY WEAPONS"), 300f);
+                    for (int k = 0; k < 4; k++)
+                    {
+                        string missileNameNoDefault = Player.GetMissileNameNoDefault((MissileType)k);
+                        int num3 = k + 8;
+                        __instance.SelectAndDrawCheckboxItem(missileNameNoDefault, position + Vector2.right * (((float)k - 1.5f) * 320f), num3, MPLoadouts.IsAllowed((MissileType)k), false, 0.5f, -1);
+                    }
+                    position.y += 62f;
+                    for (int l = 0; l < 4; l++)
+                    {
+                        string missileNameNoDefault2 = Player.GetMissileNameNoDefault(l + MissileType.NOVA);
+                        int num4 = l + 12;
+                        __instance.SelectAndDrawCheckboxItem(missileNameNoDefault2, position + Vector2.right * (((float)l - 1.5f) * 320f), num4, MPLoadouts.IsAllowed((MissileType)(l + MissileType.NOVA)), false, 0.5f, -1);
+                    }
+                    __instance.DrawMenuSeparator(position + Vector2.up * 40f);
+                    position.y += 80.6f;
+                    __instance.SelectAndDrawHalfItem2(Loc.LS("ALLOWED POWERUPS"), position - Vector2.right * 470f, 22, false);
+                    __instance.SelectAndDrawHalfItem2(Loc.LS("CLEAR"), position - Vector2.right * 160f, 20, false);
+                    __instance.SelectAndDrawHalfItem2(Loc.LS("RESET"), position + Vector2.right * 160f, 21, false);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // Handle Logic for Selection Menu
+    [HarmonyPatch(typeof(MenuManager), "MpMatchSetup")]
+    class MPLoadouts_MenuManager_MpMatchSetup
+    {
+        [HarmonyPriority(Priority.Normal + 1)]
+        static void Postfix()
+        {
+            //uConsole.Log("Fire: " + MenuManager.m_menu_micro_state + " : " + UIManager.m_menu_selection);
+
+            // Disables reflex powerups since it's provided as a standard sidearm now.
+            // But if Reflex is forbidden in the loadout settings, you may add it as powerup
+            if (!Menus.mms_classic_spawns && MPLoadouts.IsAllowedByFilter(WeaponType.REFLEX, MPLoadouts.LoadoutFilterBitmask))
             {
                 MenuManager.mms_powerup_filter[2] = false;
+            }
+
+            if (!UIManager.PushedSelect(100) && (!MenuManager.option_dir || !UIManager.PushedDir()))
+                return;
+
+            switch (MenuManager.m_menu_micro_state)
+            {
+                case 6:
+                    switch (UIManager.m_menu_selection)
+                    {
+                        // Button to lead into the "Allowed Loadouts Weapon" Menu
+                        case 23:
+                            MenuManager.m_menu_micro_state = 15;
+                            MenuManager.UIPulse(2f);
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        case 100:
+                            MenuManager.m_menu_micro_state = 6;
+                            MenuManager.UIPulse(2f);
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        default:
+                            return;
+                    }
+                // Handling for the Backlink button in the allowed powerups menu
+                case 7:
+                    switch (UIManager.m_menu_selection)
+                    {
+                        case 30:
+                            MenuManager.m_menu_micro_state = 15;
+                            MenuManager.UIPulse(2f);
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        default:
+                            return;
+                    }
+                // The "Allowed Loadout Weapons" Menu
+                case 15:
+                    switch (UIManager.m_menu_selection)
+                    {
+                        // Primary Weapons
+                        case 0:
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                        case 5:
+                        case 6:
+                        case 7:
+                            MPLoadouts.SetAllowed((WeaponType)UIManager.m_menu_selection, !MPLoadouts.IsAllowed((WeaponType)UIManager.m_menu_selection));
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        // Secondary Weapons
+                        case 8:
+                        case 9:
+                        case 10:
+                        case 11:
+                        case 12:
+                        case 13:
+                        case 14:
+                        case 15:
+                            MPLoadouts.SetAllowed((MissileType)UIManager.m_menu_selection - 8, !MPLoadouts.IsAllowed((MissileType)UIManager.m_menu_selection - 8));
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        // Clear All Button
+                        case 20:
+                            for (int i = 0; i < 8; i++)
+                            {
+                                MPLoadouts.SetAllowed((WeaponType)i, false);
+                                MPLoadouts.SetAllowed((MissileType)i, false);
+                            }
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        // Set Default State Button
+                        case 21:
+                            MPLoadouts.LoadoutFilterBitmask = MPLoadouts.MASK_DEFAULT;
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        // Switch to Powerup menu
+                        case 22:
+                            MenuManager.m_menu_micro_state = 7;
+                            MenuManager.UIPulse(2f);
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        // Back to parent menu Button
+                        case 100:
+                            MenuManager.m_menu_micro_state = 6;
+                            MenuManager.UIPulse(2f);
+                            MenuManager.PlaySelectSound(1f);
+                            return;
+                        default:
+                            return;
+                    }
+            }
+        }
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            int state = 0;
+            int fail = 0;
+            Label jumpTarget = new Label();
+            List<CodeInstruction> instructionsSaved = new List<CodeInstruction>();
+
+            foreach (var code in instructions) {
+                if (state == 0) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "mms_powerup_filter") {
+                        state++;
+                    }
+                } else if (state == 1) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "m_menu_selection") {
+                        state++;
+                    } else {
+                        fail = state;
+                    }
+                } else if (state == 2) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "mms_powerup_filter") {
+                        state++;
+                    } else {
+                        fail = state;
+                    }
+                } else if (state == 3) {
+                    if (code.opcode == OpCodes.Ldsfld && (code.operand as FieldInfo).Name == "m_menu_selection") {
+                        state++;
+                    } else {
+                        fail = state;
+                    }
+                } else if (state == 4) {
+                    if (code.opcode == OpCodes.Br) {
+                        jumpTarget = (Label)code.operand;
+                        // add additional branch
+                        yield return new CodeInstruction(OpCodes.Ldlen);
+                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(UIManager), "m_menu_selection"));
+                        yield return new CodeInstruction(OpCodes.Ble, jumpTarget);
+                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MenuManager), "mms_powerup_filter"));
+
+                        // emit the saved instructions now
+                        foreach (var c in instructionsSaved) {
+                            yield return c;
+                        }
+                        state++;
+                    }
+                }
+                if (state > 1 && state < 5) {
+                    instructionsSaved.Add(code);
+                } else {
+                    yield return code;
+                }
+            }
+            if (state != 5 || fail > 0) {
+            } else {
+                Debug.LogFormat("MPLoadouts_MenuManager_MpMatchSetup: transpiler failed at state {0} {1}", state, fail);
             }
         }
     }

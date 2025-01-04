@@ -32,32 +32,42 @@ namespace GameMod
         {
             private static bool Prefix(Player player, PlayerState[] ___m_player_state_history)
             {
-                if (Client.m_PendingPlayerStateMessages.Count < 1) {
+                if (Client.m_PendingPlayerStateMessages.Count < 1)
+                {
                     // nothing to do, we can skip the original as it doesn't do anything anyway
                     return false;
                 }
                 // the original ReconcileServerPlayerState removes all elements from the queue
                 // and uses the last one, if there is one.
                 // We remove all but the last one, and only peek at that
-                while(Client.m_PendingPlayerStateMessages.Count > 1) {
+                while(Client.m_PendingPlayerStateMessages.Count > 1)
+                {
                     Client.m_PendingPlayerStateMessages.Dequeue();
                 }
                 PlayerStateToClientMessage msg = Client.m_PendingPlayerStateMessages.Peek();
                 if (msg.m_tick < Client.m_tick)
                 {
                     PlayerState s = ___m_player_state_history[msg.m_tick & 1023];
-                    if (s != null) {
+                    if (s != null)
+                    {
                         float err_distsqr = (msg.m_player_pos - s.m_pos).sqrMagnitude;
                         float err_angle = Mathf.Abs(Quaternion.Angle(msg.m_player_rot, s.m_rot));
                         bool skip = (err_distsqr < 0.0004f) && (err_angle < 0.5f);
-                        if (skip) {
+                        if (skip)
+                        {
                             // we are skipping the resimulation, consume the message right here
-                            if (Client.m_last_acknowledged_tick < msg.m_tick) {
+                            if (Client.m_last_acknowledged_tick < msg.m_tick)
+                            {
                                 Client.m_last_acknowledged_tick = msg.m_tick;
                             }
 
-                            player.c_player_ship.m_boost_heat = msg.m_boost_heat;
-                            player.c_player_ship.m_boost_overheat_timer = msg.m_boost_overheat_timer;
+                            // from Server Optimization patch -- there is technically a delay here to your boost energy recharge etc. but there isn't a good way to get them up to date if resim is being skipped. They will be a few frames out of sync.
+                            // If we're using client-side physics, we can skip this, as it's handled in SniperPacket's OnPlayerAddResource() now. This *will* be in sync.
+                            if (!MPServerOptimization.enabled)
+                            {
+                                player.c_player_ship.m_boost_heat = msg.m_boost_heat;
+                                player.c_player_ship.m_boost_overheat_timer = msg.m_boost_overheat_timer;
+                            }
 
                             Client.m_PendingPlayerStateMessages.Dequeue();
                             return false;

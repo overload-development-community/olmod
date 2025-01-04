@@ -101,8 +101,25 @@ namespace GameMod
             {
                 UpdateFrameLimiterSlider(UIManager.m_menu_selection);
             }
-
         }
-        
+    }
+
+    // Adds the ability to set the max number of frames queued for rendering. Saved in pilot config, but not present in menu for now. May change in future.
+    [HarmonyPatch(typeof(GameManager), "Start")]
+    public static class FrameQueueControl_GameManager_Start
+    {
+        public static void Postfix()
+        {
+            uConsole.RegisterCommand("maxqueue", "sets the QualitySettings.maxQueuedFrames amount (default 2)", new uConsole.DebugCommand(CmdSetMaxQueuedFrames));
+        }
+
+        public static void CmdSetMaxQueuedFrames()
+        {
+            QualitySettings.maxQueuedFrames = uConsole.GetInt();
+
+            Debug.Log("-------------------------------");
+            Debug.Log("QualitySettings.maxQueuedFrames set to " + QualitySettings.maxQueuedFrames);
+            Debug.Log("-------------------------------");
+        }
     }
 }

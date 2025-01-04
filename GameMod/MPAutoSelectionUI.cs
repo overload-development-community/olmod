@@ -9,6 +9,8 @@ namespace GameMod
 {
     class MPAutoSelectionUI
     {
+        // Consolidated into Menus_UIElement_DrawControlsMenu in Menus.cs
+        /*
         // Adds the 'CONFIGURE AUTOSELECT' Option as the Entrypoint for the Autoselect menu under 'Options/Control Options/'
         [HarmonyPatch(typeof(UIElement), "DrawControlsMenu")]
         internal class MPAutoSelectionUI_UIElement_DrawControlsMenu
@@ -55,7 +57,7 @@ namespace GameMod
                 return codes;
             }
         }
-
+        */
 
         // Changes the menu state if the "CONFIGURE AUTOSELECT" Button gets pressed
         [HarmonyPatch(typeof(MenuManager), "ControlsOptionsUpdate")]

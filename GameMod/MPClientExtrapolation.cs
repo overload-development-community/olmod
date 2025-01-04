@@ -442,14 +442,12 @@ namespace GameMod {
             }
         }
 
-        static private MethodInfo _Client_GetPlayerFromNetId_Method = AccessTools.Method(typeof(Client), "GetPlayerFromNetId");
-
         public static NewPlayerSnapshot GetPlayerSnapshot(NewPlayerSnapshotToClientMessage msg, Player p)
         {
             for (int i = 0; i < msg.m_num_snapshots; i++)
             {
                 NewPlayerSnapshot playerSnapshot = msg.m_snapshots[i];
-                Player candidate = (Player)_Client_GetPlayerFromNetId_Method.Invoke(null, new object[] {playerSnapshot.m_net_id});
+                Player candidate = OL_Client.GetPlayerFromNetId(playerSnapshot.m_net_id);
 
                 if (candidate == p)
                 {
@@ -487,36 +485,61 @@ namespace GameMod {
             player.c_player_ship.c_mesh_collider_trans.localRotation = player.c_player_ship.c_transform.localRotation;
         }
 
-        public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t){
-            if (HandlePlayerRespawn(player,snapshot)) {
+        public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t)
+        {
+            if (HandlePlayerRespawn(player, snapshot))
+            {
                 return;
             }
-            Vector3 newPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos+snapshot.m_vel, t);
+
+            Vector3 newPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos + snapshot.m_vel, t);
+            Quaternion newRot;
+
+            if (Menus.mms_lag_compensation_prediction_mode == 0)
+            {
+                newRot = snapshot.m_rot;
+            }
+            else // Vel + Rotation or Motion Arc mode
+            {
+                newRot = Quaternion.Euler(snapshot.m_vrot * Mathf.Rad2Deg * t) * snapshot.m_rot; // Scales the angular velocity first now. Also the original method for this did not convert radians to degrees so was barely doing anything, thus why the default is now just straight-up disabled
+            }
+
+            // An attempt to better predict player positions on higher pings -- this portion applies the rotation to the movement vector and then averages between the linear and rotated positions
+            if (Menus.mms_lag_compensation_prediction_mode == 2) // Motion Arc mode
+            {
+                Vector3 rotPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos + ((snapshot.m_rot * Quaternion.Inverse(newRot)) * snapshot.m_vel), t);
+                newPos = Vector3.Lerp(newPos, rotPos, 0.5f); // some semblance of faking inertia -- only go ~1/2 of the way to the rotated position vector. This could probably use tuning.
+            }
+
             // limit ship dive-in if enabled:
-            if (Menus.mms_lag_compensation_collision_limit > 0) {
-                const float radius = 0.98f; /// the ship's collider is radius 1, we use a bit smaller one
+            if (Menus.mms_lag_compensation_collision_limit > 0)
+            {
+                const float radius = 0.98f; // the ship's collider is radius 1, we use a bit smaller one
                 // how far the ship's enclosing sphere is allowed to dive in
                 float maxDive = (100.0f - (float)Menus.mms_lag_compensation_collision_limit)/50.0f * radius;
                 Vector3 basePos = snapshot.m_pos;
                 Vector3 deltaPos = newPos - basePos;
                 float dist = deltaPos.magnitude;
-                if (dist > 0.05f && dist > maxDive) { // only if ship is moved by a significant amount
+                if (dist > 0.05f && dist > maxDive)
+                {   // only if ship is moved by a significant amount
                     // NOTE: we only test against LAVA and LEVEL, not other players, because that
                     //       would have two drawbacks:
-                    //       - we would test against the player ship itslef, if speed and ping
+                    //       - we would test against the player ship itself, if speed and ping
                     //         is high enough (I tried to disable that collider, but that didn't work)
-                    //       - if multipe opponents collide, the first one we processed here
+                    //       - if multiple opponents collide, the first one we processed here
                     //         would get maximal movement and the others would be cut short, which
                     //         is not correct either...
                     const int layerMask = (1<<(int)UnityObjectLayers.LEVEL) | (1<<(int)UnityObjectLayers.LAVA);
                     RaycastHit hitInfo;
                     Vector3 direction = (1.0f/dist) * deltaPos;
-                    dist += radius; // we're doing a basic RayCast, so the distance to check must be increased by the ship's radius`
+                    dist += radius; // we're doing a basic RayCast, so the distance to check must be increased by the ship's radius
 
-                    if (Physics.Raycast(basePos, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore)) {
+                    if (Physics.Raycast(basePos, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore))
+                    {
                         // how far the ship's enclosing shpere dives into the collider
                         float diveIn = dist - hitInfo.distance;
-                        if (diveIn > maxDive) {
+                        if (diveIn > maxDive)
+                        {
                             // limit the ship position
                             diveIn = maxDive;
                             newPos = basePos + (hitInfo.distance - radius + diveIn) * direction;
@@ -525,7 +548,7 @@ namespace GameMod {
                 }
             }
             player.c_player_ship.c_transform.localPosition = newPos;
-            player.c_player_ship.c_transform.rotation = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot*Quaternion.Euler(snapshot.m_vrot), t);
+            player.c_player_ship.c_transform.rotation = newRot;
             player.c_player_ship.c_mesh_collider_trans.localPosition = player.c_player_ship.c_transform.localPosition;
             player.c_player_ship.c_mesh_collider_trans.localRotation = player.c_player_ship.c_transform.localRotation;
         }
@@ -598,6 +621,7 @@ namespace GameMod {
                 } else {
                     // extrapolation case
                     // use the most recently received snapshot
+                    msgA = m_last_messages_ring[(m_last_messages_ring_pos_last - 2) & 3]; // we've added another snapshot here, see below during the "foreach"
                     msgB = m_last_messages_ring[m_last_messages_ring_pos_last];
                 }
             } // lock
@@ -641,18 +665,34 @@ namespace GameMod {
             // actually apply the operation to each player
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
-                if (player != null && !player.isLocalPlayer && !player.m_spectator)
+                if (player != null && !player.isLocalPlayer && !player.m_spectator && m_last_messages_ring_count > 3) // wait until the ring is full before actually doing anything since we need multiple snapshots
                 {
                     // do the actual interpolation or extrapolation, as calculated above
-                    if (do_interpolation) {
+                    if (do_interpolation)
+                    {
                         NewPlayerSnapshot A = GetPlayerSnapshot(msgA, player);
                         NewPlayerSnapshot B = GetPlayerSnapshot(msgB, player);
-                        if(A != null && B != null){
+                        if (A != null && B != null)
+                        {
                             interpolatePlayer(player, A, B, interpolate_factor);
                         }
-                    } else {
+                    }
+                    else
+                    {
+                        NewPlayerSnapshot oldsnapshot = GetPlayerSnapshot(msgA, player);
                         NewPlayerSnapshot snapshot = GetPlayerSnapshot(msgB, player);
-                        if(snapshot != null){
+
+                        if (snapshot != null && oldsnapshot != null)
+                        {
+                            // An attempt to put some damping on the wild swinging certain highly-mobile players appear to have on high ping. If enabled, looks back 2 snapshots and scales the amount of extrapolation by how strongly the velocity vectors are correlated.
+                            if (Menus.mms_lag_compensation_damping_mode == 1)
+                            {
+                                delta_t *= Mathf.Min(Mathf.Sqrt(snapshot.m_vel.sqrMagnitude / oldsnapshot.m_vel.sqrMagnitude), 1f); // only takes magnitudes into account
+                            }
+                            if (Menus.mms_lag_compensation_damping_mode == 2)
+                            {
+                                delta_t *= Mathf.Min(Vector3.Dot(snapshot.m_vel.normalized, oldsnapshot.m_vel.normalized), 0f); // scales back by directional differences as well
+                            }
                             extrapolatePlayer(player, snapshot, delta_t);
                         }
                     }
@@ -698,6 +738,7 @@ namespace GameMod {
         }
     }
 
+    /* This has been moved to MPServerOptimization and combined with the patch there
     /// <summary>
     /// Force a high input deficit on the server so it always catches up on inputs, even if this number gets out of sync with the number of inputs received.
     /// </summary>
@@ -711,6 +752,7 @@ namespace GameMod {
             }
         }
     }
+    */
 
     /*[HarmonyPatch(typeof(Client), "UpdateInterpolationBuffer")]
     class MPClientExtrapolation_UpdateInterpolationBuffer {
