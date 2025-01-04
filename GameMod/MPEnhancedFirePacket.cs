@@ -37,7 +37,7 @@ namespace GameMod
 				return;
 			}
 			EnhancedFireProjectileToClientMessage fireProjectileToClientMessage = msg.ReadMessage<EnhancedFireProjectileToClientMessage>();
-			Player playerFromNetId = GetPlayerFromNetId(fireProjectileToClientMessage.m_net_id);
+			Player playerFromNetId = OL_Client.GetPlayerFromNetId(fireProjectileToClientMessage.m_net_id);
 			if (playerFromNetId == null)
 			{
 				return;
@@ -56,14 +56,6 @@ namespace GameMod
 			}
 			//Debug.Log("CCF Received E-fire packet, strength " + fireProjectileToClientMessage.m_strength);
         }
-
-		[HarmonyReversePatch]
-		[HarmonyPatch(typeof(Client), "GetPlayerFromNetId")]
-		public static Player GetPlayerFromNetId(NetworkInstanceId net_id)
-		{
-			// its a stub so it has no initial content
-			throw new NotImplementedException("It's a stub");
-		}
 
 		internal class EnhancedFireProjectileToClientMessage : MessageBase
 		{

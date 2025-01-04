@@ -81,6 +81,12 @@ namespace GameMod
                 uie.DrawStringSmall(GetColliderName(MPModPrivateData.ShipMeshCollider), position, TEXT_SIZE, StringOffset.RIGHT, UIManager.m_col_ui2, uie.m_alpha);
                 position.y += LINE_SIZE;
             }
+            if (MPServerOptimization.enabled)
+            {
+                show = true;
+                uie.DrawStringSmall("CLIENT-SIDE PHYSICS ENABLED", position - Vector2.right * LEFT_OFFSET, TEXT_SIZE, StringOffset.LEFT, UIManager.m_col_ui1, 1f, 200f);
+                position.y += LINE_SIZE;
+            }
             if (MPModPrivateData.ClassicSpawnsEnabled)
             {
                 show = true;

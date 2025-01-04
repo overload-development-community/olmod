@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using HarmonyLib;
 using Overload;
 using UnityEngine;
@@ -204,14 +206,17 @@ namespace GameMod {
         }
     }
 
+    // CCF-------- get rid of this whole thing as long as it's not actually getting called
     /// <summary>
     /// 
     /// </summary>
     [HarmonyPatch(typeof(Server), "SendSnapshotsToPlayer")]
     public class MPNoPositionCompression_SendSnapshotsToPlayer{
+        private static bool displayed = false;
 
         public static NewPlayerSnapshotToClientMessage m_snapshot_buffer = new NewPlayerSnapshotToClientMessage();
         public static bool Prefix(Player send_to_player){
+            if (!displayed) { displayed = true; Debug.Log("--CCF WARNING SendSnapshotsToPlayer GOT CALLED SOMEHOW - it's not supposed to anymore"); }
             m_snapshot_buffer.m_num_snapshots = 0;
             foreach (Player player in Overload.NetworkManager.m_Players)
             {
@@ -236,6 +241,98 @@ namespace GameMod {
             }
             return false;
         }
+    }
+    // CCF-------- get rid of this whole thing ^^ as long as it's not actually getting called
 
+    // might as well just generate the snapshot list once since there's already checks in place in olmod and in stock to not apply a snapshot to the local player
+    [HarmonyPatch(typeof(Server), "SendSnapshotsToPlayers")]
+    public class MPNoPositionCompression_SendSnapshotsToPlayers
+    {
+        public static NewPlayerSnapshotToClientMessage m_snapshot_buffer = new NewPlayerSnapshotToClientMessage();
+
+        public static Dictionary<NetworkInstanceId, int> playerMissingTicks = new Dictionary<NetworkInstanceId, int>(16);
+
+        public static bool Prefix()
+        {
+            m_snapshot_buffer.m_num_snapshots = 0;
+
+            // build the snapshot message
+            foreach (Player player in Overload.NetworkManager.m_Players)
+            {
+                if (!(player == null) && !player.m_spectator)
+                {
+                    NewPlayerSnapshot playerSnapshot = m_snapshot_buffer.m_snapshots[m_snapshot_buffer.m_num_snapshots++];
+                    playerSnapshot.m_net_id = player.netId;
+                    playerSnapshot.m_vel = player.c_player_ship.c_rigidbody.velocity;
+                    playerSnapshot.m_vrot = player.c_player_ship.c_rigidbody.angularVelocity;
+
+                    if (player.m_send_updated_state || player.c_player_ship.m_dead || player.c_player_ship.m_dying)
+                    {
+                        playerSnapshot.m_pos = player.transform.position;
+                        playerSnapshot.m_rot = player.transform.rotation;
+                        playerMissingTicks.Remove(playerSnapshot.m_net_id);
+                    }
+                    else // extrapolate the movement 1 frame forward so it doesn't just freeze in the case of a starved buffer or a network hitch
+                    {
+                        int numticks;
+                        playerMissingTicks.TryGetValue(playerSnapshot.m_net_id, out numticks);
+                        playerMissingTicks[playerSnapshot.m_net_id] = ++numticks;
+                        //Debug.Log("==CCF EXTRAPOLATING FRAME for " + player.m_mp_name + " on player tick " + player.m_server_tick + "==");
+                        playerSnapshot.m_pos = Vector3.LerpUnclamped(player.transform.position, player.transform.position + playerSnapshot.m_vel, Time.fixedDeltaTime * numticks);
+                        playerSnapshot.m_rot = Quaternion.Euler(playerSnapshot.m_vrot * Mathf.Rad2Deg * Time.fixedDeltaTime * numticks) * player.transform.rotation; // TODO - project off the previous fake snapshot for some semblance of predicted vector? Does it even matter?
+                    }
+                }
+            }
+
+            // send the right version to everyone
+            if (m_snapshot_buffer.m_num_snapshots > 0)
+            {
+                foreach (Player send_to_player in Overload.NetworkManager.m_Players)
+                {
+                    if (!(send_to_player == null) && !send_to_player.isLocalPlayer)
+                    {
+                        //SendSnapshotsToPlayer(player);
+                        if (m_snapshot_buffer.m_num_snapshots > 0)
+                        {
+                            if (!MPNoPositionCompression.enabled || !MPTweaks.ClientHasTweak(send_to_player.connectionToClient.connectionId, "nocompress_0_3_6"))
+                            {
+                                send_to_player.connectionToClient.SendByChannel(64, m_snapshot_buffer.ToOldSnapshotMessage(), 1);
+                            }
+                            else
+                            {
+                                send_to_player.connectionToClient.SendByChannel(MessageTypes.MsgNewPlayerSnapshotToClient, m_snapshot_buffer, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Server), "SendUpdatedStateToPlayers")]
+    public class MPNoPositionCompression_SendUpdatedStateToPlayers
+    {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
+        {
+            bool skip = false;
+
+            foreach (var code in codes)
+            {
+                if (!skip)
+                {
+                    yield return code;
+                }
+
+                if (code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(Player), "m_LastPlayerStateSent"))
+                {
+                    skip = true;
+                }
+                else if (code.opcode == OpCodes.Stfld && code.operand == AccessTools.Field(typeof(Player), "m_send_updated_state")) // check removed here as we'll be clearing the bool at the start of the next cycle instead -- see MPServerOptimization_ProcessCachedControlsRemote
+                {
+                    skip = false;
+                }
+            }
+        }
     }
 }

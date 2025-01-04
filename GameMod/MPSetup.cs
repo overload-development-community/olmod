@@ -252,6 +252,8 @@ namespace GameMod {
                 Menus.mms_ship_lag_compensation_scale = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
                 Menus.mms_weapon_lag_compensation_scale = ModPrefs.GetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
                 Menus.mms_lag_compensation_collision_limit = ModPrefs.GetInt("MP_PM_SHIP_LAG_COMPENSATION_COLLISION_LIMIT", Menus.mms_lag_compensation_collision_limit);
+                Menus.mms_lag_compensation_prediction_mode = ModPrefs.GetInt("MP_LAG_COMPENSATION_PREDICTION_MODE", Menus.mms_lag_compensation_prediction_mode);
+                Menus.mms_lag_compensation_damping_mode = ModPrefs.GetInt("MP_LAG_COMPENSATION_DAMPING_MODE", Menus.mms_lag_compensation_damping_mode);
                 Menus.mms_sticky_death_summary = ModPrefs.GetBool("MP_PM_STICKY_DEATH_SUMMARY", Menus.mms_sticky_death_summary);
                 MPDeathReview.stickyDeathReview = Menus.mms_sticky_death_summary;
                 Menus.mms_reduced_ship_explosions = ModPrefs.GetBool("MP_PM_REDUCED_SHIP_EXPLOSIONS", Menus.mms_reduced_ship_explosions);
@@ -292,6 +294,12 @@ namespace GameMod {
                 FramerateLimiter.target_framerate = ModPrefs.GetInt("TARGET_FRAMERATE", 0);
 
                 Menus.mms_collision_mesh = ModPrefs.GetInt("MP_COLLIDER_MESH", 0);
+
+                MPServerOptimization.ODTurning = ModPrefs.GetBool("OD_TURNING", true);
+                MPServerOptimization.RollFix = ModPrefs.GetBool("MOUSE_ROLL_FIX", false);
+                MPServerOptimization.prefEnabled = ModPrefs.GetBool("MP_CLIENT_PHYSICS", true);
+
+                QualitySettings.maxQueuedFrames = ModPrefs.GetInt("GFX_MAXQUEUEDFRAMES", 2);
             }
             else // for compatibility with old olmod, no need to add new settings
             {
@@ -343,6 +351,8 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_WEAPON_LAG_COMPENSATION_SCALE", Menus.mms_weapon_lag_compensation_scale);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION_SCALE", Menus.mms_ship_lag_compensation_scale);
             ModPrefs.SetInt("MP_PM_SHIP_LAG_COMPENSATION_COLLISION_LIMIT", Menus.mms_lag_compensation_collision_limit);
+            ModPrefs.SetInt("MP_LAG_COMPENSATION_PREDICTION_MODE", Menus.mms_lag_compensation_prediction_mode);
+            ModPrefs.SetInt("MP_LAG_COMPENSATION_DAMPING_MODE", Menus.mms_lag_compensation_damping_mode);
             ModPrefs.SetBool("MP_PM_STICKY_DEATH_SUMMARY", Menus.mms_sticky_death_summary);
             ModPrefs.SetBool("MP_PM_REDUCED_SHIP_EXPLOSIONS", Menus.mms_reduced_ship_explosions);
             ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_ALPHA_MULT", Menus.mms_damageeffect_alpha_mult);
@@ -382,6 +392,10 @@ namespace GameMod {
             ModPrefs.SetBool("MP_AUDIOTAUNT_SHOW_FREQUENCYBAND", MPAudioTaunts.AClient.display_audio_spectrum);
             ModPrefs.SetInt("TARGET_FRAMERATE", FramerateLimiter.target_framerate);
             ModPrefs.SetInt("MP_COLLIDER_MESH", Menus.mms_collision_mesh);
+            ModPrefs.SetBool("OD_TURNING", MPServerOptimization.ODTurning);
+            ModPrefs.SetBool("MOUSE_ROLL_FIX", MPServerOptimization.RollFix);
+            ModPrefs.SetBool("MP_CLIENT_PHYSICS", MPServerOptimization.prefEnabled);
+            ModPrefs.SetInt("GFX_MAXQUEUEDFRAMES", QualitySettings.maxQueuedFrames);
 
             ModPrefs.Flush(filename + "mod");
         }
