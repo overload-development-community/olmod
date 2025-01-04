@@ -487,49 +487,59 @@ namespace GameMod {
 
         public static void extrapolatePlayer(Player player, NewPlayerSnapshot snapshot, float t)
         {
-            if (HandlePlayerRespawn(player,snapshot)) {
+            if (HandlePlayerRespawn(player, snapshot))
+            {
                 return;
             }
 
-            //Vector3 newPos;
             Vector3 newPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos + snapshot.m_vel, t);
-            //Quaternion newRot = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot * Quaternion.Euler(snapshot.m_vrot), t);
-            //Quaternion newRot = Quaternion.SlerpUnclamped(snapshot.m_rot, snapshot.m_rot * Quaternion.Euler(snapshot.m_vrot * Mathf.Rad2Deg), t); // turns out snapshot.m_vrot is in radians, and Quaternion.Euler expects degrees -- this makes for jerky rotation, though
-            //Quaternion newRot = snapshot.m_rot * Quaternion.Euler(snapshot.m_vrot * Mathf.Rad2Deg * t); // trying something new -- scale the angular velocity first.
-            Quaternion newRot = snapshot.m_rot * Quaternion.Euler(Vector3.SlerpUnclamped(Vector3.zero, snapshot.m_vrot * Mathf.Rad2Deg, t)); // trying something new -- slerp the angular velocity first, in degrees, *then* apply it as a quaternion rotation
+            Quaternion newRot;
+
+            if (Menus.mms_lag_compensation_prediction_mode == 0)
+            {
+                newRot = snapshot.m_rot;
+            }
+            else // Vel + Rotation or Motion Arc mode
+            {
+                newRot = Quaternion.Euler(snapshot.m_vrot * Mathf.Rad2Deg * t) * snapshot.m_rot; // Scales the angular velocity first now. Also the original method for this did not convert radians to degrees so was barely doing anything, thus why the default is now just straight-up disabled
+            }
 
             // An attempt to better predict player positions on higher pings -- this portion applies the rotation to the movement vector and then averages between the linear and rotated positions
-            if (Menus.mms_lag_compensation_prediction_mode == 1 || Menus.mms_lag_compensation_prediction_mode == 3) // Rotation or Damped Rotation mode
+            if (Menus.mms_lag_compensation_prediction_mode == 2) // Motion Arc mode
             {
                 Vector3 rotPos = Vector3.LerpUnclamped(snapshot.m_pos, snapshot.m_pos + ((snapshot.m_rot * Quaternion.Inverse(newRot)) * snapshot.m_vel), t);
-                newPos = Vector3.Lerp(newPos, rotPos, 0.5f); // some semblance of faking inertia -- only go ~1/2 of the way to the rotated position vector
+                newPos = Vector3.Lerp(newPos, rotPos, 0.5f); // some semblance of faking inertia -- only go ~1/2 of the way to the rotated position vector. This could probably use tuning.
             }
 
             // limit ship dive-in if enabled:
-            if (Menus.mms_lag_compensation_collision_limit > 0) {
-                const float radius = 0.98f; /// the ship's collider is radius 1, we use a bit smaller one
+            if (Menus.mms_lag_compensation_collision_limit > 0)
+            {
+                const float radius = 0.98f; // the ship's collider is radius 1, we use a bit smaller one
                 // how far the ship's enclosing sphere is allowed to dive in
                 float maxDive = (100.0f - (float)Menus.mms_lag_compensation_collision_limit)/50.0f * radius;
                 Vector3 basePos = snapshot.m_pos;
                 Vector3 deltaPos = newPos - basePos;
                 float dist = deltaPos.magnitude;
-                if (dist > 0.05f && dist > maxDive) { // only if ship is moved by a significant amount
+                if (dist > 0.05f && dist > maxDive)
+                {   // only if ship is moved by a significant amount
                     // NOTE: we only test against LAVA and LEVEL, not other players, because that
                     //       would have two drawbacks:
-                    //       - we would test against the player ship itslef, if speed and ping
+                    //       - we would test against the player ship itself, if speed and ping
                     //         is high enough (I tried to disable that collider, but that didn't work)
-                    //       - if multipe opponents collide, the first one we processed here
+                    //       - if multiple opponents collide, the first one we processed here
                     //         would get maximal movement and the others would be cut short, which
                     //         is not correct either...
                     const int layerMask = (1<<(int)UnityObjectLayers.LEVEL) | (1<<(int)UnityObjectLayers.LAVA);
                     RaycastHit hitInfo;
                     Vector3 direction = (1.0f/dist) * deltaPos;
-                    dist += radius; // we're doing a basic RayCast, so the distance to check must be increased by the ship's radius`
+                    dist += radius; // we're doing a basic RayCast, so the distance to check must be increased by the ship's radius
 
-                    if (Physics.Raycast(basePos, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore)) {
+                    if (Physics.Raycast(basePos, direction, out hitInfo, dist, layerMask, QueryTriggerInteraction.Ignore))
+                    {
                         // how far the ship's enclosing shpere dives into the collider
                         float diveIn = dist - hitInfo.distance;
-                        if (diveIn > maxDive) {
+                        if (diveIn > maxDive)
+                        {
                             // limit the ship position
                             diveIn = maxDive;
                             newPos = basePos + (hitInfo.distance - radius + diveIn) * direction;
@@ -675,9 +685,13 @@ namespace GameMod {
                         if (snapshot != null && oldsnapshot != null)
                         {
                             // An attempt to put some damping on the wild swinging certain highly-mobile players appear to have on high ping. If enabled, looks back 2 snapshots and scales the amount of extrapolation by how strongly the velocity vectors are correlated.
-                            if (Menus.mms_lag_compensation_prediction_mode > 1)
+                            if (Menus.mms_lag_compensation_damping_mode == 1)
                             {
                                 delta_t *= Mathf.Min(Mathf.Sqrt(snapshot.m_vel.sqrMagnitude / oldsnapshot.m_vel.sqrMagnitude), 1f); // only takes magnitudes into account
+                            }
+                            if (Menus.mms_lag_compensation_damping_mode == 2)
+                            {
+                                delta_t *= Mathf.Min(Vector3.Dot(snapshot.m_vel.normalized, oldsnapshot.m_vel.normalized), 0f); // scales back by directional differences as well
                             }
                             extrapolatePlayer(player, snapshot, delta_t);
                         }

@@ -197,7 +197,7 @@ namespace GameMod
             public int shipMeshCollider = 0;
             public float colliderScale = 1f;
             public bool thunderboltPassthrough;
-            public bool serverOptimizations = true; // CCF-FixMaybe - should this be on by default? Set this properly if so.
+            public bool serverOptimizations = true;
 
             public void Apply()
             {

@@ -270,20 +270,16 @@ namespace GameMod {
                     {
                         playerSnapshot.m_pos = player.transform.position;
                         playerSnapshot.m_rot = player.transform.rotation;
-                        //playerMissingTicks[playerSnapshot.m_net_id] = 0;
                         playerMissingTicks.Remove(playerSnapshot.m_net_id);
                     }
-                    else // extrapolate the movement 1 frame forward so it doesn't just freeze in the case of a starved buffer or a network hitch -- CCF-FixMaybe This should be updated to extrapolate forward by number of missing frames if necessary
+                    else // extrapolate the movement 1 frame forward so it doesn't just freeze in the case of a starved buffer or a network hitch
                     {
                         int numticks;
                         playerMissingTicks.TryGetValue(playerSnapshot.m_net_id, out numticks);
                         playerMissingTicks[playerSnapshot.m_net_id] = ++numticks;
                         //Debug.Log("==CCF EXTRAPOLATING FRAME for " + player.m_mp_name + " on player tick " + player.m_server_tick + "==");
                         playerSnapshot.m_pos = Vector3.LerpUnclamped(player.transform.position, player.transform.position + playerSnapshot.m_vel, Time.fixedDeltaTime * numticks);
-                        //playerSnapshot.m_rot = Quaternion.SlerpUnclamped(player.transform.rotation, player.transform.rotation * Quaternion.Euler(playerSnapshot.m_vrot), Time.fixedDeltaTime); // CCF-- THIS IS WRONG. So is the lag comp code. m_vrot is in radians, Quaternion.Euler is epecting degrees.
-                        //playerSnapshot.m_rot = Quaternion.SlerpUnclamped(player.transform.rotation, , Time.fixedDeltaTime * numticks); // 57.3f or approximately 180/pi -- turns out snapshot.m_vrot is in radians, and Quaternion.Euler expects degrees
-                        //playerSnapshot.m_rot = player.transform.rotation * Quaternion.Euler(playerSnapshot.m_vrot * Mathf.Rad2Deg * Time.fixedDeltaTime * numticks); // TODO - project off the previous fake snapshot for some semblance of predicted vector? Does it even matter?
-                        playerSnapshot.m_rot = player.transform.rotation * Quaternion.Euler(Vector3.SlerpUnclamped(Vector3.zero ,playerSnapshot.m_vrot * Mathf.Rad2Deg, Time.fixedDeltaTime * numticks)); // TODO - project off the previous fake snapshot for some semblance of predicted vector? Does it even matter?
+                        playerSnapshot.m_rot = Quaternion.Euler(playerSnapshot.m_vrot * Mathf.Rad2Deg * Time.fixedDeltaTime * numticks) * player.transform.rotation; // TODO - project off the previous fake snapshot for some semblance of predicted vector? Does it even matter?
                     }
                 }
             }

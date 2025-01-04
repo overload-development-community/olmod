@@ -116,7 +116,6 @@ namespace GameMod
 				}
 
 				if (enabled && (NetworkSim.m_resimulating || (GameplayManager.IsDedicatedServer() && MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "cphysics")))) // supports client-side physics, also simplify resim
-				//if ((enabled && NetworkSim.m_resimulating) || (GameplayManager.IsDedicatedServer() && MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "cphysics"))) // supports client-side physics, also simplify resim // CCF--
 				{
 					// BEGIN MOVEMENT
 
@@ -160,10 +159,7 @@ namespace GameMod
 					current.move_dir = force;
 					current.rot_dir = torque;
 
-					//if (enabled) // CCF--
-					//{
-						client.SendByChannel(MessageTypes.MsgPlayerPhysics, message, 2); // *now* we send the new packet type including the pre-calculated physics moves
-					//}
+					client.SendByChannel(MessageTypes.MsgPlayerPhysics, message, 2); // *now* we send the new packet type including the pre-calculated physics moves
 				}
 				force = Vector3.zero;
 				torque = Vector3.zero;
@@ -443,7 +439,6 @@ namespace GameMod
 			public static bool Prefix(Player __instance, PlayerEncodedInput input)
 			{
 				if (enabled && (NetworkSim.m_resimulating || (GameplayManager.IsDedicatedServer() && MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "cphysics"))))
-				// if ((NetworkSim.m_resimulating && enabled) || (GameplayManager.IsDedicatedServer() && MPTweaks.ClientHasTweak(__instance.connectionToClient.connectionId, "cphysics"))) // CCF--
 				{
 					__instance.ClearCachedInput();
 					__instance.DecodePlayerButtonPresses(input.m_encoded_bits & 0xFFFFu);

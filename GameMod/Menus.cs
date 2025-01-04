@@ -213,7 +213,7 @@ namespace GameMod {
             }
         }
 
-        public static string GetMMSLagCompensationPrediction()
+        public static string GetMMSLagCompensationPredictionMode()
         {
             switch (mms_lag_compensation_prediction_mode)
             {
@@ -221,11 +221,23 @@ namespace GameMod {
                 default:
                     return "VELOCITY";
                 case 1:
-                    return "ROTATION";
+                    return "VELOCITY + ROTATION";
                 case 2:
-                    return "DAMPED VELOCITY";
-                case 3:
-                    return "DAMPED ROTATION";
+                    return "MOTION ARC";
+            }
+        }
+
+        public static string GetMMSLagCompensationDampingMode()
+        {
+            switch (mms_lag_compensation_damping_mode)
+            {
+                case 0:
+                default:
+                    return "DISABLED";
+                case 1:
+                    return "SPEED ONLY";
+                case 2:
+                    return "SPEED + DIRECTION";
             }
         }
 
@@ -256,6 +268,7 @@ namespace GameMod {
             mms_lag_compensation_use_interpolation = 0;
             mms_lag_compensation_collision_limit = 0;
             mms_lag_compensation_prediction_mode = 0;
+            mms_lag_compensation_damping_mode = 0;
         }
 
         public static int mms_weapon_lag_compensation_max = 100;
@@ -269,6 +282,7 @@ namespace GameMod {
         public static int mms_lag_compensation_use_interpolation = 0;
         public static int mms_lag_compensation_collision_limit = 0;
         public static int mms_lag_compensation_prediction_mode = 0;
+        public static int mms_lag_compensation_damping_mode = 0;
         public static string mms_mp_projdata_fn = "STOCK";
         public static bool mms_sticky_death_summary = false;
         public static int mms_damageeffect_alpha_mult = 30;
@@ -791,7 +805,11 @@ namespace GameMod {
                         position.y += 58f;
                         SelectAndDrawSliderItem(__instance, Loc.LS("LIMIT SHIPS DIVING INTO WALLS"), position, 11, Menus.mms_lag_compensation_collision_limit, 100, "LIMIT HOW FAR SHIPS MIGHT DIVE INTO WALLS (BUT SHIPS MIGHT APPEAR STUCK AT THE WALLS FOR SHORT MOMENTS INSTEAD)." + Environment.NewLine + "0 FOR UNLIMITED (NO CALCULATION OVERHEAD), OTHERWISE PERCENTAGE OF SHIP DIAMETER WHICH MUST REMAIN VISIBLE (100 = NO DIVE-IN AT ALL).");
                         position.y += 58f;
-                        __instance.SelectAndDrawStringOptionItem(Loc.LS("VECTOR PREDICTION"), position, 12, Menus.GetMMSLagCompensationPrediction(), Loc.LS("\"VELOCITY\" PROJECTS A SHIP'S VELOCITY FORWARD - \"ROTATION\" PROJECTS ROTATION ONTO SHIP VELOCITY - \"DAMPED VELOCITY\" REDUCES PROJECTED VEL AS IT CHANGES - \"DAMPED ROTATION\" COMBINES THE PREVIOUS TWO"), 1.5f);
+                        position.x = -260f;
+                        __instance.SelectAndDrawStringOptionItem(Loc.LS("VECTOR PREDICTION"), position, 12, Menus.GetMMSLagCompensationPredictionMode(), Loc.LS("\"VELOCITY\" PROJECTS ONLY THE STRAIGHT-LINE VELOCITY - \"VELOCITY + ROTATION\" PROJECTS THE STRAIGHT-LINE VELOCITY AND CONTINUES ROTATION - \"MOTION ARC\" PARTIALLY ROTATES THE PREDICTED VELOCITY VECTOR AS THE SHIP ROTATES"), 0.9f);
+                        position.x = 260f;
+                        __instance.SelectAndDrawStringOptionItem(Loc.LS("MOTION DAMPING"), position, 13, Menus.GetMMSLagCompensationDampingMode(), Loc.LS("IF ENABLED, DAMPS TWITCHY MOVEMENTS BY COMPARING SHIP VELOCITY AGAINST THE PREVIOUS FEW FRAMES. AS SPEED (AND OPTIONALLY DIRECTION) BECOME LESS CORRELATED WITH PAST FRAMES, PREDICTION STRENGTH DROPS TO COMPENSATE."), 0.9f);
+                        position.x = 0f;
                     }
                     break;
                 case 3:
@@ -1198,7 +1216,12 @@ namespace GameMod {
                                         Menus.mms_lag_compensation_collision_limit = (int)(UIElement.SliderPos * 100f + 0.5f);
                                         break;
                                     case 12:
-                                        Menus.mms_lag_compensation_prediction_mode = (Menus.mms_lag_compensation_prediction_mode + 4 + UIManager.m_select_dir) % 4;
+                                        Menus.mms_lag_compensation_prediction_mode = (Menus.mms_lag_compensation_prediction_mode + 3 + UIManager.m_select_dir) % 3;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                                        break;
+                                    case 13:
+                                        Menus.mms_lag_compensation_damping_mode = (Menus.mms_lag_compensation_damping_mode + 3 + UIManager.m_select_dir) % 3;
+                                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                                         break;
                                 }
                                 break;
