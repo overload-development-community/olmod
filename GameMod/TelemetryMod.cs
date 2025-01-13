@@ -2,6 +2,7 @@
 
 using Overload;
 
+using System;
 using System.Collections;
 using System.Net;
 using System.Net.Sockets;
@@ -28,6 +29,7 @@ namespace GameMod
         private static GameObject udpSenderObject;
         private static Vector3 previousVelocity = Vector3.zero; 
         private static Vector3 previousLocalVelocity = Vector3.zero;
+        const float Rad2Degf = 57.29578f;
 
 
         [HarmonyPatch(typeof(PlayerShip), "FixedUpdateProcessControlsInternal")]
@@ -94,18 +96,17 @@ namespace GameMod
 
                         // velocity relative to object
                         Vector3 localVelocity = cRigidbody.transform.InverseTransformDirection(cRigidbody.velocity);
+                        
+                        Vector3 lgforce = (localVelocity - previousLocalVelocity) / Time.fixedDeltaTime / 9.81f;
+                        previousLocalVelocity = localVelocity;
 
                         Vector3 gforce = (cRigidbody.velocity - previousVelocity) / Time.fixedDeltaTime / 9.81f;
                         previousVelocity = cRigidbody.velocity;
 
-                        Vector3 lgforce = (localVelocity - previousLocalVelocity) / Time.fixedDeltaTime / 9.81f;
-                        previousLocalVelocity = localVelocity;
+                        var pyr = ToPitchYawRoll(rotation);
 
-
-                        Telemetry.Telemetry_SendTelemetry(  new Vector3(
-                            eulerAngles.x > 180.0 ? eulerAngles.x - 360f : eulerAngles.x, 
-                            eulerAngles.y > 180.0 ? eulerAngles.y - 360f : eulerAngles.y, 
-                            eulerAngles.z > 180.0 ? eulerAngles.z - 360f : eulerAngles.z),
+                        Telemetry.Telemetry_SendTelemetry( 
+                            pyr,                            
                             angularVelocity,
                             gforce,
                             event_boosting,
@@ -129,6 +130,17 @@ namespace GameMod
             }
         }
 
+        
+        public static Vector3 ToPitchYawRoll(Quaternion q)
+        {
+            var yaw = (float)Math.Atan2(2 * (q.y * q.w - q.x * q.z), 1 - 2 * (q.y * q.y + q.z * q.z)) * Rad2Degf;
+            var pitch = (float)Math.Atan2(2 * (q.x * q.w - q.y * q.z), 1 - 2 * (q.x * q.x + q.z * q.z)) * Rad2Degf;
+            var roll = (float)Math.Asin(2 * (q.x * q.y + q.z * q.w)) * Rad2Degf;
+
+            return new Vector3(pitch, yaw, -roll);
+        }
+        
+        
         private class PlayerData
         {
             /// <summary>
@@ -232,7 +244,7 @@ namespace GameMod
                 this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(this.IP), this.port);
                 client = new UdpClient();
                 local_player_data = new PlayerData();
-                this.StartCoroutine("Telemetry_Start");
+                this.StartCoroutine(nameof(Telemetry_Start));
             }
 
             public static void Telemetry_SendTelemetry(
