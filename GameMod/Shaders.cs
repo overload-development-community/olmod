@@ -10,7 +10,7 @@ namespace GameMod {
                 return true;
             }
 
-            __instance.mat = new Material((Shader)null);
+            __instance.mat = new Material(Shader.Find("Standard"));
             __instance.meshRender.material = __instance.mat;
             if (__instance._atlas && __instance._atlas.texture) {
                 __instance.mat.mainTexture = __instance._atlas.texture;
