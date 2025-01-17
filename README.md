@@ -211,6 +211,8 @@ This is an unaffiliated, unsupported tool. Use at your own risk.
 
 - Spawnpoint injection, by Fireball. See https://github.com/overload-development-community/olmod/wiki/Spawnpoint-Injection for details.
 
+- Export UDP Telemetry , by luponix. Add localized sway,surge & heave, and angular velocity by fresh_ch. Improve EulerAngle calculation by drowhunter.
+
 ##### Linux
 
 Build the shared object library:

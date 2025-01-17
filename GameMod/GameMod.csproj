@@ -228,6 +228,7 @@
     <Compile Include="Menus.cs" />
     <Compile Include="Shaders.cs" />
     <Compile Include="SPThunderboltShakeFix.cs" />
+    <Compile Include="TelemetryMod.cs" />
     <Compile Include="WarperOrientation.cs" />
     <Compile Include="ExitCutscene.cs" />
     <Compile Include="UIMeshColliderNoRender.cs" />
