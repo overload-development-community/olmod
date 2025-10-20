@@ -21,14 +21,22 @@ olargs=${args[@]}
 
 if [[ -z "$OSTYPE" || "$OSTYPE" != "darwin"* ]];
 then
-	olmodso="${olmoddir}/olmod.so"
+	olmodso="./olmod.so"
 	overload="${gamedir}/Overload.x86_64"
+	if [[ -v SteamAppId ]];
+	then
+		echo "Running under Steam; replacing LD_PRELOAD to avoid conflict with Steam Overlay"
+		olpreload="${olmodso}"
+	else
+		olpreload="${LD_PRELOAD:+${LD_PRELOAD}:}${olmodso}"
+	fi
+
 	if [[ -f "${olmodso}" ]];
 	then
 		if [[ -f "${overload}" ]];
 		then
 			cd "${olmoddir}"
-			OLMODDIR="${olmoddir}" LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}./olmod.so" "${overload}" ${olargs}
+			OLMODDIR="${olmoddir}" LD_PRELOAD="${olpreload}" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}${olmoddir}" "${overload}" ${olargs}
 		else
 			echo "Error: Overload.x86_64 not found." >&2
 			echo "Looked in ${gamedir}" >&2
