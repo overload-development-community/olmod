@@ -10,6 +10,7 @@ namespace GameMod {
     {
         public static bool KeyEnabled;
         public static int CustomUIColor;
+        public static string[] ActivationChars = { "`", "~", "ö" };
 
         private static MethodInfo _GameManager_InitializeMissionList_Method = typeof(GameManager).GetMethod("InitializeMissionList", AccessTools.all);
         public static void CmdReloadMissions()
@@ -347,9 +348,68 @@ namespace GameMod {
     [HarmonyPatch(typeof(uConsoleInput), "ProcessActivationInput")]
     class ConsoleEnablePatch
     {
+        private static bool lastFramePresent = false;
+
+        private static bool ActivationCharTyped()
+        {
+            string s = Input.inputString;
+            if (string.IsNullOrEmpty(s)) return false;
+            foreach (string c in Console.ActivationChars)
+                if (!string.IsNullOrEmpty(c) && s.Contains(c))
+                    return true;
+            return false;
+        }
+
         private static bool Prefix()
         {
-            return Console.KeyEnabled || uConsole.IsOn();
+            bool down = ActivationCharTyped() && !lastFramePresent;
+            bool up = !ActivationCharTyped() && lastFramePresent;
+            lastFramePresent = ActivationCharTyped();
+
+            if (!(Console.KeyEnabled || uConsole.IsOn()))
+                return false;
+
+            if (down)
+            {
+                if (!uConsole.IsOn())
+                {
+                    uConsole.TurnOn();
+                    uConsole.m_GUI.InputFieldMoveCaretToEnd();
+                    uConsole.m_GUI.InputFieldSetFocus();
+                }
+                else
+                {
+                    uConsole.TurnOff();
+                    uConsole.m_GUI.InputFieldDeactivate();
+                }
+            }
+            else if (up && uConsole.IsOn())
+            {
+                uConsole.m_GUI.InputFieldSetFocus();
+            }
+
+            return false;
+        }
+
+        // remove the activation character from the input field
+        private static void Postfix()
+        {
+            string text = uConsole.m_GUI.InputFieldGetText();
+            if (string.IsNullOrEmpty(text)) return;
+
+            string stripped = text;
+            foreach (string c in Console.ActivationChars)
+                if (!string.IsNullOrEmpty(c))
+                    stripped = stripped.Replace(c, "");
+
+            if (stripped == text) return;
+            if (stripped.Length == 0)
+                uConsole.m_GUI.InputFieldClearText();
+            else
+            {
+                uConsole.m_GUI.InputFieldSetText(stripped);
+                uConsole.m_GUI.InputFieldMoveCaretToEnd();
+            }
         }
     }
 
