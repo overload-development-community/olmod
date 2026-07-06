@@ -130,6 +130,7 @@
     <Compile Include="FrameTime.cs" />
     <Compile Include="GameMod.cs" />
     <Compile Include="GSyncFix.cs" />
+    <Compile Include="Hotkeys.cs" />
     <Compile Include="JoystickCurveEditor.cs" />
     <Compile Include="JoystickRotationFix.cs" />
     <Compile Include="LevelError.cs" />
