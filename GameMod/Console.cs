@@ -241,6 +241,132 @@ namespace GameMod {
             Debug.LogFormat("loadout mask: {0} = {0:X8}", MPLoadouts.LoadoutFilterBitmask);
         }
 
+        static bool RequireInt(string usage)
+        {
+            if (uConsole.NextParameterIsInt()) return true;
+            uConsole.Log("qs_set " + usage + " <int>");
+            return false;
+        }
+
+        static bool RequireFloat(string usage)
+        {
+            if (uConsole.NextParameterIsFloat()) return true;
+            uConsole.Log("qs_set " + usage + " <float>");
+            return false;
+        }
+
+        static void CmdSetQualitySetting()
+        {
+            string name = uConsole.GetString();
+            if (string.IsNullOrEmpty(name))
+            {
+                uConsole.Log("usage: qs_set <name> <value> - run qs_show for names and current values");
+                return;
+            }
+            switch (name.ToLowerInvariant())
+            {
+                case "pixellightcount":
+                    if (!RequireInt("pixellightcount")) return;
+                    QualitySettings.pixelLightCount = uConsole.GetInt();
+                    break;
+                case "texturequality":
+                    if (!RequireInt("texturequality (masterTextureLimit, 0=full res)")) return;
+                    QualitySettings.masterTextureLimit = uConsole.GetInt();
+                    break;
+                case "anisotropicfiltering":
+                    if (!RequireInt("anisotropicfiltering (0=disable,1=enable,2=forceenable)")) return;
+                    QualitySettings.anisotropicFiltering = (AnisotropicFiltering)uConsole.GetInt();
+                    break;
+                case "antialiasing":
+                    if (!RequireInt("antialiasing (0,2,4,8)")) return;
+                    QualitySettings.antiAliasing = uConsole.GetInt();
+                    break;
+                case "softparticles":
+                    if (!RequireInt("softparticles (0|1)")) return;
+                    QualitySettings.softParticles = uConsole.GetInt() != 0;
+                    break;
+                case "realtimereflectionprobes":
+                    if (!RequireInt("realtimereflectionprobes (0|1)")) return;
+                    QualitySettings.realtimeReflectionProbes = uConsole.GetInt() != 0;
+                    break;
+                case "particleraycastbudget":
+                    if (!RequireInt("particleraycastbudget")) return;
+                    QualitySettings.particleRaycastBudget = uConsole.GetInt();
+                    break;
+                case "maxqueuedframes":
+                    if (!RequireInt("maxqueuedframes")) return;
+                    QualitySettings.maxQueuedFrames = uConsole.GetInt();
+                    break;
+                case "vsynccount":
+                    if (!RequireInt("vsynccount (0,1,2,3,4)")) return;
+                    QualitySettings.vSyncCount = uConsole.GetInt();
+                    break;
+                case "blendweights":
+                    if (!RequireInt("blendweights (0=0bones,1=1bone,2=2bones,4=4bones)")) return;
+                    QualitySettings.blendWeights = (BlendWeights)uConsole.GetInt();
+                    break;
+                case "lodbias":
+                    if (!RequireFloat("lodbias")) return;
+                    QualitySettings.lodBias = uConsole.GetFloat();
+                    break;
+                case "maximumlodlevel":
+                    if (!RequireInt("maximumlodlevel")) return;
+                    QualitySettings.maximumLODLevel = uConsole.GetInt();
+                    break;
+                case "shadows":
+                    if (!RequireInt("shadows (0=off,1=hard,2=all)")) return;
+                    QualitySettings.shadows = (ShadowQuality)uConsole.GetInt();
+                    break;
+                case "shadowresolution":
+                    if (!RequireInt("shadowresolution (0=low,1=medium,2=high,3=veryhigh)")) return;
+                    QualitySettings.shadowResolution = (ShadowResolution)uConsole.GetInt();
+                    break;
+                case "shadowprojection":
+                    if (!RequireInt("shadowprojection (0=closefit,1=stablefit)")) return;
+                    QualitySettings.shadowProjection = (ShadowProjection)uConsole.GetInt();
+                    break;
+                case "shadowcascades":
+                    if (!RequireInt("shadowcascades (0,1,2,4)")) return;
+                    QualitySettings.shadowCascades = uConsole.GetInt();
+                    break;
+                case "shadowdistance":
+                    if (!RequireFloat("shadowdistance")) return;
+                    QualitySettings.shadowDistance = uConsole.GetFloat();
+                    break;
+                case "shadownearplaneoffset":
+                    if (!RequireFloat("shadownearplaneoffset")) return;
+                    QualitySettings.shadowNearPlaneOffset = uConsole.GetFloat();
+                    break;
+                default:
+                     uConsole.Log("qs_set: unknown field '" + name + "'");
+                    return;
+            }
+            uConsole.Log("qs_set: " + name.ToLowerInvariant() + " applied");
+        }
+
+        static void CmdShowQualitySettings()
+        {
+            uConsole.Log("--- QualitySettings (live values) ---");
+            uConsole.Log("pixelLightCount = " + QualitySettings.pixelLightCount);
+            uConsole.Log("textureQuality (masterTextureLimit) = " + QualitySettings.masterTextureLimit);
+            uConsole.Log("anisotropicFiltering = " + QualitySettings.anisotropicFiltering);
+            uConsole.Log("antiAliasing = " + QualitySettings.antiAliasing);
+            uConsole.Log("softParticles = " + QualitySettings.softParticles);
+            uConsole.Log("realtimeReflectionProbes = " + QualitySettings.realtimeReflectionProbes);
+            uConsole.Log("particleRaycastBudget = " + QualitySettings.particleRaycastBudget);
+            uConsole.Log("maxQueuedFrames = " + QualitySettings.maxQueuedFrames);
+            uConsole.Log("vSyncCount = " + QualitySettings.vSyncCount);
+            uConsole.Log("blendWeights = " + QualitySettings.blendWeights);
+            uConsole.Log("lodBias = " + QualitySettings.lodBias);
+            uConsole.Log("maximumLODLevel = " + QualitySettings.maximumLODLevel);
+            uConsole.Log("shadows = " + QualitySettings.shadows);
+            uConsole.Log("shadowResolution = " + QualitySettings.shadowResolution);
+            uConsole.Log("shadowProjection = " + QualitySettings.shadowProjection);
+            uConsole.Log("shadowCascades = " + QualitySettings.shadowCascades);
+            uConsole.Log("shadowDistance = " + QualitySettings.shadowDistance);
+            uConsole.Log("shadowNearPlaneOffset = " + QualitySettings.shadowNearPlaneOffset);
+        }
+
         public static void RegisterCommands()
         {
             uConsole.RegisterCommand("mute", "Mute a specific player", new uConsole.DebugCommand(MutePlayer));
@@ -253,6 +379,8 @@ namespace GameMod {
             uConsole.RegisterCommand("vr_scale", "Set VR scale (0.1 to 10)", new uConsole.DebugCommand(CmdVRScale));
             uConsole.RegisterCommand("xp", "Set XP", new uConsole.DebugCommand(CmdXP));
             uConsole.RegisterCommand("loadout_mask", "Manually set the loadout mask", CmdLoadoutMask);
+            uConsole.RegisterCommand("qs_set", "sets a raw Unity QualitySettings field by name (qs_set <name> <value>); run qs_show for names/current values", new uConsole.DebugCommand(CmdSetQualitySetting));
+            uConsole.RegisterCommand("qs_show", "prints the current value of every Unity QualitySettings field", new uConsole.DebugCommand(CmdShowQualitySettings));
         }
     }
 
