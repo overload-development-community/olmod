@@ -298,6 +298,7 @@ namespace GameMod {
         public static int mms_selected_loadout_idx = 0;
         public static int mms_collision_mesh = 0;
         public static bool mms_distinct_kill_sound = false;
+        public static bool mms_super_countdown = false;
     }
 
 
@@ -818,23 +819,25 @@ namespace GameMod {
             {
                 case 0:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("TEXT CHAT"), position, 0, MenuManager.GetMPTextChat(), string.Empty, 1.5f, false);
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("AUTO-RESPAWN TIMER"), position, 2, MenuManager.GetToggleSetting(MenuManager.opt_mp_auto_respawn), string.Empty, 1.5f, false);
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("STICKY DEATH SUMMARY"), position, 3, Menus.mms_sticky_death_summary ? "YES" : "NO", "KEEP DEATH SUMMARY ON THE SCREEN AFTER LETTING GO OF THE TOGGLE");
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 4, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 5, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 6, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), position, 7, MPColoredPlayerNames.isActive ? "ON" : "OFF", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]"));
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("PROFANITY FILTER"), position, 8, DisableProfanityFilter.profanity_filter ? "ON" : "OFF", Loc.LS(""));
-                    position.y += 52f;
+                    position.y += 49f;
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("LOADOUT SELECTION HOTKEYS"), position, 9, Menus.GetMMSLoadoutHotkeys(), Loc.LS("WEAPON SELECTION HOTKEYS WILL QUICK-SWAP BETWEEN LOADOUTS"));
-                    position.y += 68f;
+                    position.y += 49f;
+                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SUPER SPAWN COUNTDOWN"), position, 10, Menus.mms_super_countdown ? "ON" : "OFF", Loc.LS("FLASH A COUNTDOWN TO THE NEXT SUPER WHEN THE SUPER SIREN SOUNDS"));
+                    position.y += 49f;
                     __instance.SelectAndDrawItem(Loc.LS("QUICK CHAT"), position, 1, false, 1f, 0.75f);
                     break;
                 case 1:
@@ -1201,6 +1204,10 @@ namespace GameMod {
                                         {
                                             Menus.mms_loadout_hotkeys = 3;
                                         }
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 10:
+                                        Menus.mms_super_countdown = !Menus.mms_super_countdown;
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                 }

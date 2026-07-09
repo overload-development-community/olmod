@@ -271,6 +271,7 @@ namespace GameMod {
                 Menus.mms_directional_warnings = ModPrefs.GetBool("MP_PM_DIRECTIONAL_WARNINGS", Menus.mms_directional_warnings);
                 Menus.mms_loadout_hotkeys = ModPrefs.GetInt("MP_PM_LOADOUT_HOTKEYS2", Menus.mms_loadout_hotkeys);
                 Menus.mms_creeper_colors = ModPrefs.GetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
+                Menus.mms_super_countdown = ModPrefs.GetBool("MP_PM_SUPER_COUNTDOWN", Menus.mms_super_countdown);
 
                 MPLoadouts.Loadouts[0].weapons[0] = (WeaponType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_W1", (int)MPLoadouts.Loadouts[0].weapons[0]);
                 MPLoadouts.Loadouts[0].missiles[0] = (MissileType)ModPrefs.GetInt("MP_PM_LOADOUT_BOMBER1_M1", (int)MPLoadouts.Loadouts[0].missiles[0]);
@@ -359,6 +360,7 @@ namespace GameMod {
             ModPrefs.SetInt("MP_LAG_COMPENSATION_ROTATION_STRENGTH", Menus.mms_lag_compensation_rotation_strength);
             ModPrefs.SetBool("MP_PM_STICKY_DEATH_SUMMARY", Menus.mms_sticky_death_summary);
             ModPrefs.SetBool("MP_PM_REDUCED_SHIP_EXPLOSIONS", Menus.mms_reduced_ship_explosions);
+            ModPrefs.SetBool("MP_PM_SUPER_COUNTDOWN", Menus.mms_super_countdown);
             ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_ALPHA_MULT", Menus.mms_damageeffect_alpha_mult);
             ModPrefs.SetInt("MP_PM_DAMAGEEFFECT_DRUNK_BLUR_MULT", Menus.mms_damageeffect_drunk_blur_mult);
             ModPrefs.SetInt("MP_PM_MATCH_TIME_LIMIT", Menus.mms_match_time_limit);
