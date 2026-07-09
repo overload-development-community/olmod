@@ -188,6 +188,7 @@
     <Compile Include="MPSpew.cs" />
     <Compile Include="MPSuddenDeath.cs" />
     <Compile Include="MPSuperCheck.cs" />
+    <Compile Include="MPSuperAlert.cs" />
     <Compile Include="MPTags.cs" />
     <Compile Include="MPThunderboltPassthrough.cs" />
     <Compile Include="MPTriggers.cs" />
