@@ -298,6 +298,9 @@ namespace GameMod {
         public static int mms_selected_loadout_idx = 0;
         public static int mms_collision_mesh = 0;
         public static bool mms_distinct_kill_sound = false;
+        public static int mms_spawn_health = 100;
+        public static int mms_mp_general_scroll_offset = 0;
+        public const int SCROLL_ELEMENT_PAGE_VISIBLE_ROWS = 10;
     }
 
 
@@ -798,6 +801,22 @@ namespace GameMod {
     [HarmonyPatch(typeof(UIElement), "DrawMpOptions")]
     class Menus_UIElement_DrawMpOptions
     {
+        private static UIElement mp_general_tab_uie;
+        private static Vector2 mp_general_tab_row_position;
+        private static readonly List<Action> mp_general_tab_rows = new List<Action> {
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("TEXT CHAT"), mp_general_tab_row_position, 0, MenuManager.GetMPTextChat(), string.Empty, 1.5f, false),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("AUTO-RESPAWN TIMER"), mp_general_tab_row_position, 2, MenuManager.GetToggleSetting(MenuManager.opt_mp_auto_respawn), string.Empty, 1.5f, false),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("SPAWN HEALTH"), mp_general_tab_row_position, 11, Menus.mms_spawn_health + "%", Loc.LS("SELF-HANDICAP: SPAWN WITH REDUCED HEALTH, VISIBLE ON THE SCOREBOARD")),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("STICKY DEATH SUMMARY"), mp_general_tab_row_position, 3, Menus.mms_sticky_death_summary ? "YES" : "NO", "KEEP DEATH SUMMARY ON THE SCREEN AFTER LETTING GO OF THE TOGGLE"),
+            () => mp_general_tab_uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), mp_general_tab_row_position, 4, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f),
+            () => mp_general_tab_uie.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), mp_general_tab_row_position, 5, ((float)Menus.mms_damageeffect_alpha_mult) / 100f),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), mp_general_tab_row_position, 6, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL")),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), mp_general_tab_row_position, 7, MPColoredPlayerNames.isActive ? "ON" : "OFF", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]")),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("PROFANITY FILTER"), mp_general_tab_row_position, 8, DisableProfanityFilter.profanity_filter ? "ON" : "OFF", Loc.LS("")),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("LOADOUT SELECTION HOTKEYS"), mp_general_tab_row_position, 9, Menus.GetMMSLoadoutHotkeys(), Loc.LS("WEAPON SELECTION HOTKEYS WILL QUICK-SWAP BETWEEN LOADOUTS")),
+            () => mp_general_tab_uie.SelectAndDrawItem(Loc.LS("QUICK CHAT"), mp_general_tab_row_position, 1, false, 1f, 0.75f),
+        };
+
         static bool Prefix(UIElement __instance)
         {
             UIManager.X_SCALE = 0.2f;
@@ -817,25 +836,21 @@ namespace GameMod {
             switch (MenuManager.m_menu_micro_state)
             {
                 case 0:
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("TEXT CHAT"), position, 0, MenuManager.GetMPTextChat(), string.Empty, 1.5f, false);
-                    position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("AUTO-RESPAWN TIMER"), position, 2, MenuManager.GetToggleSetting(MenuManager.opt_mp_auto_respawn), string.Empty, 1.5f, false);
-                    position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("STICKY DEATH SUMMARY"), position, 3, Menus.mms_sticky_death_summary ? "YES" : "NO", "KEEP DEATH SUMMARY ON THE SCREEN AFTER LETTING GO OF THE TOGGLE");
-                    position.y += 52f;
-                    __instance.SelectAndDrawSliderItem(Loc.LS("DAMAGE BLUR INTENSITY"), position, 4, ((float)Menus.mms_damageeffect_drunk_blur_mult) / 100f);
-                    position.y += 52f;
-                    __instance.SelectAndDrawSliderItem(Loc.LS("DAMAGE COLOR INTENSITY"), position, 5, ((float)Menus.mms_damageeffect_alpha_mult) / 100f);
-                    position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("SHIP EXPLOSION EFFECTS"), position, 6, Menus.mms_reduced_ship_explosions ? Loc.LS("REDUCED") : Loc.LS("FULL"), Loc.LS("REDUCED VISUAL CLUTTER DURING DEATH ROLL"));
-                    position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), position, 7, MPColoredPlayerNames.isActive ? "ON" : "OFF", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]"));
-                    position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("PROFANITY FILTER"), position, 8, DisableProfanityFilter.profanity_filter ? "ON" : "OFF", Loc.LS(""));
-                    position.y += 52f;
-                    __instance.SelectAndDrawStringOptionItem(Loc.LS("LOADOUT SELECTION HOTKEYS"), position, 9, Menus.GetMMSLoadoutHotkeys(), Loc.LS("WEAPON SELECTION HOTKEYS WILL QUICK-SWAP BETWEEN LOADOUTS"));
-                    position.y += 68f;
-                    __instance.SelectAndDrawItem(Loc.LS("QUICK CHAT"), position, 1, false, 1f, 0.75f);
+                    mp_general_tab_uie = __instance;
+                    int general_tab_max_scroll_offset = Math.Max(0, mp_general_tab_rows.Count - Menus.SCROLL_ELEMENT_PAGE_VISIBLE_ROWS);
+                    Menus.mms_mp_general_scroll_offset = Mathf.Clamp(Menus.mms_mp_general_scroll_offset, 0, general_tab_max_scroll_offset);
+                    int general_tab_visible_rows = Math.Min(Menus.SCROLL_ELEMENT_PAGE_VISIBLE_ROWS, mp_general_tab_rows.Count);
+                    float general_tab_first_row_y = position.y;
+                    for (int row_index = Menus.mms_mp_general_scroll_offset; row_index < Menus.mms_mp_general_scroll_offset + general_tab_visible_rows; row_index++)
+                    {
+                        mp_general_tab_row_position = position;
+                        mp_general_tab_rows[row_index]();
+                        position.y += 52f;
+                    }
+                    position.y -= 52f;
+
+                    if (mp_general_tab_rows.Count > Menus.SCROLL_ELEMENT_PAGE_VISIBLE_ROWS)
+                        DrawMPGeneralTabScrollbar(__instance, general_tab_first_row_y, general_tab_visible_rows, mp_general_tab_rows.Count, general_tab_max_scroll_offset);
                     break;
                 case 1:
                     __instance.SelectAndDrawStringOptionItem(Loc.LS("TEAMMATE NAMES"), position, 0, MenuManager.GetMPTeammateNames(), string.Empty, 1.5f, false);
@@ -994,6 +1009,63 @@ namespace GameMod {
             __instance.MaybeShowMpStatus();
 
             return false;
+        }
+
+        private static bool mp_general_tab_scrollbar_dragging = false;
+        private static void DrawMPGeneralTabScrollbar(UIElement uie, float first_row_y, int visible_rows, int total_rows, int max_scroll_offset)
+        {
+            const float scrollbar_center_x = 440f;
+            float track_top_y = first_row_y - 10f;
+            float track_bottom_y = first_row_y + (visible_rows - 1) * 52f + 10f;
+            float track_height = track_bottom_y - track_top_y;
+            float thumb_height = track_height * visible_rows / total_rows;
+
+            bool mouse_on_track = Mathf.Abs(UIManager.m_mouse_pos.x - scrollbar_center_x) <= 14f
+                && UIManager.m_mouse_pos.y >= track_top_y - 6f && UIManager.m_mouse_pos.y <= track_bottom_y + 6f;
+            if (Input.GetMouseButtonDown(0) && mouse_on_track)
+                mp_general_tab_scrollbar_dragging = true;
+            if (!Input.GetMouseButton(0))
+                mp_general_tab_scrollbar_dragging = false;
+            if (mp_general_tab_scrollbar_dragging)
+            {
+                float drag_range = track_height - thumb_height;
+                float drag_fraction = drag_range > 0f ? Mathf.Clamp01((UIManager.m_mouse_pos.y - track_top_y - thumb_height * 0.5f) / drag_range) : 0f;
+                Menus.mms_mp_general_scroll_offset = Mathf.RoundToInt(drag_fraction * max_scroll_offset);
+            }
+
+            Vector2 track_center = new Vector2(scrollbar_center_x, (track_top_y + track_bottom_y) * 0.5f);
+            UIManager.DrawQuadUI(track_center, 6f, track_height * 0.5f + 4f, UIManager.m_col_ub0, uie.m_alpha * 0.1f, 12);
+            UIManager.DrawQuadUI(track_center, 1.2f, track_height * 0.5f, UIManager.m_col_ui0, uie.m_alpha * 0.5f, 12);
+
+            float thumb_top_y = track_top_y + Menus.mms_mp_general_scroll_offset * (track_height - thumb_height) / max_scroll_offset;
+            Vector2 thumb_center = new Vector2(scrollbar_center_x, thumb_top_y + thumb_height * 0.5f);
+            Color thumb_color = (mp_general_tab_scrollbar_dragging || mouse_on_track)
+                ? Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.2f * UIElement.FLICKER))
+                : UIManager.m_col_ui2;
+            UIManager.DrawQuadUIInner(thumb_center, 5f, thumb_height * 0.5f, thumb_color, uie.m_alpha, 11, 0.75f);
+
+            const float arrow_arm_length = 5f;
+            if (Menus.mms_mp_general_scroll_offset > 0)
+            {
+                Vector2 up_arrow_center = new Vector2(scrollbar_center_x, track_top_y - 18f);
+                uie.TestMouseInRect(up_arrow_center, 14f, 12f, 1900, true);
+                Color up_arrow_color = UIManager.m_menu_selection == 1900
+                    ? Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER))
+                    : UIManager.m_col_ui2;
+                UIManager.DrawQuadCenterLine(new Vector2(up_arrow_center.x - arrow_arm_length, up_arrow_center.y + arrow_arm_length * 0.5f), new Vector2(up_arrow_center.x, up_arrow_center.y - arrow_arm_length * 0.5f), 1.5f, 1f, up_arrow_color, 13);
+                UIManager.DrawQuadCenterLine(new Vector2(up_arrow_center.x, up_arrow_center.y - arrow_arm_length * 0.5f), new Vector2(up_arrow_center.x + arrow_arm_length, up_arrow_center.y + arrow_arm_length * 0.5f), 1.5f, 1f, up_arrow_color, 13);
+            }
+
+            if (Menus.mms_mp_general_scroll_offset < max_scroll_offset)
+            {
+                Vector2 down_arrow_center = new Vector2(scrollbar_center_x, track_bottom_y + 18f);
+                uie.TestMouseInRect(down_arrow_center, 14f, 12f, 1901, true);
+                Color down_arrow_color = UIManager.m_menu_selection == 1901
+                    ? Color.Lerp(UIManager.m_col_ui5, UIManager.m_col_ui6, UnityEngine.Random.Range(0f, 0.5f * UIElement.FLICKER))
+                    : UIManager.m_col_ui2;
+                UIManager.DrawQuadCenterLine(new Vector2(down_arrow_center.x - arrow_arm_length, down_arrow_center.y - arrow_arm_length * 0.5f), new Vector2(down_arrow_center.x, down_arrow_center.y + arrow_arm_length * 0.5f), 1.5f, 1f, down_arrow_color, 13);
+                UIManager.DrawQuadCenterLine(new Vector2(down_arrow_center.x, down_arrow_center.y + arrow_arm_length * 0.5f), new Vector2(down_arrow_center.x + arrow_arm_length, down_arrow_center.y - arrow_arm_length * 0.5f), 1.5f, 1f, down_arrow_color, 13);
+            }
         }
 
         public static void DrawTabs(UIElement uie, Vector2 pos, int tab_selected)
@@ -1202,6 +1274,18 @@ namespace GameMod {
                                             Menus.mms_loadout_hotkeys = 3;
                                         }
                                         MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 11:
+                                        MPSpawnHealth.CycleMenuOption();
+                                        break;
+                                    // scrollbar arrows
+                                    case 1900:
+                                        Menus.mms_mp_general_scroll_offset--;
+                                        MenuManager.PlayCycleSound(1f, -1f);
+                                        break;
+                                    case 1901:
+                                        Menus.mms_mp_general_scroll_offset++;
+                                        MenuManager.PlayCycleSound(1f, 1f);
                                         break;
                                 }
                                 break;
@@ -1488,6 +1572,13 @@ namespace GameMod {
                                 break;
                         }
                     }
+
+                    if (MenuManager.m_menu_micro_state == 0)
+                    {
+                        float scroll_wheel_delta = Input.GetAxis("Mouse ScrollWheel");
+                        if (scroll_wheel_delta != 0f)
+                            Menus.mms_mp_general_scroll_offset = Math.Max(0, Menus.mms_mp_general_scroll_offset + (scroll_wheel_delta < 0f ? 1 : -1));
+                    }
                 }
                 else if (menu_sub_state == MenuSubState.GET_INPUT)
                 {
@@ -1768,6 +1859,13 @@ namespace GameMod {
             position.y += 62f;
         }
 
+        static void DrawMpSpawnHealth(UIElement uie, ref Vector2 position)
+        {
+            uie.SelectAndDrawStringOptionItem(Loc.LS("SPAWN HEALTH"), position, 14, Menus.mms_spawn_health + "%", "", 1f, false);
+
+            position.y += 62f;
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             foreach (var code in codes)
@@ -1776,7 +1874,10 @@ namespace GameMod {
                 {
                     yield return new CodeInstruction(OpCodes.Ldloca_S, 0); // Vector2 position
                     yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawPauseMenu), "DrawMpTeamSwitch"));
-                    yield return new CodeInstruction(OpCodes.Ldarg_0); // We stole 'this' to pass as first arg to DrawMpTeamSwitch, put back on stack
+                    yield return new CodeInstruction(OpCodes.Ldarg_0); // instance for DrawMpSpawnHealth
+                    yield return new CodeInstruction(OpCodes.Ldloca_S, 0);
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Menus_UIElement_DrawPauseMenu), "DrawMpSpawnHealth"));
+                    yield return new CodeInstruction(OpCodes.Ldarg_0); // replenish the taken instance
                 }
 
                 yield return code;
@@ -1794,6 +1895,10 @@ namespace GameMod {
             {
                 Menus.mms_team_selection = MPTeams.NextTeam(Menus.mms_team_selection ?? GameManager.m_local_player.m_mp_team);
                 MenuManager.PlaySelectSound(1f);
+            }
+            else if (UIManager.m_menu_selection == 14)
+            {
+                MPSpawnHealth.CycleMenuOption();
             }
         }
 

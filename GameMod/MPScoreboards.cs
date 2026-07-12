@@ -14,6 +14,23 @@ namespace GameMod
     {
         public static bool ShowScores = true;
 
+        // Extra column showing reduced spawn health, only present while any
+        // player in the match uses the self-handicap
+        const float SpawnHealthCol = 420f;
+
+        static void DrawSpawnHealthHeader(UIElement uie, Vector2 pos)
+        {
+            if (MPSpawnHealth.AnyPlayerHasReducedHealth)
+                uie.DrawStringSmall(Loc.LS("HP"), pos + Vector2.right * SpawnHealthCol, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
+        }
+
+        static void DrawSpawnHealthValue(UIElement uie, Vector2 pos, Player player, Color c, float alpha)
+        {
+            int health = MPSpawnHealth.GetDisplayedHealth(player);
+            if (MPSpawnHealth.AnyPlayerHasReducedHealth && health < MPSpawnHealth.MAX_HEALTH)
+                uie.DrawDigitsVariable(pos + Vector2.right * SpawnHealthCol, health, 0.65f, StringOffset.CENTER, c, alpha);
+        }
+
         public class Anarchy
         {
             static FieldInfo m_alpha_Field = AccessTools.Field(typeof(UIElement), "m_alpha");
@@ -43,6 +60,7 @@ namespace GameMod
                     uie.DrawStringSmall(Loc.LS("ASSISTS"), pos + Vector2.right * col3, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
                 uie.DrawStringSmall(Loc.LS("DEATHS"), pos + Vector2.right * col4, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
                 UIManager.DrawSpriteUI(pos + Vector2.right * col5, 0.13f, 0.13f, UIManager.m_col_ui0, m_alpha, 204);
+                DrawSpawnHealthHeader(uie, pos);
             }
 
             static void DrawScoresWithoutTeams(UIElement uie, Vector2 pos, float col1, float col2, float col3, float col4, float col5, bool score = false)
@@ -99,6 +117,7 @@ namespace GameMod
                         }
                         uie.DrawDigitsVariable(pos + Vector2.right * col2, player.m_kills, 0.65f, StringOffset.CENTER, c, m_alpha * num);
                         uie.DrawDigitsVariable(pos + Vector2.right * col4, player.m_deaths, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                        DrawSpawnHealthValue(uie, pos, player, c, m_alpha * num);
                         c = uie.GetPingColor(player.m_avg_ping_ms);
                         uie.DrawDigitsVariable(pos + Vector2.right * col5, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, c, m_alpha * num);
                         pos.y += 25f;
@@ -195,6 +214,7 @@ namespace GameMod
                         if (MPModPrivateData.AssistScoring)
                             uie.DrawDigitsVariable(pos + Vector2.right * col3, player.m_assists, 0.65f, StringOffset.CENTER, c, m_alpha * num);
                         uie.DrawDigitsVariable(pos + Vector2.right * col4, player.m_deaths, 0.65f, StringOffset.CENTER, c, m_alpha * num);
+                        DrawSpawnHealthValue(uie, pos, player, c, m_alpha * num);
                         c = uie.GetPingColor(player.m_avg_ping_ms);
                         uie.DrawDigitsVariable(pos + Vector2.right * col5, player.m_avg_ping_ms, 0.65f, StringOffset.CENTER, c, m_alpha * num);
                         pos.y += 25f;
@@ -216,6 +236,7 @@ namespace GameMod
                     uie.DrawStringSmall(Loc.LS("ASSISTS"), pos + Vector2.right * col3, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
                 uie.DrawStringSmall(Loc.LS("DEATHS"), pos + Vector2.right * col4, 0.4f, StringOffset.CENTER, UIManager.m_col_ui0, 1f, 85f);
                 UIManager.DrawSpriteUI(pos + Vector2.right * col5, 0.13f, 0.13f, UIManager.m_col_ui0, m_alpha, 204);
+                DrawSpawnHealthHeader(uie, pos);
             }
 
             public static bool DrawHUDScoreInfo(UIElement uie, Vector2 pos)
