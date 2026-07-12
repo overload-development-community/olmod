@@ -118,10 +118,6 @@ namespace GameMod
     static class MPDestructibleMissiles
     {
         public const int MISSILE_LAYER = 27;   // rp ignore layer
-
-        // mptweaks capability, the server only sends missile messages to clients that share this flag
-        public const string TWEAK_NAME = "destructiblemissiles";
-
         public static bool Enabled = false;
 
         //                                         falcon  pod hunt creeper nova   dev  time  vortex
