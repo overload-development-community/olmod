@@ -307,6 +307,7 @@ namespace GameMod
             "[SECTION: AUDIOTAUNT_KEYBINDS]",
             "[SECTION: AUDIOTAUNT_MUTED_PLAYERS]",
             "[SECTION: AUDIOTAUNT_SELECTED_TAUNTS]",
+            "[SECTION: HOTKEYS]",
             //...
         };
 
@@ -346,6 +347,11 @@ namespace GameMod
             if (section_name.Equals(known_sections[5]))
             {
                 Section_AudiotauntSelectedTaunts.Load(section);
+                return;
+            }
+            if (section_name.Equals(known_sections[6]))
+            {
+                Section_Hotkeys.Load(section);
                 return;
             }
             //...
@@ -388,6 +394,10 @@ namespace GameMod
                     Section_AudiotauntSelectedTaunts.Save(w);
                     w.WriteLine("[/END]");
 
+                    w.WriteLine("[SECTION: HOTKEYS]");
+                    Section_Hotkeys.Save(w);
+                    w.WriteLine("[/END]");
+
                     //...
 
                     if (unknown_sections != null)
@@ -416,12 +426,14 @@ namespace GameMod
             Section_JoystickCurve.SetDefault();
             Section_WeaponCycling.Set();
             Section_AudiotauntKeybinds.SetDefaultKeybinds();
+            Section_Hotkeys.Set();
         }
 
         public static void ApplyConfigData()
         {
             Section_AutoSelect.ApplySettings();
             Section_WeaponCycling.ApplySettings();
+            Section_Hotkeys.ApplySettings();
         }
 
 
@@ -1096,6 +1108,82 @@ namespace GameMod
                 for (int i = 0; i < MPAudioTaunts.AMOUNT_OF_TAUNTS_PER_CLIENT; i++)
                     if (MPAudioTaunts.AClient.local_taunts.Length > i && MPAudioTaunts.AClient.local_taunts[i] != null)
                         w.WriteLine("   " + MPAudioTaunts.AClient.local_taunts[i].hash);
+            }
+        }
+
+        internal class Section_Hotkeys
+        {
+            public static Dictionary<string, string> settings;
+
+            public static void Load(List<string> section)
+            {
+                settings = new Dictionary<string, string>();
+                foreach (string line in section)
+                {
+                    string l = RemoveWhitespace(line);
+                    string[] res = l.Split(':');
+                    if (res.Length == 2)
+                    {
+                        settings.Add(res[0], res[1]);
+                    }
+                    else
+                    {
+                        Debug.Log("Error in ExtendedConfig.Section_Hotkeys.Load: unexpected line split: " + line + ", Setting Default Values.");
+                        Set();
+                        return;
+                    }
+                }
+                ApplySettings();
+            }
+
+            public static void Save(StreamWriter w)
+            {
+                if (settings != null)
+                {
+                    foreach (var setting in settings)
+                    {
+                        if (setting.Key != null && setting.Value != null)
+                        {
+                            w.WriteLine("   " + setting.Key + ": " + setting.Value);
+                        }
+                    }
+                }
+            }
+
+            // sets the values of the hotkeys dictionary
+            //  mirror = false   sets the default bindings
+            //  mirror = true    sets the current Hotkeys bindings
+            public static void Set(bool mirror = false)
+            {
+                settings = new Dictionary<string, string>();
+                foreach (Hotkeys.Hotkey h in Hotkeys.hotkeys)
+                {
+                    settings.Add(h.name, mirror ? Hotkeys.FormatBinding(h.keys) : h.defaultBinding);
+                }
+            }
+
+            public static void ApplySettings()
+            {
+                if (settings == null)
+                {
+                    return;
+                }
+                foreach (var setting in settings)
+                {
+                    if (!Hotkeys.SetBinding(setting.Key, setting.Value))
+                    {
+                        Debug.Log("[HOTKEYS] ignoring config entry '" + setting.Key + ": " + setting.Value + "'");
+                    }
+                }
+                // hotkeys added after the config file was written keep their default
+                // binding and get included on the next save
+                foreach (Hotkeys.Hotkey h in Hotkeys.hotkeys)
+                {
+                    if (!settings.ContainsKey(h.name))
+                    {
+                        settings.Add(h.name, Hotkeys.FormatBinding(h.keys));
+                    }
+                }
             }
         }
 
