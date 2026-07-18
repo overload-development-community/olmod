@@ -228,7 +228,7 @@ namespace GameMod
         private static void SendToCapable(short msgType, MessageBase msg)
         {
             foreach (var conn in NetworkServer.connections)
-                if (conn != null && MPTweaks.ClientHasTweak(conn.connectionId, TWEAK_NAME))
+                if (conn != null && MPTweaks.ClientHasTweak(conn.connectionId, "destructiblemissiles"))
                     conn.SendByChannel(msgType, msg, 0);
         }
 
