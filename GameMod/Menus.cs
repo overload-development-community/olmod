@@ -1895,8 +1895,17 @@ namespace GameMod {
     [HarmonyPatch(typeof(MenuManager), "PausedUpdate")]
     class Menus_MenuManager_PausedUpdate
     {
+        static void Prefix()
+        {
+            if (MenuManager.m_menu_sub_state != MenuSubState.ACTIVE || MenuManager.m_menu_micro_state != 0)
+                return;
+            if (MenuManager.option_dir && UIManager.PushedDir())
+                HandleMenuSelection();
+        }
+
         static void HandleMenuSelection()
         {
+            MenuManager.MaybeReverseOption();
             if (UIManager.m_menu_selection == 13)
             {
                 Menus.mms_team_selection = MPTeams.NextTeam(Menus.mms_team_selection ?? GameManager.m_local_player.m_mp_team);
