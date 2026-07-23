@@ -301,6 +301,7 @@ namespace GameMod {
         public static int mms_spawn_health = 100;
         public static int mms_mp_general_scroll_offset = 0;
         public const int SCROLL_ELEMENT_PAGE_VISIBLE_ROWS = 10;
+        public static bool mms_super_countdown = false;
     }
 
 
@@ -814,6 +815,7 @@ namespace GameMod {
             () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("INDIVIDUAL PLAYER COLORS"), mp_general_tab_row_position, 7, MPColoredPlayerNames.isActive ? "ON" : "OFF", Loc.LS("MAKES NAMES MORE RECOGNIZABLE AND DISTINCT BY MAKING THEM BIGGER AND COLORING THEM BY PLAYER [ANARCHY ONLY]")),
             () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("PROFANITY FILTER"), mp_general_tab_row_position, 8, DisableProfanityFilter.profanity_filter ? "ON" : "OFF", Loc.LS("")),
             () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("LOADOUT SELECTION HOTKEYS"), mp_general_tab_row_position, 9, Menus.GetMMSLoadoutHotkeys(), Loc.LS("WEAPON SELECTION HOTKEYS WILL QUICK-SWAP BETWEEN LOADOUTS")),
+            () => mp_general_tab_uie.SelectAndDrawStringOptionItem(Loc.LS("SUPER SPAWN COUNTDOWN"), mp_general_tab_row_position, 10, Menus.mms_super_countdown ? "ON" : "OFF", Loc.LS("FLASH A COUNTDOWN TO THE NEXT SUPER WHEN THE SUPER SIREN SOUNDS")),
             () => mp_general_tab_uie.SelectAndDrawItem(Loc.LS("QUICK CHAT"), mp_general_tab_row_position, 1, false, 1f, 0.75f),
         };
 
@@ -1273,6 +1275,10 @@ namespace GameMod {
                                         {
                                             Menus.mms_loadout_hotkeys = 3;
                                         }
+                                        MenuManager.PlaySelectSound(1f);
+                                        break;
+                                    case 10:
+                                        Menus.mms_super_countdown = !Menus.mms_super_countdown;
                                         MenuManager.PlaySelectSound(1f);
                                         break;
                                     case 11:
