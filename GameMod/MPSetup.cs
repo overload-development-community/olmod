@@ -235,6 +235,7 @@ namespace GameMod {
                 Menus.mms_classic_spawns = ModPrefs.GetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
                 Menus.mms_assist_scoring = ModPrefs.GetBool("MP_ASSIST_SCORING", Menus.mms_assist_scoring);
                 Menus.mms_allow_smash = ModPrefs.GetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
+                Menus.mms_destructible_missiles = ModPrefs.GetBool("MP_DESTRUCTIBLE_MISSILES", Menus.mms_destructible_missiles);
 
                 JoystickRotationFix.alt_turn_ramp_mode = ModPrefs.GetBool("SCALE_UP_ROTATION", JoystickRotationFix.alt_turn_ramp_mode);
                 MPColoredPlayerNames.isActive = ModPrefs.GetBool("MP_COLORED_NAMES", MPColoredPlayerNames.isActive);
@@ -391,6 +392,7 @@ namespace GameMod {
             ModPrefs.SetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
             ModPrefs.SetBool("MP_ASSIST_SCORING", Menus.mms_assist_scoring);
             ModPrefs.SetBool("MP_ALLOW_SMASH", Menus.mms_allow_smash);
+            ModPrefs.SetBool("MP_DESTRUCTIBLE_MISSILES", Menus.mms_destructible_missiles);
             ModPrefs.SetBool("MP_CREEPER_COLORS", Menus.mms_creeper_colors);
             ModPrefs.SetBool("MP_AUDIOTAUNTS_ACTIVE", MPAudioTaunts.AClient.active);
             ModPrefs.SetInt("MP_AUDIOTAUNT_VOLUME", MPAudioTaunts.AClient.audio_taunt_volume);

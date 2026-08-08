@@ -40,6 +40,7 @@ namespace GameMod {
         public static bool mms_always_cloaked { get; set; }
         public static bool mms_allow_smash { get; set; }
         public static bool mms_damage_numbers { get; set; }
+        public static bool mms_destructible_missiles { get; set; }
         public static bool mms_client_damage_numbers { get; set; } = true;
         public static bool mms_assist_scoring { get; set; } = true;
         public static bool mms_team_color_default { get; set; } = true;
@@ -129,6 +130,11 @@ namespace GameMod {
         public static string GetMMSDamageNumbers()
         {
             return MenuManager.GetToggleSetting(Convert.ToInt32(mms_damage_numbers));
+        }
+
+        public static string GetMMSDestructibleMissiles()
+        {
+            return MenuManager.GetToggleSetting(Convert.ToInt32(mms_destructible_missiles));
         }
 
         public static string GetMMSScaleRespawnTime()
@@ -323,11 +329,11 @@ namespace GameMod {
             position.x += 600f;
             position.y = col_top - 250f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW REAR VIEW CAMERA"), position, 11, Menus.GetMMSRearViewPIP(), Loc.LS("CLIENTS CAN CHOOSE TO HAVE REAR VIEW"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALWAYS CLOAKED"), position, 15, Menus.GetMMSAlwaysCloaked(), Loc.LS("SHIPS ARE ALWAYS CLOAKED"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLASSIC SPAWNS"), position, 13, Menus.GetMMSClassicSpawns(), Loc.LS("SPAWN WITH IMPULSE+ DUALS AND FALCONS"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
 
             if (MenuManager.mms_mode == ExtMatchMode.CTF)
             {
@@ -338,22 +344,25 @@ namespace GameMod {
                 uie.SelectAndDrawStringOptionItem(Loc.LS("ASSISTS"), position, 18, Menus.GetMMSAssistScoring(), Loc.LS("AWARD POINTS FOR ASSISTING WITH KILLS"), 1f, false);
             }
 
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("PROJECTILE DATA"), position, 16, Menus.mms_mp_projdata_fn == "STOCK" ? "STOCK" : System.IO.Path.GetFileName(Menus.mms_mp_projdata_fn), string.Empty, 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("ALLOW SMASH ATTACK"), position, 17, Menus.GetMMSAllowSmash(), Loc.LS("ALLOWS PLAYERS TO USE THE SMASH ATTACK"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("TB PENETRATION"), position, 20, MPThunderboltPassthrough.isAllowed ? "ON" : "OFF", Loc.LS("ALLOWS THUNDERBOLT SHOTS TO PENETRATE SHIPS"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("DAMAGE NUMBERS"), position, 21, Menus.GetMMSDamageNumbers(), Loc.LS("SHOWS THE DAMAGE YOU DO TO OTHER SHIPS"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("CLIENT-SIDE PHYSICS"), position, 23, MPServerOptimization.prefEnabled ? "ENABLED" : "DISABLED", Loc.LS("ALLOWS CLIENTS TO PASS PRE-PROCESSED PHYSICS RATHER THAN RESIMULATING INPUTS ON THE SERVER"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             //uie.SelectAndDrawStringOptionItem(Loc.LS("SERVER INPUT BUFFER LENGTH"), position, 24, MPServerOptimization.InputBufferLength.ToString(), Loc.LS("NUMBER OF FRAMES TO BUFFER BEFORE SERVER PROCESSES INPUT IT HAS RECEIVED (OVERLOAD STOCK IS 3, TESTING VERSION IS 2)"), 1f, false); // TESTING
             uie.SelectAndDrawStringOptionItem(Loc.LS("ROLL SPEED LIMIT"), position, 24, "+" + (MPServerOptimization.RollSpeedLimit - 3), Loc.LS("MAXIMUM ROLL SPEED MODIFIER TO ALLOW FOR THIS ROUND"), 1f, false);
-            position.y += 50f;
+            position.y += 45f;
             uie.SelectAndDrawStringOptionItem(Loc.LS("COLLISION MESH"), position, 22, Menus.GetMMSCollisionMesh(), Loc.LS("COLLIDER TO USE FOR PROJECTILE->SHIP COLLISIONS"), 1f, false);
-        }
+            position.y += 45f;
+            uie.SelectAndDrawStringOptionItem(Loc.LS("DESTRUCTIBLE MISSILES"), position, 25, Menus.GetMMSDestructibleMissiles(), Loc.LS("ALLOWS MISSILES TO BE SHOT DOWN IN FLIGHT"), 1f, false);
+
+          }
 
         private static void AdjustAdvancedPositionCenterColumn(ref Vector2 position)
         {
@@ -690,6 +699,11 @@ namespace GameMod {
                         MPServerOptimization.RollSpeedLimit = 3 + ((2 + MPServerOptimization.RollSpeedLimit + UIManager.m_select_dir) % 5);
                         MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
                         break;
+                    case 25:
+                        Menus.mms_destructible_missiles = !Menus.mms_destructible_missiles;
+                        MenuManager.PlayCycleSound(1f, (float)UIManager.m_select_dir);
+                        break;
+
                 }
             }
             else if (MenuManager.m_menu_micro_state == 10)

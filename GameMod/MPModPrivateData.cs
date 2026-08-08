@@ -1282,7 +1282,7 @@ END_ENTRY
             get { return MPLoadouts.LoadoutFilterBitmask; }
             set { MPLoadouts.LoadoutFilterBitmask = value; }
         }
-      
+
         public static bool ClientPhysics
         {
             get { return MPServerOptimization.enabled; }
@@ -1301,6 +1301,18 @@ END_ENTRY
                 MPServerOptimization.RoundRollSpeedLimit = value;
                 Debug.Log("Roll speed limit is set to +" + (value - 3) + " for this round");
             }
+        }
+
+        public static bool DestructibleMissiles
+        {
+            get { return MPDestructibleMissiles.Enabled; }
+            set { MPDestructibleMissiles.Enabled = value; }
+        }
+
+        public static float[] MissileTypeHealth
+        {
+            get { return MPDestructibleMissiles.MissileTypeHealth; }
+            set { MPDestructibleMissiles.MissileTypeHealth = value; }
         }
 
         public static JObject Serialize()
@@ -1333,6 +1345,8 @@ END_ENTRY
             jobject["loadoutfilter"] = (int)LoadoutFilterBitmask;
             jobject["clientphysics"] = ClientPhysics;
             jobject["rollspeedlimit"] = RollSpeedLimit;
+            jobject["destructiblemissiles"] = DestructibleMissiles;
+            jobject["missiletypehealth"] = new JArray(MissileTypeHealth.Select(h => (JToken)(float)h));
             return jobject;
         }
 
@@ -1369,6 +1383,12 @@ END_ENTRY
             LoadoutFilterBitmask = root["loadoutfilter"].GetInt(MPLoadouts.MASK_DEFAULT);
             ClientPhysics = root["clientphysics"].GetBool(false);
             RollSpeedLimit = root["rollspeedlimit"].GetInt(7);
+            DestructibleMissiles = root["destructiblemissiles"].GetBool(false);
+            var hArr = root["missiletypehealth"] as JArray;
+            if (hArr != null && hArr.Count == 8)
+                MissileTypeHealth = hArr.Select((t, i) => t?.Value<float>() ?? MPDestructibleMissiles.DefaultHealth[i]).ToArray();
+            // a server's olmodsettings.json HP overrides win over the match creator's values
+            MPDestructibleMissiles.ApplyServerOverrides();
         }
 
         public static string GetModeString(MatchMode mode)
@@ -1666,6 +1686,7 @@ END_ENTRY
             MPModPrivateData.LoadoutFilterBitmask = MPLoadouts.LoadoutFilterBitmask;
             MPModPrivateData.ClientPhysics = MPServerOptimization.prefEnabled;
             MPModPrivateData.RollSpeedLimit = MPServerOptimization.RollSpeedLimit;
+            MPModPrivateData.DestructibleMissiles = Menus.mms_destructible_missiles;
             if (Menus.mms_mp_projdata_fn == "STOCK") {
                 MPModPrivateData.CustomProjdata = string.Empty;
             } else {

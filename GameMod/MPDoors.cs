@@ -11,7 +11,8 @@ namespace GameMod
         // In Multiplayer, players now open doors by shooting them or touching them.
         private static void Postfix(GameObject go, ref bool __result)
         {
-            if (go != null && (go.layer == 13 || go.layer == 9 || go.layer == 31) && GameplayManager.IsMultiplayerActive)
+            // layer 27: server-side destructible missiles (re-layered from 13 by MPDestructibleMissiles)
+            if (go != null && (go.layer == 13 || go.layer == 9 || go.layer == 31 || go.layer == MPDestructibleMissiles.MISSILE_LAYER) && GameplayManager.IsMultiplayerActive)
                 __result = true;
         }
     }
