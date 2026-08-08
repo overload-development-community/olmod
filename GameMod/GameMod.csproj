@@ -183,6 +183,7 @@
     <Compile Include="MPSniperPackets.cs" />
     <Compile Include="MPSoundExt.cs" />
     <Compile Include="MPSoundOcclusion.cs" />
+    <Compile Include="MPSpawnHealth.cs" />
     <Compile Include="MPSpawnInitialization.cs" />
     <Compile Include="MPSpawnInvuln.cs" />
     <Compile Include="MPSpew.cs" />

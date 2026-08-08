@@ -230,6 +230,7 @@ namespace GameMod {
                 Console.CustomUIColor = ModPrefs.GetInt("O_CUSTOM_UI_COLOR", Console.CustomUIColor);
                 Menus.mms_damage_numbers = ModPrefs.GetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
                 Menus.mms_client_damage_numbers = ModPrefs.GetBool("MP_CLIENT_DAMAGE_NUMBERS", Menus.mms_client_damage_numbers);
+                Menus.mms_spawn_health = MPSpawnHealth.ClampToValidHealth(ModPrefs.GetInt("MP_SPAWN_HEALTH", Menus.mms_spawn_health));
                 MPThunderboltPassthrough.isAllowed = ModPrefs.GetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
                 Menus.mms_always_cloaked = ModPrefs.GetBool("MP_ALWAYS_CLOAKED", Menus.mms_always_cloaked);
                 Menus.mms_classic_spawns = ModPrefs.GetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
@@ -386,6 +387,7 @@ namespace GameMod {
             ModPrefs.SetInt("MP_PM_LOADOUT_GUNNER2_M1", (int)MPLoadouts.Loadouts[3].missiles[0]);
             ModPrefs.SetBool("MP_DAMAGE_NUMBERS", Menus.mms_damage_numbers);
             ModPrefs.SetBool("MP_CLIENT_DAMAGE_NUMBERS", Menus.mms_client_damage_numbers);
+            ModPrefs.SetInt("MP_SPAWN_HEALTH", Menus.mms_spawn_health);
             ModPrefs.SetBool("MP_THUNDERBOLT_PASSTHROUGH", MPThunderboltPassthrough.isAllowed);
             ModPrefs.SetBool("MP_ALWAYS_CLOAKED", Menus.mms_always_cloaked);
             ModPrefs.SetBool("MP_CLASSIC_SPAWNS", Menus.mms_classic_spawns);
