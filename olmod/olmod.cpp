@@ -352,6 +352,68 @@ static DWORD MyGetModuleFileNameW(HMODULE hModule, LPWSTR lpFilename, DWORD nSiz
 	return GetModuleFileNameW(hModule, lpFilename, nSize);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+//	Unity job worker pool clamp
+// 	Unity 2017 implemented a very early version of the job scheduling system.
+//	The Engine prepares as many worker threads as there are virtual cores (-1) to take care of parallelizable engine work.
+//	Jobs go into a global lock free queue and then the main thread wakes up a number of worker threads to take care of them.
+// 	Unfortunately with the short task runtime and high worker thread synchronisation this can become 
+//  a big performance hog in cpu bound scenarios on modern processors.
+// 	To fix this we limit the amount of reported cores to 4 here to avoid spawning a lot of threads while still leaving a possibility open that
+//  it might be a benefit in some scenarios. This also ensures that the behaviour on cpus with 4 or less cores does not change.
+//  Otherwise we might pass the point at which cpus were slow enough for the synchronization overhead to not overshadow the performed work.
+//  This is configurable through a commandline argument:
+// 	   -worker-cpus <n>        limits the amount of reported cores to [1..n..virtual_core_count]
+//     -worker-cpus 0          disable the clamp entirely
+//
+//	https://unity.com/blog/engine-platform/improving-job-system-performance-2022-2-part-2
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+#define OLMOD_DEFAULT_WORKER_CPUS 4
+
+static LONG worker_cpu_limit = -1;
+
+static BOOL parse_dec_w(LPCWSTR s, LONG *out)
+{
+	LONG v = 0;
+	if (!s || !*s)
+		return FALSE;
+	for (; *s; s++) {
+		if (*s < L'0' || *s > L'9')
+			return FALSE;
+		v = v * 10 + (*s - L'0');
+		if (v > 4096)
+			return FALSE;
+	}
+	*out = v;
+	return TRUE;
+}
+
+static void init_worker_cpu_limit()
+{
+	LPWSTR *argv;
+	int argc, i;
+	LONG v;
+
+	worker_cpu_limit = OLMOD_DEFAULT_WORKER_CPUS;
+
+	argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	if (argv) {
+		for (i = 1; i < argc - 1; i++)
+			if (lstrcmpiW(argv[i], L"-worker-cpus") == 0 && parse_dec_w(argv[i + 1], &v)) {
+				worker_cpu_limit = v;
+				break;
+			}
+		LocalFree(argv);
+	}
+}
+
+static void WINAPI MyGetSystemInfo(LPSYSTEM_INFO psi)
+{
+	GetSystemInfo(psi);
+	if (psi && worker_cpu_limit > 0 && psi->dwNumberOfProcessors > (DWORD)worker_cpu_limit)
+		psi->dwNumberOfProcessors = (DWORD)worker_cpu_limit;
+}
+
 static BOOL patch_functions() {
 	HMODULE module = GetModuleHandle(L"UnityPlayer.dll");
 	if (module == NULL) {
@@ -362,6 +424,11 @@ static BOOL patch_functions() {
 		return FALSE;
 	if (!patch_func(module, "GetModuleFileNameW", (PROC)MyGetModuleFileNameW))
 		return FALSE;
+
+	// run with the default worker pool if the build does not import GetSystemInfo
+	init_worker_cpu_limit();
+	if (worker_cpu_limit > 0 && !patch_func(module, "GetSystemInfo", (PROC)MyGetSystemInfo))
+		print("worker cpu clamp: GetSystemInfo not found in import table\n");
 	return TRUE;
 }
 

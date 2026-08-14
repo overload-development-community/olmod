@@ -209,17 +209,17 @@ static void *my_mono_image_open_from_data_with_name(char *data, int data_len, in
 }
 
 #ifdef __APPLE__
-#define org_dlsym dlsym
+#define original_dlsym dlsym
 #else
 #define new_dlsym dlsym
 typedef void *(*DLSYM_PROC_T)(void*, const char*);
-DLSYM_PROC_T org_dlsym;
+DLSYM_PROC_T original_dlsym;
 #endif
 
 // separate function needed on mac to prevent stub_helper in dlsym which prevents opengl driver loading (???)
 __attribute__((noinline))
 static void *mono_dlsym(void *lib, const char *sym) {
-	void *ret = org_dlsym(lib, sym);
+	void *ret = original_dlsym(lib, sym);
 	if (strcmp(sym, "mono_image_close") == 0)
 		org_mono_image_close = (mono_image_close_t)ret;
 	if (strcmp(sym, "mono_runtime_invoke") == 0) {
@@ -257,7 +257,7 @@ static void *mono_dlsym(void *lib, const char *sym) {
 
 void *new_dlsym(void *lib, const char *sym) {
 	if (sym[0] != 'm' || sym[1] != 'o' || sym[2] != 'n' || sym[3] != 'o')
-		return org_dlsym(lib, sym);
+		return original_dlsym(lib, sym);
 	return mono_dlsym(lib, sym);
 }
 //static void olmod_init(void) __attribute__((constructor));
@@ -296,15 +296,127 @@ __attribute__((constructor)) static void olmod_init(void)
 #else
 #error NOT SUPPORTED FOR THIS ARCHITECTURE
 #endif
-	if (!(org_dlsym = (DLSYM_PROC_T)dlvsym(RTLD_NEXT, "dlsym", "GLIBC_" DLSYM_ABI_VERSION))) {
+	if (!(original_dlsym = (DLSYM_PROC_T)dlvsym(RTLD_NEXT, "dlsym", "GLIBC_" DLSYM_ABI_VERSION))) {
 		print("olmod failed dlsym lookup\n");
 		abort();
 	} else {
 		// Use the versioned one to look up the unversioned version, as this might be a different one.
-		DLSYM_PROC_T ptr = (DLSYM_PROC_T)org_dlsym(RTLD_NEXT, "dlsym");
-		if (ptr && (ptr != org_dlsym)) {
-			org_dlsym = ptr;
+		DLSYM_PROC_T ptr = (DLSYM_PROC_T)original_dlsym(RTLD_NEXT, "dlsym");
+		if (ptr && (ptr != original_dlsym)) {
+			original_dlsym = ptr;
 		}
 	}
+}
+#endif
+
+#ifndef __APPLE__
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+//	Unity job worker pool clamp
+// 	Unity 2017 implemented a very early version of the job scheduling system.
+//	The Engine prepares as many worker threads as there are virtual cores (-1) to take care of parallelizable engine work.
+//	Jobs go into a global lock free queue and then the main thread wakes up a number of worker threads to take care of them.
+// 	Unfortunately with the short task runtime and high worker thread synchronisation this can become 
+//  a big performance hog in cpu bound scenarios on modern processors.
+// 	To fix this we limit the amount of reported cores to 4 here to avoid spawning a lot of threads while still leaving a possibility open that
+//  it might be a benefit in some scenarios. This also ensures that the behaviour on cpus with 4 or less cores does not change.
+//  Otherwise we might pass the point at which cpus were slow enough for the synchronization overhead to not overshadow the performed work.
+//  This is configurable through a commandline argument:
+// 	   -worker-cpus <n>        limits the amount of reported cores to [1..n..virtual_core_count]
+//     -worker-cpus 0          disable the clamp entirely
+//
+//	https://unity.com/blog/engine-platform/improving-job-system-performance-2022-2-part-2
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+#include <sys/sysinfo.h>
+
+#define OLMOD_DEFAULT_WORKER_CPUS 4
+
+typedef long (*SYSCONF_PROC_T)(int);
+typedef int (*GET_NPROCS_PROC_T)(void);
+static SYSCONF_PROC_T 	 original_sysconf;
+static GET_NPROCS_PROC_T original_get_nprocs;
+static GET_NPROCS_PROC_T original_get_nprocs_conf;
+
+static long olmod_cmdline_cpu_limit(void)
+{
+	static char buf[8192];
+	ssize_t n, i;
+	int fd = open("/proc/self/cmdline", O_RDONLY);
+
+	if (fd < 0)
+		return -1;
+	n = read(fd, buf, sizeof(buf) - 1);
+	close(fd);
+	if (n <= 0)
+		return -1;
+	buf[n] = 0;
+
+	for (i = 0; i < n; i += (ssize_t)strlen(buf + i) + 1) {
+		if (strcmp(buf + i, "-worker-cpus"))
+			continue;
+		i += (ssize_t)strlen(buf + i) + 1;
+		if (i < n) {
+			char *end;
+			long v = strtol(buf + i, &end, 10);
+			if (end != buf + i && !*end && v >= 0)
+				return v;
+		}
+		break;
+	}
+	return -1;
+}
+
+static long olmod_cpu_limit(void)
+{
+	static long limit = -1;
+	if (limit < 0) {
+		long arg = olmod_cmdline_cpu_limit();
+		limit = (arg >= 0) ? arg : OLMOD_DEFAULT_WORKER_CPUS;
+	}
+	return limit;
+}
+
+static long olmod_clamp_cpus(long real)
+{
+	long limit = olmod_cpu_limit();
+	return (limit > 0 && real > limit) ? limit : real;
+}
+
+static void olmod_resolve_cpu_syms(void)
+{
+	if (original_sysconf)
+		return;
+	if (original_dlsym) {
+		original_sysconf = (SYSCONF_PROC_T)original_dlsym(RTLD_NEXT, "sysconf");
+		original_get_nprocs = (GET_NPROCS_PROC_T)original_dlsym(RTLD_NEXT, "get_nprocs");
+		original_get_nprocs_conf = (GET_NPROCS_PROC_T)original_dlsym(RTLD_NEXT, "get_nprocs_conf");
+	}
+	if (!original_sysconf)
+		original_sysconf = (SYSCONF_PROC_T)dlvsym(RTLD_NEXT, "sysconf", "GLIBC_" DLSYM_ABI_VERSION);
+}
+
+long sysconf(int name)
+{
+	olmod_resolve_cpu_syms();
+	if (!original_sysconf)
+		return (name == _SC_NPROCESSORS_ONLN || name == _SC_NPROCESSORS_CONF) ? olmod_clamp_cpus(OLMOD_DEFAULT_WORKER_CPUS) : -1;
+	if (name == _SC_NPROCESSORS_ONLN || name == _SC_NPROCESSORS_CONF)
+		return olmod_clamp_cpus(original_sysconf(name));
+	return original_sysconf(name);
+}
+
+int get_nprocs(void)
+{
+	olmod_resolve_cpu_syms();
+	if (!original_get_nprocs)
+		return (int)olmod_clamp_cpus(sysconf(_SC_NPROCESSORS_ONLN));
+	return (int)olmod_clamp_cpus(original_get_nprocs());
+}
+
+int get_nprocs_conf(void)
+{
+	olmod_resolve_cpu_syms();
+	if (!original_get_nprocs_conf)
+		return (int)olmod_clamp_cpus(sysconf(_SC_NPROCESSORS_CONF));
+	return (int)olmod_clamp_cpus(original_get_nprocs_conf());
 }
 #endif
