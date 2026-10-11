@@ -26,6 +26,10 @@ namespace GameMod
             if (!HUDVelocity.MenuManagerEnabled || GameManager.m_local_player.m_spectator || (GameplayManager.IsMultiplayerActive && NetworkMatch.m_match_state != MatchState.PLAYING))
                 return;
 
+            // Suppress the Hud for Replay Benchmarks
+            if (Replay.Hud.Suppressed)
+                return;
+
             Vector2 pos = default(Vector2);
             pos.x = 0f;
             pos.y = UIManager.UI_TOP - 210f;

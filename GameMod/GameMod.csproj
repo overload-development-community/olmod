@@ -241,6 +241,22 @@
     <Compile Include="VSync.cs" />
     <Compile Include="Boss2B.cs" />
     <Compile Include="MatcenHp.cs" />
+    <Compile Include="Replay\Benchmark.cs" />
+    <Compile Include="Replay\Data\Model.cs" />
+    <Compile Include="Replay\Data\OlrFile.cs" />
+    <Compile Include="Replay\DemosMenu.cs" />
+    <Compile Include="Replay\Playback.cs" />
+    <Compile Include="Replay\Recorder.cs" />
+    <Compile Include="Replay\Scene\Ships.cs" />
+    <Compile Include="Replay\Scene\Shots.cs" />
+    <Compile Include="Replay\Scene\Viewpoint.cs" />
+    <Compile Include="Replay\Scene\World.cs" />
+    <Compile Include="Replay\Session.cs" />
+    <Compile Include="Replay\UI\ControlBar.cs" />
+    <Compile Include="Replay\UI\Hud.cs" />
+    <Compile Include="Replay\UI\MatchHud.cs" />
+    <Compile Include="Replay\UI\Reticle.cs" />
+    <Compile Include="Replay\UI\ShipHud.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0Harmony.dll" />

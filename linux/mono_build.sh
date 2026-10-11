@@ -51,7 +51,8 @@ mcs \
     -resource:../GameMod/Resources/meshes,GameMod.Resources.meshes \
     -out:GameMod.dll \
     ../GameMod/*.cs \
-    ../GameMod/*/*.cs
+    ../GameMod/*/*.cs \
+    ../GameMod/Replay/*/*.cs
 
 if [ $? -ne 0 ]; then
     exit 1

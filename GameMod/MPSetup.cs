@@ -304,6 +304,8 @@ namespace GameMod {
                 QualitySettings.maxQueuedFrames = ModPrefs.GetInt("GFX_MAXQUEUEDFRAMES", 2);
 
                 Menus.mms_distinct_kill_sound = ModPrefs.GetBool("MP_DISTINCT_KILL_SOUND", false);
+
+                Replay.Session.RecordReplays = ModPrefs.GetBool("MP_RECORD_REPLAYS", false);
             }
             else // for compatibility with old olmod, no need to add new settings
             {
@@ -403,6 +405,7 @@ namespace GameMod {
             ModPrefs.SetInt("MP_ROLL_SPEED_LIMIT", MPServerOptimization.RollSpeedLimit);
             ModPrefs.SetInt("GFX_MAXQUEUEDFRAMES", QualitySettings.maxQueuedFrames);
             ModPrefs.SetBool("MP_DISTINCT_KILL_SOUND", Menus.mms_distinct_kill_sound);
+            ModPrefs.SetBool("MP_RECORD_REPLAYS", Replay.Session.RecordReplays);
 
             ModPrefs.Flush(filename + "mod");
         }
